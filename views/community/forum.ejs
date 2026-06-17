@@ -1,0 +1,59 @@
+<%- include('../partials/head') %>
+<div class="page-head">
+  <div><h1><svg class="icon icon-lg"><use href="#i-community"/></svg> Community</h1><p class="muted">Connect with other founders.</p></div>
+  <% if (user) { %><a class="btn btn-ghost" href="/groups"><svg class="icon"><use href="#i-team"/></svg> Groups</a> <a class="btn btn-ghost" href="/members"><svg class="icon"><use href="#i-profile"/></svg> Members</a> <a class="btn btn-primary" href="/community/collab"><svg class="icon"><use href="#i-collab"/></svg> Collaboration hub</a><% } else { %><a class="btn btn-primary" href="/signup">Join the community</a><% } %>
+</div>
+
+<form method="get" action="/community" class="card forum-search">
+  <input name="q" value="<%= q %>" placeholder="Search topics…" maxlength="80">
+  <select name="cat">
+    <option value="">All categories</option>
+    <% cats.forEach(c => { %><option value="<%= c.slug %>" <%= filterCat === c.slug ? 'selected' : '' %>><%= c.emoji %> <%= c.name %></option><% }) %>
+  </select>
+  <input name="tag" value="<%= filterTag %>" placeholder="Tag (e.g. marketing)" maxlength="24">
+  <button class="btn btn-primary">Search</button>
+  <% if (q || filterTag || filterCat) { %><a class="btn btn-ghost" href="/community">Clear</a><% } %>
+</form>
+
+<div class="forum-layout">
+  <div class="forum-main">
+    <% if (results) { %>
+      <h3><%= results.length %> result<%= results.length === 1 ? '' : 's' %><%= q ? ' for "' + q + '"' : '' %><%= filterTag ? ' tagged #' + filterTag : '' %></h3>
+      <% results.forEach(t => { %>
+        <a class="card thread-row" href="/community/t/<%= t.id %>">
+          <div><strong><%= t.title %></strong>
+          <p class="muted small"><%= (t.body || '').slice(0, 120) %><%= (t.body || '').length > 120 ? '…' : '' %></p>
+          <% if (t.tags && t.tags.length) { %><p class="tag-row"><% t.tags.forEach(tg => { %><span class="chip tag-chip">#<%= tg %></span><% }) %></p><% } %></div>
+          <div class="thread-meta"><span class="chip">💬 <%= t.reply_count || 0 %></span></div>
+        </a>
+      <% }) %>
+      <% if (!results.length) { %><div class="card center"><p>No threads matched. Try different keywords.</p></div><% } %>
+    <% } else { %>
+      <div class="forum-cats">
+        <% cats.forEach(c => { %>
+          <a class="card forum-cat" href="/community/c/<%= c.slug %>">
+            <span class="forum-emoji"><%= c.emoji %></span>
+            <div><h3><%= c.name %></h3><p class="muted"><%= c.description %></p></div>
+            <div class="forum-cat-meta">
+              <span class="chip"><%= counts[c.id] || 0 %> threads</span>
+              <% if (latest[c.id]) { %><p class="small muted">Latest: <%= latest[c.id].title.slice(0, 40) %></p><% } %>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+  <aside class="forum-side">
+    <div class="card">
+      <h3>🕐 Latest posts</h3>
+      <% sidebar.latestPosts.forEach(t => { %><a class="side-thread" href="/community/t/<%= t.id %>"><%= t.title.slice(0, 60) %><span class="muted small"><%= new Date(t.created_at).toLocaleDateString() %></span></a><% }) %>
+      <% if (!sidebar.latestPosts.length) { %><p class="muted small">No posts yet.</p><% } %>
+    </div>
+    <div class="card">
+      <h3>🔥 Most popular</h3>
+      <% sidebar.popularPosts.forEach(t => { %><a class="side-thread" href="/community/t/<%= t.id %>"><%= t.title.slice(0, 60) %><span class="muted small">💬 <%= t.reply_count || 0 %> comments</span></a><% }) %>
+      <% if (!sidebar.popularPosts.length) { %><p class="muted small">No posts yet.</p><% } %>
+    </div>
+  </aside>
+</div>
+<%- include('../partials/foot') %>

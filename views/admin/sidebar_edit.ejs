@@ -1,0 +1,14 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/admin/sidebars">← Sidebars</a>
+<h1><%= isNew ? 'New sidebar' : 'Edit sidebar' %></h1>
+<form method="post" action="/admin/sidebars/save" class="card">
+  <% if (!isNew) { %><input type="hidden" name="id" value="<%= item.id %>"><% } %>
+  <label>Name<input name="name" value="<%= item.name || '' %>" required maxlength="80" placeholder="e.g. Blog default, Guide + ad"></label>
+  <label class="check"><input type="checkbox" name="show_similar" <%= item.show_similar ? 'checked' : '' %>> Show "similar posts" section (recommended)</label>
+  <p class="muted small">The three HTML areas below render above, between, and below the similar-posts section. Paste ad code, newsletter embeds, banners, or any HTML/JS.</p>
+  <label>HTML — top<textarea name="html_top" rows="5" class="mono" placeholder="<!-- ad or embed code -->"><%= item.html_top || '' %></textarea></label>
+  <label>HTML — middle<textarea name="html_middle" rows="5" class="mono"><%= item.html_middle || '' %></textarea></label>
+  <label>HTML — bottom<textarea name="html_bottom" rows="5" class="mono"><%= item.html_bottom || '' %></textarea></label>
+  <button class="btn btn-primary">Save sidebar</button>
+</form>
+<%- include('../partials/foot') %>

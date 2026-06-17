@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<div class="page-head center" style="justify-content:center;text-align:center;display:block">
+  <h1>Simple pricing. Be your own boss.</h1>
+  <p class="lead">Start free. Upgrade when you're ready to go all-in.</p>
+</div>
+<% if (typeof upgrade !== 'undefined' && upgrade) { %><p class="notice">That feature is part of the paid plan — pick an option below to unlock it.</p><% } %>
+<% if (msg) { %><p class="error"><%= msg %></p><% } %>
+<div class="pricing-grid">
+  <div class="card price-card">
+    <h3>Free</h3>
+    <p class="price">$0<span class="muted small"> forever</span></p>
+    <ul class="feature-list"><% freeFeatures.forEach(f => { %><li>✓ <%= f %></li><% }) %></ul>
+    <% if (!user) { %><a class="btn btn-ghost btn-block" href="/signup">Get started</a>
+    <% } else if (plan === 'free') { %><span class="chip">Your current plan</span><% } %>
+  </div>
+  <% tiers.forEach(t => { %>
+    <div class="card price-card <%= t.key === 'year' ? 'price-featured' : '' %>">
+      <% if (t.key === 'year') { %><span class="chip chip-success">Best value</span><% } %>
+      <h3><%= t.name %></h3>
+      <p class="price">$<%= (t.price_cents / 100).toFixed(t.price_cents % 100 ? 2 : 0) %><span class="muted small"> <%= t.interval_label %></span></p>
+      <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
+      <ul class="feature-list"><% paidFeatures.forEach(f => { %><li>✓ <%= f %></li><% }) %></ul>
+      <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Start free, then upgrade</a>
+      <% } else if (plan === 'paid') { %><span class="chip chip-success">You have full access</span>
+      <% } else { %>
+        <form method="post" action="/billing/checkout/<%= t.key %>"><button class="btn btn-primary btn-block">Choose <%= t.name.replace('Founder ','') %></button></form>
+      <% } %>
+    </div>
+  <% }) %>
+</div>
+<p class="muted small center">Subscriptions are handled securely by Stripe. Cancel anytime from Account settings — you keep access until the end of your billing period.</p>
+<%- include('partials/foot') %>

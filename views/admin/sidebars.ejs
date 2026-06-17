@@ -1,0 +1,23 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>🧩 Sidebars</h1><p class="muted">Reusable sidebars for blog posts and guides — pick one per post in the editor.</p></div>
+<a class="btn btn-primary" href="/admin/sidebars/new">+ New sidebar</a></div>
+<%- include('nav') %>
+<% if (!items.length) { %><div class="card center"><p class="muted">No sidebars yet. Create one to attach to blogs and guides.</p></div><% } %>
+<div class="card table-wrap">
+<table class="table">
+  <tr><th>Name</th><th>Similar posts</th><th>Custom HTML</th><th>Updated</th><th></th></tr>
+  <% items.forEach(s => { %>
+    <tr>
+      <td><strong><%= s.name %></strong></td>
+      <td><%= s.show_similar ? '✓ shown' : '—' %></td>
+      <td><%= ['html_top','html_middle','html_bottom'].filter(k => s[k]).length %> block(s)</td>
+      <td><%= new Date(s.updated_at).toLocaleDateString() %></td>
+      <td class="actions">
+        <a class="btn btn-ghost btn-sm" href="/admin/sidebars/<%= s.id %>/edit">Edit</a>
+        <form method="post" action="/admin/sidebars/<%= s.id %>/delete" class="inline" onsubmit="return confirm('Delete this sidebar? Posts using it will fall back to the default.')"><button class="btn btn-ghost btn-sm">Delete</button></form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+</div>
+<%- include('../partials/foot') %>

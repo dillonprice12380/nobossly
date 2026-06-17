@@ -1,0 +1,94 @@
+<%- include('../partials/head') %>
+<a class="muted" href="<%= typeof backLink !== 'undefined' ? backLink : '/admin/content' %>">← Back</a>
+<div class="page-head"><div><h1><%= (typeof kind !== 'undefined' && kind === 'guide') ? (isNew ? 'New guide' : 'Edit guide') : (isNew ? 'New content' : 'Edit content') %></h1></div></div>
+<form method="post" action="<%= typeof formAction !== 'undefined' ? formAction : '/admin/content/save' %>" id="editor-form">
+  <% if (!isNew) { %><input type="hidden" name="id" value="<%= item.id %>"><input type="hidden" name="was_published" value="<%= item.status === 'published' ? '1' : '' %>"><% } %>
+  <input type="hidden" name="blocks" id="blocks-field">
+  <div class="editor-wrap">
+    <div>
+      <div class="card">
+        <div class="grid-2" <% if (typeof kind !== 'undefined' && kind === 'guide') { %>style="display:none"<% } %>>
+          <label>Type
+            <select name="type" id="ctype">
+              <option value="blog" <%= item.type === 'blog' ? 'selected' : '' %>>Blog post</option>
+              <option value="page" <%= item.type === 'page' ? 'selected' : '' %>>Page</option>
+              <option value="custom" <%= item.type === 'custom' ? 'selected' : '' %>>Custom post type</option>
+            </select>
+          </label>
+          <label>Custom type name<input name="custom_type" value="<%= item.custom_type || '' %>" placeholder="e.g. case-study"></label>
+        </div>
+        <label>Title<input name="title" id="f-title" value="<%= item.title || '' %>" required></label>
+        <label>Excerpt<textarea name="excerpt" id="f-excerpt" rows="2"><%= item.excerpt || '' %></textarea></label>
+      </div>
+      <% 
+        var __bl = item.blocks;
+        var __blocksMeaningful = Array.isArray(__bl) && __bl.some(function(b){ return (b && ((b.text&&b.text.trim()) || (b.html&&b.html.trim()) || (b.src&&b.src.trim()) || (b.css&&b.css.trim()) || (b.js&&b.js.trim()))); });
+        var __mode = __blocksMeaningful ? 'blocks' : 'raw';
+      %>
+      <input type="hidden" name="mode" id="mode-field" value="<%= __mode %>">
+      <div class="card">
+        <div class="editor-mode-toggle">
+          <button type="button" class="mode-btn <%= __mode==='blocks'?'active':'' %>" data-mode="blocks">📝 Visual blocks</button>
+          <button type="button" class="mode-btn <%= __mode==='raw'?'active':'' %>" data-mode="raw">&lt;/&gt; Raw HTML</button>
+        </div>
+        <div id="mode-blocks" style="<%= __mode==='raw'?'display:none':'' %>">
+          <h3>📝 Content blocks</h3>
+          <p class="format-hint">Select text and use the B / I / 🔗 buttons — or type <code>**bold**</code>, <code>*italic*</code>, <code>[link text](https://example.com)</code> in any paragraph, heading, or list item.</p>
+          <div class="blocks" id="blocks"></div>
+          <div class="add-block-bar">
+            <button type="button" data-add="p">+ Paragraph</button>
+            <button type="button" data-add="h1">+ H1</button>
+            <button type="button" data-add="h2">+ H2</button>
+            <button type="button" data-add="h3">+ H3</button>
+            <button type="button" data-add="ul">+ Bullet list</button>
+            <button type="button" data-add="ol">+ Numbered list</button>
+            <button type="button" data-add="img">+ Image</button>
+            <button type="button" data-add="html">+ HTML</button>
+            <button type="button" data-add="advanced">+ Advanced (HTML/CSS/JS)</button>
+          </div>
+          <p class="muted small" style="margin-top:.6rem">Tips: **bold**, *italic*, [link](https://…) work inside text blocks. One list item per line.</p>
+        </div>
+        <div id="mode-raw" style="<%= __mode==='blocks'?'display:none':'' %>">
+          <h3>&lt;/&gt; Raw HTML</h3>
+          <p class="format-hint">Paste full HTML — including <code>&lt;style&gt;</code>, <code>&lt;div&gt;</code>, headings and inline markup. It is saved and rendered exactly as written. Use <code>&lt;h2&gt;</code>/<code>&lt;h3&gt;</code> headings so the table of contents builds automatically.</p>
+          <textarea name="body" id="raw-html" class="code" rows="24" spellcheck="false"><%= item.body || '' %></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="seo-panel">
+      <div class="card">
+        <h3>🔍 SEO</h3>
+        <div class="center"><span class="seo-score" id="seo-score">–</span><span class="muted">/100</span></div>
+        <ul class="seo-checks" id="seo-checks"></ul>
+        <label>Meta title<input name="seo_title" id="f-seotitle" value="<%= item.seo_title || '' %>" maxlength="70"><span class="muted small" id="seotitle-count"></span></label>
+        <label>Meta description<textarea name="seo_description" id="f-seodesc" rows="3" maxlength="170"><%= item.seo_description || '' %></textarea><span class="muted small" id="seodesc-count"></span></label>
+        <label>Slug<input name="slug" id="f-slug" value="<%= item.slug || '' %>" placeholder="auto-generated from title"></label>
+        <label>Featured image URL<input name="featured_image" id="f-featimg" value="<%= item.featured_image || '' %>" placeholder="https://…"></label>
+      </div>
+      <div class="card">
+        <label>Sidebar
+          <select name="sidebar_id">
+            <option value="">Default (similar posts)</option>
+            <% (typeof sidebars !== 'undefined' ? sidebars : []).forEach(s => { %>
+              <option value="<%= s.id %>" <%= item.sidebar_id === s.id ? 'selected' : '' %>><%= s.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <p class="muted small">Shown next to published blogs and guides. <a href="/admin/sidebars" target="_blank">Manage sidebars ↗</a></p>
+        <label>Status
+          <select name="status"><option value="draft" <%= item.status === 'draft' ? 'selected' : '' %>>Draft</option><option value="published" <%= item.status === 'published' ? 'selected' : '' %>>Published</option></select>
+        </label>
+        <button class="btn btn-primary" style="width:100%">Save</button>
+        <% if (!isNew && item.status === 'published') { %>
+          <a class="btn btn-ghost" style="width:100%;margin-top:.5rem;text-align:center" target="_blank" href="<%= item.type === 'blog' ? '/blog/' + item.slug : '/' + item.slug %>">View live ↗</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</form>
+<script>
+  window.__INITIAL_BLOCKS = <%- JSON.stringify(item.blocks || null) %>;
+  window.__LEGACY_BODY = <%- JSON.stringify(item.body || '') %>;
+</script>
+<script src="/js/editor.js?v=3"></script>
+<%- include('../partials/foot') %>

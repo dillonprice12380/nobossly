@@ -1,0 +1,83 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div><h1>💰 Budget & Expenses</h1><p class="muted"><%= monthLabel %> — plan your spend, track every dollar.</p></div>
+  <a class="btn btn-ghost" href="/dashboard">← Dashboard</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>This month</h3>
+    <p class="big-number">$<%= totalSpent.toFixed(2) %> <span class="muted small">spent<%= totalBudget ? ' of $' + totalBudget.toFixed(2) + ' budgeted' : '' %></span></p>
+    <% if (totalBudget) { const pct = Math.min(100, Math.round(totalSpent / totalBudget * 100)); %>
+      <div class="budget-bar"><div class="budget-fill <%= pct >= 100 ? 'over' : pct >= 80 ? 'warn' : '' %>" style="width:<%= pct %>%"></div></div>
+      <p class="muted small"><%= pct %>% of monthly budget used</p>
+    <% } %>
+    <h3 style="margin-top:1rem">Categories</h3>
+    <% if (!cats.length) { %><p class="muted small">Add a category and limit below to start budgeting.</p><% } %>
+    <% cats.forEach(cat => { const b = budgets.find(x => x.category === cat); const spent = spentByCat[cat] || 0; const lim = b ? Number(b.monthly_limit) : 0; const pct = lim ? Math.min(100, Math.round(spent / lim * 100)) : 0; %>
+      <div class="budget-row">
+        <div class="budget-row-head">
+          <strong><%= cat %></strong>
+          <span class="muted small">$<%= spent.toFixed(2) %><%= lim ? ' / $' + lim.toFixed(2) : '' %></span>
+          <% if (b) { %><form method="post" action="/budget/category/<%= b.id %>/delete" class="inline"><button class="btn-x" title="Remove category">×</button></form><% } %>
+        </div>
+        <% if (lim) { %><div class="budget-bar"><div class="budget-fill <%= spent > lim ? 'over' : pct >= 80 ? 'warn' : '' %>" style="width:<%= pct %>%"></div></div><% } %>
+      </div>
+    <% }) %>
+    <form method="post" action="/budget/category" class="inline-form" style="margin-top:.8rem">
+      <input name="category" placeholder="Category (e.g. Marketing)" required maxlength="40">
+      <input name="monthly_limit" type="number" step="0.01" min="0" placeholder="Monthly limit $">
+      <button class="btn btn-ghost btn-sm">Set budget</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Add expense</h3>
+    <form method="post" action="/budget/expense">
+      <div class="form-grid-2">
+        <label>Amount ($)<input name="amount" type="number" step="0.01" min="0.01" required></label>
+        <label>Date<input name="spent_at" type="date" value="<%= new Date().toISOString().slice(0,10) %>"></label>
+      </div>
+      <label>Category
+        <select name="category" id="exp-cat" required>
+          <option value="" disabled selected>Choose a category…</option>
+          <% if (cats.length) { %><optgroup label="Your categories"><% cats.forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %></optgroup><% } %>
+          <optgroup label="Common categories">
+            <% const stdCats = ['Advertising','Marketing','Software & SaaS','Web Hosting & Domains','Office Supplies','Equipment & Hardware','Rent & Workspace','Utilities','Phone & Internet','Travel','Meals & Entertainment','Shipping & Postage','Inventory & Materials','Manufacturing','Packaging','Legal Fees','Accounting & Bookkeeping','Consulting & Contractors','Salaries & Payroll','Employee Benefits','Insurance','Taxes & Licenses','Bank Fees','Payment Processing Fees','Interest & Loans','Education & Courses','Books & Subscriptions','Memberships & Dues','Research & Development','Design & Creative','Photography & Video','Printing','Events & Conferences','Networking','Customer Support Tools','Maintenance & Repairs','Cleaning','Security','Vehicle & Fuel','Parking & Tolls','Health & Wellness','Charity & Donations','Gifts','Groceries','Personal Care','Entertainment','Streaming & Subscriptions','Miscellaneous']; %>
+            <% stdCats.filter(c => !cats.includes(c)).forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %>
+          </optgroup>
+          <option value="__other">Other…</option>
+        </select>
+      </label>
+      <label id="exp-cat-other" style="display:none">Custom category<input name="category_other" maxlength="40" placeholder="Type your own category"></label>
+      <label>Note (optional)<input name="note" maxlength="200" placeholder="What was it for?"></label>
+      <button class="btn btn-primary">Add expense</button>
+    </form>
+    <h3 style="margin-top:1.2rem">Recent expenses</h3>
+    <% if (!expenses.length) { %><p class="muted small">Nothing logged this month yet.</p><% } %>
+    <table class="table small" style="width:100%">
+      <% expenses.slice(0, 30).forEach(e => { %>
+        <tr>
+          <td><%= new Date(e.spent_at + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></td>
+          <td><strong><%= e.category %></strong><% if (e.note) { %><br><span class="muted small"><%= e.note %></span><% } %></td>
+          <td>$<%= Number(e.amount).toFixed(2) %></td>
+          <td><form method="post" action="/budget/expense/<%= e.id %>/delete" class="inline"><button class="btn-x" title="Delete">×</button></form></td>
+        </tr>
+      <% }) %>
+    </table>
+  </div>
+</div>
+<script>
+  (function () {
+    var sel = document.getElementById('exp-cat');
+    var other = document.getElementById('exp-cat-other');
+    if (!sel || !other) return;
+    sel.addEventListener('change', function () {
+      var show = sel.value === '__other';
+      other.style.display = show ? '' : 'none';
+      other.querySelector('input').required = show;
+      if (show) other.querySelector('input').focus();
+    });
+  })();
+</script>
+<%- include('partials/foot') %>

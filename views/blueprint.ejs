@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<a class="muted" href="/ideas">← All ideas</a>
+<div class="page-head">
+  <div><h1>📐 <%= bp.business_name %></h1><p class="lead"><%= bp.tagline %></p></div>
+  <% if (hasSprint) { %><a class="btn btn-primary" href="/dashboard">Go to sprint →</a>
+  <% } else { %><a class="btn btn-primary btn-lg" href="/dashboard/sprint/start/<%= bp.id %>">🏃 Start my first sprint</a><% } %>
+</div>
+<div class="grid-2">
+  <div class="card span-2"><h3>Positioning</h3><p><%= bp.positioning %></p><h4>Elevator pitch</h4><p class="quote"><%= bp.elevator_pitch %></p></div>
+  <div class="card"><h3>Ideal customer: <%= bp.icp_archetype %></h3><p><%= bp.icp_description %></p>
+    <h4>Demographics</h4><ul><% (bp.icp_demographics||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+    <h4>Pain points</h4><ul><% (bp.icp_pain_points||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+    <h4>Where to find them</h4><ul><% (bp.icp_watering_holes||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul></div>
+  <div class="card"><h3>Revenue model: <%= bp.revenue_type %></h3><p><%= bp.revenue_rationale %></p>
+    <h4>Pricing</h4>
+    <% (bp.pricing_tiers||[]).forEach(t=>{ %><p><strong><%= t.name %></strong> — <%= t.price %><br><span class="muted"><%= t.includes %></span></p><% }) %>
+    <h4>Projections</h4><p>Month 3: <strong><%= bp.projection_month3 %></strong> · Month 6: <strong><%= bp.projection_month6 %></strong> · Month 12: <strong><%= bp.projection_month12 %></strong></p></div>
+  <div class="card"><h3>Differentiators</h3><ul><% (bp.differentiators||[]).forEach(x=>{ %><li><%= typeof x==='string'?x:JSON.stringify(x) %></li><% }) %></ul>
+    <h4>Roadmap</h4><p><%= bp.roadmap_summary %></p></div>
+  <div class="card"><h3>Go-to-market</h3><p><%= bp.gtm_strategy %></p>
+    <h4>Landing customer #1</h4><p><%= bp.gtm_first_customer %></p>
+    <h4>Channels</h4><% (bp.gtm_channels||[]).forEach(c=>{ %><p><strong><%= c.channel %></strong> <span class="muted">(<%= c.effort %> effort)</span><br><%= c.why %></p><% }) %></div>
+  <div class="card span-2"><h3>Week 1 actions</h3><ol><% (bp.gtm_week1_actions||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ol></div>
+</div>
+<%- include('partials/foot') %>

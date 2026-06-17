@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= title %> · NoBossly</title>
+<meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly turns your skills and passions into a real business with AI-matched ideas, launch blueprints, and weekly sprints.' %>">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dkxa3rup0/image/upload/v1779381514/N_i8pl8n.png">
+<link rel="stylesheet" href="/css/style.css?v=12">
+</head>
+<body class="<%= typeof bodyTheme !== 'undefined' ? bodyTheme : 'theme-light' %>">
+<%- include('icons') %>
+<nav class="nav">
+  <a class="brand" href="/"><img class="logo-img" src="https://res.cloudinary.com/dkxa3rup0/image/upload/v1779381926/nobossly-logo_a5ew2x.png" alt="NoBossly"></a>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <div class="nav-links" id="nav-links">
+    <% if (user) { %>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/community">Community</a>
+      <div class="nav-dropdown" data-dd>
+        <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
+        <div class="nav-dd-menu">
+          <a href="/blog"><svg class="icon"><use href="#i-blog"/></svg> Blog</a>
+          <a href="/guides"><svg class="icon"><use href="#i-milestone"/></svg> Guides</a>
+          <a href="/help"><svg class="icon"><use href="#i-help"/></svg> Help Center</a>
+        </div>
+      </div>
+      <a class="bell" href="/messages" title="Messages"><svg class="nav-ico" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><% if (typeof unreadMsgs !== 'undefined' && unreadMsgs > 0) { %><span class="nav-badge"><%= unreadMsgs > 9 ? '9+' : unreadMsgs %></span><% } %></a>
+      <a class="bell" href="/notifications" title="Notifications"><svg class="nav-ico" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><% if (typeof unreadCount !== 'undefined' && unreadCount > 0) { %><span class="nav-badge"><%= unreadCount > 9 ? '9+' : unreadCount %></span><% } %></a>
+      <% if (profile && profile.is_admin) { %><a href="/admin" title="Admin"><svg class="nav-ico" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></a><% } %>
+      <div class="avatar-menu" id="avatar-menu">
+        <button class="avatar-btn" id="avatar-btn" aria-haspopup="true" aria-expanded="false">
+          <% if (profile && profile.avatar_url) { %><img src="<%= profile.avatar_url %>" alt=""><% } else { %><%= ((profile && (profile.display_name || profile.username)) || '?').slice(0,1).toUpperCase() %><% } %>
+        </button>
+        <div class="avatar-dropdown" id="avatar-dropdown">
+          <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
+          <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
+          <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
+          <% if (typeof plan !== 'undefined' && plan === 'free') { %><a href="/pricing"><svg class="icon"><use href="#i-upgrade"/></svg> Upgrade</a><% } %>
+          <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
+        </div>
+      </div>
+    <% } else { %>
+      <a href="/community">Community</a>
+      <div class="nav-dropdown" data-dd>
+        <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
+        <div class="nav-dd-menu">
+          <a href="/blog"><svg class="icon"><use href="#i-blog"/></svg> Blog</a>
+          <a href="/guides"><svg class="icon"><use href="#i-milestone"/></svg> Guides</a>
+          <a href="/help"><svg class="icon"><use href="#i-help"/></svg> Help Center</a>
+        </div>
+      </div>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Log in</a>
+      <a class="btn btn-primary" href="/signup">Get started</a>
+    <% } %>
+  </div>
+</nav>
+<% if (typeof pendingDeletion !== 'undefined' && pendingDeletion) { %>
+<div class="warn-banner">⚠️ Your account is scheduled for permanent deletion on <%= new Date(new Date(pendingDeletion).getTime() + 7*86400000).toLocaleDateString() %>. <form method="post" action="/account/cancel-deletion" class="inline"><button class="btn btn-sm btn-primary">Cancel deletion</button></form></div>
+<% } %>
+<main class="container">

@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Guides</h1><p class="muted">Step-by-step playbooks for building your business.</p></div></div>
+<% posts.forEach(p => { %>
+  <a class="card post-card" href="/guides/<%= p.slug %>">
+    <div class="post-card-top">
+      <% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty">📘</div><% } %>
+      <h3 class="post-card-title"><%= p.title %></h3>
+    </div>
+    <% if (p.excerpt) { %><p class="muted post-card-excerpt"><%= p.excerpt %></p><% } %>
+  </a>
+<% }) %>
+<% if (!posts.length) { %><div class="card center"><p>No guides yet — check back soon.</p></div><% } %>
+<%- include('partials/foot') %>

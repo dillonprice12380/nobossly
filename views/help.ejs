@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-help"/></svg> Help Center</h1><p class="muted">Quick answers to the most common questions.</p></div></div>
+
+<div class="grid">
+  <a class="card idea-card" href="#getting-started"><h3><svg class="icon"><use href="#i-idea"/></svg> Getting started</h3><p class="muted small">Ideas, the questionnaire, and your first sprint.</p></a>
+  <a class="card idea-card" href="#plans"><h3><svg class="icon"><use href="#i-upgrade"/></svg> Plans &amp; billing</h3><p class="muted small">Free vs paid, upgrading, and cancelling.</p></a>
+  <a class="card idea-card" href="#account"><h3><svg class="icon"><use href="#i-setting"/></svg> Your account</h3><p class="muted small">Email, password, privacy, and deletion.</p></a>
+  <a class="card idea-card" href="#community"><h3><svg class="icon"><use href="#i-community"/></svg> Community</h3><p class="muted small">Forum, members, teams, and messaging.</p></a>
+</div>
+
+<div class="card" id="getting-started">
+  <h2><svg class="icon"><use href="#i-idea"/></svg> Getting started</h2>
+  <details><summary>How does idea generation work?</summary><p class="muted">After you sign up, complete the founder questionnaire — your skills, passions, budget, schedule, and appetite for competition. Our AI then generates business ideas matched to you, each scored for success likelihood, demand, and passion fit.</p></details>
+  <details><summary>What is a launch blueprint?</summary><p class="muted">Pick an idea you love and NoBossly builds a complete launch plan: positioning, ideal customer profile, pricing, revenue projections, and a go-to-market checklist. Blueprints are part of the paid plan.</p></details>
+  <details><summary>What are 7-day sprints?</summary><p class="muted">Sprints break your launch into focused weekly pushes with AI-planned tasks, daily check-ins, XP, and streaks to keep you accountable.</p></details>
+  <details><summary>How do tasks work on the free plan?</summary><p class="muted">Free members can manage up to 8 open tasks at a time manually. Paid plans unlock unlimited tasks plus AI roadmaps that disperse tasks with deadlines automatically.</p></details>
+</div>
+
+<div class="card" id="plans">
+  <h2><svg class="icon"><use href="#i-upgrade"/></svg> Plans &amp; billing</h2>
+  <details><summary>What's included in the free plan?</summary><p class="muted">One AI idea generation, full community forum access, up to 8 manual tasks at a time, and your member profile with levels and badges.</p></details>
+  <details><summary>What do paid plans add?</summary><p class="muted">Unlimited idea generations, AI roadmaps and automatic task dispersement, launch blueprints, challenges, milestones, and collaborations &amp; teams. See <a href="/pricing">Pricing</a> for current rates.</p></details>
+  <details><summary>How do I cancel my subscription?</summary><p class="muted">Go to <a href="/account">Account settings</a> → Subscription → End subscription. You keep full access until the end of your current billing period. Lifetime purchases never expire.</p></details>
+  <details><summary>Is payment secure?</summary><p class="muted">All payments are processed by Stripe — NoBossly never sees or stores your card details.</p></details>
+</div>
+
+<div class="card" id="account">
+  <h2><svg class="icon"><use href="#i-setting"/></svg> Your account</h2>
+  <details><summary>How do I change my email or password?</summary><p class="muted">Both can be updated in <a href="/account">Account settings</a>. Email changes require confirming a link sent to both your old and new address.</p></details>
+  <details><summary>What's the difference between a public and private profile?</summary><p class="muted">Public profiles show your full profile to everyone. Private profiles only reveal your username, level, awards and badges. Toggle this in Account settings.</p></details>
+  <details><summary>How do I deactivate or delete my account?</summary><p class="muted">In Account settings: deactivating hides your profile and signs you out — logging back in reactivates it. Deleting schedules permanent removal after a 7-day grace period, during which you can cancel by logging back in.</p></details>
+</div>
+
+<div class="card" id="community">
+  <h2><svg class="icon"><use href="#i-community"/></svg> Community</h2>
+  <details><summary>Where do I meet other founders?</summary><p class="muted">The <a href="/community">Community</a> forum is open to everyone. Browse <a href="/members">Members</a> to see profiles, and message founders directly.</p></details>
+  <details><summary>How do collaborations and teams work?</summary><p class="muted">Paid members can create projects and invite members by username. Teammates can be assigned tasks on your board.</p></details>
+  <details><summary>What are challenges and milestones?</summary><p class="muted">Challenges are timed pushes (30/60/90-day) pinned to your dashboard; milestones mark real-world wins like "registered my business" — both award XP and badges.</p></details>
+</div>
+
+<div class="card center">
+  <h3>Still stuck?</h3>
+  <p class="muted">Ask in the <a href="/community">community forum</a> — the team and other founders are happy to help.</p>
+</div>
+<%- include('partials/foot') %>

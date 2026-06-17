@@ -1,0 +1,64 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/community">← Forum</a>
+<div class="page-head"><div><h1>🤝 Collaboration hub</h1><p class="muted">Find partners, collaborators, and beta testers.</p></div></div>
+<div class="grid-2">
+  <div>
+    <h2>Open collaboration requests</h2>
+    <% collabs.forEach(c => { %>
+      <div class="card">
+        <span class="tag"><%= c.role_type %></span>
+        <h3><%= c.title %></h3>
+        <p class="muted"><%= c.description %></p>
+        <% if ((c.skills_needed || []).length) { %><p class="small">Needs: <% c.skills_needed.forEach(s => { %><span class="chip"><%= s %></span> <% }) %></p><% } %>
+        <% if (c.offering) { %><p class="small muted">Offering: <%= c.offering %></p><% } %>
+        <p class="small muted">by <%= (pmap[c.requester_id] || {}).display_name || 'founder' %></p>
+      </div>
+    <% }) %>
+    <% if (!collabs.length) { %><div class="card center muted">No open requests yet.</div><% } %>
+    <div class="card">
+      <h3>Post a request</h3>
+      <form method="post" action="/community/collab">
+        <label>Looking for
+          <select name="role_type"><option value="co-founder">Co-founder</option><option value="collaborator" selected>Collaborator</option><option value="partner">Partner</option><option value="mentor">Mentor</option><option value="freelancer">Freelancer</option></select>
+        </label>
+        <label>Title<input name="title" required></label>
+        <label>Description<textarea name="description" rows="2"></textarea></label>
+        <label>Skills needed (comma-separated)<input name="skills_needed"></label>
+        <label>What you offer<input name="offering"></label>
+        <button class="btn btn-primary">Post</button>
+      </form>
+    </div>
+  </div>
+  <div>
+    <h2>Beta programs</h2>
+    <% betas.forEach(b => { %>
+      <div class="card">
+        <h3><%= b.title %></h3>
+        <p class="muted"><%= b.description %></p>
+        <% if (b.what_testing) { %><p class="small">Testing: <%= b.what_testing %></p><% } %>
+        <% if (b.ideal_tester) { %><p class="small muted">Ideal tester: <%= b.ideal_tester %></p><% } %>
+        <p class="small muted"><%= b.tester_count || 0 %>/<%= b.max_testers %> testers · by <%= (pmap[b.owner_id] || {}).display_name || 'founder' %></p>
+        <% if (enrolled.has(b.id)) { %><span class="chip chip-success">✅ Enrolled</span>
+        <% } else if (user && b.owner_id !== user.id) { %>
+          <form method="post" action="/community/beta/<%= b.id %>/join"><button class="btn btn-primary btn-sm">Join as tester (+15 XP)</button></form>
+        <% } %>
+      </div>
+    <% }) %>
+    <% if (!betas.length) { %><div class="card center muted">No open beta programs yet.</div><% } %>
+    <div class="card">
+      <h3>Launch a beta program</h3>
+      <form method="post" action="/community/beta">
+        <label>Title<input name="title" required></label>
+        <label>Description<textarea name="description" rows="2"></textarea></label>
+        <label>What are you testing?<input name="what_testing"></label>
+        <label>Ideal tester<input name="ideal_tester"></label>
+        <div class="grid-2">
+          <label>Feedback format<input name="feedback_format" value="Written feedback"></label>
+          <label>Max testers<input type="number" name="max_testers" value="10" min="1" max="500"></label>
+        </div>
+        <button class="btn btn-primary">Launch</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/foot') %>

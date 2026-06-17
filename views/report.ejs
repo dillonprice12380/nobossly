@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<div class="auth-card card" style="max-width:520px">
+    <% if (done) { %>
+      <h1>✅ Report submitted</h1>
+      <p class="muted">Thanks for helping keep the community safe. Our team will review this shortly.</p>
+      <a class="btn btn-primary" href="<%= back %>">Back</a>
+    <% } else { %>
+      <h1>Report this <%= label %></h1>
+      <p class="muted small">Reports are confidential — the person you report won't know who reported them.</p>
+      <form method="post" action="/report">
+        <input type="hidden" name="type" value="<%= type %>">
+        <input type="hidden" name="id" value="<%= id %>">
+        <input type="hidden" name="back" value="<%= back %>">
+        <label>Reason
+          <select name="reason" required>
+            <option value="spam">Spam or self-promotion</option>
+            <option value="harassment">Harassment or bullying</option>
+            <option value="hate">Hate speech</option>
+            <option value="scam">Scam or fraud</option>
+            <option value="inappropriate">Inappropriate content</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label>Details (optional)<textarea name="details" rows="4" placeholder="Tell us what happened…"></textarea></label>
+        <div class="cta-row">
+          <button class="btn btn-primary">Submit report</button>
+          <a class="btn btn-ghost" href="<%= back %>">Cancel</a>
+        </div>
+      </form>
+    <% } %>
+</div>
+<%- include('partials/foot') %>

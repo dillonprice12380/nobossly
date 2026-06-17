@@ -1,0 +1,110 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div><h1><svg class="icon icon-lg"><use href="#i-task"/></svg> Tasks</h1><p class="muted">Your command center. Drag cards between columns.</p></div>
+  <button class="btn btn-primary" onclick="document.getElementById('new-task-modal').classList.remove('hidden')">+ New task</button>
+</div>
+
+<div class="toolbar">
+  <a class="chip <%= !listFilter ? 'chip-active' : '' %>" href="/tasks">All lists</a>
+  <% lists.forEach(l => { %>
+    <a class="chip <%= listFilter === l.id ? 'chip-active' : '' %>" href="/tasks?list=<%= l.id %>" style="border-color:<%= l.color %>"><%= l.name %></a>
+  <% }) %>
+  <form method="post" action="/tasks/list" class="inline-form">
+    <input name="name" placeholder="New list…" required>
+    <button class="btn btn-ghost btn-sm">Add</button>
+  </form>
+</div>
+
+<div class="kanban">
+  <% const labels = { todo: '📋 To do', in_progress: '🔨 In progress', blocked: '🚧 Blocked', done: '✅ Done' }; %>
+  <% statuses.forEach(st => { %>
+    <div class="kanban-col" data-status="<%= st %>">
+      <h3><%= labels[st] %> <span class="muted">(<%= byStatus[st].length %>)</span></h3>
+      <div class="kanban-cards" data-status="<%= st %>">
+        <% byStatus[st].forEach(t => { %>
+          <div class="kcard" draggable="true" data-id="<%= t.id %>" data-task="<%= JSON.stringify({ id: t.id, title: t.title, description: t.description, priority: t.priority, status: t.status, due_date: t.due_date, due_time: t.due_time ? String(t.due_time).slice(0,5) : '', list_id: t.list_id, labels: t.labels || [], assigned_to: t.assigned_to }) %>">
+            <div class="kcard-top">
+              <span class="tag tag-<%= t.priority %>"><%= t.priority %></span>
+              <button class="kdel" title="Delete">×</button>
+            </div>
+            <strong class="ktitle"><%= t.title %></strong>
+            <% if (t.description) { %><p class="muted small"><%= t.description %></p><% } %>
+            <% if ((subs[t.id] || []).length) { %>
+              <ul class="subtasks">
+                <% subs[t.id].forEach(s => { %>
+                  <li class="<%= s.status === 'done' ? 'sub-done' : '' %>" data-id="<%= s.id %>"><input type="checkbox" class="subchk" <%= s.status === 'done' ? 'checked' : '' %>> <%= s.title %></li>
+                <% }) %>
+              </ul>
+            <% } %>
+            <div class="kmeta">
+              <% if (t.due_date) { %><span class="chip <%= new Date(t.due_date) < new Date() && t.status !== 'done' ? 'chip-danger' : '' %>">📅 <%= t.due_date %><%= t.due_time ? ' ' + String(t.due_time).slice(0,5) : '' %></span><% } %>
+              <% if (t.assigned_to && t.assigned_to !== me && pmap[t.assigned_to]) { %><span class="chip assignee-chip">→ <%= pmap[t.assigned_to].display_name || pmap[t.assigned_to].username %></span><% } %>
+              <% if (t.user_id !== me && pmap[t.user_id]) { %><span class="chip assignee-chip">from <%= pmap[t.user_id].display_name || pmap[t.user_id].username %></span><% } %>
+              <% (t.labels || []).forEach(lb => { %><span class="chip"><%= lb %></span><% }) %>
+              <select class="kstatus" data-id="<%= t.id %>" title="Change status">
+                <% statuses.forEach(st2 => { %><option value="<%= st2 %>" <%= t.status === st2 ? 'selected' : '' %>><%= labels[st2] %></option><% }) %>
+              </select>
+              <button class="btn btn-ghost btn-sm addsub" data-id="<%= t.id %>">+ subtask</button>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<div id="new-task-modal" class="modal hidden">
+  <div class="modal-card card">
+    <button type="button" class="modal-close" onclick="document.getElementById('new-task-modal').classList.add('hidden')">×</button>
+    <h3>New task</h3>
+    <form id="new-task-form">
+      <label>Title<input name="title" required></label>
+      <label>Description<textarea name="description" rows="2"></textarea></label>
+      <div class="grid-2">
+        <label>Priority<select name="priority"><option>urgent</option><option>high</option><option selected>medium</option><option>low</option></select></label>
+        <label>Assign to<select name="assigned_to"><option value="<%= me %>">Me (<%= profile.display_name || profile.username %>)</option><% team.forEach(p => { %><option value="<%= p.id %>"><%= p.display_name || p.username %></option><% }) %></select></label>
+      </div>
+      <div class="grid-2">
+        <label>📅 Due date<input type="date" name="due_date"></label>
+        <label>🕐 Due time<input type="time" name="due_time"></label>
+      </div>
+      <label>List<select name="list_id"><option value="">None</option><% lists.forEach(l => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %></select></label>
+      <label>Labels (comma-separated)<input name="labels"></label>
+      <div class="cta-row">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('new-task-modal').classList.add('hidden')">Cancel</button>
+        <button class="btn btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div id="edit-task-modal" class="modal hidden">
+  <div class="modal-card card">
+    <button type="button" class="modal-close" onclick="document.getElementById('edit-task-modal').classList.add('hidden')">&times;</button>
+    <h3>Edit task</h3>
+    <form id="edit-task-form">
+      <input type="hidden" name="id" id="e-id">
+      <label>Title<input name="title" id="e-title" required></label>
+      <label>Description<textarea name="description" id="e-description" rows="3"></textarea></label>
+      <div class="grid-2">
+        <label>Status<select name="status" id="e-status"><% statuses.forEach(st2 => { %><option value="<%= st2 %>"><%= labels[st2] %></option><% }) %></select></label>
+        <label>Priority<select name="priority" id="e-priority"><option>urgent</option><option>high</option><option>medium</option><option>low</option></select></label>
+      </div>
+      <div class="grid-2">
+        <label>Assign to<select name="assigned_to" id="e-assigned"><option value="<%= me %>">Me (<%= profile.display_name || profile.username %>)</option><% team.forEach(p => { %><option value="<%= p.id %>"><%= p.display_name || p.username %></option><% }) %></select></label>
+        <label>List<select name="list_id" id="e-list"><option value="">None</option><% lists.forEach(l => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %></select></label>
+      </div>
+      <div class="grid-2">
+        <label>📅 Due date<input type="date" name="due_date" id="e-date"></label>
+        <label>🕐 Due time<input type="time" name="due_time" id="e-time"></label>
+      </div>
+      <label>Labels (comma-separated)<input name="labels" id="e-labels"></label>
+      <div class="cta-row">
+        <button type="button" class="btn btn-ghost" id="e-delete" style="color:var(--danger)">Delete</button>
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-task-modal').classList.add('hidden')">Cancel</button>
+        <button class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="/js/tasks.js?v=5"></script>
+<%- include('partials/foot') %>

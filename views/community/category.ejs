@@ -1,0 +1,28 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/community">← All categories</a>
+<div class="page-head"><div><h1><%= cat.emoji %> <%= cat.name %></h1><p class="muted"><%= cat.description %></p></div></div>
+<% if (user) { %>
+<div class="card">
+  <h3>Start a thread</h3>
+  <form method="post" action="/community/c/<%= cat.slug %>/thread">
+    <label>Title<input name="title" required maxlength="160"></label>
+    <label>Tags <span class="muted small">(comma separated, up to 5 — e.g. marketing, saas)</span><input name="tags" maxlength="140" placeholder="marketing, growth"></label>
+    <label>Post</label>
+    <input type="hidden" name="body_html">
+    <div data-rich data-placeholder="Share your thoughts… use the toolbar for formatting, images, and link cards"></div>
+    <textarea name="body" rows="3"></textarea>
+    <button class="btn btn-primary">Post thread (+10 XP)</button>
+  </form>
+</div>
+<% } else { %><div class="card center"><p>Sign up to start a thread and get feedback from founders.</p><a class="btn btn-primary" href="/signup">Join free</a></div><% } %>
+<% threads.forEach(t => { %>
+  <a class="card thread-row" href="/community/t/<%= t.id %>">
+    <div><strong><%= t.is_pinned ? '📌 ' : '' %><%= t.is_locked ? '🔒 ' : '' %><%= t.title %></strong>
+    <p class="muted small">by <%= (pmap[t.user_id] || {}).display_name || 'founder' %> · <%= new Date(t.created_at).toLocaleDateString() %></p>
+    <% if (t.tags && t.tags.length) { %><p class="tag-row"><% t.tags.forEach(tg => { %><span class="chip tag-chip">#<%= tg %></span><% }) %></p><% } %></div>
+    <div class="thread-meta"><span class="chip">💬 <%= t.reply_count %></span><span class="chip">👁 <%= t.view_count %></span></div>
+  </a>
+<% }) %>
+<% if (!threads.length) { %><div class="card center"><p>No threads yet — start the first one!</p></div><% } %>
+<script src="/js/forum.js?v=2"></script>
+<%- include('../partials/foot') %>

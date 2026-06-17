@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<a class="muted" href="/members/<%= p.username %>">← My profile</a>
+<div class="card form-card">
+  <h2>Edit profile</h2>
+  <% if (saved) { %><p class="notice">Profile saved.</p><% } %>
+  <form method="post" action="/members/me/edit">
+    <label>Display name<input name="display_name" value="<%= p.display_name || '' %>" maxlength="60"></label>
+    <label>Bio<textarea name="bio" rows="3" maxlength="600"><%= p.bio || '' %></textarea></label>
+    <label>Occupation<input name="occupation" value="<%= p.occupation || '' %>"></label>
+    <label>Location<input name="location" value="<%= p.location || '' %>"></label>
+    <label>Website<input name="website_url" value="<%= p.website_url || '' %>" placeholder="https://"></label>
+    <label>Journey stage
+      <select name="founder_stage">
+        <% ['Dreaming','Validating','Building','Launched','Growing','Scaling'].forEach(o => { %><option <%= p.founder_stage === o ? 'selected' : '' %>><%= o %></option><% }) %>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="notification_emails_enabled" <%= p.notification_emails_enabled !== false ? 'checked' : '' %>> Email me task deadline reminders</label>
+    <button class="btn btn-primary">Save</button>
+  </form>
+</div>
+<%- include('partials/foot') %>

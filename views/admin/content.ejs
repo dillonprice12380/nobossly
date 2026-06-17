@@ -1,0 +1,32 @@
+<%- include('../partials/head') %>
+<div class="page-head">
+  <div><h1>📝 Content</h1></div>
+  <a class="btn btn-primary" href="/admin/content/new<%= type ? '?type=' + type : '' %>">+ New</a>
+</div>
+<%- include('nav') %>
+<div class="toolbar">
+  <a class="chip <%= !type ? 'chip-active' : '' %>" href="/admin/content">All</a>
+  <a class="chip <%= type === 'blog' ? 'chip-active' : '' %>" href="/admin/content?type=blog">Blog</a>
+  <a class="chip <%= type === 'page' ? 'chip-active' : '' %>" href="/admin/content?type=page">Pages</a>
+  <a class="chip <%= type === 'custom' ? 'chip-active' : '' %>" href="/admin/content?type=custom">Custom</a>
+</div>
+<div class="card table-wrap">
+<table class="table">
+  <tr><th>Title</th><th>Type</th><th>Slug</th><th>Status</th><th>Updated</th><th></th></tr>
+  <% items.forEach(i => { %>
+    <tr>
+      <td><strong><%= i.title %></strong></td>
+      <td><%= i.type %><%= i.custom_type ? ' (' + i.custom_type + ')' : '' %></td>
+      <td class="muted">/<%= i.type === 'blog' ? 'blog/' : 'p/' %><%= i.slug %></td>
+      <td><span class="chip <%= i.status === 'published' ? 'chip-success' : '' %>"><%= i.status %></span></td>
+      <td class="muted small"><%= new Date(i.updated_at).toLocaleDateString() %></td>
+      <td class="actions">
+        <a class="btn btn-ghost btn-sm" href="/admin/content/<%= i.id %>/edit">Edit</a>
+        <form method="post" action="/admin/content/<%= i.id %>/delete" class="inline" onsubmit="return confirm('Delete this content?')"><button class="btn btn-ghost btn-sm">Delete</button></form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+</div>
+<% if (!items.length) { %><div class="card center muted">Nothing here yet.</div><% } %>
+<%- include('../partials/foot') %>

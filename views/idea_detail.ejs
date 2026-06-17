@@ -1,0 +1,26 @@
+<%- include('partials/head') %>
+<a class="muted" href="/ideas">← All ideas</a>
+<div class="page-head">
+  <div><span class="tag"><%= idea.category %></span><h1><%= idea.name %></h1><p class="lead"><%= idea.tagline %></p></div>
+</div>
+<div class="scores">
+  <span class="chip">🎯 <%= idea.success_likelihood %>% success likelihood</span>
+  <span class="chip">📈 demand <%= idea.demand_score %>/10</span>
+  <span class="chip">❤️ passion fit <%= idea.passion_score %>/10</span>
+  <span class="chip">⏱ revenue in <%= idea.time_to_revenue %></span>
+</div>
+<div class="cta-row">
+  <% if (blueprintId) { %><a class="btn btn-primary btn-lg" href="/blueprint/<%= blueprintId %>">📐 View launch blueprint</a>
+  <% } else { %><a class="btn btn-primary btn-lg" href="/blueprint/start/<%= idea.id %>">📐 Build my launch blueprint</a><% } %>
+  <form method="post" action="/ideas/<%= idea.id %>/favorite" class="inline"><button class="btn btn-ghost"><%= idea.is_favorited ? '⭐ Favorited' : '☆ Favorite' %></button></form>
+</div>
+<div class="grid-2">
+  <div class="card"><h3>Why this fits you</h3><p><%= idea.why_you %></p><p class="muted"><%= idea.profile_summary %></p></div>
+  <div class="card"><h3>Market analysis</h3><p><%= idea.market_analysis %></p></div>
+  <div class="card"><h3>Competitor landscape</h3><p><%= idea.competitor_landscape %></p></div>
+  <div class="card"><h3>Startup costs</h3>
+    <p>Lean: <strong><%= idea.startup_cost_lean %></strong><br>Standard: <strong><%= idea.startup_cost_standard %></strong><br>Full build: <strong><%= idea.startup_cost_full %></strong></p>
+    <h4>Legal notes</h4><p class="muted"><%= idea.legal_nuances %></p></div>
+  <div class="card span-2"><h3>First steps</h3><p class="pre"><%= idea.first_steps %></p></div>
+</div>
+<%- include('partials/foot') %>

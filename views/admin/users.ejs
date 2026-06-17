@@ -1,0 +1,34 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>👥 Users</h1></div></div>
+<%- include('nav') %>
+<form method="get" class="inline-form"><input name="q" value="<%= search %>" placeholder="Search users…"><button class="btn btn-ghost btn-sm">Search</button></form>
+<div class="card table-wrap">
+<table class="table">
+  <tr><th>User</th><th>Level / XP</th><th>Tier</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+  <% users.forEach(u => { %>
+    <tr>
+      <td><strong><%= u.display_name || u.username %></strong><br><span class="muted small">@<%= u.username %><%= u.is_admin ? ' · 🛡 admin' : '' %></span></td>
+      <td>lvl <%= u.current_level %> · <%= u.xp_total %> XP</td>
+      <td><% const tn = {month:'Founder Monthly',quarter:'Founder Quarterly',year:'Founder Annual',lifetime:'Founder Lifetime'}; %><%= u.is_lifetime ? 'Founder Lifetime' : (tn[u.subscription_tier] || 'Free') %><% if (u.subscription_status === 'active' && !u.is_lifetime && u.subscription_tier) { %> <span class="chip chip-success">active</span><% } %></td>
+      <td><%= u.account_status || 'active' %></td>
+      <td><%= new Date(u.created_at).toLocaleDateString() %></td>
+      <td class="actions">
+        <form method="post" action="/admin/users/<%= u.id %>" class="inline"><input type="hidden" name="action" value="toggle_admin"><button class="btn btn-ghost btn-sm"><%= u.is_admin ? 'Revoke admin' : 'Make admin' %></button></form>
+        <form method="post" action="/admin/users/<%= u.id %>" class="inline"><input type="hidden" name="action" value="toggle_status"><button class="btn btn-ghost btn-sm"><%= u.account_status === 'suspended' ? 'Reactivate' : 'Suspend' %></button></form>
+        <form method="post" action="/admin/users/<%= u.id %>" class="inline">
+          <input type="hidden" name="action" value="grant_plan">
+          <select name="tier" class="sm-select">
+            <option value="free">Free</option>
+            <option value="month">Founder Monthly</option>
+            <option value="quarter">Founder Quarterly</option>
+            <option value="year">Founder Annual</option>
+            <option value="lifetime">Founder Lifetime</option>
+          </select>
+          <button class="btn btn-ghost btn-sm">Grant plan</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+</div>
+<%- include('../partials/foot') %>

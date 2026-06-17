@@ -1,0 +1,16 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/community/t/<%= thread.id %>">← Back to thread</a>
+<div class="page-head"><div><h1>✏️ Edit thread</h1></div></div>
+<div class="card">
+  <form method="post" action="/community/t/<%= thread.id %>/edit">
+    <label>Title<input name="title" required maxlength="160" value="<%= thread.title %>"></label>
+    <label>Tags <span class="muted small">(comma separated, up to 5 — e.g. marketing, saas)</span><input name="tags" maxlength="140" value="<%= (thread.tags || []).join(', ') %>"></label>
+    <label>Post</label>
+    <input type="hidden" name="body_html">
+    <div data-rich data-placeholder="Share your thoughts…"><template><%- thread.body_html || ('<p>' + (thread.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</p>') %></template></div>
+    <textarea name="body" rows="3"></textarea>
+    <div class="cta-row"><button class="btn btn-primary">Save changes</button> <a class="btn btn-ghost" href="/community/t/<%= thread.id %>">Cancel</a></div>
+  </form>
+</div>
+<script src="/js/forum.js?v=2"></script>
+<%- include('../partials/foot') %>

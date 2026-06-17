@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-profile"/></svg> Members</h1><p class="muted">The NoBossly founder community.</p></div></div>
+<% if (!members.length) { %>
+  <div class="card center"><p class="muted">No members yet.</p></div>
+<% } else { %>
+  <div class="grid">
+    <% members.forEach(m => { const lvl = levels.find(l => l.level === (m.current_level || 1)) || { emoji: '🌱', title: 'Dreamer' }; %>
+      <a class="card idea-card" href="/members/<%= m.username %>">
+        <div class="profile-head" style="align-items:center">
+          <div class="avatar-circle"><%= ((m.profile_is_public === false ? m.username : (m.display_name || m.username)) || '?').slice(0,1).toUpperCase() %></div>
+          <div>
+            <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
+            <% if (m.profile_is_public === false) { %><span class="chip" style="margin-left:.3rem">🔒 private</span><% } %>
+            <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> — <%= lvl.title %> · ⚡ <%= m.xp_total || 0 %> XP</p>
+          </div>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('partials/foot') %>

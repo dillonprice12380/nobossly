@@ -1,0 +1,18 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-blog"/></svg> Blog</h1></div></div>
+<% posts.forEach(p => { %>
+  <a class="card post-card" href="/blog/<%= p.slug %>">
+    <div class="post-card-top">
+      <% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty">📰</div><% } %>
+      <h3 class="post-card-title"><%= p.title %></h3>
+    </div>
+    <p class="muted small post-card-meta">
+      <%= p.published_at ? new Date(p.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '' %>
+      <% if (p.author_id && amap[p.author_id]) { %> · By <%= amap[p.author_id] %><% } %>
+      · 👁 <%= p.view_count || 0 %> views
+    </p>
+    <% if (p.excerpt) { %><p class="muted post-card-excerpt"><%= p.excerpt %></p><% } %>
+  </a>
+<% }) %>
+<% if (!posts.length) { %><div class="card center"><p>No posts yet.</p></div><% } %>
+<%- include('partials/foot') %>

@@ -1,0 +1,22 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>🌐 Forum moderation</h1></div></div>
+<%- include('nav') %>
+<div class="card table-wrap">
+<table class="table">
+  <tr><th>Thread</th><th>Author</th><th>Replies</th><th>Created</th><th>Actions</th></tr>
+  <% threads.forEach(t => { %>
+    <tr>
+      <td><a href="/community/t/<%= t.id %>"><%= t.is_pinned ? '📌 ' : '' %><%= t.is_locked ? '🔒 ' : '' %><%= t.title %></a></td>
+      <td><%= (pmap[t.user_id] || {}).display_name || '?' %></td>
+      <td><%= t.reply_count %></td>
+      <td class="muted small"><%= new Date(t.created_at).toLocaleDateString() %></td>
+      <td class="actions">
+        <form method="post" action="/admin/forum/<%= t.id %>" class="inline"><input type="hidden" name="action" value="toggle_pin"><button class="btn btn-ghost btn-sm"><%= t.is_pinned ? 'Unpin' : 'Pin' %></button></form>
+        <form method="post" action="/admin/forum/<%= t.id %>" class="inline"><input type="hidden" name="action" value="toggle_lock"><button class="btn btn-ghost btn-sm"><%= t.is_locked ? 'Unlock' : 'Lock' %></button></form>
+        <form method="post" action="/admin/forum/<%= t.id %>" class="inline" onsubmit="return confirm('Delete thread?')"><input type="hidden" name="action" value="delete"><button class="btn btn-ghost btn-sm">Delete</button></form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+</div>
+<%- include('../partials/foot') %>

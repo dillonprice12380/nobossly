@@ -1,0 +1,17 @@
+<% /* expects: shareUrl, shareTitle */ %>
+<div class="share-row">
+  <a class="share-btn" target="_blank" rel="noopener nofollow" title="Share on X" href="https://twitter.com/intent/tweet?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent(shareTitle) %>">𝕏</a>
+  <a class="share-btn" target="_blank" rel="noopener nofollow" title="Share on Facebook" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>">f</a>
+  <a class="share-btn" target="_blank" rel="noopener nofollow" title="Share on LinkedIn" href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent(shareUrl) %>">in</a>
+  <button class="share-btn copy-link" type="button" title="Copy link" data-url="<%= shareUrl %>">⧉</button>
+</div>
+<script>
+  document.querySelectorAll('.copy-link').forEach(function (b) {
+    b.addEventListener('click', function () {
+      navigator.clipboard.writeText(b.getAttribute('data-url')).then(function () {
+        var t = b.textContent; b.textContent = '✓';
+        setTimeout(function () { b.textContent = t; }, 1500);
+      });
+    });
+  });
+</script>

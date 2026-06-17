@@ -1,0 +1,122 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div><h1>Hey <%= profile.display_name || 'founder' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
+  <p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
+  <% if (levelInfo.next) { %> · <%= levelInfo.next.xp_required - (profile.xp_total||0) %> XP to <%= levelInfo.next.title %><% } %></p></div>
+  <% if (sprint && !checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
+  <% } else if (sprint) { %><span class="chip">✅ Checked in today</span><% } %>
+</div>
+
+<div class="stat-row">
+  <div class="stat card"><span class="stat-num"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
+  <div class="stat card"><span class="stat-num"><svg class="icon" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day streak</span></div>
+  <div class="stat card"><span class="stat-num"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
+  <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
+</div>
+
+<div class="card">
+  <h2><svg class="icon icon-lg"><use href="#i-suitcase"/></svg> Workspace</h2>
+  <div class="workspace-grid">
+    <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>Ideas</strong><span class="muted small">AI business ideas</span></a>
+    <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
+    <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    <a class="ws-tile" href="/collaborations"><span class="ws-emoji"><svg class="icon"><use href="#i-team"/></svg></span><strong>Teams</strong><span class="muted small">Collaborate on projects<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Push your limits<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses & budgets<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    
+  </div>
+</div>
+
+<% if (typeof pinned !== 'undefined' && pinned.length) { %>
+  <div class="card challenge-pin">
+    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active challenges</h2>
+    <% pinned.forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); %>
+      <div class="milestone-row">
+        <div><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
+        <p class="muted small"><%= a.duration_days %>-day challenge · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP</p></div>
+        <div class="cta-row" style="margin:0">
+          <form method="post" action="/challenges/<%= a.challenge_id %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form>
+          <form method="post" action="/challenges/<%= a.challenge_id %>/abandon" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<% if (sprint) { %>
+  <div class="card">
+    <div class="page-head">
+      <div><h2><svg class="icon icon-lg"><use href="#i-target"/></svg> Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></h2>
+      <p class="muted"><%= sprint.goal %> · <%= sprint.start_date %> → <%= sprint.end_date %></p></div>
+      <span class="chip"><%= sprint.tasks_done %>/<%= sprint.tasks_total %> done</span>
+    </div>
+    <div class="progress"><div class="progress-bar" style="width:<%= sprint.velocity_pct || 0 %>%"></div></div>
+    <ul class="task-list">
+      <% tasks.forEach(t => { %>
+        <li class="task <%= t.status === 'done' ? 'done' : '' %>" data-id="<%= t.id %>">
+          <button class="task-check" title="Toggle"><%= t.status === 'done' ? '✓' : '' %></button>
+          <div><strong><%= t.title %></strong> <span class="tag tag-<%= t.priority %>"><%= t.priority %></span>
+          <p class="muted small"><%= t.description %></p></div>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+<% } else { %>
+  <div class="card center">
+    <h2>No active sprint</h2>
+    <% if (ideas.length) { %>
+      <p>Pick an idea, build its blueprint, then launch your first 7-day sprint.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/ideas">Browse your ideas</a>
+    <% } else { %>
+      <p>Start by generating your AI-matched business ideas.</p>
+      <a class="btn btn-primary" href="/ideas/generate">✨ Generate ideas</a>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (ideas.length) { %>
+  <h2>Your ideas</h2>
+  <div class="grid">
+    <% ideas.forEach(i => { %>
+      <a class="card idea-card" href="/ideas/<%= i.id %>">
+        <h3><%= i.is_favorited ? '⭐ ' : '' %><%= i.name %></h3>
+        <p class="muted"><%= i.tagline %></p>
+        <span class="chip">🎯 <%= i.success_likelihood %>%</span>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<% if (typeof analytics !== 'undefined' && analytics) { %>
+<section class="card analytics">
+  <h2>📈 Your progress <span class="muted small">last 8 weeks</span></h2>
+  <div class="analytics-stats">
+    <div><span class="big-number"><%= analytics.totalDone %></span><span class="muted small">tasks completed</span></div>
+    <div><span class="big-number"><%= analytics.totalXp %></span><span class="muted small">XP earned</span></div>
+    <div><span class="big-number"><%= analytics.openTasks %></span><span class="muted small">tasks open</span></div>
+    <div><span class="big-number"><%= profile.streak_days || 0 %>🔥</span><span class="muted small">day streak</span></div>
+  </div>
+  <div class="charts">
+    <div class="chart">
+      <h3 class="small muted">Tasks completed / week</h3>
+      <svg viewBox="0 0 320 110" class="bar-chart" role="img" aria-label="Tasks completed per week">
+        <% analytics.weeks.forEach((w, i) => { const h = Math.round(w.tasksDone / analytics.maxTasks * 80); %>
+          <rect x="<%= 10 + i * 39 %>" y="<%= 90 - h %>" width="26" height="<%= Math.max(h, 2) %>" rx="4" class="bar"></rect>
+          <text x="<%= 23 + i * 39 %>" y="<%= 84 - h %>" text-anchor="middle" class="bar-val"><%= w.tasksDone || '' %></text>
+          <text x="<%= 23 + i * 39 %>" y="104" text-anchor="middle" class="bar-label"><%= w.label %></text>
+        <% }) %>
+      </svg>
+    </div>
+    <div class="chart">
+      <h3 class="small muted">XP earned / week</h3>
+      <svg viewBox="0 0 320 110" class="bar-chart" role="img" aria-label="XP earned per week">
+        <% analytics.weeks.forEach((w, i) => { const h = Math.round(w.xp / analytics.maxXp * 80); %>
+          <rect x="<%= 10 + i * 39 %>" y="<%= 90 - h %>" width="26" height="<%= Math.max(h, 2) %>" rx="4" class="bar bar-alt"></rect>
+          <text x="<%= 23 + i * 39 %>" y="<%= 84 - h %>" text-anchor="middle" class="bar-val"><%= w.xp || '' %></text>
+          <text x="<%= 23 + i * 39 %>" y="104" text-anchor="middle" class="bar-label"><%= w.label %></text>
+        <% }) %>
+      </svg>
+    </div>
+  </div>
+</section>
+<% } %>
+<%- include('partials/foot') %>

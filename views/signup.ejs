@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<div class="auth-card card">
+  <h2>Become your own boss</h2>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <div class="oauth-row">
+    <a class="btn btn-ghost btn-oauth" href="/auth/oauth/google">Continue with Google</a>
+    <a class="btn btn-ghost btn-oauth" href="/auth/oauth/linkedin">Continue with LinkedIn</a>
+    <a class="btn btn-ghost btn-oauth" href="/auth/oauth/github">Continue with GitHub</a>
+  </div>
+  <div class="divider">or use email</div>
+  <form method="post" action="/signup">
+    <label>Email<input type="email" name="email" required></label>
+    <label>Community username <span class="muted small">(your name or a made-up handle — shown to other members)</span>
+      <input name="username" pattern="[A-Za-z0-9_]{3,24}" title="3-24 letters, numbers or underscores" required></label>
+    <label>Password (8+ characters)<input type="password" name="password" minlength="8" required></label>
+    <button class="btn btn-primary btn-block">Create account</button>
+  </form>
+  <p class="muted">Already registered? <a href="/login">Log in</a></p>
+</div>
+<%- include('partials/foot') %>

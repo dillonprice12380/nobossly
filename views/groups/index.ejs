@@ -1,0 +1,32 @@
+<%- include('../partials/head') %>
+<div class="page-head">
+  <div><h1><svg class="icon icon-lg"><use href="#i-team"/></svg> Groups</h1>
+  <p class="muted">Founder-led groups around niches, industries, and goals.</p></div>
+  <a class="btn btn-ghost" href="/community">← Community</a>
+</div>
+<% if (canCreate) { %>
+  <div class="card">
+    <h3>Create a group</h3>
+    <form method="post" action="/groups">
+      <label>Name<input name="name" maxlength="80" required placeholder="e.g. SaaS Founders"></label>
+      <label>Description<textarea name="description" rows="2" maxlength="600" placeholder="What is this group about?"></textarea></label>
+      <button class="btn btn-primary">Create group</button>
+    </form>
+  </div>
+<% } else { %>
+  <p class="notice">Creating groups is a <strong>Founder plan</strong> feature. <a href="/pricing">Upgrade to start your own group</a> — joining groups is free for everyone.</p>
+<% } %>
+<% if (!groups.length) { %>
+  <div class="card center"><p class="muted">No groups yet. <%= canCreate ? 'Start the first one!' : 'Check back soon.' %></p></div>
+<% } %>
+<div class="grid-3">
+  <% groups.forEach(g => { %>
+    <div class="card">
+      <h3><a href="/groups/<%= g.slug %>"><%= g.name %></a></h3>
+      <% if (g.description) { %><p class="muted small"><%= g.description %></p><% } %>
+      <p class="muted small"><%= counts[g.id] || 0 %> member<%= (counts[g.id] || 0) === 1 ? '' : 's' %><%= mine.has(g.id) ? ' · ✓ joined' : '' %></p>
+      <a class="btn btn-ghost btn-sm" href="/groups/<%= g.slug %>">Open</a>
+    </div>
+  <% }) %>
+</div>
+<%- include('../partials/foot') %>

@@ -1,0 +1,23 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>🚩 Reports</h1></div></div>
+<%- include('nav') %>
+<% if (!reports.length) { %><div class="card center"><p class="muted">No reports — all clear. 🎉</p></div><% } %>
+<% reports.forEach(r => { %>
+  <div class="card">
+    <p>
+      <span class="chip <%= r.status === 'open' ? '' : 'chip-success' %>"><%= r.status %></span>
+      <strong><%= r.target_type.replace('_',' ') %></strong> reported for <strong><%= r.reason %></strong>
+      <span class="muted small">by <%= (pmap[r.reporter_id] || {}).display_name || (pmap[r.reporter_id] || {}).username || 'member' %> · <%= new Date(r.created_at).toLocaleString() %></span>
+    </p>
+    <% if (r.details) { %><p class="pre muted small"><%= r.details %></p><% } %>
+    <% if (r.preview) { %><blockquote class="muted small" style="border-left:3px solid var(--border);padding-left:.7rem;margin:.4rem 0"><%= r.preview %></blockquote><% } %>
+    <div class="actions">
+      <% if (r.link) { %><a class="btn btn-ghost btn-sm" href="<%= r.link %>">View target</a><% } %>
+      <% if (r.status === 'open') { %>
+        <form method="post" action="/admin/reports/<%= r.id %>" class="inline"><input type="hidden" name="status" value="resolved"><button class="btn btn-primary btn-sm">Mark resolved</button></form>
+        <form method="post" action="/admin/reports/<%= r.id %>" class="inline"><input type="hidden" name="status" value="dismissed"><button class="btn btn-ghost btn-sm">Dismiss</button></form>
+      <% } %>
+    </div>
+  </div>
+<% }) %>
+<%- include('../partials/foot') %>

@@ -1,0 +1,61 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-team"/></svg> Collaborations</h1><p class="muted">Create a project, invite members, and assign tasks to your team.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="notice" style="border-color:var(--danger)"><%= err %></p><% } %>
+
+<% if (invites.length) { %>
+  <div class="card challenge-pin">
+    <h2>📨 Invitations</h2>
+    <% invites.forEach(i => { %>
+      <div class="member-row">
+        <div><strong><%= i.project ? i.project.name : 'Project' %></strong><p class="muted small"><%= i.project ? i.project.description : '' %></p></div>
+        <div class="cta-row" style="margin:0">
+          <form method="post" action="/collaborations/invite/<%= i.id %>/respond" class="inline"><input type="hidden" name="action" value="accept"><button class="btn btn-primary btn-sm">Accept</button></form>
+          <form method="post" action="/collaborations/invite/<%= i.id %>/respond" class="inline"><input type="hidden" name="action" value="decline"><button class="btn btn-ghost btn-sm">Decline</button></form>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<div class="card">
+  <h2>Start a new project</h2>
+  <form method="post" action="/collaborations/create">
+    <div class="grid-2">
+      <label>Project name<input name="name" required maxlength="80" placeholder="e.g. Launch website"></label>
+      <label>Description<input name="description" maxlength="500" placeholder="What are you building?"></label>
+    </div>
+    <button class="btn btn-primary">Create project</button>
+  </form>
+</div>
+
+<% function renderProject(p, isOwner) { const members = membersByProject[p.id] || []; %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h3><%= p.name %></h3><p class="muted small"><%= p.description %></p></div>
+      <% if (isOwner) { %><form method="post" action="/collaborations/<%= p.id %>/delete" onsubmit="return confirm('Delete this project?')"><button class="btn btn-ghost btn-sm">Delete</button></form><% } %>
+    </div>
+    <div class="member-row">
+      <span>👑 <%= pmap[p.owner_id] ? (pmap[p.owner_id].display_name || pmap[p.owner_id].username) : 'Owner' %> <span class="muted small">owner</span></span>
+    </div>
+    <% members.forEach(m => { const prof = pmap[m.user_id]; %>
+      <div class="member-row">
+        <span><%= prof ? (prof.display_name || prof.username) : 'Member' %>
+          <% if (m.status === 'invited') { %><span class="chip">⏳ invited</span><% } else if (m.status === 'declined') { %><span class="chip">declined</span><% } else { %><span class="chip chip-success">member</span><% } %>
+        </span>
+        <% if (isOwner) { %><form method="post" action="/collaborations/<%= p.id %>/remove/<%= m.id %>"><button class="btn btn-ghost btn-sm">Remove</button></form><% } %>
+      </div>
+    <% }) %>
+    <% if (isOwner) { %>
+      <form method="post" action="/collaborations/<%= p.id %>/invite" class="inline-form" style="margin-top:.7rem">
+        <input name="username" placeholder="Invite by username…" required>
+        <button class="btn btn-primary btn-sm">Invite</button>
+      </form>
+    <% } %>
+  </div>
+<% } %>
+
+<% if (owned.length) { %><h2 style="margin-top:1.5rem">My projects</h2><% owned.forEach(p => renderProject(p, true)) %><% } %>
+<% if (joined.length) { %><h2 style="margin-top:1.5rem">Projects I'm part of</h2><% joined.forEach(m => { if (m.project) renderProject(m.project, false) }) %><% } %>
+<% if (!owned.length && !joined.length && !invites.length) { %><div class="card center"><p class="muted">No projects yet — create one above to start collaborating.</p></div><% } %>
+<%- include('partials/foot') %>

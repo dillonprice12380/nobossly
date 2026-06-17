@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<div class="card auth-card center">
+  <div class="spinner"></div>
+  <h2>Working on it…</h2>
+  <p id="gen-label"><%= label %></p>
+  <p class="error hidden" id="gen-error"></p>
+  <a class="btn btn-ghost hidden" id="gen-back" href="/dashboard">Back</a>
+</div>
+<script>
+(async function () {
+  try {
+    const r = await fetch('<%= action %>', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const j = await r.json();
+    if (j.redirect) return location.href = j.redirect;
+    throw new Error(j.error || 'Unknown error');
+  } catch (e) {
+    document.querySelector('.spinner').classList.add('hidden');
+    document.getElementById('gen-label').classList.add('hidden');
+    const el = document.getElementById('gen-error');
+    el.textContent = e.message; el.classList.remove('hidden');
+    document.getElementById('gen-back').classList.remove('hidden');
+  }
+})();
+</script>
+<%- include('partials/foot') %>

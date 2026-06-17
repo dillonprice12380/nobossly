@@ -1,0 +1,76 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-setting"/></svg> Account settings</h1><p class="muted">Manage your login, privacy, and subscription.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="error"><%= err %></p><% } %>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>📧 Email</h3>
+    <p class="muted small">Current: <%= user.email %></p>
+    <form method="post" action="/account/email">
+      <label>New email<input type="email" name="email" required></label>
+      <button class="btn btn-primary btn-sm">Update email</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3>🔑 Password</h3>
+    <form method="post" action="/account/password">
+      <label>New password<input type="password" name="password" minlength="8" required></label>
+      <label>Confirm new password<input type="password" name="password2" minlength="8" required></label>
+      <button class="btn btn-primary btn-sm">Change password</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h3>👁️ Profile visibility</h3>
+  <p class="muted small">Public profiles are fully visible to everyone. Private profiles only show your username, level, awards and badges.</p>
+  <form method="post" action="/account/visibility" class="cta-row" style="justify-content:flex-start">
+    <label class="check"><input type="radio" name="visibility" value="public" <%= p.profile_is_public !== false ? 'checked' : '' %>> Public</label>
+    <label class="check"><input type="radio" name="visibility" value="private" <%= p.profile_is_public === false ? 'checked' : '' %>> Private</label>
+    <button class="btn btn-primary btn-sm">Save</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>💳 Subscription</h3>
+  <% if (plan === 'paid' && p.is_lifetime) { %>
+    <p><span class="chip chip-success">Lifetime access</span> — you're set forever. 🎉</p>
+  <% } else if (plan === 'paid') { %>
+    <p><span class="chip chip-success">Active</span> <strong><%= tierName || 'Paid plan' %></strong>
+    <% if (p.subscription_period_end) { %><span class="muted small"> · <%= p.subscription_status === 'canceled' ? 'access ends' : 'renews' %> <%= new Date(p.subscription_period_end).toLocaleDateString() %></span><% } %></p>
+    <% if (p.subscription_status !== 'canceled') { %>
+      <form method="post" action="/billing/cancel" onsubmit="return confirm('End your subscription? You keep access until the end of the current period.')">
+        <button class="btn btn-ghost btn-sm">End subscription</button>
+      </form>
+    <% } else { %><p class="muted small">Your subscription is set to end — you keep access until the date above.</p><% } %>
+  <% } else { %>
+    <p><span class="chip">Free plan</span> — 1 AI idea generation, forum access, up to 8 manual tasks.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">See plans & upgrade</a>
+  <% } %>
+</div>
+
+<div class="card" style="border-color:#fca5a5">
+  <h3 style="color:var(--danger)">⚠️ Danger zone</h3>
+  <% if (p.delete_requested_at) { %>
+    <p class="error">Your account is scheduled for permanent deletion on <%= new Date(new Date(p.delete_requested_at).getTime() + 7*86400000).toLocaleDateString() %>.</p>
+    <form method="post" action="/account/cancel-deletion"><button class="btn btn-primary btn-sm">Cancel deletion</button></form>
+  <% } else { %>
+    <div class="grid-2">
+      <div>
+        <h4>Deactivate account</h4>
+        <p class="muted small">Hides your profile and signs you out. Logging back in reactivates it.</p>
+        <form method="post" action="/account/deactivate" onsubmit="return confirm('Deactivate your account?')"><button class="btn btn-ghost btn-sm">Deactivate</button></form>
+      </div>
+      <div>
+        <h4>Delete account</h4>
+        <p class="muted small">Permanently deletes your account and data after a 7-day grace period. Type DELETE to confirm.</p>
+        <form method="post" action="/account/delete" onsubmit="return confirm('Schedule your account for permanent deletion?')" class="inline-form">
+          <input name="confirm" placeholder="DELETE" style="max-width:120px">
+          <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)">Delete account</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include('partials/foot') %>

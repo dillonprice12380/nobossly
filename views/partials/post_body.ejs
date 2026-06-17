@@ -1,0 +1,45 @@
+<% var hasToc = typeof toc !== 'undefined' && toc && toc.length >= 2; %>
+<% var isBlog = post.type === 'blog'; var isGuide = post.type === 'guide'; %>
+<div class="post-layout <%= sidebar ? 'with-sidebar' : '' %>">
+  <article class="article">
+    <% if (post.featured_image) { %><img class="featured-img" src="<%= post.featured_image %>" alt="<%= post.title %>"><% } %>
+    <h1><%= post.title %></h1>
+    <% if (isBlog) { %>
+      <div class="post-meta-row">
+        <span class="muted small"><% if (typeof authorName !== 'undefined' && authorName) { %>By <strong><%= authorName %></strong> · <% } %><%= post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '' %></span>
+        <% if (typeof shareUrl !== 'undefined' && shareUrl) { %><%- include('share_buttons', { shareUrl, shareTitle: post.title }) %><% } %>
+      </div>
+    <% } else if (isGuide) { %>
+      <div class="post-meta-row">
+        <% if (typeof shareUrl !== 'undefined' && shareUrl) { %><%- include('share_buttons', { shareUrl, shareTitle: post.title }) %><% } %>
+      </div>
+    <% } %>
+    <div class="article-body"><%- post.body %></div>
+  </article>
+  <% if (sidebar) { %>
+    <aside class="post-sidebar">
+      <% if (hasToc) { %>
+        <details class="toc toc-accordion">
+          <summary>📑 Contents</summary>
+          <ol class="toc-list">
+            <% toc.forEach(t => { %><li class="toc-l<%= t.level %>"><a href="#<%= t.id %>"><%= t.text %></a></li><% }) %>
+          </ol>
+        </details>
+      <% } %>
+      <% if (sidebar.config.html_top) { %><div class="sidebar-html"><%- sidebar.config.html_top %></div><% } %>
+      <% if (sidebar.config.show_similar && sidebar.similar.length) { %>
+        <div class="card">
+          <h3>Keep reading</h3>
+          <% sidebar.similar.forEach(s => { %>
+            <a class="similar-post" href="<%= sidebar.base + s.slug %>">
+              <% if (s.featured_image) { %><img src="<%= s.featured_image %>" alt="" loading="lazy"><% } %>
+              <span><%= s.title %></span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+      <% if (sidebar.config.html_middle) { %><div class="sidebar-html"><%- sidebar.config.html_middle %></div><% } %>
+      <% if (sidebar.config.html_bottom) { %><div class="sidebar-html"><%- sidebar.config.html_bottom %></div><% } %>
+    </aside>
+  <% } %>
+</div>

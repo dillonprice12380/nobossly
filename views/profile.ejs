@@ -1,0 +1,78 @@
+<%- include('partials/head') %>
+<div class="card">
+  <div class="profile-head">
+    <div class="avatar-circle"><%= ((isPrivate ? p.username : (p.display_name || p.username)) || '?').slice(0,1).toUpperCase() %></div>
+    <div>
+      <h1><%= isPrivate ? '@' + p.username : (p.display_name || p.username) %></h1>
+      <p class="muted"><% if (!isPrivate) { %>@<%= p.username %> · <% } %><%= lvl.emoji %> Level <%= p.current_level || 1 %> — <%= lvl.title %><% if (!isPrivate) { %> · Member since <%= new Date(p.created_at).toLocaleDateString() %><% } %></p>
+      <div class="scores">
+        <span class="chip">⚡ <%= p.xp_total || 0 %> XP</span>
+        <% if (!isPrivate) { %>
+          <span class="chip">🔥 <%= p.streak_days || 0 %>-day streak</span>
+          <span class="chip">✅ <%= p.tasks_completed || 0 %> tasks done</span>
+          <% if (p.founder_stage) { %><span class="chip">🚀 <%= p.founder_stage %></span><% } %>
+        <% } %>
+      </div>
+    </div>
+    <% if (isMe) { %><a class="btn btn-ghost" style="margin-left:auto" href="/members/me/edit">Edit profile</a><% } %>
+  </div>
+  <% if (!isMe && typeof social !== 'undefined') { %>
+    <div class="social-bar">
+      <% if (social.blockedMe) { %>
+        <p class="muted small">This member isn't available.</p>
+      <% } else if (social.iBlocked) { %>
+        <span class="chip">🚫 Blocked</span>
+        <form method="post" action="/unblock/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">Unblock</button></form>
+      <% } else { %>
+        <% if (!isPrivate) { %><a class="btn btn-primary btn-sm" href="/messages/with/<%= p.id %>">💬 Message</a><% } %>
+        <% if (social.isFollowing) { %>
+          <form method="post" action="/unfollow/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">✓ Following</button></form>
+        <% } else { %>
+          <form method="post" action="/follow/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">+ Follow</button></form>
+        <% } %>
+        <% const f = social.friendship; %>
+        <% if (!f || f.status === 'declined') { %>
+          <form method="post" action="/friends/request/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">🤝 Add friend</button></form>
+        <% } else if (f.status === 'pending' && f.addressee_id !== p.id) { %>
+          <form method="post" action="/friends/<%= f.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Accept friend request</button></form>
+          <form method="post" action="/friends/<%= f.id %>/decline" class="inline"><button class="btn btn-ghost btn-sm">Decline</button></form>
+        <% } else if (f.status === 'pending') { %>
+          <span class="chip">🤝 Request sent</span>
+        <% } else if (f.status === 'accepted') { %>
+          <span class="chip chip-success">🤝 Friends</span>
+          <form method="post" action="/friends/<%= f.id %>/remove" class="inline"><button class="btn btn-ghost btn-sm">Unfriend</button></form>
+        <% } %>
+        <a class="btn btn-ghost btn-sm" href="/report?type=user&id=<%= p.id %>">⚑ Report</a>
+        <form method="post" action="/block/<%= p.id %>" class="inline" onsubmit="return confirm('Block @<%= p.username %>? You will no longer see each other\'s messages and posts.')"><button class="btn btn-ghost btn-sm">🚫 Block</button></form>
+      <% } %>
+    </div>
+    <p class="muted small" style="margin-top:.4rem"><%= social.followers %> follower<%= social.followers === 1 ? '' : 's' %> · <%= social.following %> following · <%= social.friends %> friend<%= social.friends === 1 ? '' : 's' %></p>
+  <% } %>
+  <% if (isPrivate) { %>
+    <p class="muted small" style="margin-top:1rem">🔒 This profile is private. Only the username, level, awards and badges are shown.</p>
+  <% } else { %>
+  <% if (p.bio) { %><p style="margin-top:1rem"><%= p.bio %></p><% } %>
+  <p class="muted small">
+    <% if (p.occupation) { %><%= p.occupation %> · <% } %>
+    <% if (p.location) { %>📍 <%= p.location %> · <% } %>
+    <% if (p.website_url) { %><a href="<%= p.website_url %>" rel="nofollow noopener" target="_blank">🔗 Website</a><% } %>
+  </p>
+  <% } %>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <h3><svg class="icon"><use href="#i-star"/></svg> Badges (<%= badges.length %>)</h3>
+    <% if (badges.length) { %>
+      <div class="badge-grid">
+        <% badges.forEach(b => { %><div class="badge-chip" title="<%= b.description %>"><span class="b-emoji"><%= b.emoji %></span><span class="small"><%= b.name %></span><br><span class="muted small"><%= b.tier %></span></div><% }) %>
+      </div>
+    <% } else { %><p class="muted">No badges yet.</p><% } %>
+  </div>
+  <div class="card">
+    <h3><svg class="icon"><use href="#i-trophy"/></svg> Awards & milestones (<%= milestones.length %>)</h3>
+    <% if (milestones.length) { %>
+      <ul class="feature-list"><% milestones.forEach(m => { %><li><%= m.emoji %> <%= m.title %></li><% }) %></ul>
+    <% } else { %><p class="muted">No milestones marked yet.</p><% } %>
+  </div>
+</div>
+<%- include('partials/foot') %>

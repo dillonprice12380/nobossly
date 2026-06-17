@@ -1,0 +1,18 @@
+<% /* expects: rkey ('thread:ID' or 'reply:ID'), entityType, entityId, reactions, REACTIONS, user, backUrl */ %>
+<div class="react-bar">
+  <% REACTIONS.forEach(rx => {
+       const c = (reactions.counts[rkey] || {})[rx.key] || 0;
+       const mine = reactions.mine[rkey] && reactions.mine[rkey].has(rx.key); %>
+    <% if (user) { %>
+      <form method="post" action="/community/react" class="inline">
+        <input type="hidden" name="entity_type" value="<%= entityType %>">
+        <input type="hidden" name="entity_id" value="<%= entityId %>">
+        <input type="hidden" name="reaction" value="<%= rx.key %>">
+        <input type="hidden" name="back" value="<%= backUrl %>">
+        <button class="react-btn <%= mine ? 'react-on' : '' %>" title="<%= rx.label %>"><%= rx.emoji %><% if (c) { %> <span class="react-count"><%= c %></span><% } %></button>
+      </form>
+    <% } else if (c) { %>
+      <span class="react-btn react-static"><%= rx.emoji %> <span class="react-count"><%= c %></span></span>
+    <% } %>
+  <% }) %>
+</div>

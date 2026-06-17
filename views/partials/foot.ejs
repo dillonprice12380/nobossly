@@ -1,0 +1,43 @@
+</main>
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <img class="logo-img-footer" src="https://res.cloudinary.com/dkxa3rup0/image/upload/v1779381926/nobossly-logo_a5ew2x.png" alt="NoBossly">
+      <p class="muted small">Fire your boss.<br>Hire yourself.</p>
+    </div>
+    <div>
+      <h4>Platform</h4>
+      <a href="/community">Community</a>
+      <a href="/blog">Blog</a>
+      <a href="/signup">Get started</a>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <a href="/about">About</a>
+      <a href="/terms">Terms &amp; Conditions</a>
+      <a href="/privacy">Privacy Policy</a>
+    </div>
+  </div>
+  <div class="follow-us">
+    <h4>Follow Us</h4>
+    <div class="social-row">
+      <% const soc = (typeof social !== 'undefined' && social) || {}; %>
+      <% const items = [
+        ['instagram', 'Instagram', 'M349.33 69.33H162.67A93.34 93.34 0 0 0 69.33 162.67v186.66a93.34 93.34 0 0 0 93.34 93.34h186.66a93.34 93.34 0 0 0 93.34-93.34V162.67a93.34 93.34 0 0 0-93.34-93.34zm60 280a60.07 60.07 0 0 1-60 60H162.67a60.07 60.07 0 0 1-60-60V162.67a60.07 60.07 0 0 1 60-60h186.66a60.07 60.07 0 0 1 60 60zM256 161.33A94.67 94.67 0 1 0 350.67 256 94.77 94.77 0 0 0 256 161.33zm0 156A61.33 61.33 0 1 1 317.33 256 61.4 61.4 0 0 1 256 317.33zM372 138a22 22 0 1 1-22-22 22 22 0 0 1 22 22z'],
+        ['facebook', 'Facebook', 'M256 42.67C138.18 42.67 42.67 138.18 42.67 256c0 106.47 78 194.75 180 210.74V317.33h-54.16V256H222.7v-47c0-53.47 31.85-83 80.58-83 23.34 0 47.75 4.17 47.75 4.17v52.5h-26.9c-26.5 0-34.76 16.45-34.76 33.32V256h59.16l-9.46 61.33H289.3v149.41c102-16 180-104.27 180-210.74 0-117.82-95.51-213.33-213.3-213.33z'],
+        ['x', 'X', 'M303.42 218.05 466.06 32h-38.54L286.3 193.55 173.5 32H32l170.56 244.27L32 471.41h38.54l149.14-170.58 119.13 170.58H480zM239.2 278.5l-17.28-24.32L84.42 60.55h59.2l111 156.18 17.27 24.32 144.28 203h-59.2z'],
+        ['linkedin', 'LinkedIn', 'M106.67 64a42.67 42.67 0 1 0 42.66 42.67A42.67 42.67 0 0 0 106.67 64zM69.33 192h74.67v256H69.33zM288 192c-36.7 0-58.2 19.62-68.27 38.67h-1.06V192H148v256h74.67V322.13c0-33.18 6.3-65.3 47.4-65.3 40.51 0 41.06 37.94 41.06 67.42V448h74.66V309.33C385.79 244.4 371.84 192 288 192z'],
+        ['youtube', 'YouTube', 'M461.86 152.45a54 54 0 0 0-38-38.22C390.32 105.33 256 105.33 256 105.33s-134.32 0-167.86 8.9a54 54 0 0 0-38 38.22C41.33 186.19 41.33 256 41.33 256s0 69.81 8.81 103.55a54 54 0 0 0 38 38.22c33.54 8.9 167.86 8.9 167.86 8.9s134.32 0 167.86-8.9a54 54 0 0 0 38-38.22c8.81-33.74 8.81-103.55 8.81-103.55s0-69.81-8.81-103.55zM213.33 320v-128L325.33 256z'],
+        ['tiktok', 'TikTok', 'M412.19 168.66a113.39 113.39 0 0 1-66.21-21.27 113.5 113.5 0 0 1-45.34-71.39A114 114 0 0 1 298.7 53.3h-66.6v249.42a67.6 67.6 0 1 1-48.05-64.75v-68.59a136.21 136.21 0 1 0 116.65 134.9V186a180.86 180.86 0 0 0 111.49 38.31z']
+      ]; %>
+      <% items.forEach(([key, label, path]) => { const url = soc[key]; %>
+        <% if (url) { %><a class="social-ico" href="<%= url %>" target="_blank" rel="noopener" aria-label="<%= label %>" title="<%= label %>"><svg viewBox="0 0 512 512"><path d="<%= path %>"/></svg></a>
+        <% } else { %><span class="social-ico" title="<%= label %>"><svg viewBox="0 0 512 512"><path d="<%= path %>"/></svg></span><% } %>
+      <% }) %>
+    </div>
+  </div>
+  <p class="muted small" style="text-align:center;padding-bottom:1.2rem">© <%= new Date().getFullYear() %> NoBossly. All rights reserved.</p>
+</footer>
+<script src="/js/app.js?v=7"></script>
+</body>
+</html>

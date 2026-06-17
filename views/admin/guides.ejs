@@ -1,0 +1,25 @@
+<%- include('../partials/head') %>
+<div class="page-head">
+  <div><h1>📚 Guides</h1><p class="muted">Long-form guides at /guides/[slug] — same editor and SEO tools as blog posts.</p></div>
+  <a class="btn btn-primary" href="/admin/guides/new">+ New guide</a>
+</div>
+<%- include('nav') %>
+<div class="card table-wrap">
+<table class="table">
+  <tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th><th></th></tr>
+  <% if (!items.length) { %><tr><td colspan="5" class="muted">No guides yet — create your first one.</td></tr><% } %>
+  <% items.forEach(i => { %>
+    <tr>
+      <td><strong><%= i.title %></strong></td>
+      <td class="muted">/guides/<%= i.slug %></td>
+      <td><span class="chip <%= i.status === 'published' ? 'chip-success' : '' %>"><%= i.status %></span></td>
+      <td class="muted small"><%= new Date(i.updated_at).toLocaleDateString() %></td>
+      <td class="actions">
+        <a class="btn btn-ghost btn-sm" href="/admin/guides/<%= i.id %>/edit">Edit</a>
+        <form method="post" action="/admin/guides/<%= i.id %>/delete" class="inline" onsubmit="return confirm('Delete this guide?')"><button class="btn btn-ghost btn-sm" style="color:var(--danger)">Delete</button></form>
+      </td>
+    </tr>
+  <% }) %>
+</table>
+</div>
+<%- include('../partials/foot') %>

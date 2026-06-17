@@ -1,0 +1,48 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/community/c/<%= cat ? cat.slug : '' %>">← <%= cat ? cat.name : 'Back' %></a>
+<div class="card">
+  <h1 class="thread-title"><%= thread.is_locked ? '🔒 ' : '' %><%= thread.title %></h1>
+  <p class="muted small">by <%= (pmap[thread.user_id] || {}).display_name || 'founder' %> · <%= new Date(thread.created_at).toLocaleString() %><% if (thread.edited_at) { %> · edited<% } %><% if (user && thread.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_thread&id=<%= thread.id %>">⚑ report</a><% } %></p>
+  <% if (thread.tags && thread.tags.length) { %><p class="tag-row"><% thread.tags.forEach(tg => { %><a class="chip tag-chip" href="/community?tag=<%= encodeURIComponent(tg) %>">#<%= tg %></a><% }) %></p><% } %>
+  <% if (thread.body_html) { %><div class="article-body rt-content"><%- thread.body_html %></div><% } else { %><p class="pre"><%= thread.body %></p><% } %>
+  <%- include('../partials/reactions', { rkey: 'thread:' + thread.id, entityType: 'thread', entityId: thread.id, reactions, REACTIONS, user, backUrl: '/community/t/' + thread.id }) %>
+  <% if (user && (thread.user_id === user.id || (profile && profile.is_admin))) { %>
+    <div class="cta-row owner-row">
+      <a class="btn btn-ghost btn-sm" href="/community/t/<%= thread.id %>/edit">✏️ Edit</a>
+      <form method="post" action="/community/t/<%= thread.id %>/delete" class="inline" onsubmit="return confirm('Delete this thread and all its replies?')"><button class="btn btn-ghost btn-sm btn-danger">🗑 Delete</button></form>
+    </div>
+  <% } %>
+</div>
+<h3><%= replies.length %> replies</h3>
+<% replies.forEach(r => { %>
+  <div class="card reply">
+    <p class="muted small"><strong><%= (pmap[r.user_id] || {}).display_name || 'founder' %></strong> · lvl <%= (pmap[r.user_id] || {}).current_level || 1 %> · <%= new Date(r.created_at).toLocaleString() %><% if (r.edited_at) { %> · edited<% } %><% if (user && r.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_reply&id=<%= r.id %>">⚑ report</a><% } %></p>
+    <% if (r.body_html) { %><div class="article-body rt-content"><%- r.body_html %></div><% } else { %><p class="pre"><%= r.body %></p><% } %>
+    <%- include('../partials/reactions', { rkey: 'reply:' + r.id, entityType: 'reply', entityId: r.id, reactions, REACTIONS, user, backUrl: '/community/t/' + thread.id }) %>
+    <% if (user && (r.user_id === user.id || (profile && profile.is_admin))) { %>
+      <details class="reply-edit">
+        <summary class="muted small">✏️ Edit reply</summary>
+        <form method="post" action="/community/r/<%= r.id %>/edit">
+          <input type="hidden" name="body_html">
+          <div data-rich data-placeholder="Edit your reply…"><template><%- r.body_html || ('<p>' + (r.body || '').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</p>') %></template></div>
+          <textarea name="body" rows="3"></textarea>
+          <button class="btn btn-primary btn-sm">Save changes</button>
+        </form>
+      </details>
+      <form method="post" action="/community/r/<%= r.id %>/delete" class="inline" onsubmit="return confirm('Delete this reply?')"><button class="btn-x" title="Delete reply">×</button></form>
+    <% } %>
+  </div>
+<% }) %>
+<% if (!thread.is_locked && user) { %>
+  <div class="card">
+    <form method="post" action="/community/t/<%= thread.id %>/reply">
+      <label>Reply (+5 XP)</label>
+      <input type="hidden" name="body_html">
+      <div data-rich data-placeholder="Write a reply…"></div>
+      <textarea name="body" rows="3"></textarea>
+      <button class="btn btn-primary">Reply</button>
+    </form>
+  </div>
+<% } else if (!user) { %><div class="card center"><p>Want to join the conversation?</p><a class="btn btn-primary" href="/signup">Join NoBossly free</a></div><% } else { %><p class="notice">This thread is locked.</p><% } %>
+<script src="/js/forum.js?v=2"></script>
+<%- include('../partials/foot') %>

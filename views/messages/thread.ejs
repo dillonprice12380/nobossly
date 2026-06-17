@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/messages">← All messages</a>
+<div class="page-head"><div><h1>💬 <%= other ? (other.display_name || other.username) : 'Member' %></h1></div>
+<% if (other) { %><div class="actions"><a class="btn btn-ghost btn-sm" href="/members/<%= other.username %>">View profile</a>
+<a class="btn btn-ghost btn-sm" href="/report?type=user&id=<%= other.id %>">⚑ Report</a>
+<form method="post" action="/block/<%= other.id %>" class="inline" onsubmit="return confirm('Block this member? The conversation will be hidden and neither of you can message the other.')"><input type="hidden" name="back" value="/messages"><button class="btn btn-ghost btn-sm">🚫 Block</button></form>
+</div><% } %></div>
+<div class="card">
+  <% if (!msgs.length) { %><p class="muted center">Say hello 👋</p><% } %>
+  <% msgs.forEach(m => { %>
+    <div class="msg-row"><div class="msg-bubble <%= m.sender_id === me ? 'msg-mine' : '' %> <%= (!m.is_read && m.sender_id !== me) ? 'msg-new' : '' %>">
+      <% if (m.content) { %><p class="pre"><%= m.content %></p><% } %>
+      <% if (m.attachment_url && m.attachment_type === 'image') { %><a href="<%= m.attachment_url %>" target="_blank" rel="noopener"><img class="msg-img" src="<%= m.attachment_url %>" alt="<%= m.attachment_name || 'image' %>" loading="lazy"></a><% } %>
+      <% if (m.attachment_url && m.attachment_type !== 'image') { %><a class="msg-file" href="<%= m.attachment_url %>" target="_blank" rel="noopener">📎 <%= m.attachment_name || 'Attachment' %></a><% } %>
+      <% if (m.link_url) { %>
+        <a class="link-card" href="<%= m.link_url %>" target="_blank" rel="nofollow noopener">
+          <% if (m.link_image) { %><img src="<%= m.link_image %>" alt="" loading="lazy"><% } %>
+          <span class="link-card-body"><strong><%= m.link_title %></strong><span class="link-card-domain"><%= m.link_domain %></span></span>
+        </a>
+      <% } %>
+      <p class="muted small"><%= new Date(m.created_at).toLocaleString() %><% if (m.sender_id !== me) { %> · <a class="muted" href="/report?type=message&id=<%= m.id %>">report</a><% } %></p>
+    </div></div>
+  <% }) %>
+  <form method="post" action="/messages/c/<%= convo.id %>" id="msg-form">
+    <label>Message<textarea name="content" rows="2" maxlength="2000" placeholder="Write a message… (links get a preview card)"></textarea></label>
+    <input type="hidden" name="attachment_url"><input type="hidden" name="attachment_name"><input type="hidden" name="attachment_type">
+    <div class="composer-row">
+      <button class="btn btn-primary">Send</button>
+      <label class="btn btn-ghost btn-sm attach-btn">📎 Attach<input type="file" id="msg-file" hidden accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"></label>
+      <span class="muted small" id="attach-status"></span>
+    </div>
+  </form>
+  <script>
+  (function(){
+    var form=document.getElementById('msg-form'), file=document.getElementById('msg-file'), status=document.getElementById('attach-status');
+    file.addEventListener('change', async function(){
+      if(!file.files[0]) return;
+      status.textContent='Uploading…';
+      var fd=new FormData(); fd.append('file', file.files[0]);
+      try{
+        var r=await fetch('/upload',{method:'POST',body:fd});
+        var j=await r.json();
+        if(j.url){form.attachment_url.value=j.url;form.attachment_name.value=j.name;form.attachment_type.value=j.isImage?'image':'file';status.textContent='📎 '+j.name+' ready';}
+        else status.textContent=j.error||'Upload failed';
+      }catch(e){status.textContent='Upload failed';}
+    });
+    form.addEventListener('submit',function(e){
+      if(!form.content.value.trim() && !form.attachment_url.value){e.preventDefault();}
+    });
+  })();
+  </script>
+</div>
+<%- include('../partials/foot') %>

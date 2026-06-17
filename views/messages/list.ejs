@@ -1,0 +1,14 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>💬 Messages</h1></div></div>
+<% if (!convos.length) { %><div class="card center"><p class="muted">No conversations yet. Visit a member's profile to start one.</p></div><% } %>
+<% convos.forEach(c => { const other = pmap[c.participant_a === me ? c.participant_b : c.participant_a] || {}; const pv = previews[c.id]; const un = unread[c.id] || 0; %>
+  <a class="card thread-row <%= un ? 'thread-unread' : '' %>" href="/messages/c/<%= c.id %>">
+    <div class="thread-main">
+      <strong><%= other.display_name || 'Member' %> <% if (un) { %><span class="nav-badge inline-badge"><%= un > 9 ? '9+' : un %></span><% } %></strong>
+      <% if (pv) { %><p class="msg-preview <%= un ? 'msg-preview-new' : 'muted' %> small"><%= pv.mine ? 'You: ' : '' %><%= pv.text %></p>
+      <% } else { %><p class="muted small">@<%= other.username || '?' %></p><% } %>
+    </div>
+    <span class="muted small"><%= c.last_message_at ? new Date(c.last_message_at).toLocaleString() : '' %></span>
+  </a>
+<% }) %>
+<%- include('../partials/foot') %>

@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1>🔔 Notifications</h1></div></div>
+<div class="card">
+  <% if (!notifs.length) { %><p class="muted center">Nothing yet. When someone replies to you or messages you, it shows up here.</p><% } %>
+  <% notifs.forEach(n => { %>
+    <div class="notif <%= n.is_read ? '' : 'unread' %>">
+      <% const link = n.entity_type === 'conversations' ? '/messages/c/' + n.entity_id : (n.entity_type === 'forum_threads' ? '/community/t/' + n.entity_id : '/dashboard'); %>
+      <a href="<%= link %>"><%= n.message %></a>
+      <p class="muted small"><%= new Date(n.created_at).toLocaleString() %></p>
+    </div>
+  <% }) %>
+</div>
+<%- include('partials/foot') %>

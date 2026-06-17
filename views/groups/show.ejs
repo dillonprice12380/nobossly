@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/groups">← All groups</a>
+<div class="page-head">
+  <div>
+    <h1><%= group.name %></h1>
+    <% if (group.description) { %><p class="muted"><%= group.description %></p><% } %>
+    <p class="muted small"><%= members.length %> member<%= members.length === 1 ? '' : 's' %> · created <%= new Date(group.created_at).toLocaleDateString() %></p>
+  </div>
+  <div class="actions">
+    <% if (!isMember) { %>
+      <form method="post" action="/groups/<%= group.slug %>/join"><button class="btn btn-primary">Join group</button></form>
+    <% } else if (!isOwner) { %>
+      <form method="post" action="/groups/<%= group.slug %>/leave"><button class="btn btn-ghost">Leave</button></form>
+    <% } %>
+    <% if (isOwner || (profile && profile.is_admin)) { %>
+      <form method="post" action="/groups/<%= group.slug %>/delete" onsubmit="return confirm('Delete this group and all its posts?')"><button class="btn btn-ghost">Delete group</button></form>
+    <% } %>
+  </div>
+</div>
+<div class="two-col">
+  <div>
+    <% if (isMember) { %>
+      <div class="card">
+        <form method="post" action="/groups/<%= group.slug %>/post">
+          <label>Share with the group<textarea name="body" rows="3" required placeholder="What's on your mind?"></textarea></label>
+          <button class="btn btn-primary">Post</button>
+        </form>
+      </div>
+    <% } else { %>
+      <p class="notice">Join the group to post.</p>
+    <% } %>
+    <% if (!posts.length) { %><div class="card center"><p class="muted">No posts yet.</p></div><% } %>
+    <% posts.forEach(p => { %>
+      <div class="card reply">
+        <p class="muted small">
+          <strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= (pmap[p.user_id] || {}).display_name || 'founder' %></a></strong>
+          · lvl <%= (pmap[p.user_id] || {}).current_level || 1 %> · <%= new Date(p.created_at).toLocaleString() %>
+          <% if (p.user_id === user.id || isOwner || (profile && profile.is_admin)) { %><% } %>
+        </p>
+        <p class="pre"><%= p.body %></p>
+      </div>
+    <% }) %>
+  </div>
+  <aside>
+    <div class="card">
+      <h3>Members</h3>
+      <% members.forEach(m => { %>
+        <p class="small"><a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= (pmap[m.user_id] || {}).display_name || 'founder' %></a><%= m.role === 'owner' ? ' · 👑 owner' : '' %></p>
+      <% }) %>
+    </div>
+  </aside>
+</div>
+<%- include('../partials/foot') %>

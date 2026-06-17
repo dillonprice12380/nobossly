@@ -1,0 +1,10 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>🛠 Admin</h1></div></div>
+<%- include('nav') %>
+<div class="stat-row">
+  <div class="stat card"><span class="stat-num"><%= stats.users %></span><span class="muted">users</span></div>
+  <div class="stat card"><span class="stat-num"><%= stats.ideas %></span><span class="muted">ideas generated</span></div>
+  <div class="stat card"><span class="stat-num"><%= stats.threads %></span><span class="muted">forum threads</span></div>
+  <div class="stat card"><span class="stat-num"><%= stats.contents %></span><span class="muted">content items</span></div>
+</div>
+<%- include('../partials/foot') %>

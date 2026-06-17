@@ -1,0 +1,36 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Accept a challenge, pick your timeline, and it pins to your dashboard.</p></div></div>
+<div class="grid">
+  <% challenges.forEach(c => { const a = accMap[c.id]; %>
+    <div class="card">
+      <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+      <h3><%= c.title %></h3>
+      <p class="muted"><%= c.description %></p>
+      <% if (!a) { %>
+        <form method="post" action="/challenges/<%= c.id %>/accept">
+          <label class="small">Timeline
+            <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
+          </label>
+          <button class="btn btn-primary btn-sm">Accept challenge</button>
+        </form>
+      <% } else if (a.status === 'active') { %>
+        <span class="chip">⏳ Due <%= a.due_date %> (<%= a.duration_days %>-day)</span>
+        <div class="cta-row" style="justify-content:flex-start">
+          <form method="post" action="/challenges/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
+          <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+        </div>
+      <% } else if (a.status === 'completed') { %>
+        <span class="chip chip-success">✅ Completed</span>
+      <% } else { %>
+        <form method="post" action="/challenges/<%= c.id %>/accept">
+          <span class="chip">Abandoned</span>
+          <label class="small">Try again
+            <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
+          </label>
+          <button class="btn btn-ghost btn-sm">Re-accept</button>
+        </form>
+      <% } %>
+    </div>
+  <% }) %>
+</div>
+<%- include('partials/foot') %>

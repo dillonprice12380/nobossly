@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<div class="card form-card">
+  <h2>📝 Daily check-in</h2>
+  <% if (sprint) { %><p class="muted">Sprint: <%= sprint.theme %> — <%= sprint.goal %></p><% } %>
+  <form method="post" action="/dashboard/checkin">
+    <input type="hidden" name="sprint_id" value="<%= sprint ? sprint.id : '' %>">
+    <label>How are you feeling today?
+      <select name="mood_score">
+        <option value="5">🤩 Unstoppable</option><option value="4">😄 Good</option>
+        <option value="3" selected>🙂 Okay</option><option value="2">😕 Struggling</option><option value="1">😩 Rough day</option>
+      </select>
+    </label>
+    <label>What progress did you make?<textarea name="progress_note" rows="2" required></textarea></label>
+    <label>Any wins today?<textarea name="wins_today" rows="2"></textarea></label>
+    <label>Blockers?<textarea name="blockers" rows="2"></textarea></label>
+    <label>Plan for tomorrow<textarea name="tomorrow_plan" rows="2"></textarea></label>
+    <button class="btn btn-primary btn-block">Check in (+15 XP)</button>
+  </form>
+</div>
+<%- include('partials/foot') %>
