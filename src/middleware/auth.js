@@ -1,15 +1,31 @@
 const { anonClient, userClient } = require('../supabase');
 
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
-const COOKIE_OPTS = { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 * 30, ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}) };
+// Leave COOKIE_DOMAIN unset for HOST-ONLY cookies — they work on ANY host
+// (Hostinger temp domains, nobossly.com, localhost) with no configuration.
+// Only set it (e.g. ".nobossly.com") if you want one cookie shared across subdomains.
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
+
+function cookieOpts(req) {
+  const proto = String((req && (req.headers['x-forwarded-proto'] || req.protocol)) || '').split(',')[0].trim();
+  const isHttps = proto === 'https' || (req && req.secure);
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isHttps,
+    maxAge: 1000 * 60 * 60 * 24 * 30,
+    path: '/',
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {})
+  };
+}
 
 function setSessionCookies(res, session) {
-  res.cookie('sb_access', session.access_token, COOKIE_OPTS);
-  res.cookie('sb_refresh', session.refresh_token, COOKIE_OPTS);
+  const opts = cookieOpts(res.req);
+  res.cookie('sb_access', session.access_token, opts);
+  res.cookie('sb_refresh', session.refresh_token, opts);
 }
 
 function clearSessionCookies(res) {
-  const opts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
+  const opts = { path: '/', ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}) };
   res.clearCookie('sb_access', opts);
   res.clearCookie('sb_refresh', opts);
 }
