@@ -88,6 +88,7 @@ app.get('/debug', async (req, res) => {
   try {
     log('node ' + process.version);
     log('env SUPABASE_URL set: ' + !!process.env.SUPABASE_URL + ', ANON set: ' + !!process.env.SUPABASE_ANON_KEY);
+    log('env STRIPE_SECRET_KEY set: ' + !!process.env.STRIPE_SECRET_KEY + ' (prefix ' + String(process.env.STRIPE_SECRET_KEY || '').slice(0, 7) + '), SUB_SYNC_SECRET set: ' + !!process.env.SUB_SYNC_SECRET + ', SITE_URL: ' + (process.env.SITE_URL || '(unset)'));
     const { createClient } = require('@supabase/supabase-js');
     log('supabase-js loaded v' + require('@supabase/supabase-js/package.json').version);
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
