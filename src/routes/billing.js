@@ -67,9 +67,9 @@ router.get('/pricing', async (req, res, next) => {
 router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
   try {
     const { data: tier } = await req.sb.from('pricing_tiers').select('*').eq('key', req.params.key).eq('is_active', true).maybeSingle();
-    if (!tier) return res.redirect('/pricing');
+    if (!tier) return res.redirect('/pricing?msg=' + encodeURIComponent('DEBUG: no active tier found for key "' + req.params.key + '" (read returned null).'));
     if (!STRIPE_KEY() || !tier.stripe_price_id) {
-      return res.redirect('/pricing?msg=' + encodeURIComponent('Payments are not configured yet — check back soon.'));
+      return res.redirect('/pricing?msg=' + encodeURIComponent('DEBUG not-configured -> STRIPE_KEY=' + (STRIPE_KEY() ? 'set' : 'MISSING') + ', stripe_price_id=' + (tier.stripe_price_id || 'EMPTY')));
     }
     const params = {
       mode: tier.mode === 'payment' ? 'payment' : 'subscription',
