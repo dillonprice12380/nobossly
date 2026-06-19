@@ -63,33 +63,62 @@ router.get('/pricing', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Start checkout
+// Map a tier key to a Stripe recurring interval, used for inline (Price-ID-free) subscriptions.
+function recurringFor(key) {
+  if (key === 'quarter') return { interval: 'month', interval_count: 3 };
+  if (key === 'year') return { interval: 'year', interval_count: 1 };
+  return { interval: 'month', interval_count: 1 }; // monthly default
+}
+
+// Start checkout — EnRoute-style resilience: the ONLY thing that can block checkout is a
+// missing Stripe secret key. Pricing is read with the reliable anon client, and the line
+// item is built INLINE from the amount stored in pricing_tiers, so a missing or wrong
+// Stripe Price ID can never stop a sale (a valid stripe_price_id is still used if present).
 router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
   try {
-    const { data: tier } = await req.sb.from('pricing_tiers').select('*').eq('key', req.params.key).eq('is_active', true).maybeSingle();
-    if (!tier) return res.redirect('/pricing?msg=' + encodeURIComponent('DEBUG: no active tier found for key "' + req.params.key + '" (read returned null).'));
-    if (!STRIPE_KEY() || !tier.stripe_price_id) {
-      return res.redirect('/pricing?msg=' + encodeURIComponent('DEBUG not-configured -> STRIPE_KEY=' + (STRIPE_KEY() ? 'set' : 'MISSING') + ', stripe_price_id=' + (tier.stripe_price_id || 'EMPTY')));
+    if (!STRIPE_KEY()) {
+      return res.redirect('/pricing?msg=' + encodeURIComponent('Payments are being set up — please try again shortly.'));
     }
+    const sb = anonClient();
+    const { data: tier } = await sb.from('pricing_tiers').select('*').eq('key', req.params.key).eq('is_active', true).maybeSingle();
+    if (!tier) return res.redirect('/pricing');
+
+    const isPayment = tier.mode === 'payment';
     const params = {
-      mode: tier.mode === 'payment' ? 'payment' : 'subscription',
-      'line_items[0][price]': tier.stripe_price_id,
+      mode: isPayment ? 'payment' : 'subscription',
       'line_items[0][quantity]': '1',
       success_url: SITE() + '/billing/confirm?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: SITE() + '/pricing',
       client_reference_id: req.user.id,
-      customer_email: req.user.email,
       'metadata[tier]': tier.key,
       'metadata[user_id]': req.user.id
     };
-    if (req.profile.stripe_customer_id) { params.customer = req.profile.stripe_customer_id; delete params.customer_email; }
+
+    if (tier.stripe_price_id) {
+      // Use the configured catalog Price when present...
+      params['line_items[0][price]'] = tier.stripe_price_id;
+    } else {
+      // ...otherwise build the price inline from the amount in pricing_tiers.
+      params['line_items[0][price_data][currency]'] = 'usd';
+      params['line_items[0][price_data][product_data][name]'] = tier.name || 'NoBossly';
+      params['line_items[0][price_data][unit_amount]'] = String(tier.price_cents);
+      if (!isPayment) {
+        const r = recurringFor(tier.key);
+        params['line_items[0][price_data][recurring][interval]'] = r.interval;
+        params['line_items[0][price_data][recurring][interval_count]'] = String(r.interval_count);
+      }
+    }
+
+    if (req.profile.stripe_customer_id) { params.customer = req.profile.stripe_customer_id; }
+    else { params.customer_email = req.user.email; }
+
     let session;
     try {
       session = await stripe('POST', 'checkout/sessions', params);
     } catch (err) {
-      return res.redirect('/pricing?msg=' + encodeURIComponent('Payment could not start: ' + err.message));
+      return res.redirect('/pricing?msg=' + encodeURIComponent('Could not start checkout: ' + err.message));
     }
-    res.redirect(303, session.url);
+    return res.redirect(303, session.url);
   } catch (e) { next(e); }
 });
 
