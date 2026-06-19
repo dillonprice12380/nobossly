@@ -1,5 +1,41 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Mark the big moments of your journey. Earn XP and badges as you go.</p></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Mark the big moments of your journey and earn XP as you go.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (paid) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2>✨ Your AI-tailored milestones</h2><p class="muted small">Personalized to your launch blueprint.</p></div>
+      <form method="post" action="/milestones/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
+    </div>
+    <% if (!custom.length) { %>
+      <p class="muted">No tailored milestones yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
+    <% } else { %>
+      <% custom.forEach(m => { %>
+        <div class="milestone-row">
+          <div>
+            <strong><%= m.emoji %> <%= m.title %></strong>
+            <p class="muted small"><%= m.description %></p>
+            <span class="chip">⚡ <%= m.xp_reward %> XP</span> <span class="chip"><%= m.category %></span>
+          </div>
+          <% if (m.achieved) { %>
+            <span class="chip chip-success">✅ <%= m.date_achieved %></span>
+          <% } else { %>
+            <form method="post" action="/milestones/custom/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="card" style="border:1px dashed var(--border)">
+    <h2>✨ Want milestones tailored to YOUR business?</h2>
+    <p class="muted">Upgrade to get an AI-built set of milestones drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+  </div>
+  <p class="muted small">You can use the milestones below to track your journey and earn XP. Badges and profile awards are part of the paid plan.</p>
+<% } %>
+
 <% const labels = { foundation: '🏛️ Foundation', product: '📦 Product', revenue: '💵 Revenue', traction: '📈 Traction', community: '🌐 Community', personal: '🎯 Personal' }; %>
 <% Object.keys(cats).forEach(cat => { %>
   <div class="card">
@@ -10,7 +46,7 @@
           <strong><%= m.emoji %> <%= m.title %></strong>
           <p class="muted small"><%= m.description %></p>
           <span class="chip">⚡ <%= m.xp_reward %> XP</span>
-          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip">🏅 <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
+          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '🏅' : '🔒' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
         </div>
         <% if (got) { %>
           <span class="chip chip-success">✅ <%= new Date(got.earned_at).toLocaleDateString() %></span>

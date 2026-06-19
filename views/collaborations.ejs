@@ -18,6 +18,7 @@
   </div>
 <% } %>
 
+<% if (paid) { %>
 <div class="card">
   <h2>Start a new project</h2>
   <form method="post" action="/collaborations/create">
@@ -28,6 +29,13 @@
     <button class="btn btn-primary">Create project</button>
   </form>
 </div>
+<% } else { %>
+<div class="card" style="border:1px dashed var(--border)">
+  <h2>✨ Want to lead your own team?</h2>
+  <p class="muted">You can accept invites and collaborate on any project you're added to. Creating your own projects and inviting members is part of the paid plan.</p>
+  <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+</div>
+<% } %>
 
 <% function renderProject(p, isOwner) { const members = membersByProject[p.id] || []; %>
   <div class="card">
@@ -46,7 +54,7 @@
         <% if (isOwner) { %><form method="post" action="/collaborations/<%= p.id %>/remove/<%= m.id %>"><button class="btn btn-ghost btn-sm">Remove</button></form><% } %>
       </div>
     <% }) %>
-    <% if (isOwner) { %>
+    <% if (isOwner && paid) { %>
       <form method="post" action="/collaborations/<%= p.id %>/invite" class="inline-form" style="margin-top:.7rem">
         <input name="username" placeholder="Invite by username…" required>
         <button class="btn btn-primary btn-sm">Invite</button>

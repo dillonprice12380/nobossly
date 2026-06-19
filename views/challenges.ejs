@@ -1,5 +1,57 @@
 <%- include('partials/head') %>
 <div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Accept a challenge, pick your timeline, and it pins to your dashboard.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (paid) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2>✨ Your AI-tailored challenges</h2><p class="muted small">Personalized to your launch blueprint.</p></div>
+      <form method="post" action="/challenges/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
+    </div>
+    <% if (!custom.length) { %>
+      <p class="muted">No tailored challenges yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
+    <% } else { %>
+      <div class="grid">
+        <% custom.forEach(c => { %>
+          <div class="card">
+            <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+            <h3><%= c.title %></h3>
+            <p class="muted"><%= c.description %></p>
+            <% if (c.status === 'active') { %>
+              <span class="chip">⏳ Due <%= c.due_date %> (<%= c.duration_days %>-day)</span>
+              <div class="cta-row" style="justify-content:flex-start">
+                <form method="post" action="/challenges/custom/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
+                <form method="post" action="/challenges/custom/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+              </div>
+            <% } else if (c.status === 'completed') { %>
+              <span class="chip chip-success">✅ Completed</span>
+            <% } else { %>
+              <form method="post" action="/challenges/custom/<%= c.id %>/accept">
+                <% if (c.status === 'abandoned') { %><span class="chip">Abandoned</span><% } %>
+                <label class="small">Timeline
+                  <select name="duration_days">
+                    <option value="30" <%= c.suggested_days === 30 ? 'selected' : '' %>>30 days</option>
+                    <option value="60" <%= c.suggested_days === 60 ? 'selected' : '' %>>60 days</option>
+                    <option value="90" <%= c.suggested_days === 90 ? 'selected' : '' %>>90 days</option>
+                  </select>
+                </label>
+                <button class="btn btn-primary btn-sm"><%= c.status === 'abandoned' ? 'Re-accept' : 'Accept challenge' %></button>
+              </form>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="card" style="border:1px dashed var(--border)">
+    <h2>✨ Want challenges tailored to YOUR business?</h2>
+    <p class="muted">Upgrade to get an AI-built set of challenges drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+  </div>
+  <p class="muted small">You can take on the challenges below to track your progress and earn XP. Badges and profile awards are part of the paid plan.</p>
+<% } %>
+
 <div class="grid">
   <% challenges.forEach(c => { const a = accMap[c.id]; %>
     <div class="card">

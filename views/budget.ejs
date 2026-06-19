@@ -4,6 +4,30 @@
   <a class="btn btn-ghost" href="/dashboard">← Dashboard</a>
 </div>
 
+<% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (typeof paid !== 'undefined' && paid) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h3>✨ AI budget assistant</h3><p class="muted small">Tailored to your launch blueprint.</p></div>
+      <div class="cta-row" style="justify-content:flex-start">
+        <form method="post" action="/budget/ai/suggest" class="inline"><button class="btn btn-primary btn-sm">Suggest a startup budget</button></form>
+        <form method="post" action="/budget/ai/insights" class="inline"><button class="btn btn-ghost btn-sm">Get spending insights</button></form>
+      </div>
+    </div>
+    <% if (typeof insights !== 'undefined' && insights) { %>
+      <% if (insights.summary) { %><p><%= insights.summary %></p><% } %>
+      <% if (insights.tips && insights.tips.length) { %><ul class="feature-list"><% insights.tips.forEach(t => { %><li>💡 <%= t %></li><% }) %></ul><% } %>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="card" style="border:1px dashed var(--border)">
+    <h3>✨ Want an AI-built startup budget?</h3>
+    <p class="muted">Budgeting and expense tracking are free. Upgrade to get a lean startup budget tailored to your blueprint, plus AI insights on your spending.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+  </div>
+<% } %>
+
 <div class="grid-2">
   <div class="card">
     <h3>This month</h3>

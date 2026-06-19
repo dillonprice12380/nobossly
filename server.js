@@ -33,18 +33,18 @@ app.use((req, res, next) => {
 app.use('/', require('./src/routes/auth'));
 app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
 app.use('/ideas', requireAuth, require('./src/routes/ideas'));
-app.use('/blueprint', requireAuth, requirePaid, require('./src/routes/blueprint'));
+app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
-app.use('/challenges', requireAuth, requirePaid, require('./src/routes/challenges'));
+app.use('/challenges', requireAuth, require('./src/routes/challenges'));
 app.use('/community', require('./src/routes/community'));
-app.use('/milestones', requireAuth, requirePaid, require('./src/routes/milestones'));
-app.use('/collaborations', requireAuth, requirePaid, require('./src/routes/collaborations'));
+app.use('/milestones', requireAuth, require('./src/routes/milestones'));
+app.use('/collaborations', requireAuth, require('./src/routes/collaborations'));
 app.use('/messages', requireAuth, require('./src/routes/messages'));
 app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
-app.use('/budget', requireAuth, requirePaid, require('./src/routes/budget'));
+app.use('/budget', requireAuth, require('./src/routes/budget'));
 app.use('/', billing.router); // /pricing + /billing/*
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends, groups
 app.use('/upload', requireAuth, require('./src/routes/uploads'));

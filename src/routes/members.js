@@ -40,17 +40,20 @@ router.get('/:username', async (req, res, next) => {
       .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, streak_days, tasks_completed, created_at, profile_is_public, account_status')
       .eq('username', req.params.username).maybeSingle();
     if (!p || (p.account_status !== 'active' && p.id !== req.user.id)) return res.status(404).render('error', { title: 'Not found', message: 'Member not found.' });
-    const [{ data: ub }, { data: um }, { data: levels }] = await Promise.all([
+    const [{ data: ub }, { data: um }, { data: levels }, { data: customM }] = await Promise.all([
       req.sb.from('user_badges').select('badge_id, earned_at').eq('user_id', p.id),
-      req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', p.id).order('earned_at', { ascending: false }),
-      req.sb.from('founder_levels').select('level, title, emoji')
+      // pinned=true only — free users' personal completions are not pinned to the public profile
+      req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', p.id).eq('pinned', true).order('earned_at', { ascending: false }),
+      req.sb.from('founder_levels').select('level, title, emoji'),
+      req.sb.from('user_custom_milestones').select('title, emoji, achieved_at').eq('user_id', p.id).eq('achieved', true).order('achieved_at', { ascending: false })
     ]);
     const badgeIds = (ub || []).map(b => b.badge_id);
     const milestoneIds = (um || []).map(m => m.predefined_milestone_id);
-    const [{ data: badges }, { data: milestones }] = await Promise.all([
+    const [{ data: badges }, { data: preMilestones }] = await Promise.all([
       badgeIds.length ? req.sb.from('badges').select('id, name, emoji, tier, description').in('id', badgeIds) : { data: [] },
       milestoneIds.length ? req.sb.from('predefined_milestones').select('id, title, emoji').in('id', milestoneIds) : { data: [] }
     ]);
+    const milestones = [...(preMilestones || []), ...((customM || []).map(c => ({ emoji: c.emoji, title: c.title })))];
     const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '🌱' };
     const isMe = p.id === req.user.id;
     const isPrivate = p.profile_is_public === false && !isMe;

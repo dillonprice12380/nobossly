@@ -89,4 +89,55 @@ Include 6-9 tasks ordered by priority. Sprint 1 should focus on validation and f
   return askJSON(token, system, prompt, 4000);
 }
 
-module.exports = { generateIdeas, generateBlueprint, generateSprintTasks, hasKey };
+function blueprintContext(bp) {
+  return `Business: ${bp.business_name || ''} — ${bp.tagline || ''}
+Positioning: ${bp.positioning || ''}
+Ideal customer: ${bp.icp_archetype || ''} — ${bp.icp_description || ''}
+Revenue model: ${bp.revenue_type || ''}
+Roadmap: ${bp.roadmap_summary || ''}
+Go-to-market: ${bp.gtm_strategy || ''}
+First customer plan: ${bp.gtm_first_customer || ''}
+Week-1 actions: ${JSON.stringify(bp.gtm_week1_actions || [])}
+Projections: 3mo ${bp.projection_month3 || '?'}, 6mo ${bp.projection_month6 || '?'}, 12mo ${bp.projection_month12 || '?'}`;
+}
+
+async function generateMilestones(token, bp) {
+  const system = 'You are NoBossly, a startup coach who turns a founder\'s launch blueprint into meaningful, personalized milestones that mark real progress.';
+  const prompt = `${blueprintContext(bp)}
+
+Create 7 milestones tailored to THIS specific business that mark concrete moments of progress (not generic). Return a JSON array where each element has:
+title (short, specific to this business), description (1 sentence on what achieving it means), emoji (a single relevant emoji), category (one of: foundation, product, revenue, traction, community, personal), xp_reward (integer between 25 and 150, larger for harder milestones).
+Order them roughly from earliest to latest in the journey.`;
+  return askJSON(token, system, prompt, 3000);
+}
+
+async function generateChallenges(token, bp) {
+  const system = 'You are NoBossly, a startup execution coach who designs time-boxed challenges that push a founder toward their launch.';
+  const prompt = `${blueprintContext(bp)}
+
+Create 6 time-boxed challenges tailored to THIS specific business that build momentum toward launch and first revenue. Return a JSON array where each element has:
+title (short, action-oriented, specific to this business), description (1-2 sentences on the challenge and why it matters), emoji (a single relevant emoji), suggested_days (one of 30, 60, 90), xp_reward (integer between 25 and 150).`;
+  return askJSON(token, system, prompt, 3000);
+}
+
+async function generateBudget(token, bp) {
+  const system = 'You are NoBossly, a pragmatic startup finance coach who builds lean, realistic monthly operating budgets for early-stage founders.';
+  const prompt = `${blueprintContext(bp)}
+
+Propose a lean MONTHLY startup operating budget for this specific business. Return a JSON array of 6-8 elements, each with:
+category (short label, e.g. "Software & tools", "Marketing & ads", "Contractors"), monthly_limit (integer US dollars, realistic for an early-stage solo founder), rationale (1 short sentence on why this matters for THIS business).
+Keep the total lean and grounded in the business model above.`;
+  return askJSON(token, system, prompt, 2500);
+}
+
+async function budgetInsights(token, summary) {
+  const system = 'You are NoBossly, a startup finance coach. You give concise, practical, encouraging insights on a founder\'s spending vs. their budget.';
+  const prompt = `Here is the founder's current month budget and spending (USD):
+${JSON.stringify(summary)}
+
+Return a JSON object: { "summary": "2-3 sentence read on how they're doing", "tips": ["3-5 specific, actionable tips based on the numbers"] }.
+Call out over-budget categories, unspent room, and lean-startup suggestions. Be specific to the numbers, not generic.`;
+  return askJSON(token, system, prompt, 2000);
+}
+
+module.exports = { generateIdeas, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey };
