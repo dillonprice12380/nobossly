@@ -25,9 +25,14 @@ function setSessionCookies(res, session) {
 }
 
 function clearSessionCookies(res) {
-  const opts = { path: '/', ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}) };
-  res.clearCookie('sb_access', opts);
-  res.clearCookie('sb_refresh', opts);
+  // Clear every variant the cookie could have been set under (host-only now, but
+  // older sessions may carry an apex-domain cookie) so logout always sticks.
+  const variants = [{ path: '/' }, { path: '/', domain: '.nobossly.com' }];
+  if (COOKIE_DOMAIN && COOKIE_DOMAIN !== '.nobossly.com') variants.push({ path: '/', domain: COOKIE_DOMAIN });
+  for (const opts of variants) {
+    res.clearCookie('sb_access', opts);
+    res.clearCookie('sb_refresh', opts);
+  }
 }
 
 async function attachUser(req, res, next) {
@@ -59,28 +64,47 @@ async function attachUser(req, res, next) {
       req.user = user;
       req.accessToken = token;
       res.locals.user = user;
-      const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
-      if (!profile) {
+      const { data: existing } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      let prof = existing;
+      // The on_auth_user_created DB trigger inserts a bare profile (id only), so the
+      // username is backfilled here the first time we see the user — this covers
+      // BOTH a missing profile and a trigger-created one with a null username.
+      // Email/password signups carry a chosen username in metadata; social (OAuth)
+      // signups don't, so we derive a placeholder and flag the account to pick one
+      // (enforced by the /choose-username redirect in server.js).
+      if (!prof || !prof.username) {
         const meta = user.user_metadata || {};
-        let uname = String(meta.username || '').replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 24);
-        if (uname.length < 3) uname = (user.email || 'founder').split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20) || 'founder';
-        let created = null;
-        for (let attempt = 0; attempt < 2 && !created; attempt++) {
-          const tryName = attempt === 0 ? uname : uname.slice(0, 19) + '_' + user.id.slice(0, 4);
-          const r = await sb.from('profiles')
-            .insert({ id: user.id, username: tryName, display_name: meta.display_name || tryName })
-            .select().maybeSingle();
-          if (!r.error) created = r.data;
+        const chosen = String(meta.username || '').replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 24);
+        const hasChosen = chosen.length >= 3;
+        const baseName = hasChosen ? chosen
+          : ((user.email || 'founder').split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20) || 'founder');
+        const fullName = meta.full_name || meta.name || meta.display_name || '';
+        let finalName = null;
+        for (let attempt = 0; attempt < 3 && !finalName; attempt++) {
+          const tryName = attempt === 0 ? baseName : (baseName.slice(0, 18) + '_' + user.id.slice(0, 3 + attempt));
+          const { data: clash } = await sb.from('profiles').select('id').eq('username', tryName).neq('id', user.id).maybeSingle();
+          if (!clash) finalName = tryName;
         }
-        req.profile = created;
-      } else {
-        req.profile = profile;
-        // auto-reactivate a deactivated account on login
-        if (profile.account_status === 'deactivated') {
-          await sb.from('profiles').update({ account_status: 'active' }).eq('id', user.id);
-          req.profile.account_status = 'active';
-          res.locals.reactivated = true;
+        if (!finalName) finalName = (baseName.slice(0, 12) + '_' + user.id.slice(0, 8));
+        const patch = {
+          username: finalName,
+          display_name: (prof && prof.display_name) || fullName || finalName,
+          needs_username: !hasChosen
+        };
+        if (prof) {
+          const { data: upd } = await sb.from('profiles').update(patch).eq('id', user.id).select().maybeSingle();
+          prof = upd || Object.assign(prof, patch);
+        } else {
+          const { data: ins } = await sb.from('profiles').insert(Object.assign({ id: user.id }, patch)).select().maybeSingle();
+          prof = ins || Object.assign({ id: user.id }, patch);
         }
+      }
+      req.profile = prof;
+      // auto-reactivate a deactivated account on login
+      if (prof && prof.account_status === 'deactivated') {
+        await sb.from('profiles').update({ account_status: 'active' }).eq('id', user.id);
+        req.profile.account_status = 'active';
+        res.locals.reactivated = true;
       }
       res.locals.profile = req.profile;
       res.locals.plan = planOf(req.profile);

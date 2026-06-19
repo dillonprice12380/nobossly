@@ -97,4 +97,34 @@ router.get('/auth/callback', async (req, res) => {
   }
 });
 
+// ---------- Choose username (first-time OAuth users) ----------
+const USERNAME_RE = /^[a-z0-9_]{3,24}$/;
+
+router.get('/choose-username', (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  if (req.profile && !req.profile.needs_username) return res.redirect('/dashboard');
+  const meta = req.user.user_metadata || {};
+  const suggestedName = (req.profile && req.profile.display_name) || meta.full_name || meta.name || '';
+  const suggestedUser = (req.profile && req.profile.username) || '';
+  res.render('choose-username', { title: 'Choose your username', error: null, suggestedUser, suggestedName });
+});
+
+router.post('/choose-username', async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  const sb = req.sb || anonClient();
+  const username = String(req.body.username || '').trim().toLowerCase();
+  const displayName = String(req.body.display_name || '').trim().slice(0, 60);
+  const rerender = (error) => res.render('choose-username', { title: 'Choose your username', error, suggestedUser: username, suggestedName: displayName });
+  if (!USERNAME_RE.test(username)) {
+    return rerender('Username must be 3–24 characters: letters, numbers, or underscores.');
+  }
+  const { data: taken } = await sb.from('profiles').select('id').eq('username', username).neq('id', req.user.id).maybeSingle();
+  if (taken) return rerender('That username is taken — try another.');
+  const { error } = await sb.from('profiles')
+    .update({ username, display_name: displayName || username, needs_username: false })
+    .eq('id', req.user.id);
+  if (error) return rerender('Could not save that username: ' + error.message);
+  res.redirect('/questionnaire');
+});
+
 module.exports = router;

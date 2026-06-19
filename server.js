@@ -21,6 +21,15 @@ app.use(require('./src/middleware/ogPrerender')); // crawler OG tags for /blog/:
 app.use(attachUser);
 app.use(require('./src/settings').attachSettings);
 
+// First-time social (Google/LinkedIn/GitHub) sign-ups must choose a username
+// before using the rest of the app. Skip the chooser itself, auth, and logout.
+app.use((req, res, next) => {
+  if (!req.user || !req.profile || !req.profile.needs_username) return next();
+  const p = req.path;
+  if (p === '/choose-username' || p === '/logout' || p === '/debug' || p.startsWith('/auth/')) return next();
+  return res.redirect('/choose-username');
+});
+
 app.use('/', require('./src/routes/auth'));
 app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
 app.use('/ideas', requireAuth, require('./src/routes/ideas'));

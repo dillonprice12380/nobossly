@@ -1,0 +1,14 @@
+<%- include('partials/head') %>
+<div class="auth-card card">
+  <h2>Pick your username</h2>
+  <p class="muted">You're almost in. Choose how you'll appear to the NoBossly community.</p>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <form method="post" action="/choose-username">
+    <label>Display name <span class="muted small">(your real name or whatever you'd like shown)</span>
+      <input name="display_name" maxlength="60" value="<%= suggestedName || '' %>" placeholder="e.g. Dillon Price"></label>
+    <label>Community username <span class="muted small">(your unique handle — letters, numbers, underscores)</span>
+      <input name="username" pattern="[A-Za-z0-9_]{3,24}" title="3-24 letters, numbers or underscores" value="<%= suggestedUser || '' %>" required autofocus></label>
+    <button class="btn btn-primary btn-block">Continue</button>
+  </form>
+</div>
+<%- include('partials/foot') %>
