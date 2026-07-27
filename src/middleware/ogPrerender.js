@@ -4,7 +4,7 @@ const { anonClient } = require('../supabase');
 
 const SITE_URL = 'https://nobossly.com';
 // No dedicated OG image asset exists yet; fall back to the brand logo.
-const DEFAULT_IMAGE = 'https://res.cloudinary.com/dkxa3rup0/image/upload/v1779381926/nobossly-logo_a5ew2x.png';
+const DEFAULT_IMAGE = 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/nobossly-logo_a5ew2x.png';
 const CRAWLERS = /facebookexternalhit|facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Discordbot|Pinterest\//i;
 
 const ROUTES = [
@@ -30,7 +30,9 @@ module.exports = async function ogPrerender(req, res, next) {
   try {
     const { data: post } = await anonClient()
       .from(route.table)
-      .select('title, excerpt, featured_image, seo_title, seo_description, slug')
+      .select(route.table === 'cms_guides'
+        ? 'title, excerpt, seo_title, seo_description, slug'
+        : 'title, excerpt, featured_image, seo_title, seo_description, slug')
       .eq('slug', slug)
       .eq('status', 'published')
       .maybeSingle();

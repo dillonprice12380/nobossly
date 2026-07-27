@@ -30,7 +30,8 @@ function buildPager(page, pages) {
 async function listPosts(req, { table, type, q, page }) {
   const sb = client(req);
   const isBlog = table === 'cms_contents';
-  const cols = 'slug, title, excerpt, featured_image, published_at' + (isBlog ? ', view_count, author_id' : '');
+  // featured_image only exists on cms_contents; cms_guides dropped it.
+  const cols = 'slug, title, excerpt, published_at' + (isBlog ? ', featured_image, view_count, author_id' : '');
 
   const scope = base => {
     let qy = base.eq('status', 'published');
@@ -63,7 +64,7 @@ async function authorMap(req, posts) {
   return map;
 }
 
-const BLOG_LIST = { table: 'cms_contents', type: 'blog', base: '/blog/', listUrl: '/blog', emptyIcon: '📰', emptyMsg: 'No posts yet.', showMeta: true };
+const BLOG_LIST = { table: 'cms_contents', type: 'blog', base: '/blog/', listUrl: '/blog', emptyIcon: '📰', emptyMsg: 'No posts yet.', showMeta: true, showImage: true };
 const GUIDE_LIST = { table: 'cms_guides', type: null, base: '/guides/', listUrl: '/guides', emptyIcon: '📘', emptyMsg: 'No guides yet — check back soon.', showMeta: false };
 
 // Builds the full render context for views/partials/post_list.ejs.
@@ -71,7 +72,7 @@ async function listContext(req, cfg) {
   const q = cleanQ(req.query.q);
   const result = await listPosts(req, { table: cfg.table, type: cfg.type, q, page: toPage(req.query.page) });
   const amap = cfg.showMeta ? await authorMap(req, result.posts) : {};
-  return { ...result, q, amap, baseParams: { q }, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
+  return { ...result, q, amap, baseParams: { q }, showImage: cfg.showImage !== false, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
 }
 
 // Guides go through SQL functions rather than PostgREST: category and location
@@ -106,7 +107,7 @@ async function guidesContext(req) {
     posts: rows || [], total, pages, page, pager: buildPager(page, pages),
     q, cat, loc, facets, amap: {}, baseParams: { q, cat, loc },
     base: GUIDE_LIST.base, listUrl: GUIDE_LIST.listUrl,
-    emptyIcon: GUIDE_LIST.emptyIcon, emptyMsg: GUIDE_LIST.emptyMsg, showMeta: false
+    emptyIcon: GUIDE_LIST.emptyIcon, emptyMsg: GUIDE_LIST.emptyMsg, showMeta: false, showImage: false
   };
 }
 
@@ -134,7 +135,10 @@ async function loadSidebarFor(req, post, table) {
   }
   let similar = [];
   if (config.show_similar) {
-    let qy = sb.from(table).select('slug, title, excerpt, featured_image, published_at').eq('status', 'published').neq('id', post.id).order('published_at', { ascending: false }).limit(4);
+    const simCols = table === 'cms_guides'
+      ? 'slug, title, excerpt, published_at'
+      : 'slug, title, excerpt, featured_image, published_at';
+    let qy = sb.from(table).select(simCols).eq('status', 'published').neq('id', post.id).order('published_at', { ascending: false }).limit(4);
     if (table === 'cms_contents') qy = qy.eq('type', 'blog');
     const { data } = await qy;
     similar = data || [];

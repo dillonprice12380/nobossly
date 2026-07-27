@@ -2,7 +2,7 @@
 <% var isBlog = post.type === 'blog'; var isGuide = post.type === 'guide'; %>
 <div class="post-layout <%= sidebar ? 'with-sidebar' : '' %>">
   <article class="article">
-    <% if (post.featured_image) { %><img class="featured-img" src="<%= post.featured_image %>" alt="<%= post.title %>"><% } %>
+    <% if (!isGuide && post.featured_image) { %><img class="featured-img" src="<%= post.featured_image %>" alt="<%= post.title %>"><% } %>
     <h1><%= post.title %></h1>
     <% if (isBlog) { %>
       <div class="post-meta-row">

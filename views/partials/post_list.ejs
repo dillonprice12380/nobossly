@@ -21,7 +21,7 @@
   <% posts.forEach(p => { %>
     <a class="card post-card" href="<%= base %><%= p.slug %>">
       <div class="post-card-top">
-        <% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty"><%= emptyIcon %></div><% } %>
+        <% if (typeof showImage === 'undefined' || showImage) { %><% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty"><%= emptyIcon %></div><% } %><% } %>
         <h3 class="post-card-title"><%= p.title %><% if (p.varies_by_state) { %><span class="badge-varies" title="Applies nationwide, but the specifics differ by state">Varies by state</span><% } %></h3>
       </div>
       <% if (showMeta) { %>
