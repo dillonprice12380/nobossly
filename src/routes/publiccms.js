@@ -3,6 +3,74 @@ const { anonClient } = require('../supabase');
 
 const client = req => req.sb || anonClient();
 
+const PER_PAGE = 12;
+
+// Strip characters that would break PostgREST's `or=(...)` filter grammar, and the
+// LIKE wildcards that would otherwise let a stray "%" match every row.
+// Dots and hyphens are safe to keep: PostgREST only splits on the first two dots.
+const cleanQ = s => String(s || '').replace(/[,()%*\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+const toPage = v => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 1; };
+
+// Page numbers to render, with nulls standing in for ellipses.
+function buildPager(page, pages) {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  const out = [1];
+  if (page > 3) out.push(null);
+  for (let i = Math.max(2, page - 1); i <= Math.min(pages - 1, page + 1); i++) out.push(i);
+  if (page < pages - 2) out.push(null);
+  out.push(pages);
+  return out;
+}
+
+// Shared list query for cms_contents (blog) and cms_guides.
+async function listPosts(req, { table, type, q, page }) {
+  const sb = client(req);
+  const isBlog = table === 'cms_contents';
+  const cols = 'slug, title, excerpt, featured_image, published_at' + (isBlog ? ', view_count, author_id' : '');
+
+  const scope = base => {
+    let qy = base.eq('status', 'published');
+    if (type) qy = qy.eq('type', type);
+    if (q) qy = qy.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`);
+    return qy;
+  };
+
+  // Count first so the page can be clamped before fetching a range that may not exist.
+  const { count } = await scope(sb.from(table).select('slug', { count: 'exact', head: true }));
+  const total = count || 0;
+  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const current = Math.min(page, pages);
+  const from = (current - 1) * PER_PAGE;
+
+  const { data: posts } = await scope(sb.from(table).select(cols))
+    .order('published_at', { ascending: false })
+    .range(from, from + PER_PAGE - 1);
+
+  return { posts: posts || [], total, pages, page: current, pager: buildPager(current, pages) };
+}
+
+// Display names for blog post authors.
+async function authorMap(req, posts) {
+  const ids = [...new Set(posts.map(p => p.author_id).filter(Boolean))];
+  if (!ids.length) return {};
+  const { data } = await client(req).from('profiles').select('id, display_name, username').in('id', ids);
+  const map = {};
+  (data || []).forEach(a => map[a.id] = a.display_name || a.username);
+  return map;
+}
+
+const BLOG_LIST = { table: 'cms_contents', type: 'blog', base: '/blog/', listUrl: '/blog', emptyIcon: '📰', emptyMsg: 'No posts yet.', showMeta: true };
+const GUIDE_LIST = { table: 'cms_guides', type: null, base: '/guides/', listUrl: '/guides', emptyIcon: '📘', emptyMsg: 'No guides yet — check back soon.', showMeta: false };
+
+// Builds the full render context for views/partials/post_list.ejs.
+async function listContext(req, cfg) {
+  const q = cleanQ(req.query.q);
+  const result = await listPosts(req, { table: cfg.table, type: cfg.type, q, page: toPage(req.query.page) });
+  const amap = cfg.showMeta ? await authorMap(req, result.posts) : {};
+  return { ...result, q, amap, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
+}
+
 // ---- TOC: add ids to h2/h3 in body html, return [{level, id, text}] ----
 const headSlug = t => String(t || '').toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 function buildToc(html) {
@@ -35,14 +103,21 @@ async function loadSidebarFor(req, post, table) {
   return { config, similar, base: table === 'cms_guides' ? '/guides/' : '/blog/' };
 }
 
+// AJAX endpoints for live search. Mounted above /blog/:slug and /guides/:slug so a
+// path segment can never be mistaken for a slug. They render the same partial the
+// full page uses, so card markup has exactly one definition.
+router.get('/api/blog/search', async (req, res, next) => {
+  try { res.render('partials/post_list', await listContext(req, BLOG_LIST)); } catch (e) { next(e); }
+});
+
+router.get('/api/guides/search', async (req, res, next) => {
+  try { res.render('partials/post_list', await listContext(req, GUIDE_LIST)); } catch (e) { next(e); }
+});
+
 router.get('/blog', async (req, res, next) => {
   try {
-    const { data: posts } = await client(req).from('cms_contents').select('slug, title, excerpt, published_at, featured_image, view_count, author_id')
-      .eq('type', 'blog').eq('status', 'published').order('published_at', { ascending: false }).limit(50);
-    const authorIds = [...new Set((posts || []).map(p => p.author_id).filter(Boolean))];
-    const { data: authors } = authorIds.length ? await client(req).from('profiles').select('id, display_name, username').in('id', authorIds) : { data: [] };
-    const amap = {}; (authors || []).forEach(a => amap[a.id] = a.display_name || a.username);
-    res.render('blog_list', { title: 'Blog', posts: posts || [], amap, metaDescription: 'Insights, playbooks, and founder stories from NoBossly.' });
+    const ctx = await listContext(req, BLOG_LIST);
+    res.render('blog_list', { title: 'Blog', ...ctx, metaDescription: 'Insights, playbooks, and founder stories from NoBossly.' });
   } catch (e) { next(e); }
 });
 
@@ -70,10 +145,8 @@ router.get('/blog/:slug', async (req, res, next) => {
 // Guides
 router.get('/guides', async (req, res, next) => {
   try {
-    const { data: posts } = await client(req).from('cms_guides')
-      .select('slug, title, excerpt, featured_image, published_at')
-      .eq('status', 'published').order('published_at', { ascending: false }).limit(100);
-    res.render('guides_list', { title: 'Guides', posts: posts || [], metaDescription: 'Practical guides for starting and growing your business with NoBossly.' });
+    const ctx = await listContext(req, GUIDE_LIST);
+    res.render('guides_list', { title: 'Guides', ...ctx, metaDescription: 'Practical guides for starting and growing your business with NoBossly.' });
   } catch (e) { next(e); }
 });
 

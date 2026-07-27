@@ -1,18 +1,17 @@
 <%- include('partials/head') %>
 <div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-blog"/></svg> Blog</h1></div></div>
-<% posts.forEach(p => { %>
-  <a class="card post-card" href="/blog/<%= p.slug %>">
-    <div class="post-card-top">
-      <% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty">📰</div><% } %>
-      <h3 class="post-card-title"><%= p.title %></h3>
-    </div>
-    <p class="muted small post-card-meta">
-      <%= p.published_at ? new Date(p.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '' %>
-      <% if (p.author_id && amap[p.author_id]) { %> · By <%= amap[p.author_id] %><% } %>
-      · 👁 <%= p.view_count || 0 %> views
-    </p>
-    <% if (p.excerpt) { %><p class="muted post-card-excerpt"><%= p.excerpt %></p><% } %>
-  </a>
-<% }) %>
-<% if (!posts.length) { %><div class="card center"><p>No posts yet.</p></div><% } %>
+
+<form class="list-search" id="list-search-form" method="get" action="/blog" role="search"
+      data-endpoint="/api/blog/search" data-list-url="/blog">
+  <label class="sr-only" for="list-search">Search posts</label>
+  <input type="search" id="list-search" name="q" value="<%= q %>" placeholder="Search posts…"
+         autocomplete="off" spellcheck="false">
+  <noscript><button class="btn btn-primary" type="submit">Search</button></noscript>
+</form>
+
+<div id="list-results" aria-live="polite">
+<%- include('partials/post_list') %>
+</div>
+
+<script src="/js/list-search.js?v=1"></script>
 <%- include('partials/foot') %>
