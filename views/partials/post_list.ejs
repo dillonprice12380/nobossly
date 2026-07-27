@@ -1,17 +1,28 @@
-<% if (q) { %>
-  <p class="list-count muted small"><%= total %> result<%= total === 1 ? '' : 's' %> for "<%= q %>"</p>
+<%
+  const params = typeof baseParams !== 'undefined' ? baseParams : { q };
+  const href = n => {
+    const p = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) p.set(k, v); });
+    if (n > 1) p.set('page', n);
+    const s = p.toString();
+    return listUrl + (s ? '?' + s : '');
+  };
+  const filtered = Object.values(params).some(Boolean);
+%>
+<% if (filtered) { %>
+  <p class="list-count muted small"><%= total %> result<%= total === 1 ? '' : 's' %><% if (q) { %> for "<%= q %>"<% } %></p>
 <% } %>
 
 <% if (!posts.length) { %>
   <div class="card center">
-    <p><%= q ? 'No matches for "' + q + '". Try a different term.' : emptyMsg %></p>
+    <p><%= filtered ? 'No guides match those filters. Try widening your search.' : emptyMsg %></p>
   </div>
 <% } else { %>
   <% posts.forEach(p => { %>
     <a class="card post-card" href="<%= base %><%= p.slug %>">
       <div class="post-card-top">
         <% if (p.featured_image) { %><img class="post-card-img" src="<%= p.featured_image %>" alt="" loading="lazy"><% } else { %><div class="post-card-img post-card-img-empty"><%= emptyIcon %></div><% } %>
-        <h3 class="post-card-title"><%= p.title %></h3>
+        <h3 class="post-card-title"><%= p.title %><% if (p.varies_by_state) { %><span class="badge-varies" title="Applies nationwide, but the specifics differ by state">Varies by state</span><% } %></h3>
       </div>
       <% if (showMeta) { %>
         <p class="muted small post-card-meta">
@@ -26,14 +37,12 @@
 <% } %>
 
 <% if (pages > 1) { %>
-  <% const href = n => listUrl + '?' + (q ? 'q=' + encodeURIComponent(q) + '&' : '') + 'page=' + n; %>
   <nav class="pager" aria-label="Pagination">
     <% if (page > 1) { %>
       <a class="pager-btn" href="<%= href(page - 1) %>" data-page="<%= page - 1 %>" rel="prev">← Prev</a>
     <% } else { %>
       <span class="pager-btn is-disabled" aria-disabled="true">← Prev</span>
     <% } %>
-
     <span class="pager-pages">
       <% pager.forEach(n => { %>
         <% if (n === null) { %>
@@ -45,11 +54,14 @@
         <% } %>
       <% }) %>
     </span>
-
     <% if (page < pages) { %>
       <a class="pager-btn" href="<%= href(page + 1) %>" data-page="<%= page + 1 %>" rel="next">Next →</a>
     <% } else { %>
       <span class="pager-btn is-disabled" aria-disabled="true">Next →</span>
     <% } %>
   </nav>
+<% } %>
+
+<% if (typeof facets !== 'undefined' && facets) { %>
+<script type="application/json" id="facet-data"><%- JSON.stringify(facets) %></script>
 <% } %>

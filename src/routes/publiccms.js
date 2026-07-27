@@ -12,6 +12,9 @@ const cleanQ = s => String(s || '').replace(/[,()%*\\]/g, ' ').replace(/\s+/g, '
 
 const toPage = v => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 1; };
 
+// Taxonomy slugs come from our own tables; anything else is dropped outright.
+const cleanSlug = s => String(s || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50);
+
 // Page numbers to render, with nulls standing in for ellipses.
 function buildPager(page, pages) {
   if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
@@ -68,7 +71,43 @@ async function listContext(req, cfg) {
   const q = cleanQ(req.query.q);
   const result = await listPosts(req, { table: cfg.table, type: cfg.type, q, page: toPage(req.query.page) });
   const amap = cfg.showMeta ? await authorMap(req, result.posts) : {};
-  return { ...result, q, amap, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
+  return { ...result, q, amap, baseParams: { q }, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
+}
+
+// Guides go through SQL functions rather than PostgREST: category and location
+// filtering needs a join plus the location ancestor walk (a guide tagged
+// "United States" must still surface when filtering by California), which is
+// far clearer expressed in one query than assembled from embedded filters.
+async function guidesContext(req) {
+  const sb = client(req);
+  const q = cleanQ(req.query.q);
+  const cat = cleanSlug(req.query.cat);
+  const loc = cleanSlug(req.query.loc);
+  const args = { p_q: q, p_cat: cat, p_loc: loc };
+
+  const [countRes, facetRes] = await Promise.all([
+    sb.rpc('count_guides', args),
+    sb.rpc('guide_facets', args)
+  ]);
+
+  const total = Number(countRes.data || 0);
+  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const page = Math.min(toPage(req.query.page), pages);
+
+  const { data: rows } = await sb.rpc('list_guides', { ...args, p_limit: PER_PAGE, p_offset: (page - 1) * PER_PAGE });
+
+  const facetRows = facetRes.data || [];
+  const facets = {
+    categories: facetRows.filter(f => f.facet === 'category').map(f => ({ slug: f.slug, name: f.name, n: Number(f.n) })),
+    locations: facetRows.filter(f => f.facet === 'location').map(f => ({ slug: f.slug, name: f.name, kind: f.kind, n: Number(f.n) }))
+  };
+
+  return {
+    posts: rows || [], total, pages, page, pager: buildPager(page, pages),
+    q, cat, loc, facets, amap: {}, baseParams: { q, cat, loc },
+    base: GUIDE_LIST.base, listUrl: GUIDE_LIST.listUrl,
+    emptyIcon: GUIDE_LIST.emptyIcon, emptyMsg: GUIDE_LIST.emptyMsg, showMeta: false
+  };
 }
 
 // ---- TOC: add ids to h2/h3 in body html, return [{level, id, text}] ----
@@ -111,7 +150,7 @@ router.get('/api/blog/search', async (req, res, next) => {
 });
 
 router.get('/api/guides/search', async (req, res, next) => {
-  try { res.render('partials/post_list', await listContext(req, GUIDE_LIST)); } catch (e) { next(e); }
+  try { res.render('partials/post_list', await guidesContext(req)); } catch (e) { next(e); }
 });
 
 router.get('/blog', async (req, res, next) => {
@@ -145,7 +184,7 @@ router.get('/blog/:slug', async (req, res, next) => {
 // Guides
 router.get('/guides', async (req, res, next) => {
   try {
-    const ctx = await listContext(req, GUIDE_LIST);
+    const ctx = await guidesContext(req);
     res.render('guides_list', { title: 'Guides', ...ctx, metaDescription: 'Practical guides for starting and growing your business with NoBossly.' });
   } catch (e) { next(e); }
 });

@@ -6,12 +6,29 @@
   <label class="sr-only" for="list-search">Search guides</label>
   <input type="search" id="list-search" name="q" value="<%= q %>" placeholder="Search guides…"
          autocomplete="off" spellcheck="false">
-  <noscript><button class="btn btn-primary" type="submit">Search</button></noscript>
+  <div class="list-filters">
+    <label class="sr-only" for="filter-cat">Category</label>
+    <select id="filter-cat" name="cat" data-facet="category">
+      <option value="">All categories</option>
+      <% facets.categories.forEach(c => { %>
+        <option value="<%= c.slug %>"<%= cat === c.slug ? ' selected' : '' %>><%= c.name %> (<%= c.n %>)</option>
+      <% }) %>
+    </select>
+    <label class="sr-only" for="filter-loc">Location</label>
+    <select id="filter-loc" name="loc" data-facet="location">
+      <option value="">All locations</option>
+      <% facets.locations.forEach(l => { %>
+        <option value="<%= l.slug %>"<%= loc === l.slug ? ' selected' : '' %>><%= l.name %> (<%= l.n %>)</option>
+      <% }) %>
+    </select>
+    <a class="filter-clear" href="/guides" id="filter-clear"<%= (q || cat || loc) ? '' : ' hidden' %>>Clear</a>
+  </div>
+  <noscript><button class="btn btn-primary" type="submit">Apply</button></noscript>
 </form>
 
 <div id="list-results" aria-live="polite">
 <%- include('partials/post_list') %>
 </div>
 
-<script src="/js/list-search.js?v=1"></script>
+<script src="/js/list-search.js?v=2"></script>
 <%- include('partials/foot') %>

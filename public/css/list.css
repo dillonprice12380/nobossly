@@ -43,3 +43,28 @@
   .pager { gap: .3rem; }
   .pager-btn, .pager-num { padding: .35rem .6rem; font-size: .85rem; }
 }
+
+/* Category + location filters on /guides */
+.list-search { flex-wrap: wrap; }
+.list-search input[type="search"] { flex: 1 1 16rem; }
+
+.list-filters { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.list-filters select { width: auto; margin-top: 0; min-width: 11rem; cursor: pointer; }
+.list-filters select option:disabled { color: var(--muted); }
+
+.filter-clear { font-size: .85rem; color: var(--muted); text-decoration: underline; white-space: nowrap; }
+.filter-clear:hover { color: var(--accent); }
+.filter-clear[hidden] { display: none; }
+
+.badge-varies {
+  display: inline-block; margin-left: .5rem; padding: .1rem .45rem;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--panel-2); color: var(--muted);
+  font-size: .68rem; font-weight: 500; letter-spacing: .01em;
+  vertical-align: middle; white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .list-filters { width: 100%; }
+  .list-filters select { flex: 1 1 100%; min-width: 0; }
+}
