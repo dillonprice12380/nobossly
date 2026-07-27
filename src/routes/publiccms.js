@@ -125,6 +125,13 @@ function buildToc(html) {
   return { html: out, toc };
 }
 
+// Guide bodies are self-contained articles that carry their own <h1>, while
+// post_body.ejs also renders the title. Strip the body's leading heading at
+// render time so the page shows one title and one <h1>. Done here rather than
+// in the database so the stored HTML stays portable and the admin SEO check
+// can still see a heading.
+const stripLeadH1 = html => String(html || '').replace(/<h1[^>]*>[\s\S]*?<\/h1>\s*/i, '');
+
 // ---- sidebar loader: explicit sidebar or default similar-posts ----
 async function loadSidebarFor(req, post, table) {
   const sb = client(req);
@@ -200,7 +207,7 @@ router.get('/guides/:slug', async (req, res, next) => {
     if (!post) return res.status(404).render('error', { title: 'Not found', message: 'Guide not found.' });
     post.type = 'guide';
     const { html, toc } = buildToc(post.body);
-    post.body = html;
+    post.body = stripLeadH1(html);
     const sidebar = await loadSidebarFor(req, post, 'cms_guides');
     const shareUrl = 'https://nobossly.com/guides/' + post.slug;
     res.render('guide_post', { title: post.seo_title || post.title, post, toc, sidebar, shareUrl, metaDescription: post.seo_description || post.excerpt || '' });
