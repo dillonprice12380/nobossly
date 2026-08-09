@@ -5,17 +5,12 @@ const client = req => req.sb || anonClient();
 
 const PER_PAGE = 12;
 
-// Strip characters that would break PostgREST's `or=(...)` filter grammar, and the
-// LIKE wildcards that would otherwise let a stray "%" match every row.
-// Dots and hyphens are safe to keep: PostgREST only splits on the first two dots.
 const cleanQ = s => String(s || '').replace(/[,()%*\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
 
 const toPage = v => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 1; };
 
-// Taxonomy slugs come from our own tables; anything else is dropped outright.
 const cleanSlug = s => String(s || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 50);
 
-// Page numbers to render, with nulls standing in for ellipses.
 function buildPager(page, pages) {
   if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
   const out = [1];
@@ -26,11 +21,9 @@ function buildPager(page, pages) {
   return out;
 }
 
-// Shared list query for cms_contents (blog) and cms_guides.
 async function listPosts(req, { table, type, q, page }) {
   const sb = client(req);
   const isBlog = table === 'cms_contents';
-  // featured_image only exists on cms_contents; cms_guides dropped it.
   const cols = 'slug, title, excerpt, published_at' + (isBlog ? ', featured_image, view_count, author_id' : '');
 
   const scope = base => {
@@ -40,7 +33,6 @@ async function listPosts(req, { table, type, q, page }) {
     return qy;
   };
 
-  // Count first so the page can be clamped before fetching a range that may not exist.
   const { count } = await scope(sb.from(table).select('slug', { count: 'exact', head: true }));
   const total = count || 0;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
@@ -54,7 +46,6 @@ async function listPosts(req, { table, type, q, page }) {
   return { posts: posts || [], total, pages, page: current, pager: buildPager(current, pages) };
 }
 
-// Display names for blog post authors.
 async function authorMap(req, posts) {
   const ids = [...new Set(posts.map(p => p.author_id).filter(Boolean))];
   if (!ids.length) return {};
@@ -64,10 +55,9 @@ async function authorMap(req, posts) {
   return map;
 }
 
-const BLOG_LIST = { table: 'cms_contents', type: 'blog', base: '/blog/', listUrl: '/blog', emptyIcon: '📰', emptyMsg: 'No posts yet.', showMeta: true, showImage: true };
-const GUIDE_LIST = { table: 'cms_guides', type: null, base: '/guides/', listUrl: '/guides', emptyIcon: '📘', emptyMsg: 'No guides yet — check back soon.', showMeta: false };
+const BLOG_LIST = { table: 'cms_contents', type: 'blog', base: '/blog/', listUrl: '/blog', emptyIcon: '\uD83D\uDCF0', emptyMsg: 'No posts yet.', showMeta: true, showImage: true };
+const GUIDE_LIST = { table: 'cms_guides', type: null, base: '/guides/', listUrl: '/guides', emptyIcon: '\uD83D\uDCD8', emptyMsg: 'No guides yet \u2014 check back soon.', showMeta: false };
 
-// Builds the full render context for views/partials/post_list.ejs.
 async function listContext(req, cfg) {
   const q = cleanQ(req.query.q);
   const result = await listPosts(req, { table: cfg.table, type: cfg.type, q, page: toPage(req.query.page) });
@@ -75,10 +65,6 @@ async function listContext(req, cfg) {
   return { ...result, q, amap, baseParams: { q }, showImage: cfg.showImage !== false, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
 }
 
-// Guides go through SQL functions rather than PostgREST: category and location
-// filtering needs a join plus the location ancestor walk (a guide tagged
-// "United States" must still surface when filtering by California), which is
-// far clearer expressed in one query than assembled from embedded filters.
 async function guidesContext(req) {
   const sb = client(req);
   const q = cleanQ(req.query.q);
@@ -111,7 +97,6 @@ async function guidesContext(req) {
   };
 }
 
-// ---- TOC: add ids to h2/h3 in body html, return [{level, id, text}] ----
 const headSlug = t => String(t || '').toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 function buildToc(html) {
   const toc = [];
@@ -125,14 +110,8 @@ function buildToc(html) {
   return { html: out, toc };
 }
 
-// Guide bodies are self-contained articles that carry their own <h1>, while
-// post_body.ejs also renders the title. Strip the body's leading heading at
-// render time so the page shows one title and one <h1>. Done here rather than
-// in the database so the stored HTML stays portable and the admin SEO check
-// can still see a heading.
 const stripLeadH1 = html => String(html || '').replace(/<h1[^>]*>[\s\S]*?<\/h1>\s*/i, '');
 
-// ---- sidebar loader: explicit sidebar or default similar-posts ----
 async function loadSidebarFor(req, post, table) {
   const sb = client(req);
   let config = { show_similar: true, html_top: null, html_middle: null, html_bottom: null };
@@ -153,9 +132,6 @@ async function loadSidebarFor(req, post, table) {
   return { config, similar, base: table === 'cms_guides' ? '/guides/' : '/blog/' };
 }
 
-// AJAX endpoints for live search. Mounted above /blog/:slug and /guides/:slug so a
-// path segment can never be mistaken for a slug. They render the same partial the
-// full page uses, so card markup has exactly one definition.
 router.get('/api/blog/search', async (req, res, next) => {
   try { res.render('partials/post_list', await listContext(req, BLOG_LIST)); } catch (e) { next(e); }
 });
@@ -216,7 +192,15 @@ router.get('/guides/:slug', async (req, res, next) => {
 
 // Help center
 router.get('/help', (req, res) => {
-  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly — idea generation, sprints, plans, billing, and your account.' });
+  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 idea generation, sprints, plans, billing, and your account.' });
+});
+
+// How it works
+router.get('/how-it-works', (req, res) => {
+  res.render('how_it_works', {
+    title: 'How It Works',
+    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 AI-matched ideas, launch blueprints, 7-day sprints, milestones, challenges, and a founder community.'
+  });
 });
 
 router.get('/p/:slug', (req, res) => res.redirect(301, '/' + req.params.slug));
