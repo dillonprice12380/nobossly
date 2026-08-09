@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const crypto = require('crypto');
-const { anonClient, userClient } = require('../supabase');
+const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies } = require('../middleware/auth');
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
 const cookieDomainOpts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
@@ -41,7 +41,7 @@ router.post('/signup', async (req, res) => {
   }
   const sb = anonClient();
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
-  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken — try another.' });
+  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.' });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message });
   if (data.session) {
@@ -92,21 +92,22 @@ router.get('/auth/callback', async (req, res) => {
     }
     setSessionCookies(res, j);
 
-    // Seed the profile immediately from OAuth token metadata so the user appears
-    // correctly in the member directory even before the attachUser middleware has
-    // a chance to run its own backfill. Without this, the on_auth_user_created
-    // trigger creates a bare profile (id only) and the user can show up in the
-    // directory as a "?" card with no name and a broken /members/null link.
+    // Immediately seed the profile using the service role key so it bypasses RLS
+    // entirely. This guarantees the user appears in the member directory from their
+    // very first login, regardless of RLS policy timing on brand-new OAuth tokens.
     if (j.user) {
       try {
-        const sb = userClient(j.access_token);
+        // Prefer service role (bypasses RLS); fall back to user-scoped client.
+        let sc;
+        try { sc = serviceClient(); } catch (_) { sc = userClient(j.access_token); }
+
         const meta = j.user.user_metadata || {};
         const fullName = meta.full_name || meta.name || meta.display_name || '';
-        const { data: existing } = await sb.from('profiles')
+        const { data: existing } = await sc.from('profiles')
           .select('id, username, display_name')
           .eq('id', j.user.id)
           .maybeSingle();
-        // Only patch when the profile is still bare (missing username or display_name)
+
         if (!existing || !existing.username || !existing.display_name) {
           const emailBase = ((j.user.email || 'founder').split('@')[0]
             .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
@@ -116,7 +117,7 @@ router.get('/auth/callback', async (req, res) => {
               const tryName = attempt === 0
                 ? emailBase
                 : (emailBase.slice(0, 18) + '_' + j.user.id.slice(0, 3 + attempt));
-              const { data: clash } = await sb.from('profiles')
+              const { data: clash } = await sc.from('profiles')
                 .select('id').eq('username', tryName)
                 .neq('id', j.user.id).maybeSingle();
               if (!clash) finalUsername = tryName;
@@ -127,11 +128,14 @@ router.get('/auth/callback', async (req, res) => {
             username: finalUsername,
             display_name: (existing && existing.display_name) || fullName || finalUsername,
             needs_username: true,
+            account_status: 'active',
           };
           if (existing) {
-            await sb.from('profiles').update(patch).eq('id', j.user.id);
+            await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
           } else {
-            await sb.from('profiles').insert({ id: j.user.id, ...patch });
+            // Insert; if trigger already created the row (race), fall back to update
+            const { error: insErr } = await sc.from('profiles').insert({ id: j.user.id, ...patch });
+            if (insErr) await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
           }
         }
       } catch (seedErr) {
@@ -164,10 +168,10 @@ router.post('/choose-username', async (req, res) => {
   const displayName = String(req.body.display_name || '').trim().slice(0, 60);
   const rerender = (error) => res.render('choose-username', { title: 'Choose your username', error, suggestedUser: username, suggestedName: displayName });
   if (!USERNAME_RE.test(username)) {
-    return rerender('Username must be 3–24 characters: letters, numbers, or underscores.');
+    return rerender('Username must be 3\u201324 characters: letters, numbers, or underscores.');
   }
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).neq('id', req.user.id).maybeSingle();
-  if (taken) return rerender('That username is taken — try another.');
+  if (taken) return rerender('That username is taken \u2014 try another.');
   const { error } = await sb.from('profiles')
     .update({ username, display_name: displayName || username, needs_username: false })
     .eq('id', req.user.id);

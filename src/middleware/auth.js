@@ -1,8 +1,5 @@
-const { anonClient, userClient } = require('../supabase');
+const { anonClient, userClient, serviceClient } = require('../supabase');
 
-// Leave COOKIE_DOMAIN unset for HOST-ONLY cookies — they work on ANY host
-// (Hostinger temp domains, nobossly.com, localhost) with no configuration.
-// Only set it (e.g. ".nobossly.com") if you want one cookie shared across subdomains.
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
 
 function cookieOpts(req) {
@@ -25,8 +22,6 @@ function setSessionCookies(res, session) {
 }
 
 function clearSessionCookies(res) {
-  // Clear every variant the cookie could have been set under (host-only now, but
-  // older sessions may carry an apex-domain cookie) so logout always sticks.
   const variants = [{ path: '/' }, { path: '/', domain: '.nobossly.com' }];
   if (COOKIE_DOMAIN && COOKIE_DOMAIN !== '.nobossly.com') variants.push({ path: '/', domain: COOKIE_DOMAIN });
   for (const opts of variants) {
@@ -67,11 +62,9 @@ async function attachUser(req, res, next) {
       const { data: existing } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
       let prof = existing;
       // The on_auth_user_created DB trigger inserts a bare profile (id only), so the
-      // username is backfilled here the first time we see the user — this covers
-      // BOTH a missing profile and a trigger-created one with a null username.
-      // Email/password signups carry a chosen username in metadata; social (OAuth)
-      // signups don't, so we derive a placeholder and flag the account to pick one
-      // (enforced by the /choose-username redirect in server.js).
+      // username is backfilled here the first time we see the user. Email/password
+      // signups carry a chosen username in metadata; OAuth signups don't, so we derive
+      // a placeholder and flag the account to pick one (/choose-username).
       if (!prof || !prof.username) {
         const meta = user.user_metadata || {};
         const chosen = String(meta.username || '').replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 24);
@@ -89,18 +82,27 @@ async function attachUser(req, res, next) {
         const patch = {
           username: finalName,
           display_name: (prof && prof.display_name) || fullName || finalName,
-          needs_username: !hasChosen
+          needs_username: !hasChosen,
+          account_status: 'active'  // ensure profile is visible in member directory
         };
+        // Try user-scoped client first; fall back to service role if it returns nothing
+        // (can happen with brand-new OAuth tokens before RLS settles).
+        let sc = sb;
         if (prof) {
-          const { data: upd } = await sb.from('profiles').update(patch).eq('id', user.id).select().maybeSingle();
+          let { data: upd } = await sb.from('profiles').update(patch).eq('id', user.id).select().maybeSingle();
+          if (!upd) {
+            try { sc = serviceClient(); ({ data: upd } = await sc.from('profiles').update(patch).eq('id', user.id).select().maybeSingle()); } catch (_) {}
+          }
           prof = upd || Object.assign(prof, patch);
         } else {
-          const { data: ins } = await sb.from('profiles').insert(Object.assign({ id: user.id }, patch)).select().maybeSingle();
+          let { data: ins } = await sb.from('profiles').insert(Object.assign({ id: user.id }, patch)).select().maybeSingle();
+          if (!ins) {
+            try { sc = serviceClient(); ({ data: ins } = await sc.from('profiles').upsert(Object.assign({ id: user.id }, patch)).select().maybeSingle()); } catch (_) {}
+          }
           prof = ins || Object.assign({ id: user.id }, patch);
         }
       }
       req.profile = prof;
-      // auto-reactivate a deactivated account on login
       if (prof && prof.account_status === 'deactivated') {
         await sb.from('profiles').update({ account_status: 'active' }).eq('id', user.id);
         req.profile.account_status = 'active';
@@ -139,7 +141,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// 'paid' if admin, lifetime, or an active/cancel-at-period-end subscription still in its period
 function planOf(profile) {
   if (!profile) return 'free';
   if (profile.is_admin || profile.is_lifetime) return 'paid';

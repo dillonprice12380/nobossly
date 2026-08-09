@@ -1,12 +1,58 @@
 const router = require('express').Router();
 
+// Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
+// Uses the service role key so it bypasses RLS entirely. Fast no-op once every
+// profile has been seeded; only calls auth.admin.listUsers when bare rows exist.
+async function backfillBareProfiles() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    const { serviceClient } = require('../supabase');
+    const sc = serviceClient();
+    const { data: bare } = await sc.from('profiles').select('id').is('username', null).limit(20);
+    if (!bare || bare.length === 0) return;
+
+    const { data: authData } = await sc.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const authMap = {};
+    for (const u of (authData && authData.users) || []) authMap[u.id] = u;
+
+    for (const b of bare) {
+      const u = authMap[b.id];
+      if (!u) continue;
+      const meta = u.user_metadata || {};
+      const fullName = meta.full_name || meta.name || meta.display_name || '';
+      const emailBase = ((u.email || 'founder').split('@')[0]
+        .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
+      let finalUsername = null;
+      for (let attempt = 0; attempt < 3 && !finalUsername; attempt++) {
+        const tryName = attempt === 0
+          ? emailBase
+          : (emailBase.slice(0, 18) + '_' + u.id.slice(0, 3 + attempt));
+        const { data: clash } = await sc.from('profiles')
+          .select('id').eq('username', tryName).neq('id', u.id).maybeSingle();
+        if (!clash) finalUsername = tryName;
+      }
+      if (!finalUsername) finalUsername = emailBase.slice(0, 12) + '_' + u.id.slice(0, 8);
+      await sc.from('profiles').update({
+        username: finalUsername,
+        display_name: fullName || finalUsername,
+        needs_username: true,
+        account_status: 'active'
+      }).eq('id', u.id).is('username', null);
+    }
+  } catch (_) { /* non-fatal: service role not configured or transient error */ }
+}
+
 // Member directory
 router.get('/', async (req, res, next) => {
   try {
+    // Auto-fix any bare OAuth profiles before rendering the list so they show up
+    // immediately without requiring a manual admin action.
+    await backfillBareProfiles();
+
     const { data: members } = await req.sb.from('profiles')
       .select('username, display_name, profile_is_public, current_level, xp_total, created_at, avatar_url')
       .eq('account_status', 'active')
-      .not('username', 'is', null)   // exclude bare OAuth profiles (no username yet)
+      .not('username', 'is', null)
       .order('xp_total', { ascending: false })
       .limit(200);
     const { data: levels } = await req.sb.from('founder_levels').select('level, title, emoji');
@@ -43,7 +89,6 @@ router.get('/:username', async (req, res, next) => {
     if (!p || (p.account_status !== 'active' && p.id !== req.user.id)) return res.status(404).render('error', { title: 'Not found', message: 'Member not found.' });
     const [{ data: ub }, { data: um }, { data: levels }, { data: customM }] = await Promise.all([
       req.sb.from('user_badges').select('badge_id, earned_at').eq('user_id', p.id),
-      // pinned=true only — free users' personal completions are not pinned to the public profile
       req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', p.id).eq('pinned', true).order('earned_at', { ascending: false }),
       req.sb.from('founder_levels').select('level, title, emoji'),
       req.sb.from('user_custom_milestones').select('title, emoji, achieved_at').eq('user_id', p.id).eq('achieved', true).order('achieved_at', { ascending: false })
@@ -58,7 +103,6 @@ router.get('/:username', async (req, res, next) => {
     const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
     const isMe = p.id === req.user.id;
     const isPrivate = p.profile_is_public === false && !isMe;
-    // social context
     const [{ data: followRows }, { count: followerCount }, { count: followingCount }, { data: friendship }, { data: blockRow }, { data: blockedMeRow }, { count: friendCount }] = await Promise.all([
       req.sb.from('follows').select('follower_id').eq('follower_id', req.user.id).eq('following_id', p.id),
       req.sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', p.id),
