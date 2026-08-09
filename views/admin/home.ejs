@@ -1,5 +1,5 @@
 <%- include('../partials/head') %>
-<div class="page-head"><div><h1>🛠 Admin</h1></div></div>
+<div class="page-head"><div><h1>&#x1F6E0; Admin</h1></div></div>
 <%- include('nav') %>
 <div class="stat-row">
   <div class="stat card"><span class="stat-num"><%= stats.users %></span><span class="muted">users</span></div>
@@ -7,4 +7,27 @@
   <div class="stat card"><span class="stat-num"><%= stats.threads %></span><span class="muted">forum threads</span></div>
   <div class="stat card"><span class="stat-num"><%= stats.contents %></span><span class="muted">content items</span></div>
 </div>
+
+<% if (backfilled !== null && backfilled !== undefined) { %>
+<div class="card" style="margin-top:1.25rem;border-left:4px solid var(--green,#2e7d52)">
+  <strong>Backfill complete:</strong> <%= backfilled %> OAuth profile<%= backfilled == 1 ? '' : 's' %> updated. They will now appear in the member directory.
+</div>
+<% } %>
+
+<% if (backfillErr) { %>
+<div class="card" style="margin-top:1.25rem;border-left:4px solid #c0392b">
+  <strong>Backfill error:</strong> <%= backfillErr %>. Make sure <code>SUPABASE_SERVICE_ROLE_KEY</code> is set in your <code>.env</code> file on the server (Supabase Dashboard &rarr; Settings &rarr; API).
+</div>
+<% } %>
+
+<% if (bareProfileCount > 0) { %>
+<div class="card" style="margin-top:1.25rem">
+  <strong><%= bareProfileCount %> incomplete OAuth profile<%= bareProfileCount == 1 ? '' : 's' %></strong>
+  <p class="muted" style="margin:.35rem 0 .75rem">These users signed up via Google, GitHub, or LinkedIn but their name and username were never saved. They are hidden from the member directory until fixed.</p>
+  <form method="POST" action="/admin/backfill-profiles">
+    <button class="btn" type="submit">Fix <%= bareProfileCount %> profile<%= bareProfileCount == 1 ? '' : 's' %> now</button>
+  </form>
+</div>
+<% } %>
+
 <%- include('../partials/foot') %>

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { serviceClient } = require('../supabase');
 
 // ---------- Block editor rendering ----------
 const escHtml = t => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -31,10 +32,20 @@ const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g,
 router.get('/', async (req, res, next) => {
   try {
     const count = t => req.sb.from(t).select('id', { count: 'exact', head: true });
-    const [users, threads, contents, ideas] = await Promise.all([count('profiles'), count('forum_threads'), count('cms_contents'), count('generated_ideas')]);
-    res.render('admin/home', { title: 'Admin', stats: {
-      users: users.count || 0, threads: threads.count || 0, contents: contents.count || 0, ideas: ideas.count || 0
-    } });
+    const [users, threads, contents, ideas, bare] = await Promise.all([
+      count('profiles'),
+      count('forum_threads'),
+      count('cms_contents'),
+      count('generated_ideas'),
+      req.sb.from('profiles').select('id', { count: 'exact', head: true }).is('username', null)
+    ]);
+    res.render('admin/home', {
+      title: 'Admin',
+      stats: { users: users.count || 0, threads: threads.count || 0, contents: contents.count || 0, ideas: ideas.count || 0 },
+      bareProfileCount: bare.count || 0,
+      backfilled: req.query.backfilled !== undefined ? req.query.backfilled : null,
+      backfillErr: req.query.backfillErr || null
+    });
   } catch (e) { next(e); }
 });
 
@@ -377,6 +388,76 @@ router.post('/forum/:id', async (req, res, next) => {
     }
     res.redirect('/admin/forum');
   } catch (e) { next(e); }
+});
+
+// ---------- Backfill bare OAuth profiles ----------
+// Uses the service role key to read auth.users and populate display_name + username
+// for profiles that were created by the on_auth_user_created trigger but never
+// fully seeded (e.g. OAuth sign-ups that abandoned before the callback completed).
+router.post('/backfill-profiles', async (req, res, next) => {
+  try {
+    const sc = serviceClient(); // throws if SUPABASE_SERVICE_ROLE_KEY is not set
+
+    // 1. Find all profiles with no username
+    const { data: bareProfiles, error: bareErr } = await sc.from('profiles')
+      .select('id, username, display_name')
+      .is('username', null);
+    if (bareErr) throw bareErr;
+    if (!bareProfiles || bareProfiles.length === 0) {
+      return res.redirect('/admin?backfilled=0');
+    }
+
+    const bareIds = new Set(bareProfiles.map(p => p.id));
+
+    // 2. Page through auth.users to find matching records
+    let matchedUsers = [];
+    let page = 1;
+    while (true) {
+      const { data: authData, error: authErr } = await sc.auth.admin.listUsers({ page, perPage: 1000 });
+      if (authErr) throw authErr;
+      const batch = (authData && authData.users) || [];
+      matchedUsers = matchedUsers.concat(batch.filter(u => bareIds.has(u.id)));
+      if (batch.length < 1000) break;
+      page++;
+    }
+
+    // 3. For each matching auth user, derive and write username + display_name
+    let fixed = 0;
+    for (const authUser of matchedUsers) {
+      const meta = authUser.user_metadata || {};
+      const fullName = meta.full_name || meta.name || meta.display_name || '';
+      const emailBase = ((authUser.email || 'founder').split('@')[0]
+        .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
+
+      let finalUsername = null;
+      for (let attempt = 0; attempt < 3 && !finalUsername; attempt++) {
+        const tryName = attempt === 0
+          ? emailBase
+          : (emailBase.slice(0, 18) + '_' + authUser.id.slice(0, 3 + attempt));
+        const { data: clash } = await sc.from('profiles')
+          .select('id').eq('username', tryName)
+          .neq('id', authUser.id).maybeSingle();
+        if (!clash) finalUsername = tryName;
+      }
+      if (!finalUsername) finalUsername = emailBase.slice(0, 12) + '_' + authUser.id.slice(0, 8);
+
+      const { error: updateErr } = await sc.from('profiles')
+        .update({
+          username: finalUsername,
+          display_name: fullName || finalUsername,
+          needs_username: true  // flag so they choose a proper username next login
+        })
+        .eq('id', authUser.id)
+        .is('username', null); // safety: only update if still bare
+
+      if (!updateErr) fixed++;
+    }
+
+    res.redirect('/admin?backfilled=' + fixed);
+  } catch (e) {
+    console.error('Backfill error:', e.message);
+    res.redirect('/admin?backfillErr=' + encodeURIComponent(e.message || 'unknown error'));
+  }
 });
 
 module.exports = router;

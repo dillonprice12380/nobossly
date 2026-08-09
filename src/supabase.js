@@ -16,4 +16,12 @@ function userClient(accessToken) {
   });
 }
 
-module.exports = { anonClient, userClient };
+// Service-role client — bypasses RLS; only use in trusted server-side contexts.
+// Requires SUPABASE_SERVICE_ROLE_KEY in .env (Supabase Dashboard -> Settings -> API).
+function serviceClient() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+module.exports = { anonClient, userClient, serviceClient };
