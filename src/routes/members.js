@@ -6,6 +6,7 @@ router.get('/', async (req, res, next) => {
     const { data: members } = await req.sb.from('profiles')
       .select('username, display_name, profile_is_public, current_level, xp_total, created_at, avatar_url')
       .eq('account_status', 'active')
+      .not('username', 'is', null)   // exclude bare OAuth profiles (no username yet)
       .order('xp_total', { ascending: false })
       .limit(200);
     const { data: levels } = await req.sb.from('founder_levels').select('level, title, emoji');
@@ -54,7 +55,7 @@ router.get('/:username', async (req, res, next) => {
       milestoneIds.length ? req.sb.from('predefined_milestones').select('id, title, emoji').in('id', milestoneIds) : { data: [] }
     ]);
     const milestones = [...(preMilestones || []), ...((customM || []).map(c => ({ emoji: c.emoji, title: c.title })))];
-    const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '🌱' };
+    const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
     const isMe = p.id === req.user.id;
     const isPrivate = p.profile_is_public === false && !isMe;
     // social context

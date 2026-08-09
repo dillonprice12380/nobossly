@@ -4,14 +4,14 @@
   <div class="card center"><p class="muted">No members yet.</p></div>
 <% } else { %>
   <div class="grid">
-    <% members.forEach(m => { const lvl = levels.find(l => l.level === (m.current_level || 1)) || { emoji: '🌱', title: 'Dreamer' }; %>
+    <% members.forEach(m => { if (!m.username) return; const lvl = levels.find(l => l.level === (m.current_level || 1)) || { emoji: '\uD83C\uDF31', title: 'Dreamer' }; %>
       <a class="card idea-card" href="/members/<%= m.username %>">
         <div class="profile-head" style="align-items:center">
           <div class="avatar-circle"><%= ((m.profile_is_public === false ? m.username : (m.display_name || m.username)) || '?').slice(0,1).toUpperCase() %></div>
           <div>
             <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
             <% if (m.profile_is_public === false) { %><span class="chip" style="margin-left:.3rem">🔒 private</span><% } %>
-            <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> — <%= lvl.title %> · ⚡ <%= m.xp_total || 0 %> XP</p>
+            <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %> &middot; &#9889; <%= m.xp_total || 0 %> XP</p>
           </div>
         </div>
       </a>

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const crypto = require('crypto');
-const { anonClient } = require('../supabase');
+const { anonClient, userClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies } = require('../middleware/auth');
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
 const cookieDomainOpts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
@@ -91,6 +91,54 @@ router.get('/auth/callback', async (req, res) => {
       return res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed: ' + (j.error_description || j.msg || 'unknown error')));
     }
     setSessionCookies(res, j);
+
+    // Seed the profile immediately from OAuth token metadata so the user appears
+    // correctly in the member directory even before the attachUser middleware has
+    // a chance to run its own backfill. Without this, the on_auth_user_created
+    // trigger creates a bare profile (id only) and the user can show up in the
+    // directory as a "?" card with no name and a broken /members/null link.
+    if (j.user) {
+      try {
+        const sb = userClient(j.access_token);
+        const meta = j.user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || meta.display_name || '';
+        const { data: existing } = await sb.from('profiles')
+          .select('id, username, display_name')
+          .eq('id', j.user.id)
+          .maybeSingle();
+        // Only patch when the profile is still bare (missing username or display_name)
+        if (!existing || !existing.username || !existing.display_name) {
+          const emailBase = ((j.user.email || 'founder').split('@')[0]
+            .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
+          let finalUsername = (existing && existing.username) || null;
+          if (!finalUsername) {
+            for (let attempt = 0; attempt < 3 && !finalUsername; attempt++) {
+              const tryName = attempt === 0
+                ? emailBase
+                : (emailBase.slice(0, 18) + '_' + j.user.id.slice(0, 3 + attempt));
+              const { data: clash } = await sb.from('profiles')
+                .select('id').eq('username', tryName)
+                .neq('id', j.user.id).maybeSingle();
+              if (!clash) finalUsername = tryName;
+            }
+            if (!finalUsername) finalUsername = emailBase.slice(0, 12) + '_' + j.user.id.slice(0, 8);
+          }
+          const patch = {
+            username: finalUsername,
+            display_name: (existing && existing.display_name) || fullName || finalUsername,
+            needs_username: true,
+          };
+          if (existing) {
+            await sb.from('profiles').update(patch).eq('id', j.user.id);
+          } else {
+            await sb.from('profiles').insert({ id: j.user.id, ...patch });
+          }
+        }
+      } catch (seedErr) {
+        console.error('OAuth callback profile seed error:', seedErr.message);
+      }
+    }
+
     res.redirect('/dashboard');
   } catch (e) {
     res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed.'));
