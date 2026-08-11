@@ -3,9 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><%= title %> &middot; NoBossly</title>
-<meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly turns your skills and passions into a real business with AI-matched ideas, launch blueprints, and weekly sprints.' %>">
+
+<%
+  var _title   = title ? title + ' · NoBossly' : 'NoBossly — AI Founder OS';
+  var _desc    = (typeof metaDescription !== 'undefined' && metaDescription)
+                   ? metaDescription
+                   : 'NoBossly turns your skills and passions into a real business with AI-matched ideas, launch blueprints, and weekly sprints.';
+  var _url     = (typeof ogUrl   !== 'undefined' && ogUrl)   ? ogUrl   : 'https://nobossly.com';
+  var _type    = (typeof ogType  !== 'undefined' && ogType)  ? ogType  : 'website';
+  var _image   = (typeof ogImage !== 'undefined' && ogImage) ? ogImage : 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/nobossly-og-default.png';
+%>
+
+<title><%= _title %></title>
+<meta name="description" content="<%= _desc %>">
+<link rel="canonical" href="<%= _url %>">
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="<%= _type %>">
+<meta property="og:site_name"   content="NoBossly">
+<meta property="og:title"       content="<%= _title %>">
+<meta property="og:description" content="<%= _desc %>">
+<meta property="og:url"         content="<%= _url %>">
+<meta property="og:image"       content="<%= _image %>">
+
+<!-- Twitter Card -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="<%= _title %>">
+<meta name="twitter:description" content="<%= _desc %>">
+<meta name="twitter:image"       content="<%= _image %>">
+
+<!-- Site-wide entity schema: Organization + WebSite nodes.
+     @id anchors let Google Knowledge Graph resolve NoBossly as a distinct
+     entity, which is the prerequisite for AI Overview eligibility. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization", "SoftwareApplication"],
+      "@id": "https://nobossly.com/#organization",
+      "name": "NoBossly",
+      "url": "https://nobossly.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/nobossly-logo_a5ew2x.png"
+      },
+      "description": "AI-native operating system for solo founders. Generate AI-matched business ideas, launch blueprints, weekly sprints, and work with an AI Co-Founder.",
+      "foundingDate": "2025",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "knowsAbout": [
+        "Entrepreneurship",
+        "Solo founding",
+        "Business ideation",
+        "Business planning",
+        "Startup execution",
+        "AI business tools",
+        "Side hustle ideas",
+        "Solopreneur tools",
+        "Business blueprints"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://nobossly.com/#website",
+      "name": "NoBossly",
+      "url": "https://nobossly.com",
+      "publisher": { "@id": "https://nobossly.com/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://nobossly.com/blog?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ]
+}
+</script>
+
+<% if (typeof jsonLd !== 'undefined' && jsonLd) { %>
+<script type="application/ld+json"><%- JSON.stringify(jsonLd).replace(/</g, '\\u003c') %></script>
+<% } %>
+
 <link rel="stylesheet" href="/css/style.css?v=12">
 <link rel="stylesheet" href="/css/list.css?v=2">
 <!-- Google tag (gtag.js) -->

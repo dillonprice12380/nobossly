@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { anonClient } = require('../supabase');
 
+const SITE_URL = 'https://nobossly.com';
 const client = req => req.sb || anonClient();
 
 const PER_PAGE = 12;
@@ -143,7 +144,12 @@ router.get('/api/guides/search', async (req, res, next) => {
 router.get('/blog', async (req, res, next) => {
   try {
     const ctx = await listContext(req, BLOG_LIST);
-    res.render('blog_list', { title: 'Blog', ...ctx, metaDescription: 'Insights, playbooks, and founder stories from NoBossly.' });
+    res.render('blog_list', {
+      title: 'Blog',
+      ...ctx,
+      metaDescription: 'Insights, playbooks, and founder stories from NoBossly.',
+      ogUrl: `${SITE_URL}/blog`,
+    });
   } catch (e) { next(e); }
 });
 
@@ -161,18 +167,47 @@ router.get('/blog/:slug', async (req, res, next) => {
       if (a) authorName = a.display_name || a.username;
     }
     const sidebar = await loadSidebarFor(req, post, 'cms_contents');
-    const shareUrl = 'https://nobossly.com/blog/' + post.slug;
-    res.render('blog_post', { title: post.seo_title || post.title, post, toc, sidebar, authorName, shareUrl, metaDescription: post.seo_description || post.excerpt || '' });
+    const shareUrl = `${SITE_URL}/blog/${post.slug}`;
+
+    // Article schema — signals editorial content to Gemini for AI Overview eligibility.
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      '@id': `${shareUrl}#article`,
+      headline: post.seo_title || post.title,
+      description: post.seo_description || post.excerpt || '',
+      url: shareUrl,
+      ...(post.featured_image ? { image: post.featured_image } : {}),
+      ...(post.published_at ? { datePublished: post.published_at } : {}),
+      author: authorName
+        ? { '@type': 'Person', name: authorName }
+        : { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+    };
+
+    res.render('blog_post', {
+      title: post.seo_title || post.title,
+      post, toc, sidebar, authorName, shareUrl,
+      metaDescription: post.seo_description || post.excerpt || '',
+      ogUrl: shareUrl,
+      ogType: 'article',
+      ogImage: post.featured_image || undefined,
+      jsonLd,
+    });
   } catch (e) { next(e); }
 });
-
-// Legacy /p/:slug -> /:slug
 
 // Guides
 router.get('/guides', async (req, res, next) => {
   try {
     const ctx = await guidesContext(req);
-    res.render('guides_list', { title: 'Guides', ...ctx, metaDescription: 'Practical guides for starting and growing your business with NoBossly.' });
+    res.render('guides_list', {
+      title: 'Guides',
+      ...ctx,
+      metaDescription: 'Practical guides for starting and growing your business with NoBossly.',
+      ogUrl: `${SITE_URL}/guides`,
+    });
   } catch (e) { next(e); }
 });
 
@@ -185,21 +220,48 @@ router.get('/guides/:slug', async (req, res, next) => {
     const { html, toc } = buildToc(post.body);
     post.body = stripLeadH1(html);
     const sidebar = await loadSidebarFor(req, post, 'cms_guides');
-    const shareUrl = 'https://nobossly.com/guides/' + post.slug;
-    res.render('guide_post', { title: post.seo_title || post.title, post, toc, sidebar, shareUrl, metaDescription: post.seo_description || post.excerpt || '' });
+    const shareUrl = `${SITE_URL}/guides/${post.slug}`;
+
+    // Article schema for guide pages.
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      '@id': `${shareUrl}#article`,
+      headline: post.seo_title || post.title,
+      description: post.seo_description || post.excerpt || '',
+      url: shareUrl,
+      ...(post.published_at ? { datePublished: post.published_at } : {}),
+      author: { '@type': 'Organization', '@id': `${SITE_URL}/#organization` },
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+    };
+
+    res.render('guide_post', {
+      title: post.seo_title || post.title,
+      post, toc, sidebar, shareUrl,
+      metaDescription: post.seo_description || post.excerpt || '',
+      ogUrl: shareUrl,
+      ogType: 'article',
+      jsonLd,
+    });
   } catch (e) { next(e); }
 });
 
 // Help center
 router.get('/help', (req, res) => {
-  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 idea generation, sprints, plans, billing, and your account.' });
+  res.render('help', {
+    title: 'Help Center',
+    metaDescription: 'Answers to common questions about NoBossly \u2014 idea generation, sprints, plans, billing, and your account.',
+    ogUrl: `${SITE_URL}/help`,
+  });
 });
 
 // How it works
 router.get('/how-it-works', (req, res) => {
   res.render('how_it_works', {
     title: 'How It Works',
-    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 AI-matched ideas, launch blueprints, 7-day sprints, milestones, challenges, and a founder community.'
+    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 AI-matched ideas, launch blueprints, 7-day sprints, milestones, challenges, and a founder community.',
+    ogUrl: `${SITE_URL}/how-it-works`,
   });
 });
 
@@ -212,7 +274,12 @@ router.get('/:slug', async (req, res, next) => {
     const { data: page } = await client(req).from('cms_contents').select('*')
       .in('type', ['page', 'custom']).eq('slug', req.params.slug).eq('status', 'published').maybeSingle();
     if (!page) return next();
-    res.render('blog_post', { title: page.seo_title || page.title, post: page, toc: [], sidebar: null, metaDescription: page.seo_description || page.excerpt || '' });
+    res.render('blog_post', {
+      title: page.seo_title || page.title,
+      post: page, toc: [], sidebar: null,
+      metaDescription: page.seo_description || page.excerpt || '',
+      ogUrl: `${SITE_URL}/${page.slug}`,
+    });
   } catch (e) { next(e); }
 });
 
