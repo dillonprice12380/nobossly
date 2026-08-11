@@ -9,6 +9,26 @@ function callbackBase(req) {
   return proto + '://' + req.get('host');
 }
 
+// Fire-and-forget welcome email. Called after signup and OAuth for new users.
+// Intentionally not awaited so it never blocks the redirect.
+function sendWelcomeEmail(userId, email, name) {
+  const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+  fetch(`${base}/functions/v1/send-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+    },
+    body: JSON.stringify({
+      type: 'welcome',
+      user_id: userId,
+      to_email: email,
+      to_name: name || 'Founder',
+      data: {}
+    })
+  }).catch(e => console.error('[sendWelcomeEmail]', e.message));
+}
+
 router.get('/login', (req, res) => {
   if (req.user) return res.redirect('/dashboard');
   res.render('login', { title: 'Log in', error: null, message: req.query.m || null });
@@ -44,6 +64,14 @@ router.post('/signup', async (req, res) => {
   if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.' });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message });
+
+  // Send welcome email regardless of confirmation status (fire-and-forget).
+  // For confirmation-required accounts this arrives in the inbox alongside
+  // the confirmation email, giving users context before they even log in.
+  if (data.user) {
+    sendWelcomeEmail(data.user.id, email, username);
+  }
+
   if (data.session) {
     setSessionCookies(res, data.session);
     return res.redirect('/questionnaire');
@@ -95,6 +123,7 @@ router.get('/auth/callback', async (req, res) => {
     // Immediately seed the profile using the service role key so it bypasses RLS
     // entirely. This guarantees the user appears in the member directory from their
     // very first login, regardless of RLS policy timing on brand-new OAuth tokens.
+    let isNewUser = false;
     if (j.user) {
       try {
         // Prefer service role (bypasses RLS); fall back to user-scoped client.
@@ -107,6 +136,9 @@ router.get('/auth/callback', async (req, res) => {
           .select('id, username, display_name')
           .eq('id', j.user.id)
           .maybeSingle();
+
+        // New user = no profile row existed at all
+        isNewUser = !existing;
 
         if (!existing || !existing.username || !existing.display_name) {
           const emailBase = ((j.user.email || 'founder').split('@')[0]
@@ -136,6 +168,11 @@ router.get('/auth/callback', async (req, res) => {
             // Insert; if trigger already created the row (race), fall back to update
             const { error: insErr } = await sc.from('profiles').insert({ id: j.user.id, ...patch });
             if (insErr) await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
+          }
+
+          // Send welcome email to new OAuth users (fire-and-forget)
+          if (isNewUser && j.user.email) {
+            sendWelcomeEmail(j.user.id, j.user.email, fullName || finalUsername);
           }
         }
       } catch (seedErr) {
