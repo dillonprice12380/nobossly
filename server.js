@@ -34,6 +34,7 @@ app.use('/', require('./src/routes/auth'));
 app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
 app.use('/ideas', requireAuth, require('./src/routes/ideas'));
 app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
+app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));
