@@ -20,18 +20,16 @@ router.get('/generate', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/generate', async (req, res, next) => {
+// Runs in the background after the POST responds with a job id, so the HTTP
+// request never outlives the host proxy's timeout during long AI generations.
+async function runIdeaGeneration(req, q, plan, jobId) {
+  const sb = req.sb;
+  const finish = patch => sb.from('generation_jobs')
+    .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
+    .then(() => {}, e => console.error('job update', e && e.message));
   try {
-    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
-    if (!q || !q.completed) return res.json({ redirect: '/questionnaire' });
-    const plan = planOf(req.profile);
-    if (plan === 'free' && (req.profile.generations_used || 0) >= 1) {
-      return res.json({ error: 'The free plan includes 1 AI idea generation. Upgrade for unlimited generations, AI roadmaps and more.', redirect: '/pricing?upgrade=1' });
-    }
-    
-
     const ideas = await ai.generateIdeas(req.accessToken, q);
-    const { count } = await req.sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
+    const { count } = await sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const rows = ideas.slice(0, 6).map((i, idx) => ({
       user_id: req.user.id, questionnaire_id: q.id,
       name: String(i.name || 'Untitled idea'), tagline: i.tagline || '', category: i.category || '',
@@ -45,15 +43,15 @@ router.post('/generate', async (req, res, next) => {
       legal_nuances: i.legal_nuances || '', first_steps: i.first_steps || '',
       status: 'active', position: (count || 0) + idx
     }));
-    const { error } = await req.sb.from('generated_ideas').insert(rows);
+    const { data: inserted, error } = await sb.from('generated_ideas').insert(rows).select('id');
     if (error) throw error;
-    await awardXP(req.sb, req.user.id, req.profile, 25, 'Generated business ideas', 'generated_ideas', null);
-    await req.sb.from('profiles').update({ generations_used: (req.profile.generations_used || 0) + 1 }).eq('id', req.user.id);
+    await awardXP(sb, req.user.id, req.profile, 25, 'Generated business ideas', 'generated_ideas', null);
+    await sb.from('profiles').update({ generations_used: (req.profile.generations_used || 0) + 1 }).eq('id', req.user.id);
     // Auto-disperse the top idea's first steps into the task board with staggered deadlines (paid feature)
     try {
       const top = rows[0];
       if (plan === 'paid' && top && top.first_steps) {
-        const { data: list } = await req.sb.from('task_lists').insert({ user_id: req.user.id, name: ('Idea: ' + top.name).slice(0, 60), color: '#10b981' }).select().maybeSingle();
+        const { data: list } = await sb.from('task_lists').insert({ user_id: req.user.id, name: ('Idea: ' + top.name).slice(0, 60), color: '#10b981' }).select().maybeSingle();
         const steps = String(top.first_steps).split(/\n+/).map(t => t.replace(/^\s*\d+[).:-]?\s*/, '').trim()).filter(t => t.length > 3).slice(0, 7);
         const taskRows = steps.map((title, i) => ({
           user_id: req.user.id, list_id: list ? list.id : null, title: title.slice(0, 200),
@@ -61,14 +59,53 @@ router.post('/generate', async (req, res, next) => {
           priority: i === 0 ? 'high' : 'medium', status: 'todo', position: i, labels: ['idea'],
           due_date: new Date(Date.now() + (i + 1) * 3 * 86400000).toISOString().slice(0, 10)
         }));
-        if (taskRows.length) await req.sb.from('tasks').insert(taskRows);
-        await req.sb.rpc('push_notification', { target_user: req.user.id, ntype: 'tasks', nmessage: 'Your idea "' + top.name + '" was broken into ' + taskRows.length + ' tasks with deadlines — check your Tasks board.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+        if (taskRows.length) await sb.from('tasks').insert(taskRows);
+        await sb.rpc('push_notification', { target_user: req.user.id, ntype: 'tasks', nmessage: 'Your idea "' + top.name + '" was broken into ' + taskRows.length + ' tasks with deadlines — check your Tasks board.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
       }
     } catch (e2) { console.error('task dispersal', e2.message); }
-    res.json({ redirect: '/ideas' });
+    // Auto-gather live demand signals for the top idea (paid feature). Fire-and-forget:
+    // never blocks job completion, never fails the generation.
+    try {
+      if (plan === 'paid' && inserted && inserted.length) {
+        const topId = inserted[0].id;
+        const token = req.accessToken, uid = req.user.id;
+        (async () => {
+          try {
+            const { data: created } = await sb.from('generated_ideas').select('*').eq('id', topId).eq('user_id', uid).maybeSingle();
+            if (created && !created.demand_evidence) {
+              const ev = await ai.demandEvidence(token, created);
+              if (ev && Array.isArray(ev.signals)) {
+                await sb.from('generated_ideas').update({ demand_evidence: ev, evidence_at: new Date().toISOString() }).eq('id', topId);
+                await sb.rpc('push_notification', { target_user: uid, ntype: 'ideas', nmessage: 'Live demand signals are ready for "' + created.name + '" — open the idea to see the evidence.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+              }
+            }
+          } catch (err) { console.error('auto demand evidence', err.message); }
+        })();
+      }
+    } catch (e3) { console.error('auto evidence setup', e3.message); }
+    await finish({ status: 'done', redirect: '/ideas' });
   } catch (e) {
     console.error('idea generation', e);
-    res.json({ error: 'Idea generation failed: ' + e.message });
+    await finish({ status: 'error', error: 'Idea generation failed: ' + e.message });
+  }
+}
+
+router.post('/generate', async (req, res) => {
+  try {
+    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
+    if (!q || !q.completed) return res.json({ redirect: '/questionnaire' });
+    const plan = planOf(req.profile);
+    if (plan === 'free' && (req.profile.generations_used || 0) >= 1) {
+      return res.json({ error: 'The free plan includes 1 AI idea generation. Upgrade for unlimited generations, AI roadmaps and more.', redirect: '/pricing?upgrade=1' });
+    }
+    const { data: job, error: jobErr } = await req.sb.from('generation_jobs')
+      .insert({ user_id: req.user.id, kind: 'ideas' }).select('id').maybeSingle();
+    if (jobErr || !job) throw (jobErr || new Error('could not create generation job'));
+    res.json({ job: job.id });
+    runIdeaGeneration(req, q, plan, job.id);
+  } catch (e) {
+    console.error('idea generation start', e);
+    res.json({ error: 'Idea generation failed to start: ' + e.message });
   }
 });
 
@@ -77,7 +114,25 @@ router.get('/:id', async (req, res, next) => {
     const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!idea) return res.redirect('/ideas');
     const { data: bp } = await req.sb.from('blueprints').select('id').eq('idea_id', idea.id).eq('user_id', req.user.id).maybeSingle();
-    res.render('idea_detail', { title: idea.name, idea, blueprintId: bp ? bp.id : null });
+    res.render('idea_detail', { title: idea.name, idea, blueprintId: bp ? bp.id : null, plan: planOf(req.profile), msg: req.query.msg || null });
+  } catch (e) { next(e); }
+});
+
+// Gather live demand signals for one idea (paid). Regular form POST — the button
+// disables itself client-side while the ~20-30s search runs, then we redirect back.
+router.post('/:id/evidence', async (req, res, next) => {
+  try {
+    if (planOf(req.profile) !== 'paid') return res.redirect('/pricing?upgrade=1');
+    const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!idea) return res.redirect('/ideas');
+    try {
+      const ev = await ai.demandEvidence(req.accessToken, idea);
+      if (!ev || !Array.isArray(ev.signals)) throw new Error('no signals returned');
+      await req.sb.from('generated_ideas').update({ demand_evidence: ev, evidence_at: new Date().toISOString() }).eq('id', idea.id);
+    } catch (err) {
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Could not gather demand signals — please try again. (' + err.message + ')'));
+    }
+    res.redirect('/ideas/' + idea.id);
   } catch (e) { next(e); }
 });
 

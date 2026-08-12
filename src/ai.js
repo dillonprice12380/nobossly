@@ -2,7 +2,7 @@ const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functio
 
 function hasKey() { return !!process.env.SUPABASE_URL; }
 
-async function askJSON(token, system, prompt, maxTokens = 4096) {
+async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
   if (!token) throw new Error('Not authenticated');
   const r = await fetch(EDGE_URL, {
     method: 'POST',
@@ -14,7 +14,9 @@ async function askJSON(token, system, prompt, maxTokens = 4096) {
     body: JSON.stringify({
       system: system + ' Respond ONLY with valid JSON. No markdown fences, no commentary.',
       prompt,
-      max_tokens: maxTokens
+      max_tokens: maxTokens,
+      web_search: !!opts.webSearch,
+      max_searches: opts.maxSearches || undefined
     })
   });
   const j = await r.json().catch(() => ({}));
@@ -26,7 +28,9 @@ async function askJSON(token, system, prompt, maxTokens = 4096) {
   }
   let text = String(j.text || '').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
   const start = Math.min(...['[', '{'].map(c => { const i = text.indexOf(c); return i === -1 ? Infinity : i; }));
-  return JSON.parse(text.slice(start));
+  const end = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
+  if (start === Infinity || end === -1) throw new Error('AI returned no JSON');
+  return JSON.parse(text.slice(start, end + 1));
 }
 
 function profileSummaryText(q) {
@@ -55,6 +59,26 @@ Generate exactly 4 tailored business ideas for this founder. Honor their competi
 name, tagline, category, profile_summary (2-3 sentences on why this fits their profile), why_you (why THIS founder specifically), market_analysis (3-4 sentences), competitor_landscape (2-3 sentences), success_likelihood (integer 0-100), demand_score (integer 1-10), passion_score (integer 1-10), time_to_revenue (e.g. "2-4 weeks"), startup_cost_lean (e.g. "$0-100"), startup_cost_standard, startup_cost_full, legal_nuances (1-2 sentences), first_steps (3-5 concrete first steps as a single string with numbered lines).
 If the founder already has an idea, make idea #1 a refined version of it.`;
   return askJSON(token, system, prompt, 8000);
+}
+
+// Live demand evidence for a generated idea. Uses server-side web search via the
+// ai-proxy edge function (web_search flag) to find named, real-world signals.
+async function demandEvidence(token, idea) {
+  const system = 'You are NoBossly\'s market research analyst. You use web search to find real, current demand evidence for business ideas. Every signal must come from something you actually found in search results — never invent statistics, sources, or discussions. Honest, evidence-grounded reads build founder trust; thin evidence stated plainly is more valuable than inflated claims.';
+  const prompt = `Business idea: ${idea.name} — ${idea.tagline || ''}
+Category: ${idea.category || ''}
+Market context: ${idea.market_analysis || ''}
+
+Search the web for real, current demand evidence for this idea. Look for:
+- Community discussions (Reddit, forums, Facebook groups) where people express this need or pain
+- Search or trend data indicating rising or steady interest
+- Recent market size, growth, or spending statistics
+- Gaps that existing competitors leave open
+
+Return a JSON object:
+{ "signals": [ { "type": "community" | "trend" | "market" | "competitor_gap", "claim": "one specific sentence stating the evidence in your own words", "source": "where you found it (e.g. r/sweatystartup, Exploding Topics, IBISWorld, a named publication)", "strength": "strong" | "moderate" | "weak" } ], "verdict": "2-3 sentence honest read on real-world demand, including any weak spots or risks the evidence revealed" }
+Include 3-6 signals. Only include signals backed by something you actually found. If the evidence is thin or mixed, say so plainly in the verdict.`;
+  return askJSON(token, system, prompt, 3000, { webSearch: true, maxSearches: 6 });
 }
 
 async function generateBlueprint(token, idea, q) {
@@ -140,4 +164,4 @@ Call out over-budget categories, unspent room, and lean-startup suggestions. Be 
   return askJSON(token, system, prompt, 2000);
 }
 
-module.exports = { generateIdeas, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey };
+module.exports = { generateIdeas, demandEvidence, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey };

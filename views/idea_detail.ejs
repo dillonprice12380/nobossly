@@ -3,6 +3,7 @@
 <div class="page-head">
   <div><span class="tag"><%= idea.category %></span><h1><%= idea.name %></h1><p class="lead"><%= idea.tagline %></p></div>
 </div>
+<% if (msg) { %><p class="muted">⚠️ <%= msg %></p><% } %>
 <div class="scores">
   <span class="chip">🎯 <%= idea.success_likelihood %>% success likelihood</span>
   <span class="chip">📈 demand <%= idea.demand_score %>/10</span>
@@ -13,6 +14,33 @@
   <% if (blueprintId) { %><a class="btn btn-primary btn-lg" href="/blueprint/<%= blueprintId %>">📐 View launch blueprint</a>
   <% } else { %><a class="btn btn-primary btn-lg" href="/blueprint/start/<%= idea.id %>">📐 Build my launch blueprint</a><% } %>
   <form method="post" action="/ideas/<%= idea.id %>/favorite" class="inline"><button class="btn btn-ghost"><%= idea.is_favorited ? '⭐ Favorited' : '☆ Favorite' %></button></form>
+</div>
+<% const ev = idea.demand_evidence; %>
+<div class="card" style="margin:16px 0">
+  <h3>📡 Real demand signals</h3>
+  <% if (ev && ev.signals && ev.signals.length) { %>
+    <ul style="list-style:none;padding:0;margin:0 0 12px">
+      <% ev.signals.forEach(function(s){ %>
+        <li style="margin:0 0 10px">
+          <span class="chip"><%= s.strength === 'strong' ? '🟢' : s.strength === 'moderate' ? '🟡' : '⚪️' %> <%= s.strength %></span>
+          <%= s.claim %> <span class="muted">— <%= s.source %></span>
+        </li>
+      <% }) %>
+    </ul>
+    <p><strong>The read:</strong> <%= ev.verdict %></p>
+    <p class="muted" style="font-size:.85em">Signals gathered from live web search<%= idea.evidence_at ? ' on ' + new Date(idea.evidence_at).toLocaleDateString() : '' %>.</p>
+    <form method="post" action="/ideas/<%= idea.id %>/evidence" class="inline" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Searching live sources… (~20s)'">
+      <button class="btn btn-ghost">↻ Refresh signals</button>
+    </form>
+  <% } else if (plan === 'paid') { %>
+    <p class="muted">Search live sources — real community discussions, trend data, and market stats — for evidence people actually want this. Every signal comes with a named source.</p>
+    <form method="post" action="/ideas/<%= idea.id %>/evidence" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Searching live sources… (~20s)'">
+      <button class="btn btn-primary">🔎 Verify demand with live signals</button>
+    </form>
+  <% } else { %>
+    <p class="muted">See live demand evidence for this idea — real community discussions, trend data, and market stats, each with a named source. Available on the paid plan.</p>
+    <a class="btn btn-primary" href="/pricing?upgrade=1">Unlock live demand signals</a>
+  <% } %>
 </div>
 <div class="grid-2">
   <div class="card"><h3>Why this fits you</h3><p><%= idea.why_you %></p><p class="muted"><%= idea.profile_summary %></p></div>
