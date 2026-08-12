@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <div class="page-head center" style="justify-content:center;text-align:center;display:block">
   <h1>Simple pricing. Be your own boss.</h1>
-  <p class="lead">Start free. Upgrade when you're ready to go all-in.</p>
+  <p class="lead">Start free with ideas matched to who you are. Upgrade when you're ready to go all-in.</p>
 </div>
 <% if (typeof upgrade !== 'undefined' && upgrade) { %><p class="notice">That feature is part of the paid plan — pick an option below to unlock it.</p><% } %>
 <% if (msg) { %><p class="error"><%= msg %></p><% } %>
@@ -16,6 +16,7 @@
   <% tiers.forEach(t => { %>
     <div class="card price-card <%= t.key === 'year' ? 'price-featured' : '' %>">
       <% if (t.key === 'year') { %><span class="chip chip-success">Best value</span><% } %>
+      <% if (t.key === 'lifetime') { %><span class="chip">Founding member</span><% } %>
       <h3><%= t.name %></h3>
       <p class="price">$<%= (t.price_cents / 100).toFixed(t.price_cents % 100 ? 2 : 0) %><span class="muted small"> <%= t.interval_label %></span></p>
       <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
@@ -28,5 +29,6 @@
     </div>
   <% }) %>
 </div>
+<p class="muted small center">Lifetime is founding-member pricing — it rises as NoBossly grows, and early members keep everything forever. No per-report fees, no idea-by-idea charges.</p>
 <p class="muted small center">Subscriptions are handled securely by Stripe. Cancel anytime from Account settings — you keep access until the end of your billing period.</p>
 <%- include('partials/foot') %>
