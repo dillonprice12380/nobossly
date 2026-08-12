@@ -34,17 +34,21 @@ async function applySub(userId, { tier, status, customer, subId, periodEnd, life
 
 const FREE_FEATURES = [
   '1 AI idea generation',
+  '1 launch blueprint',
   'Community forum access',
-  'Up to 8 tasks at a time (manual)',
+  'Cohort challenges, streaks & XP',
+  'Up to 8 open tasks (manual)',
   'Member profile & levels'
 ];
 const PAID_FEATURES = [
   'Everything in Free',
   'Unlimited AI idea generations',
-  'AI roadmap & automatic task dispersement',
-  'Launch blueprints',
-  'Challenges & milestones',
+  'Live demand signals — real market evidence with named sources',
+  'AI roadmaps & automatic task dispersement',
+  'Unlimited launch blueprints & tasks',
+  'AI-tailored challenges & milestones',
   'Collaborations & teams',
+  'Badges & community shout-outs',
   'Priority support'
 ];
 
