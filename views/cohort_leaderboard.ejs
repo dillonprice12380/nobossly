@@ -1,0 +1,28 @@
+<%- include('partials/head') %>
+<a class="muted" href="/challenges">← All challenges</a>
+<div class="page-head">
+  <div>
+    <h1><%= ch.emoji || '🚩' %> <%= ch.title %></h1>
+    <p class="lead muted"><%= ch.description %></p>
+    <% if (ch.starts_at || ch.ends_at) { %>
+      <p class="small muted"><%= ch.starts_at ? new Date(ch.starts_at).toLocaleDateString() : '' %><%= (ch.starts_at && ch.ends_at) ? ' → ' : '' %><%= ch.ends_at ? new Date(ch.ends_at).toLocaleDateString() : '' %></p>
+    <% } %>
+  </div>
+</div>
+<div class="card">
+  <h2>🏆 Leaderboard</h2>
+  <p class="muted small">Ranked by XP earned during the cohort window — every task completed, milestone hit, and challenge finished counts.</p>
+  <% if (!rows.length) { %>
+    <p class="muted">No participants yet — be the first to join.</p>
+  <% } %>
+  <% rows.forEach((r, i) => { %>
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid var(--border);<%= r.user_id === myId ? 'font-weight:700' : '' %>">
+      <span style="width:2rem;text-align:center;flex-shrink:0"><%= i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) %></span>
+      <% if (r.avatar_url) { %><img src="<%= r.avatar_url %>" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0"><% } %>
+      <a href="/members/<%= r.username %>" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= r.display_name || r.username %><%= r.user_id === myId ? ' (you)' : '' %></a>
+      <% if (r.completed) { %><span class="chip chip-success" title="Completed the challenge">✅</span><% } %>
+      <span class="chip">⚡ <%= r.xp %> XP</span>
+    </div>
+  <% }) %>
+</div>
+<%- include('partials/foot') %>

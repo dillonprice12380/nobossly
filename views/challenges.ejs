@@ -1,6 +1,49 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Accept a challenge, pick your timeline, and it pins to your dashboard.</p></div></div>
+<div class="page-head">
+  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Accept a challenge, pick your timeline, and it pins to your dashboard.</p></div>
+  <% if (streak && streak.days > 0) { %>
+    <div><span class="chip">🔥 <%= streak.days %>-day streak</span><% if (streak.longest > streak.days) { %> <span class="chip">best: <%= streak.longest %></span><% } %></div>
+  <% } %>
+</div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (cohorts && cohorts.length) { %>
+  <div class="card">
+    <h2>🚩 Cohort challenges</h2>
+    <p class="muted small">Everyone starts together, finishes together, and climbs the same leaderboard.</p>
+    <div class="grid">
+      <% cohorts.forEach(c => { const a = accMap[c.id];
+         const now = Date.now();
+         const st = c.starts_at ? new Date(c.starts_at).getTime() : null;
+         const en = c.ends_at ? new Date(c.ends_at).getTime() : null;
+         const state = (st && now < st) ? 'upcoming' : ((en && now > en) ? 'ended' : 'live');
+         const daysTo = ms => Math.max(0, Math.ceil((ms - now) / 86400000)); %>
+        <div class="card">
+          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🚩' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+          <h3><%= c.title %></h3>
+          <p class="muted"><%= c.description %></p>
+          <p>
+            <% if (state === 'upcoming') { %><span class="chip">🗓 Starts in <%= daysTo(st) %> day<%= daysTo(st) === 1 ? '' : 's' %> — <%= new Date(c.starts_at).toLocaleDateString() %></span>
+            <% } else if (state === 'live') { %><span class="chip chip-success">🔴 Live now<%= en ? ' — ' + daysTo(en) + ' day' + (daysTo(en) === 1 ? '' : 's') + ' left' : '' %></span>
+            <% } else { %><span class="chip">Ended<%= c.ends_at ? ' ' + new Date(c.ends_at).toLocaleDateString() : '' %></span><% } %>
+          </p>
+          <% if (a && a.status === 'completed') { %>
+            <span class="chip chip-success">✅ Completed</span>
+          <% } else if (a && a.status === 'active') { %>
+            <span class="chip">🎯 You're in — finish by <%= a.due_date %></span>
+            <div class="cta-row" style="justify-content:flex-start">
+              <form method="post" action="/challenges/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
+              <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Leave cohort</button></form>
+            </div>
+          <% } else if (state !== 'ended') { %>
+            <form method="post" action="/challenges/<%= c.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Join the cohort</button></form>
+          <% } %>
+          <p style="margin-top:.5rem"><a class="btn btn-ghost btn-sm" href="/challenges/<%= c.id %>/leaderboard">🏆 View leaderboard</a></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
 
 <% if (paid) { %>
   <div class="card">
