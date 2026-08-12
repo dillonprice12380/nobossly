@@ -105,11 +105,23 @@
     </div>
     <% if ((bp.gtm_channels||[]).length) { %>
       <h4>Channels</h4>
-      <div class="grid">
-        <% (bp.gtm_channels||[]).forEach(c=>{ %>
-          <div class="card" style="margin:0">
-            <div class="idea-top"><strong><%= c.channel %></strong><span class="chip"><%= c.effort %> effort</span></div>
-            <p class="muted small"><%= c.why %></p>
+      <div class="bp-channels">
+        <% (bp.gtm_channels||[]).forEach(c=>{
+             var effRaw = (c.effort == null ? '' : String(c.effort)).trim();
+             var m = effRaw.match(/^(high|medium|moderate|low)/i);
+             var effWord = m ? m[0] : '';
+             var effLevel = effWord ? effWord.toLowerCase().replace('moderate','medium') : '';
+             var effClass = effLevel === 'high' ? 'is-high' : (effLevel === 'low' ? 'is-low' : (effLevel === 'medium' ? 'is-medium' : ''));
+             var effDetail = effWord ? effRaw.slice(effWord.length).replace(/^[\s\u2014:.\-]+/, '').trim() : effRaw;
+             var effLabel = effWord ? (effWord.charAt(0).toUpperCase() + effWord.slice(1).toLowerCase() + ' effort') : '';
+        %>
+          <div class="bp-channel">
+            <div class="bp-channel-head">
+              <strong class="bp-channel-name"><%= c.channel %></strong>
+              <% if (effLabel) { %><span class="bp-effort <%= effClass %>"><%= effLabel %></span><% } %>
+            </div>
+            <% if (effDetail) { %><p class="muted small bp-channel-effort"><%= effDetail %></p><% } %>
+            <% if (c.why) { %><p class="bp-channel-why"><%= c.why %></p><% } %>
           </div>
         <% }) %>
       </div>
@@ -178,6 +190,17 @@
   .bp-metric-label{display:block;font-size:.8rem;color:var(--muted)}
   .bp-metric-val{display:block;font-size:1.3rem;font-weight:700;margin-top:.2rem}
   .callout{background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:1rem;margin:.75rem 0}
+  /* GTM channels — dedicated layout so long effort text never collides with the name */
+  .bp-channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.75rem;margin:.5rem 0}
+  .bp-channel{border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;background:var(--card-2,rgba(16,185,129,.04))}
+  .bp-channel-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.4rem .6rem;margin-bottom:.35rem}
+  .bp-channel-name{font-size:1.02rem;line-height:1.25;overflow-wrap:anywhere}
+  .bp-effort{flex:none;white-space:nowrap;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:.15rem .5rem;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+  .bp-effort.is-high{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:#b91c1c}
+  .bp-effort.is-medium{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#b45309}
+  .bp-effort.is-low{background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35);color:#047857}
+  .bp-channel-effort{margin:.1rem 0 .4rem}
+  .bp-channel-why{margin:0;line-height:1.45}
   .bp-checklist{list-style:none;counter-reset:step;padding:0;margin:.75rem 0 0}
   .bp-checklist li{counter-increment:step;border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;margin:.4rem 0;display:flex;gap:.6rem;align-items:flex-start}
   .bp-checklist li::before{content:counter(step);flex-shrink:0;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent,#10b981);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
