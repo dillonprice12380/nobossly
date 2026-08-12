@@ -18,19 +18,43 @@ router.get('/', async (req, res, next) => {
     ]);
     const accMap = {};
     (acc || []).forEach(a => accMap[a.challenge_id] = a);
+    const all = challenges || [];
     res.render('challenges', {
-      title: 'Challenges', challenges: challenges || [], accMap,
-      paid, custom: custom || [], msg: req.query.msg || null
+      title: 'Challenges',
+      challenges: all.filter(c => !c.is_cohort),
+      cohorts: all.filter(c => c.is_cohort),
+      accMap, paid, custom: custom || [], msg: req.query.msg || null,
+      streak: { days: req.profile.streak_days || 0, longest: req.profile.longest_streak || 0 }
     });
+  } catch (e) { next(e); }
+});
+
+// Cohort leaderboard — XP earned inside the cohort window, via SECURITY DEFINER RPC.
+router.get('/:id/leaderboard', async (req, res, next) => {
+  try {
+    const { data: ch } = await req.sb.from('challenges').select('*').eq('id', req.params.id).maybeSingle();
+    if (!ch) return res.redirect('/challenges');
+    const { data: rows, error } = await req.sb.rpc('cohort_leaderboard', { p_challenge: ch.id });
+    if (error) throw error;
+    res.render('cohort_leaderboard', { title: ch.title + ' — Leaderboard', ch, rows: rows || [], myId: req.user.id });
   } catch (e) { next(e); }
 });
 
 router.post('/:id/accept', async (req, res, next) => {
   try {
-    const duration = cleanDuration(req.body.duration_days);
-    const { data: ch } = await req.sb.from('challenges').select('id, title').eq('id', req.params.id).maybeSingle();
+    let duration = cleanDuration(req.body.duration_days);
+    const { data: ch } = await req.sb.from('challenges').select('id, title, is_cohort, starts_at, ends_at').eq('id', req.params.id).maybeSingle();
     if (ch) {
-      const due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
+      let due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
+      // Cohorts share a fixed window: everyone's deadline is the cohort end date.
+      if (ch.is_cohort) {
+        if (ch.ends_at && new Date(ch.ends_at).getTime() < Date.now()) {
+          return res.redirect('/challenges?msg=' + encodeURIComponent('That cohort has already ended — keep an eye out for the next one.'));
+        }
+        const end = ch.ends_at ? new Date(ch.ends_at) : new Date(Date.now() + 30 * 86400000);
+        duration = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
+        due = end.toISOString().slice(0, 10);
+      }
       const { data: existing } = await req.sb.from('challenge_acceptances').select('id, status').eq('user_id', req.user.id).eq('challenge_id', ch.id).maybeSingle();
       if (existing) {
         if (existing.status === 'completed') return res.redirect('/challenges');
