@@ -7,7 +7,7 @@ const clampXP = v => Math.max(10, Math.min(200, parseInt(v, 10) || 50));
 const okDays = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
 
 // Paid founders get an AI-tailored set of milestones & challenges built from their
-// blueprint. Runs in the background after the blueprint response so it never blocks
+// blueprint. Runs in the background after the blueprint completes so it never blocks
 // or fails blueprint creation; the results appear on the Milestones/Challenges pages.
 async function generateTailoredSets(req, bp) {
   const [ms, chs] = await Promise.all([
@@ -49,20 +49,15 @@ router.get('/start/:ideaId', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/start/:ideaId', async (req, res) => {
+// Runs in the background after the POST responds with a job id, so the HTTP
+// request never outlives the host proxy's timeout during long AI generations.
+async function runBlueprintGeneration(req, idea, jobId) {
+  const sb = req.sb;
+  const finish = patch => sb.from('generation_jobs')
+    .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
+    .then(() => {}, e => console.error('job update', e && e.message));
   try {
-    const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.ideaId).eq('user_id', req.user.id).maybeSingle();
-    if (!idea) return res.json({ redirect: '/ideas' });
-    const { data: dupe } = await req.sb.from('blueprints').select('id').eq('idea_id', idea.id).eq('user_id', req.user.id).maybeSingle();
-    if (dupe) return res.json({ redirect: '/blueprint/' + dupe.id });
-    // Free founders can create ONE blueprint; paid is unlimited.
-    if (planOf(req.profile) !== 'paid') {
-      const { count } = await req.sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
-      if ((count || 0) >= 1) return res.json({ redirect: '/pricing?upgrade=1' });
-    }
-
-    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
-
+    const { data: q } = await sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
     const bp = await ai.generateBlueprint(req.accessToken, idea, q || {});
     const row = {
       user_id: req.user.id, idea_id: idea.id,
@@ -79,17 +74,39 @@ router.post('/start/:ideaId', async (req, res) => {
       gtm_channels: bp.gtm_channels || [], gtm_week1_actions: bp.gtm_week1_actions || [],
       is_active: true
     };
-    const { data: created, error } = await req.sb.from('blueprints').insert(row).select().maybeSingle();
+    const { data: created, error } = await sb.from('blueprints').insert(row).select().maybeSingle();
     if (error) throw error;
-    await req.sb.from('generated_ideas').update({ status: 'converted' }).eq('id', idea.id);
-    await awardXP(req.sb, req.user.id, req.profile, 50, 'Created a launch blueprint', 'blueprints', created.id);
-    res.json({ redirect: '/blueprint/' + created.id });
+    await sb.from('generated_ideas').update({ status: 'converted' }).eq('id', idea.id);
+    await awardXP(sb, req.user.id, req.profile, 50, 'Created a launch blueprint', 'blueprints', created.id);
+    await finish({ status: 'done', redirect: '/blueprint/' + created.id });
     if (planOf(req.profile) === 'paid') {
       generateTailoredSets(req, created).catch(e => console.error('tailored gen', e && e.message));
     }
   } catch (e) {
     console.error('blueprint generation', e);
-    res.json({ error: 'Blueprint generation failed: ' + e.message });
+    await finish({ status: 'error', error: 'Blueprint generation failed: ' + e.message });
+  }
+}
+
+router.post('/start/:ideaId', async (req, res) => {
+  try {
+    const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.ideaId).eq('user_id', req.user.id).maybeSingle();
+    if (!idea) return res.json({ redirect: '/ideas' });
+    const { data: dupe } = await req.sb.from('blueprints').select('id').eq('idea_id', idea.id).eq('user_id', req.user.id).maybeSingle();
+    if (dupe) return res.json({ redirect: '/blueprint/' + dupe.id });
+    // Free founders can create ONE blueprint; paid is unlimited.
+    if (planOf(req.profile) !== 'paid') {
+      const { count } = await req.sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
+      if ((count || 0) >= 1) return res.json({ redirect: '/pricing?upgrade=1' });
+    }
+    const { data: job, error: jobErr } = await req.sb.from('generation_jobs')
+      .insert({ user_id: req.user.id, kind: 'blueprint' }).select('id').maybeSingle();
+    if (jobErr || !job) throw (jobErr || new Error('could not create generation job'));
+    res.json({ job: job.id });
+    runBlueprintGeneration(req, idea, job.id);
+  } catch (e) {
+    console.error('blueprint generation start', e);
+    res.json({ error: 'Blueprint generation failed to start: ' + e.message });
   }
 });
 

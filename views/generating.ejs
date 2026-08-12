@@ -8,18 +8,38 @@
 </div>
 <script>
 (async function () {
-  try {
-    const r = await fetch('<%= action %>', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    const j = await r.json();
-    if (j.redirect) return location.href = j.redirect;
-    throw new Error(j.error || 'Unknown error');
-  } catch (e) {
+  function fail(msg) {
     document.querySelector('.spinner').classList.add('hidden');
     document.getElementById('gen-label').classList.add('hidden');
     const el = document.getElementById('gen-error');
-    el.textContent = e.message; el.classList.remove('hidden');
+    el.textContent = msg; el.classList.remove('hidden');
     document.getElementById('gen-back').classList.remove('hidden');
   }
+  // Parse defensively: proxies/gateways can return HTML error pages (timeouts,
+  // restarts) that would otherwise surface as a raw "Unexpected token '<'" error.
+  async function parse(r) {
+    const t = await r.text();
+    try { return JSON.parse(t); }
+    catch (e) { throw new Error('The server was interrupted or took too long. Please try again in a minute.'); }
+  }
+  try {
+    const r = await fetch('<%= action %>', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const j = await parse(r);
+    if (j.redirect) return location.href = j.redirect;
+    if (j.job) {
+      // Background job: poll for up to ~6 minutes. Individual poll failures
+      // (network blips, brief restarts) are tolerated and retried.
+      for (let i = 0; i < 145; i++) {
+        await new Promise(s => setTimeout(s, 2500));
+        let sJ = null;
+        try { sJ = await parse(await fetch('/jobs/' + j.job)); } catch (e) { continue; }
+        if (sJ.status === 'done' && sJ.redirect) return location.href = sJ.redirect;
+        if (sJ.status === 'error') return fail(sJ.error || 'Generation failed. Please try again.');
+      }
+      return fail('This is taking longer than expected. Your generation may still complete — check the relevant page in a couple of minutes before retrying.');
+    }
+    throw new Error(j.error || 'Unknown error');
+  } catch (e) { fail(e.message); }
 })();
 </script>
 <%- include('partials/foot') %>
