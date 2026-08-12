@@ -45,7 +45,7 @@ router.post('/generate', async (req, res, next) => {
       legal_nuances: i.legal_nuances || '', first_steps: i.first_steps || '',
       status: 'active', position: (count || 0) + idx
     }));
-    const { error } = await req.sb.from('generated_ideas').insert(rows);
+    const { data: inserted, error } = await req.sb.from('generated_ideas').insert(rows).select('id');
     if (error) throw error;
     await awardXP(req.sb, req.user.id, req.profile, 25, 'Generated business ideas', 'generated_ideas', null);
     await req.sb.from('profiles').update({ generations_used: (req.profile.generations_used || 0) + 1 }).eq('id', req.user.id);
@@ -65,6 +65,26 @@ router.post('/generate', async (req, res, next) => {
         await req.sb.rpc('push_notification', { target_user: req.user.id, ntype: 'tasks', nmessage: 'Your idea "' + top.name + '" was broken into ' + taskRows.length + ' tasks with deadlines — check your Tasks board.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
       }
     } catch (e2) { console.error('task dispersal', e2.message); }
+    // Auto-gather live demand signals for the top idea (paid feature). Fire-and-forget:
+    // never blocks the redirect, never fails the generation.
+    try {
+      if (plan === 'paid' && inserted && inserted.length) {
+        const topId = inserted[0].id;
+        const sb = req.sb, token = req.accessToken, uid = req.user.id;
+        (async () => {
+          try {
+            const { data: created } = await sb.from('generated_ideas').select('*').eq('id', topId).eq('user_id', uid).maybeSingle();
+            if (created && !created.demand_evidence) {
+              const ev = await ai.demandEvidence(token, created);
+              if (ev && Array.isArray(ev.signals)) {
+                await sb.from('generated_ideas').update({ demand_evidence: ev, evidence_at: new Date().toISOString() }).eq('id', topId);
+                await sb.rpc('push_notification', { target_user: uid, ntype: 'ideas', nmessage: 'Live demand signals are ready for "' + created.name + '" — open the idea to see the evidence.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+              }
+            }
+          } catch (err) { console.error('auto demand evidence', err.message); }
+        })();
+      }
+    } catch (e3) { console.error('auto evidence setup', e3.message); }
     res.json({ redirect: '/ideas' });
   } catch (e) {
     console.error('idea generation', e);
@@ -77,7 +97,25 @@ router.get('/:id', async (req, res, next) => {
     const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!idea) return res.redirect('/ideas');
     const { data: bp } = await req.sb.from('blueprints').select('id').eq('idea_id', idea.id).eq('user_id', req.user.id).maybeSingle();
-    res.render('idea_detail', { title: idea.name, idea, blueprintId: bp ? bp.id : null });
+    res.render('idea_detail', { title: idea.name, idea, blueprintId: bp ? bp.id : null, plan: planOf(req.profile), msg: req.query.msg || null });
+  } catch (e) { next(e); }
+});
+
+// Gather live demand signals for one idea (paid). Regular form POST — the button
+// disables itself client-side while the ~20-30s search runs, then we redirect back.
+router.post('/:id/evidence', async (req, res, next) => {
+  try {
+    if (planOf(req.profile) !== 'paid') return res.redirect('/pricing?upgrade=1');
+    const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!idea) return res.redirect('/ideas');
+    try {
+      const ev = await ai.demandEvidence(req.accessToken, idea);
+      if (!ev || !Array.isArray(ev.signals)) throw new Error('no signals returned');
+      await req.sb.from('generated_ideas').update({ demand_evidence: ev, evidence_at: new Date().toISOString() }).eq('id', idea.id);
+    } catch (err) {
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Could not gather demand signals — please try again. (' + err.message + ')'));
+    }
+    res.redirect('/ideas/' + idea.id);
   } catch (e) { next(e); }
 });
 
