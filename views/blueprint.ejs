@@ -5,21 +5,202 @@
   <% if (hasSprint) { %><a class="btn btn-primary" href="/dashboard">Go to sprint →</a>
   <% } else { %><a class="btn btn-primary btn-lg" href="/dashboard/sprint/start/<%= bp.id %>">🏃 Start my first sprint</a><% } %>
 </div>
-<div class="grid-2">
-  <div class="card span-2"><h3>Positioning</h3><p><%= bp.positioning %></p><h4>Elevator pitch</h4><p class="quote"><%= bp.elevator_pitch %></p></div>
-  <div class="card"><h3>Ideal customer: <%= bp.icp_archetype %></h3><p><%= bp.icp_description %></p>
-    <h4>Demographics</h4><ul><% (bp.icp_demographics||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
-    <h4>Pain points</h4><ul><% (bp.icp_pain_points||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
-    <h4>Where to find them</h4><ul><% (bp.icp_watering_holes||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul></div>
-  <div class="card"><h3>Revenue model: <%= bp.revenue_type %></h3><p><%= bp.revenue_rationale %></p>
-    <h4>Pricing</h4>
-    <% (bp.pricing_tiers||[]).forEach(t=>{ %><p><strong><%= t.name %></strong> — <%= t.price %><br><span class="muted"><%= t.includes %></span></p><% }) %>
-    <h4>Projections</h4><p>Month 3: <strong><%= bp.projection_month3 %></strong> · Month 6: <strong><%= bp.projection_month6 %></strong> · Month 12: <strong><%= bp.projection_month12 %></strong></p></div>
-  <div class="card"><h3>Differentiators</h3><ul><% (bp.differentiators||[]).forEach(x=>{ %><li><%= typeof x==='string'?x:JSON.stringify(x) %></li><% }) %></ul>
-    <h4>Roadmap</h4><p><%= bp.roadmap_summary %></p></div>
-  <div class="card"><h3>Go-to-market</h3><p><%= bp.gtm_strategy %></p>
-    <h4>Landing customer #1</h4><p><%= bp.gtm_first_customer %></p>
-    <h4>Channels</h4><% (bp.gtm_channels||[]).forEach(c=>{ %><p><strong><%= c.channel %></strong> <span class="muted">(<%= c.effort %> effort)</span><br><%= c.why %></p><% }) %></div>
-  <div class="card span-2"><h3>Week 1 actions</h3><ol><% (bp.gtm_week1_actions||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ol></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="error"><%= err %></p><% } %>
+
+<div class="bp-tabs" role="tablist">
+  <button class="bp-tab is-active" data-tab="positioning" role="tab">🎯 Positioning</button>
+  <button class="bp-tab" data-tab="customer" role="tab">👥 Ideal customer</button>
+  <button class="bp-tab" data-tab="revenue" role="tab">💰 Revenue</button>
+  <button class="bp-tab" data-tab="edge" role="tab">⚡ Edge &amp; roadmap</button>
+  <button class="bp-tab" data-tab="gtm" role="tab">🚀 Go-to-market</button>
+  <button class="bp-tab" data-tab="week1" role="tab">✅ Week 1</button>
 </div>
+
+<section class="bp-panel is-active" data-panel="positioning">
+  <div class="card">
+    <h3>Positioning</h3>
+    <p><%= bp.positioning %></p>
+    <h4>Elevator pitch</h4>
+    <blockquote class="quote"><%= bp.elevator_pitch %></blockquote>
+    <% if ((bp.differentiators||[]).length) { %>
+      <h4>What sets you apart</h4>
+      <div class="pill-row">
+        <% (bp.differentiators||[]).forEach(x=>{ %><span class="pill">✨ <%= typeof x==='string'?x:JSON.stringify(x) %></span><% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="bp-panel" data-panel="customer">
+  <div class="card">
+    <div class="idea-top"><h3>Ideal customer</h3><span class="chip"><%= bp.icp_archetype %></span></div>
+    <p><%= bp.icp_description %></p>
+    <div class="grid-2">
+      <div>
+        <h4>📊 Demographics</h4>
+        <ul class="clean-list"><% (bp.icp_demographics||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+      </div>
+      <div>
+        <h4>🔥 Pain points</h4>
+        <ul class="clean-list"><% (bp.icp_pain_points||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+      </div>
+      <% if ((bp.icp_motivations||[]).length) { %>
+      <div>
+        <h4>💫 Motivations</h4>
+        <ul class="clean-list"><% (bp.icp_motivations||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+      </div>
+      <% } %>
+      <div>
+        <h4>📍 Where to find them</h4>
+        <ul class="clean-list"><% (bp.icp_watering_holes||[]).forEach(x=>{ %><li><%= x %></li><% }) %></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bp-panel" data-panel="revenue">
+  <div class="card">
+    <div class="idea-top"><h3>Revenue model</h3><span class="chip"><%= bp.revenue_type %></span></div>
+    <p><%= bp.revenue_rationale %></p>
+    <% if ((bp.pricing_tiers||[]).length) { %>
+      <h4>Pricing</h4>
+      <div class="grid">
+        <% (bp.pricing_tiers||[]).forEach(t=>{ %>
+          <div class="card price-card" style="margin:0">
+            <h3 style="margin:.2rem 0"><%= t.name %></h3>
+            <p class="price" style="font-size:1.4rem"><%= t.price %></p>
+            <p class="muted small"><%= t.includes %></p>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+    <h4>Projections</h4>
+    <div class="bp-metrics">
+      <div class="bp-metric"><span class="bp-metric-label">Month 3</span><span class="bp-metric-val"><%= bp.projection_month3 %></span></div>
+      <div class="bp-metric"><span class="bp-metric-label">Month 6</span><span class="bp-metric-val"><%= bp.projection_month6 %></span></div>
+      <div class="bp-metric"><span class="bp-metric-label">Month 12</span><span class="bp-metric-val"><%= bp.projection_month12 %></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="bp-panel" data-panel="edge">
+  <div class="card">
+    <h3>Differentiators</h3>
+    <div class="pill-row">
+      <% (bp.differentiators||[]).forEach(x=>{ %><span class="pill">⚡ <%= typeof x==='string'?x:JSON.stringify(x) %></span><% }) %>
+    </div>
+    <h4>Roadmap</h4>
+    <p><%= bp.roadmap_summary %></p>
+  </div>
+</section>
+
+<section class="bp-panel" data-panel="gtm">
+  <div class="card">
+    <h3>Go-to-market strategy</h3>
+    <p><%= bp.gtm_strategy %></p>
+    <div class="callout">
+      <h4>🎯 Landing customer #1</h4>
+      <p><%= bp.gtm_first_customer %></p>
+    </div>
+    <% if ((bp.gtm_channels||[]).length) { %>
+      <h4>Channels</h4>
+      <div class="grid">
+        <% (bp.gtm_channels||[]).forEach(c=>{ %>
+          <div class="card" style="margin:0">
+            <div class="idea-top"><strong><%= c.channel %></strong><span class="chip"><%= c.effort %> effort</span></div>
+            <p class="muted small"><%= c.why %></p>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="bp-panel" data-panel="week1">
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .75rem">
+      <div><h3>Your Week 1 action plan</h3><p class="muted small">Seven days of concrete first moves. Check them off as you go.</p></div>
+    </div>
+
+    <% if (plan === 'paid') { %>
+      <% if (dispersed) { %>
+        <div class="callout"><p>✅ These actions are on your <a href="/tasks">task board</a> with staggered deadlines.</p></div>
+      <% } else { %>
+        <div class="callout">
+          <div class="page-head" style="margin:0">
+            <div><strong>⚡ Disperse to tasks</strong><p class="muted small">Send all Week 1 actions to your task board, each with a deadline — no manual entry.</p></div>
+            <form method="post" action="/blueprint/<%= bp.id %>/disperse"><button class="btn btn-primary">Disperse to tasks →</button></form>
+          </div>
+        </div>
+      <% } %>
+    <% } else { %>
+      <div class="callout" style="border-style:dashed">
+        <div class="page-head" style="margin:0">
+          <div><strong>⚡ Auto-disperse to your task board</strong><p class="muted small">Paid founders send every action to their task board with deadlines in one click. On the free plan, add them manually from your Tasks page.</p></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <a class="btn btn-ghost" href="/tasks">Add manually</a>
+            <a class="btn btn-primary" href="/pricing?upgrade=1">Unlock 1-click</a>
+          </div>
+        </div>
+      </div>
+    <% } %>
+
+    <ol class="bp-checklist">
+      <% (bp.gtm_week1_actions||[]).forEach((x, i)=>{ const label = (typeof x==='string'? x : (x && (x.title||x.action||x.task)) || '').replace(/^\s*\d+[).:-]?\s*/, ''); %>
+        <li>
+          <label class="bp-check">
+            <input type="checkbox" class="bp-check-box" data-key="bpwk_<%= bp.id %>_<%= i %>">
+            <span><%= label %></span>
+          </label>
+        </li>
+      <% }) %>
+    </ol>
+    <p class="muted small">Check-offs here are just for tracking as you read. <% if (plan === 'paid') { %>Use “Disperse to tasks” for real, deadline-tracked tasks with XP.<% } else { %>Add them on your <a href="/tasks">Tasks page</a> to earn XP and track deadlines.<% } %></p>
+  </div>
+</section>
+
+<style>
+  .bp-tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin:1rem 0 1.25rem;border-bottom:1px solid var(--border);padding-bottom:.5rem}
+  .bp-tab{background:transparent;border:1px solid transparent;border-radius:999px;padding:.5rem .9rem;cursor:pointer;font:inherit;color:var(--muted);white-space:nowrap}
+  .bp-tab:hover{color:var(--text)}
+  .bp-tab.is-active{background:var(--accent,#10b981);color:#fff;font-weight:600}
+  .bp-panel{display:none;animation:bpfade .25s ease}
+  .bp-panel.is-active{display:block}
+  @keyframes bpfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .pill-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
+  .pill{background:var(--card-2,rgba(16,185,129,.08));border:1px solid var(--border);border-radius:999px;padding:.35rem .75rem;font-size:.9rem}
+  .clean-list{list-style:none;padding:0;margin:.25rem 0}
+  .clean-list li{padding:.3rem 0 .3rem 1.1rem;position:relative}
+  .clean-list li::before{content:'•';position:absolute;left:.2rem;color:var(--accent,#10b981)}
+  .bp-metrics{display:flex;gap:.75rem;flex-wrap:wrap;margin:.5rem 0}
+  .bp-metric{flex:1;min-width:8rem;background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;text-align:center}
+  .bp-metric-label{display:block;font-size:.8rem;color:var(--muted)}
+  .bp-metric-val{display:block;font-size:1.3rem;font-weight:700;margin-top:.2rem}
+  .callout{background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:1rem;margin:.75rem 0}
+  .bp-checklist{list-style:none;counter-reset:step;padding:0;margin:.75rem 0 0}
+  .bp-checklist li{counter-increment:step;border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;margin:.4rem 0;display:flex;gap:.6rem;align-items:flex-start}
+  .bp-checklist li::before{content:counter(step);flex-shrink:0;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent,#10b981);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .bp-check{display:flex;gap:.55rem;align-items:flex-start;cursor:pointer;margin:0}
+  .bp-check input{margin-top:.2rem}
+  .bp-check input:checked + span{text-decoration:line-through;color:var(--muted)}
+</style>
+<script>
+(function(){
+  var tabs=document.querySelectorAll('.bp-tab'), panels=document.querySelectorAll('.bp-panel');
+  function show(name){
+    tabs.forEach(function(t){t.classList.toggle('is-active',t.dataset.tab===name);});
+    panels.forEach(function(p){p.classList.toggle('is-active',p.dataset.panel===name);});
+    try{history.replaceState(null,'', '#'+name);}catch(e){}
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.tab);});});
+  var hash=(location.hash||'').replace('#','');
+  if(hash && document.querySelector('.bp-panel[data-panel="'+hash+'"]')) show(hash);
+  // Lightweight local check-off memory (no server round-trip; these are reading aids).
+  document.querySelectorAll('.bp-check-box').forEach(function(cb){
+    try{ if(localStorage.getItem(cb.dataset.key)==='1') cb.checked=true; }catch(e){}
+    cb.addEventListener('change',function(){ try{ localStorage.setItem(cb.dataset.key, cb.checked?'1':'0'); }catch(e){} });
+  });
+})();
+</script>
 <%- include('partials/foot') %>
