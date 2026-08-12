@@ -56,7 +56,15 @@ async function generateIdeas(token, q) {
   const prompt = `${profileSummaryText(q)}
 
 Generate exactly 4 tailored business ideas for this founder. Honor their competition appetite: if they prefer niche, favor underserved niches; if mainstream, favor proven markets with a differentiation angle. Return a JSON array where each element has these string fields unless noted:
-name, tagline, category, profile_summary (2-3 sentences on why this fits their profile), why_you (why THIS founder specifically), market_analysis (3-4 sentences), competitor_landscape (2-3 sentences), success_likelihood (integer 0-100), demand_score (integer 1-10), passion_score (integer 1-10), time_to_revenue (e.g. "2-4 weeks"), startup_cost_lean (e.g. "$0-100"), startup_cost_standard, startup_cost_full, legal_nuances (1-2 sentences), first_steps (3-5 concrete first steps as a single string with numbered lines).
+name, tagline, category, profile_summary (2-3 sentences on why this fits their profile), why_you (why THIS founder specifically), market_analysis (3-4 sentences), competitor_landscape (2-3 sentence overview of the competitive space), competitors (see below), success_likelihood (integer 0-100), demand_score (integer 1-10), passion_score (integer 1-10), time_to_revenue (e.g. "2-4 weeks"), startup_cost_lean (e.g. "$0-100"), startup_cost_standard, startup_cost_full, legal_nuances (1-2 sentences), first_steps (3-5 concrete first steps as a single string with numbered lines).
+
+"competitors" is an array of exactly 3 objects, each with these string fields:
+  name: a real, specific competitor or close substitute this founder would actually be up against — name a real company, product, or service where possible, not a generic category;
+  what_they_do: one sentence on their offering and who they serve;
+  strength: one sentence on their main advantage (what they do well);
+  weakness: one sentence on a real gap, blind spot, or underserved segment;
+  your_edge: one sentence on how THIS founder's idea can realistically win against or differentiate from them, grounded in the founder's specific skills, angle, or target niche.
+Be honest and specific. If the space is crowded, reflect that with strong competitors; if it's wide open, name the closest substitutes people use today. Never invent fake company names — if unsure of a specific name, describe the competitor type precisely instead.
 If the founder already has an idea, make idea #1 a refined version of it.`;
   return askJSON(token, system, prompt, 8000);
 }

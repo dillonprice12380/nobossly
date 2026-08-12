@@ -42,13 +42,47 @@
     <a class="btn btn-primary" href="/pricing?upgrade=1">Unlock live demand signals</a>
   <% } %>
 </div>
+
+<% const comps = idea.competitors; %>
+<div class="card" style="margin:16px 0">
+  <h3>⚔️ Top competitors &amp; how you stack up</h3>
+  <% if (idea.competitor_landscape) { %><p class="muted"><%= idea.competitor_landscape %></p><% } %>
+  <% if (comps && comps.length) { %>
+    <div class="comp-grid">
+      <% comps.forEach(function(c, i){ %>
+        <div class="comp-card">
+          <div class="comp-head"><span class="comp-rank">#<%= i + 1 %></span><strong class="comp-name"><%= c.name %></strong></div>
+          <% if (c.what_they_do) { %><p class="comp-does"><%= c.what_they_do %></p><% } %>
+          <div class="comp-row comp-strength"><span class="comp-label">💪 Strength</span><span><%= c.strength %></span></div>
+          <div class="comp-row comp-weak"><span class="comp-label">🕳️ Gap</span><span><%= c.weakness %></span></div>
+          <div class="comp-row comp-edge"><span class="comp-label">✨ Your edge</span><span><%= c.your_edge %></span></div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="muted small">Detailed competitor breakdown wasn't generated for this idea. Regenerate ideas to include the head-to-head analysis.</p>
+  <% } %>
+</div>
+
 <div class="grid-2">
   <div class="card"><h3>Why this fits you</h3><p><%= idea.why_you %></p><p class="muted"><%= idea.profile_summary %></p></div>
   <div class="card"><h3>Market analysis</h3><p><%= idea.market_analysis %></p></div>
-  <div class="card"><h3>Competitor landscape</h3><p><%= idea.competitor_landscape %></p></div>
   <div class="card"><h3>Startup costs</h3>
     <p>Lean: <strong><%= idea.startup_cost_lean %></strong><br>Standard: <strong><%= idea.startup_cost_standard %></strong><br>Full build: <strong><%= idea.startup_cost_full %></strong></p>
     <h4>Legal notes</h4><p class="muted"><%= idea.legal_nuances %></p></div>
   <div class="card span-2"><h3>First steps</h3><p class="pre"><%= idea.first_steps %></p></div>
 </div>
+
+<style>
+  .comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.75rem;margin-top:.75rem}
+  .comp-card{border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;background:var(--card-2,rgba(16,185,129,.04))}
+  .comp-head{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.35rem}
+  .comp-rank{flex:none;font-size:.72rem;font-weight:700;color:#fff;background:var(--accent,#10b981);border-radius:999px;padding:.1rem .45rem}
+  .comp-name{font-size:1.02rem;line-height:1.25;overflow-wrap:anywhere}
+  .comp-does{margin:0 0 .5rem;color:var(--muted);font-size:.9rem}
+  .comp-row{display:flex;flex-direction:column;gap:.1rem;padding:.35rem 0;border-top:1px solid var(--border);font-size:.9rem}
+  .comp-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+  .comp-edge .comp-label{color:var(--accent,#10b981)}
+  .comp-edge span:last-child{font-weight:500}
+</style>
 <%- include('partials/foot') %>

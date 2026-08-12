@@ -3,6 +3,19 @@ const { planOf } = require('../middleware/auth');
 const ai = require('../ai');
 const { awardXP } = require('../xp');
 
+// Normalize the AI competitors field into a clean array of exactly the shape the view expects.
+function cleanCompetitors(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = raw.slice(0, 3).map(c => {
+    if (!c || typeof c !== 'object') return null;
+    const s = v => (v == null ? '' : String(v)).slice(0, 400);
+    const name = s(c.name).slice(0, 120);
+    if (!name) return null;
+    return { name, what_they_do: s(c.what_they_do), strength: s(c.strength), weakness: s(c.weakness), your_edge: s(c.your_edge) };
+  }).filter(Boolean);
+  return out.length ? out : null;
+}
+
 router.get('/', async (req, res, next) => {
   try {
     const { data: ideas } = await req.sb.from('generated_ideas').select('*')
@@ -35,6 +48,7 @@ async function runIdeaGeneration(req, q, plan, jobId) {
       name: String(i.name || 'Untitled idea'), tagline: i.tagline || '', category: i.category || '',
       profile_summary: i.profile_summary || '', why_you: i.why_you || '',
       market_analysis: i.market_analysis || '', competitor_landscape: i.competitor_landscape || '',
+      competitors: cleanCompetitors(i.competitors),
       success_likelihood: Math.min(100, parseInt(i.success_likelihood, 10) || 50),
       demand_score: Math.min(10, parseInt(i.demand_score, 10) || 5),
       passion_score: Math.min(10, parseInt(i.passion_score, 10) || 5),
