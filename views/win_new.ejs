@@ -1,0 +1,26 @@
+<%- include('partials/head') %>
+<a class="muted" href="/wins">← Wins wall</a>
+<div class="page-head"><div><h1>Share a win</h1><p class="lead">Keep it real — modest, honest wins inspire more than moonshots. “First $40 from a neighbor” beats “crushing it.”</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<div class="card auth-card">
+  <form method="post" action="/wins">
+    <label>What happened?
+      <input name="title" maxlength="120" required placeholder="e.g. Landed my first paying customer">
+    </label>
+    <label>Category
+      <select name="category">
+        <% Object.keys(cats).forEach(k => { %><option value="<%= k %>"><%= cats[k] %></option><% }) %>
+      </select>
+    </label>
+    <label>Amount in USD (optional)
+      <input name="amount_usd" type="number" min="1" step="1" placeholder="e.g. 500">
+      <span class="small muted">Only if there's a real number behind the win — it's fine to leave blank.</span>
+    </label>
+    <label>The story (a few sentences)
+      <textarea name="story" rows="5" maxlength="1000" required placeholder="What did you do, how long did it take, and what surprised you?"></textarea>
+    </label>
+    <button class="btn btn-primary">Submit for review</button>
+    <p class="small muted">Wins are reviewed before they appear publicly. Approved wins earn 25 XP and a notification.</p>
+  </form>
+</div>
+<%- include('partials/foot') %>

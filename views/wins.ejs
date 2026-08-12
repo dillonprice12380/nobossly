@@ -1,0 +1,71 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1>🏆 Member wins</h1>
+    <p class="lead">Real wins from real members — first dollars, first customers, launches, and resignation letters. Modest, honest, and growing.</p>
+  </div>
+  <div><a class="btn btn-primary" href="/wins/new">Share a win</a></div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (pending && pending.length) { %>
+  <div class="card" style="border:2px dashed var(--border)">
+    <h2>🛡 Pending review (admin)</h2>
+    <% pending.forEach(w => { %>
+      <div style="padding:.6rem 0;border-bottom:1px solid var(--border)">
+        <strong><%= cats[w.category] || w.category %> — <%= w.title %></strong>
+        <% if (w.amount_usd) { %><span class="chip">$<%= w.amount_usd.toLocaleString() %></span><% } %>
+        <p class="muted small" style="margin:.25rem 0"><%= w.story %></p>
+        <p class="small muted">by <%= (w.profiles && (w.profiles.display_name || w.profiles.username)) || 'A member' %> · <%= new Date(w.created_at).toLocaleDateString() %></p>
+        <div class="cta-row" style="justify-content:flex-start">
+          <form method="post" action="/wins/<%= w.id %>/approve" class="inline"><button class="btn btn-primary btn-sm">Approve</button></form>
+          <form method="post" action="/wins/<%= w.id %>/reject" class="inline"><button class="btn btn-ghost btn-sm">Reject</button></form>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<% if (mine && mine.length) { %>
+  <div class="card">
+    <h2>Your wins</h2>
+    <% mine.forEach(w => { %>
+      <div style="display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="flex:1;min-width:12rem"><%= cats[w.category] || w.category %> — <strong><%= w.title %></strong></span>
+        <% if (w.approved) { %><span class="chip chip-success">✅ On the wall</span>
+        <% } else if (w.rejected_at) { %><span class="chip">Not published</span>
+        <% } else { %><span class="chip">⏳ In review</span><% } %>
+        <% if (!w.approved) { %><form method="post" action="/wins/<%= w.id %>/delete" class="inline"><button class="btn btn-ghost btn-sm">Remove</button></form><% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<p>
+  <a class="chip" href="/wins" style="<%= !cat ? 'font-weight:700' : '' %>">All</a>
+  <% Object.keys(cats).forEach(k => { %>
+    <a class="chip" href="/wins?cat=<%= k %>" style="<%= cat === k ? 'font-weight:700' : '' %>"><%= cats[k] %></a>
+  <% }) %>
+</p>
+
+<% if (!wins.length) { %>
+  <div class="card"><p class="muted">No wins in this category yet — yours could be the first. <a href="/wins/new">Share a win</a>.</p></div>
+<% } %>
+<div class="grid">
+  <% wins.forEach(w => { const p = w.profiles || {}; %>
+    <div class="card">
+      <div class="idea-top">
+        <span class="chip"><%= cats[w.category] || w.category %></span>
+        <% if (w.amount_usd) { %><span class="chip chip-success">$<%= w.amount_usd.toLocaleString() %></span><% } %>
+      </div>
+      <h3><%= w.title %></h3>
+      <p class="muted"><%= w.story %></p>
+      <p class="small muted" style="display:flex;align-items:center;gap:.5rem">
+        <% if (p.avatar_url) { %><img src="<%= p.avatar_url %>" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover"><% } %>
+        <% if (p.username) { %><a href="/members/<%= p.username %>"><%= p.display_name || p.username %></a><% } else { %>A member<% } %>
+        · <%= new Date(w.approved_at || w.created_at).toLocaleDateString() %>
+      </p>
+    </div>
+  <% }) %>
+</div>
+<%- include('partials/foot') %>

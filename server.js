@@ -39,6 +39,7 @@ app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));
 app.use('/community', require('./src/routes/community'));
+app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review
 app.use('/milestones', requireAuth, require('./src/routes/milestones'));
 app.use('/collaborations', requireAuth, require('./src/routes/collaborations'));
 app.use('/messages', requireAuth, require('./src/routes/messages'));
@@ -79,6 +80,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/blog', pri: '0.8' },
       { loc: base + '/pricing', pri: '0.8' },
       { loc: base + '/guides', pri: '0.8' },
+      { loc: base + '/wins', pri: '0.7' },
       { loc: base + '/help', pri: '0.6' },
       ...(pages || []).map(p => ({ loc: base + '/' + p.slug, mod: p.updated_at, pri: '0.5' })),
       ...(posts || []).map(p => ({ loc: base + '/blog/' + p.slug, mod: p.updated_at, pri: '0.7' })),
