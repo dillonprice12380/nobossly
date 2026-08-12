@@ -115,7 +115,56 @@ router.get('/:id', async (req, res, next) => {
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!bp) return res.redirect('/ideas');
     const { data: sprint } = await req.sb.from('sprints').select('id').eq('blueprint_id', bp.id).eq('user_id', req.user.id).limit(1).maybeSingle();
-    res.render('blueprint', { title: bp.business_name, bp, hasSprint: !!sprint });
+    // Has this blueprint's Week-1 actions already been dispersed into tasks?
+    const { count: dispersedCount } = await req.sb.from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', req.user.id).eq('source_blueprint_id', bp.id);
+    res.render('blueprint', {
+      title: bp.business_name, bp, hasSprint: !!sprint,
+      plan: planOf(req.profile), dispersed: (dispersedCount || 0) > 0,
+      msg: req.query.msg || null, err: req.query.err || null
+    });
+  } catch (e) { next(e); }
+});
+
+// Disperse the blueprint's Week-1 actions into the task board (paid feature).
+// Free users enter tasks manually; this endpoint hard-blocks them.
+router.post('/:id/disperse', async (req, res, next) => {
+  try {
+    const enc = encodeURIComponent;
+    if (planOf(req.profile) !== 'paid') return res.redirect('/pricing?upgrade=1');
+    const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!bp) return res.redirect('/ideas');
+    // Idempotent: don't double-disperse the same blueprint.
+    const { count: already } = await req.sb.from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', req.user.id).eq('source_blueprint_id', bp.id);
+    if ((already || 0) > 0) {
+      return res.redirect('/blueprint/' + bp.id + '?msg=' + enc('These actions are already on your task board.'));
+    }
+    const actions = (bp.gtm_week1_actions || [])
+      .map(a => (typeof a === 'string' ? a : (a && (a.title || a.action || a.task)) || ''))
+      .map(s => String(s).replace(/^\s*\d+[).:-]?\s*/, '').trim())
+      .filter(s => s.length > 2)
+      .slice(0, 12);
+    if (!actions.length) {
+      return res.redirect('/blueprint/' + bp.id + '?err=' + enc('No Week 1 actions to disperse.'));
+    }
+    const { data: list } = await req.sb.from('task_lists')
+      .insert({ user_id: req.user.id, name: (bp.business_name || 'Launch').slice(0, 50) + ' — Week 1', color: '#10b981' })
+      .select().maybeSingle();
+    const rows = actions.map((title, i) => ({
+      user_id: req.user.id, list_id: list ? list.id : null,
+      title: title.slice(0, 200),
+      description: 'Week 1 action from your "' + (bp.business_name || 'launch') + '" blueprint.',
+      priority: i === 0 ? 'high' : 'medium', status: 'todo', position: i,
+      labels: ['week-1'], source_blueprint_id: bp.id,
+      due_date: new Date(Date.now() + (i + 1) * 86400000).toISOString().slice(0, 10)
+    }));
+    const { error } = await req.sb.from('tasks').insert(rows);
+    if (error) return res.redirect('/blueprint/' + bp.id + '?err=' + enc('Could not add tasks: ' + error.message));
+    await awardXP(req.sb, req.user.id, req.profile, 15, 'Dispersed Week 1 actions to tasks', 'blueprints', bp.id);
+    res.redirect('/tasks?list=' + (list ? list.id : ''));
   } catch (e) { next(e); }
 });
 
