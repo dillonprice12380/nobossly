@@ -132,10 +132,15 @@ async function loadSidebarFor(req, post, table) {
   return { config, similar, base: table === 'cms_guides' ? '/guides/' : '/blog/' };
 }
 
+// Location hub data. Hierarchy is: Global > continent > [bloc >] country > [region >] state.
+// Continents are stored as kind='region' rows parented directly to Global, which also
+// happens to be the kind used for US-internal sub-regions (Midwest, South, ...) -- those
+// are distinguished by sitting under a country instead of under Global, so a "continent"
+// here specifically means a region whose own parent is the Global root.
 async function locationsContext(req) {
   const sb = client(req);
   const [{ data: allLocs }, { data: cat }] = await Promise.all([
-    sb.from('guide_locations').select('id, slug, name, kind, parent_id').in('kind', ['country', 'region', 'state']).order('name'),
+    sb.from('guide_locations').select('id, slug, name, kind, parent_id').order('name'),
     sb.from('guide_categories').select('id').eq('slug', 'start-a-business').maybeSingle()
   ]);
 
@@ -157,38 +162,55 @@ async function locationsContext(req) {
     }
   }
 
-  // Build country -> [states] using the existing country > region > state hierarchy.
-  // Countries with their own direct guide (no state breakdown, e.g. future non-US countries)
-  // are supported too: they just won't have a `states` array.
   const locs = allLocs || [];
   const byId = {};
   locs.forEach(l => { byId[l.id] = l; });
 
-  const countryOf = loc => {
+  const globalRoot = locs.find(l => l.kind === 'global');
+  const globalId = globalRoot ? globalRoot.id : null;
+
+  const continentRows = locs.filter(l => l.kind === 'region' && l.parent_id === globalId);
+  const continentById = {};
+  continentRows.forEach(ct => { continentById[ct.id] = ct; });
+
+  // Walk up the parent chain from `loc` until `matches` is true (or we run out of ancestors).
+  const findAncestor = (loc, matches) => {
     let cur = loc, depth = 0;
-    while (cur && cur.kind !== 'country' && depth < 5) { cur = byId[cur.parent_id]; depth++; }
-    return cur && cur.kind === 'country' ? cur : null;
+    while (cur && !matches(cur) && depth < 6) { cur = byId[cur.parent_id]; depth++; }
+    return cur && matches(cur) ? cur : null;
   };
 
-  const countries = locs.filter(l => l.kind === 'country').map(c => ({
-    slug: c.slug, name: c.name, guide: guideByLocation[c.id] || null, states: []
-  }));
+  const countries = locs.filter(l => l.kind === 'country').map(c => {
+    const continent = findAncestor(c, n => !!continentById[n.id]);
+    return {
+      slug: c.slug, name: c.name, guide: guideByLocation[c.id] || null, states: [],
+      continentSlug: continent ? continent.slug : null
+    };
+  });
   const countryBySlug = {};
   countries.forEach(c => { countryBySlug[c.slug] = c; });
 
   locs.filter(l => l.kind === 'state').forEach(s => {
-    const country = countryOf(s);
-    if (!country) return;
+    const country = findAncestor(s, n => n.kind === 'country');
+    if (!country || !countryBySlug[country.slug]) return;
     countryBySlug[country.slug].states.push({ slug: s.slug, name: s.name, guide: guideByLocation[s.id] || null });
   });
   countries.forEach(c => c.states.sort((a, b) => a.name.localeCompare(b.name)));
 
   // Only surface countries that actually have content (a state breakdown or their own guide),
-  // so the page doesn't fill up with empty "coming soon" countries as more get added to guide_locations.
+  // so the page doesn't fill up with empty "coming soon" countries as more get added.
   const visibleCountries = countries.filter(c => c.states.length || c.guide);
-  visibleCountries.sort((a, b) => a.name.localeCompare(b.name));
 
-  return { countries: visibleCountries };
+  const continents = continentRows.map(ct => ({
+    slug: ct.slug,
+    name: ct.name,
+    countries: visibleCountries.filter(c => c.continentSlug === ct.slug).sort((a, b) => a.name.localeCompare(b.name))
+  })).filter(g => g.countries.length);
+  continents.sort((a, b) => a.name.localeCompare(b.name));
+
+  const totalCountries = continents.reduce((sum, ct) => sum + ct.countries.length, 0);
+
+  return { continents, totalCountries };
 }
 
 router.get('/api/blog/search', async (req, res, next) => {
@@ -249,7 +271,8 @@ router.get('/guides/:slug', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Location hub: "Start a Business by Location" (US states today, more countries over time)
+// Location hub: "Start a Business by Location" (grouped by continent, US as a
+// state-by-state accordion under North America; more countries over time)
 router.get('/locations', async (req, res, next) => {
   try {
     const ctx = await locationsContext(req);
