@@ -14,6 +14,14 @@
         <% if (typeof shareUrl !== 'undefined' && shareUrl) { %><%- include('share_buttons', { shareUrl, shareTitle: post.title }) %><% } %>
       </div>
     <% } %>
+    <% if (hasToc) { %>
+      <details class="toc toc-accordion toc-inline-mobile">
+        <summary>📑 Contents</summary>
+        <ol class="toc-list">
+          <% toc.forEach(t => { %><li class="toc-l<%= t.level %>"><a href="#<%= t.id %>"><%= t.text %></a></li><% }) %>
+        </ol>
+      </details>
+    <% } %>
     <div class="article-body"><%- post.body %></div>
   </article>
   <% if (sidebar) { %>
