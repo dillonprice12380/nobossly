@@ -631,3 +631,21 @@ body.theme-light .article-body a { color: #047857; }
   .toc-inline-mobile { display: block; }
   .post-sidebar .toc.toc-accordion { display: none; }
 }
+
+/* ============ v14: /locations continent grouping, filter bar, country accordions ============ */
+.loc-filter-bar { display: flex; gap: .9rem; flex-wrap: wrap; align-items: center; margin: 0 0 1.8rem; }
+.loc-filter-bar input[type="search"] { flex: 1 1 240px; margin: 0; }
+.loc-filter-pills { display: flex; gap: .45rem; flex-wrap: wrap; }
+.loc-pill { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: .4rem .95rem; font-size: .85rem; cursor: pointer; color: var(--text); font-family: inherit; }
+.loc-pill .muted { font-size: .82em; }
+.loc-pill:hover { border-color: var(--accent); }
+.loc-pill.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.loc-pill.is-active .muted { color: rgba(255,255,255,.75); }
+
+.loc-country-accordion { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.loc-country-accordion summary { cursor: pointer; font-weight: 700; font-size: 1.15rem; list-style: none; display: flex; align-items: center; gap: .5rem; }
+.loc-country-accordion summary::-webkit-details-marker { display: none; }
+.loc-country-accordion summary::after { content: '\25BE'; margin-left: auto; color: var(--muted); transition: transform .2s; font-size: .85em; }
+.loc-country-accordion[open] summary::after { transform: rotate(180deg); }
+
+.loc-hidden { display: none !important; }
