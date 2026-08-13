@@ -604,22 +604,25 @@ body.theme-light .article-body a { color: #047857; }
 .editor-mode-toggle .mode-btn.active { background: var(--accent); color: #fff; }
 #raw-html { width: 100%; min-height: 360px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem; line-height: 1.5; }
 
-/* ============ v12: article tables + mobile inline TOC ============ */
-.article-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.6em 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: .95rem; box-shadow: 0 1px 3px rgba(11,61,46,.04); }
-.article-body thead th { background: var(--panel-2, rgba(16,185,129,.08)); text-align: left; padding: .75rem 1rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #5e7a6c); font-weight: 700; border-bottom: 1px solid var(--border); }
-.article-body td { padding: .75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+/* ============ v13: article tables (denser, filled, no whitespace) + mobile inline TOC ============ */
+.article-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.6em 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: .92rem; box-shadow: 0 1px 3px rgba(11,61,46,.06); background: #eef7f1; }
+.article-body thead th { background: #0b3d2e; color: #eafff5; text-align: left; padding: .6rem .9rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+.article-body td { padding: .6rem .9rem; border-bottom: 1px solid #d4e6db; vertical-align: middle; }
 .article-body tr:last-child td { border-bottom: none; }
 .article-body tbody tr { transition: background .12s ease; }
-.article-body tbody tr:nth-child(even) { background: rgba(16,185,129,.045); }
-.article-body tbody tr:hover { background: rgba(16,185,129,.11); }
+.article-body tbody tr:nth-child(odd) { background: rgba(255,255,255,.65); }
+.article-body tbody tr:nth-child(even) { background: rgba(16,185,129,.1); }
+.article-body tbody tr:hover { background: rgba(16,185,129,.2); }
+.article-body td:first-child, .article-body th:first-child { border-right: 1px solid #d4e6db; }
 .article-body td:last-child, .article-body th:last-child { text-align: right; }
 
 @media (max-width: 560px) {
   .article-body table, .article-body thead, .article-body tbody, .article-body tr, .article-body th, .article-body td { display: block; width: 100%; }
   .article-body thead { display: none; }
-  .article-body tbody tr { padding: .65rem 1rem; }
+  .article-body tbody tr { padding: .6rem .9rem; }
   .article-body td { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; border: none; padding: .3rem 0; text-align: left !important; }
-  .article-body td::before { content: attr(data-label); font-weight: 700; color: var(--muted, #5e7a6c); font-size: .7rem; text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; }
+  .article-body td:first-child, .article-body td:last-child { border-right: none; }
+  .article-body td::before { content: attr(data-label); font-weight: 700; color: #5e7a6c; font-size: .7rem; text-transform: uppercase; letter-spacing: .03em; flex-shrink: 0; }
 }
 
 /* mobile-only duplicate TOC at top of article; sidebar copy hides below the same breakpoint the sidebar itself collapses at */
