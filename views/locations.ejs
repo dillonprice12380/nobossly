@@ -1,1 +1,39 @@
-PLACEHOLDER
+<%- include('partials/head') %>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Start a Business by Location</h1><p class="muted">Country- and state-specific guides to registering, licensing, and launching your business &mdash; costs, forms, and deadlines specific to where you're filing.</p></div></div>
+
+<% countries.forEach(country => { %>
+  <section class="location-section" style="margin-bottom:2.5rem">
+    <h2 style="margin-bottom:1rem"><%= country.name %></h2>
+
+    <% if (country.states.length) { %>
+      <% if (country.guide) { %>
+        <a class="card post-card" href="/guides/<%= country.guide.slug %>" style="margin-bottom:1rem;display:block">
+          <h3 class="post-card-title">National overview</h3>
+          <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+        </a>
+      <% } %>
+      <div class="grid-3">
+        <% country.states.forEach(s => { %>
+          <% if (s.guide) { %>
+            <a class="card post-card" href="/guides/<%= s.guide.slug %>" style="margin-bottom:0">
+              <h3 class="post-card-title"><%= s.name %></h3>
+              <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+            </a>
+          <% } else { %>
+            <div class="card post-card" style="margin-bottom:0;opacity:.55;cursor:default">
+              <h3 class="post-card-title"><%= s.name %></h3>
+              <p class="muted small" style="margin:.4rem 0 0">Coming soon</p>
+            </div>
+          <% } %>
+        <% }) %>
+      </div>
+    <% } else if (country.guide) { %>
+      <a class="card post-card" href="/guides/<%= country.guide.slug %>" style="margin-bottom:0;display:block;max-width:22rem">
+        <h3 class="post-card-title"><%= country.name %></h3>
+        <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+      </a>
+    <% } %>
+  </section>
+<% }) %>
+
+<%- include('partials/foot') %>
