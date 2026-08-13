@@ -1,39 +1,64 @@
 <%- include('partials/head') %>
 <div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Start a Business by Location</h1><p class="muted">Country- and state-specific guides to registering, licensing, and launching your business &mdash; costs, forms, and deadlines specific to where you're filing.</p></div></div>
 
-<% countries.forEach(country => { %>
-  <section class="location-section" style="margin-bottom:2.5rem">
-    <h2 style="margin-bottom:1rem"><%= country.name %></h2>
+<div class="loc-filter-bar">
+  <label class="sr-only" for="loc-search">Search countries</label>
+  <input type="search" id="loc-search" placeholder="Search countries&hellip;" autocomplete="off" spellcheck="false">
+  <div class="loc-filter-pills" role="group" aria-label="Filter by continent">
+    <button type="button" class="loc-pill is-active" data-continent="all">All <span class="muted">(<%= totalCountries %>)</span></button>
+    <% continents.forEach(continent => { %>
+      <button type="button" class="loc-pill" data-continent="<%= continent.slug %>"><%= continent.name %> <span class="muted">(<%= continent.countries.length %>)</span></button>
+    <% }) %>
+  </div>
+</div>
 
-    <% if (country.states.length) { %>
-      <% if (country.guide) { %>
-        <a class="card post-card" href="/guides/<%= country.guide.slug %>" style="margin-bottom:1rem;display:block">
-          <h3 class="post-card-title">National overview</h3>
-          <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
-        </a>
-      <% } %>
+<p id="loc-empty" class="muted center" hidden>No countries match your search.</p>
+
+<% continents.forEach(continent => { %>
+  <% const accordionCountries = continent.countries.filter(c => c.states.length); %>
+  <% const simpleCountries = continent.countries.filter(c => !c.states.length && c.guide); %>
+  <section class="location-section" data-continent-section="<%= continent.slug %>" style="margin-bottom:2.5rem">
+    <h2 style="margin-bottom:1rem"><%= continent.name %></h2>
+
+    <% accordionCountries.forEach(country => { %>
+      <details class="loc-country-accordion" data-country="<%= country.name.toLowerCase() %>">
+        <summary><%= country.name %> <span class="muted small">&mdash; <%= country.states.length %> states</span></summary>
+        <% if (country.guide) { %>
+          <a class="card post-card" href="/guides/<%= country.guide.slug %>" style="margin:1rem 0 1rem;display:block">
+            <h3 class="post-card-title">National overview</h3>
+            <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+          </a>
+        <% } %>
+        <div class="grid-3" style="margin-top: <%= country.guide ? '0' : '1rem' %>">
+          <% country.states.forEach(s => { %>
+            <% if (s.guide) { %>
+              <a class="card post-card" href="/guides/<%= s.guide.slug %>" style="margin-bottom:0">
+                <h3 class="post-card-title"><%= s.name %></h3>
+                <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+              </a>
+            <% } else { %>
+              <div class="card post-card" style="margin-bottom:0;opacity:.55;cursor:default">
+                <h3 class="post-card-title"><%= s.name %></h3>
+                <p class="muted small" style="margin:.4rem 0 0">Coming soon</p>
+              </div>
+            <% } %>
+          <% }) %>
+        </div>
+      </details>
+    <% }) %>
+
+    <% if (simpleCountries.length) { %>
       <div class="grid-3">
-        <% country.states.forEach(s => { %>
-          <% if (s.guide) { %>
-            <a class="card post-card" href="/guides/<%= s.guide.slug %>" style="margin-bottom:0">
-              <h3 class="post-card-title"><%= s.name %></h3>
-              <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
-            </a>
-          <% } else { %>
-            <div class="card post-card" style="margin-bottom:0;opacity:.55;cursor:default">
-              <h3 class="post-card-title"><%= s.name %></h3>
-              <p class="muted small" style="margin:.4rem 0 0">Coming soon</p>
-            </div>
-          <% } %>
+        <% simpleCountries.forEach(country => { %>
+          <a class="card post-card loc-country-card" data-country="<%= country.name.toLowerCase() %>" href="/guides/<%= country.guide.slug %>" style="margin-bottom:0">
+            <h3 class="post-card-title"><%= country.name %></h3>
+            <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
+          </a>
         <% }) %>
       </div>
-    <% } else if (country.guide) { %>
-      <a class="card post-card" href="/guides/<%= country.guide.slug %>" style="margin-bottom:0;display:block;max-width:22rem">
-        <h3 class="post-card-title"><%= country.name %></h3>
-        <p class="muted small" style="margin:.4rem 0 0">Start a business guide &rarr;</p>
-      </a>
     <% } %>
   </section>
 <% }) %>
 
+<script src="/js/locations-filter.js?v=1"></script>
 <%- include('partials/foot') %>
