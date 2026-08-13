@@ -23,6 +23,12 @@
       </details>
     <% } %>
     <div class="article-body"><%- post.body %></div>
+    <% if (isGuide) { %>
+      <div class="cta-band">
+        <p>Ready to turn this into a real business? NoBossly matches you with a validated idea and a step-by-step plan to launch it.</p>
+        <a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= user ? '/dashboard' : '/signup' %>"><%= user ? 'Go to your dashboard' : 'Get started free' %></a>
+      </div>
+    <% } %>
   </article>
   <% if (sidebar) { %>
     <aside class="post-sidebar">
