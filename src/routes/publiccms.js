@@ -132,6 +132,35 @@ async function loadSidebarFor(req, post, table) {
   return { config, similar, base: table === 'cms_guides' ? '/guides/' : '/blog/' };
 }
 
+async function locationsContext(req) {
+  const sb = client(req);
+  const [{ data: locs }, { data: cat }] = await Promise.all([
+    sb.from('guide_locations').select('id, slug, name').eq('kind', 'state').order('name'),
+    sb.from('guide_categories').select('id').eq('slug', 'start-a-business').maybeSingle()
+  ]);
+
+  let guideByLocation = {};
+  if (cat) {
+    const { data: catGuides } = await sb.from('cms_guide_categories').select('guide_id').eq('category_id', cat.id);
+    const guideIds = (catGuides || []).map(r => r.guide_id);
+    if (guideIds.length) {
+      const [{ data: guides }, { data: links }] = await Promise.all([
+        sb.from('cms_guides').select('id, slug, title, excerpt').in('id', guideIds).eq('status', 'published'),
+        sb.from('cms_guide_locations').select('guide_id, location_id').in('guide_id', guideIds)
+      ]);
+      const guideById = {};
+      (guides || []).forEach(g => { guideById[g.id] = g; });
+      (links || []).forEach(l => {
+        const g = guideById[l.guide_id];
+        if (g) guideByLocation[l.location_id] = g;
+      });
+    }
+  }
+
+  const locations = (locs || []).map(l => ({ slug: l.slug, name: l.name, guide: guideByLocation[l.id] || null }));
+  return { locations };
+}
+
 router.get('/api/blog/search', async (req, res, next) => {
   try { res.render('partials/post_list', await listContext(req, BLOG_LIST)); } catch (e) { next(e); }
 });
@@ -187,6 +216,14 @@ router.get('/guides/:slug', async (req, res, next) => {
     const sidebar = await loadSidebarFor(req, post, 'cms_guides');
     const shareUrl = 'https://nobossly.com/guides/' + post.slug;
     res.render('guide_post', { title: post.seo_title || post.title, post, toc, sidebar, shareUrl, metaDescription: post.seo_description || post.excerpt || '' });
+  } catch (e) { next(e); }
+});
+
+// Location hub: "Start a Business by State"
+router.get('/locations', async (req, res, next) => {
+  try {
+    const ctx = await locationsContext(req);
+    res.render('locations', { title: 'Start a Business by State', ...ctx, metaDescription: 'State-by-state guides to registering, licensing, and launching your business in the U.S.' });
   } catch (e) { next(e); }
 });
 

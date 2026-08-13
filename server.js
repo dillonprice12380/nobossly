@@ -80,6 +80,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/blog', pri: '0.8' },
       { loc: base + '/pricing', pri: '0.8' },
       { loc: base + '/guides', pri: '0.8' },
+      { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },
       { loc: base + '/help', pri: '0.6' },
       ...(pages || []).map(p => ({ loc: base + '/' + p.slug, mod: p.updated_at, pri: '0.5' })),
