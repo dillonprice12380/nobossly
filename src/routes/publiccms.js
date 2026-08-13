@@ -112,6 +112,10 @@ function buildToc(html) {
 
 const stripLeadH1 = html => String(html || '').replace(/<h1[^>]*>[\s\S]*?<\/h1>\s*/i, '');
 
+// For a guide tagged at country level, "Keep reading" is scoped to neighboring countries
+// first, then other countries on the same continent (see similar_location_guides in the
+// DB). State guides and blog posts don't have that geography, so they fall back to the
+// simple "most recent" pool, same as before.
 async function loadSidebarFor(req, post, table) {
   const sb = client(req);
   let config = { show_similar: true, html_top: null, html_middle: null, html_bottom: null };
@@ -121,22 +125,23 @@ async function loadSidebarFor(req, post, table) {
   }
   let similar = [];
   if (config.show_similar) {
-    const simCols = table === 'cms_guides'
-      ? 'slug, title, excerpt, published_at'
-      : 'slug, title, excerpt, featured_image, published_at';
-    let qy = sb.from(table).select(simCols).eq('status', 'published').neq('id', post.id).order('published_at', { ascending: false }).limit(4);
-    if (table === 'cms_contents') qy = qy.eq('type', 'blog');
-    const { data } = await qy;
-    similar = data || [];
+    if (table === 'cms_guides') {
+      const { data: related } = await sb.rpc('similar_location_guides', { p_guide_id: post.id, p_limit: 4 });
+      similar = related || [];
+    }
+    if (!similar.length) {
+      const simCols = table === 'cms_guides'
+        ? 'slug, title, excerpt, published_at'
+        : 'slug, title, excerpt, featured_image, published_at';
+      let qy = sb.from(table).select(simCols).eq('status', 'published').neq('id', post.id).order('published_at', { ascending: false }).limit(4);
+      if (table === 'cms_contents') qy = qy.eq('type', 'blog');
+      const { data } = await qy;
+      similar = data || [];
+    }
   }
   return { config, similar, base: table === 'cms_guides' ? '/guides/' : '/blog/' };
 }
 
-// Location hub data. Hierarchy is: Global > continent > [bloc >] country > [region >] state.
-// Continents are stored as kind='region' rows parented directly to Global, which also
-// happens to be the kind used for US-internal sub-regions (Midwest, South, ...) -- those
-// are distinguished by sitting under a country instead of under Global, so a "continent"
-// here specifically means a region whose own parent is the Global root.
 async function locationsContext(req) {
   const sb = client(req);
   const [{ data: allLocs }, { data: cat }] = await Promise.all([
@@ -173,7 +178,6 @@ async function locationsContext(req) {
   const continentById = {};
   continentRows.forEach(ct => { continentById[ct.id] = ct; });
 
-  // Walk up the parent chain from `loc` until `matches` is true (or we run out of ancestors).
   const findAncestor = (loc, matches) => {
     let cur = loc, depth = 0;
     while (cur && !matches(cur) && depth < 6) { cur = byId[cur.parent_id]; depth++; }
@@ -197,8 +201,6 @@ async function locationsContext(req) {
   });
   countries.forEach(c => c.states.sort((a, b) => a.name.localeCompare(b.name)));
 
-  // Only surface countries that actually have content (a state breakdown or their own guide),
-  // so the page doesn't fill up with empty "coming soon" countries as more get added.
   const visibleCountries = countries.filter(c => c.states.length || c.guide);
 
   const continents = continentRows.map(ct => ({
