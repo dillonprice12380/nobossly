@@ -3,6 +3,13 @@ const { planOf } = require('../middleware/auth');
 const ai = require('../ai');
 const { awardXP } = require('../xp');
 
+// Copy shown while the generator runs — each path is doing something different.
+const GENERATING_LABELS = {
+  existing: 'Running a market read on your business and mapping your strongest paths forward…',
+  idea: 'Stacking your idea against live demand and finding your angle…',
+  exploring: 'Analyzing your profile and generating tailored business ideas…'
+};
+
 // Normalize the AI competitors field into a clean array of exactly the shape the view expects.
 function cleanCompetitors(raw) {
   if (!Array.isArray(raw)) return null;
@@ -29,7 +36,7 @@ router.get('/generate', async (req, res, next) => {
   try {
     const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
     if (!q || !q.completed) return res.redirect('/questionnaire');
-    res.render('generating', { title: 'Generating ideas', action: '/ideas/generate', label: 'Analyzing your profile and generating tailored business ideas…' });
+    res.render('generating', { title: 'Generating ideas', action: '/ideas/generate', label: GENERATING_LABELS[ai.pathOf(q)] });
   } catch (e) { next(e); }
 });
 
@@ -41,7 +48,9 @@ async function runIdeaGeneration(req, q, plan, jobId) {
     .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
     .then(() => {}, e => console.error('job update', e && e.message));
   try {
-    const ideas = await ai.generateIdeas(req.accessToken, q);
+    // Founders with a business or an idea get a web-grounded market read; the
+    // blank-page path is matched from the profile alone.
+    const ideas = await ai.generateIdeas(req.accessToken, q, { webSearch: ai.pathOf(q) !== 'exploring' });
     const { count } = await sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const rows = ideas.slice(0, 6).map((i, idx) => ({
       user_id: req.user.id, questionnaire_id: q.id,
