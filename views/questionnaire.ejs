@@ -39,7 +39,7 @@
 </style>
 <div class="card form-card">
   <div class="progress"><div class="progress-bar" style="width:<%= Math.round(step/steps*100) %>%"></div></div>
-  <p class="muted">Step <%= step %> of <%= steps %></p>
+  <p class="muted">Step <%= step %> of <%= steps %><% if (typeof run !== 'undefined' && run > 1) { %> · questionnaire #<%= run %><% } %></p>
   <form method="post" action="/questionnaire">
     <input type="hidden" name="step" value="<%= step %>">
 
@@ -249,7 +249,8 @@
     <% } %>
 
     <div class="cta-row">
-      <% if (step > 1) { %><a class="btn btn-ghost" href="/questionnaire?step=<%= step-1 %>">Back</a><% } %>
+      <% if (step > 1) { %><a class="btn btn-ghost" href="/questionnaire?step=<%= step-1 %>">Back</a>
+      <% } else if (typeof canCancel !== 'undefined' && canCancel) { %><a class="btn btn-ghost" href="/ideas">Cancel</a><% } %>
       <button class="btn btn-primary"><%= step === steps ? 'Finish & generate my ideas →' : 'Continue →' %></button>
     </div>
   </form>
