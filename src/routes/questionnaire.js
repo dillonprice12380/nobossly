@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const qs = require('../questionnaires');
 
 const csvToArr = v => (v || '').split(',').map(s => s.trim()).filter(Boolean);
 const arrField = v => Array.isArray(v) ? v : (v ? [v] : []);
@@ -93,6 +94,26 @@ const FIELDS = {
   }
 };
 
+// Columns only ever written by one path, cleared when a run switches paths.
+const PATH_ONLY = {
+  existing: ['biz_name', 'biz_description', 'biz_stage', 'biz_age', 'biz_model', 'biz_revenue_monthly',
+    'biz_trend', 'biz_profitability', 'biz_customer_count', 'biz_pricing', 'biz_channels',
+    'biz_best_channel', 'biz_whats_working', 'biz_whats_stuck', 'biz_growth_blocker',
+    'biz_pivot_openness', 'biz_goal_12mo'],
+  idea: ['idea_description', 'idea_stage', 'idea_problem', 'idea_customer', 'idea_monetization',
+    'idea_why_now', 'idea_validation', 'idea_known_competitors', 'idea_differentiator',
+    'idea_biggest_unknown', 'customer_access'],
+  exploring: ['hobbies', 'passion_topic', 'problem_pain', 'work_mode', 'team_preference', 'ai_stance',
+    'learning_appetite', 'biz_models', 'avoid_industries', 'ideal_day', 'regret', 'biggest_fear',
+    'prior_attempts', 'biggest_obstacle', 'success_definition']
+};
+
+function blankPathFields(oldPath) {
+  const out = {};
+  (PATH_ONLY[oldPath] || []).forEach(c => { out[c] = null; });
+  return out;
+}
+
 // readiness_score is constrained to 1-5 in the database
 function readinessScore(q) {
   const path = PATHS.includes(q.founder_path) ? q.founder_path : 'exploring';
@@ -120,45 +141,68 @@ function readinessScore(q) {
   return Math.max(1, Math.min(5, 1 + pts));
 }
 
-router.get('/', async (req, res) => {
-  const step = Math.min(Math.max(parseInt(req.query.step || '1', 10) || 1, 1), STEPS);
-  const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
-  const path = q && PATHS.includes(q.founder_path) ? q.founder_path : null;
-  if (step > 1 && !path) return res.redirect('/questionnaire?step=1');
-  res.render('questionnaire', { title: 'Founder Questionnaire', step, steps: STEPS, path, q: q || {} });
+// Start a fresh run rather than editing the answers behind the last one. Previous
+// runs stay put so the ideas they produced keep their context.
+router.get('/new', async (req, res, next) => {
+  try {
+    await qs.startNew(req.sb, req.user.id);
+    res.redirect('/questionnaire?step=1');
+  } catch (e) { next(e); }
+});
+
+router.get('/', async (req, res, next) => {
+  try {
+    const step = Math.min(Math.max(parseInt(req.query.step || '1', 10) || 1, 1), STEPS);
+    const q = await qs.latest(req.sb, req.user.id);
+    const path = q && PATHS.includes(q.founder_path) ? q.founder_path : null;
+    if (step > 1 && !path) return res.redirect('/questionnaire?step=1');
+    const finishedRuns = await qs.completedCount(req.sb, req.user.id);
+    res.render('questionnaire', {
+      title: 'Founder Questionnaire', step, steps: STEPS, path, q: q || {},
+      run: (q && q.run_number) || 1, canCancel: finishedRuns > 0
+    });
+  } catch (e) { next(e); }
 });
 
 router.post('/', async (req, res, next) => {
   try {
     const step = Math.min(Math.max(parseInt(req.body.step, 10) || 1, 1), STEPS);
     const b = req.body;
+    const current = await qs.latest(req.sb, req.user.id);
     let patch = {};
 
     if (step === 1) {
       const chosen = PATHS.includes(b.founder_path) ? b.founder_path : null;
       if (!chosen) return res.redirect('/questionnaire?step=1');
+      // Switching paths mid-run clears the answers the old path collected, so a
+      // half-finished existing-business run can't leak into an idea run.
+      const switched = current && current.founder_path && current.founder_path !== chosen;
       patch = { founder_path: chosen, has_idea: chosen === 'exploring' ? 'no' : 'yes' };
+      if (switched) Object.assign(patch, blankPathFields(current.founder_path));
     } else {
-      const { data: current } = await req.sb.from('questionnaire_responses').select('founder_path').eq('user_id', req.user.id).maybeSingle();
       const path = current && PATHS.includes(current.founder_path) ? current.founder_path : null;
       if (!path) return res.redirect('/questionnaire?step=1');
       patch = FIELDS[path][step](b);
     }
 
-    patch.user_id = req.user.id;
     patch.updated_at = new Date().toISOString();
 
-    const { data: existing } = await req.sb.from('questionnaire_responses').select('id').eq('user_id', req.user.id).maybeSingle();
-    if (existing) {
-      await req.sb.from('questionnaire_responses').update(patch).eq('id', existing.id);
+    let runId;
+    if (current) {
+      runId = current.id;
+      await req.sb.from('questionnaire_responses').update(patch).eq('id', current.id);
     } else {
-      await req.sb.from('questionnaire_responses').insert(patch);
+      patch.user_id = req.user.id;
+      patch.run_number = 1;
+      const { data: created } = await req.sb.from('questionnaire_responses').insert(patch).select('id').maybeSingle();
+      if (!created) throw new Error('could not save your answers');
+      runId = created.id;
     }
 
     if (step < STEPS) return res.redirect('/questionnaire?step=' + (step + 1));
 
     // Final step: compute readiness, mark complete
-    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
+    const q = await qs.byId(req.sb, req.user.id, runId);
     await req.sb.from('questionnaire_responses').update({ completed: true, readiness_score: readinessScore(q) }).eq('id', q.id);
     await req.sb.from('profiles').update({ onboarding_completed: true, display_name: q.founder_name || undefined }).eq('id', req.user.id);
     res.redirect('/ideas/generate');
