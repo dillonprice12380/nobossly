@@ -1,29 +1,45 @@
 <%- include('partials/head') %>
 <div class="page-head">
   <h1><svg class="icon icon-lg"><use href="#i-idea"/></svg> Your business ideas</h1>
-  <% if (hasQuestionnaire) { %><a class="btn btn-primary" href="/ideas/generate">✨ Generate more</a>
+  <% if (hasQuestionnaire) { %>
+    <div class="cta-row" style="margin:0">
+      <a class="btn btn-primary" href="/questionnaire/new">📝 Answer a new questionnaire</a>
+      <a class="btn btn-ghost" href="/ideas/generate">✨ Generate from my last answers</a>
+    </div>
   <% } else { %><a class="btn btn-primary" href="/questionnaire">Complete your questionnaire first</a><% } %>
 </div>
+<% if (hasQuestionnaire) { %>
+  <p class="muted small">A new questionnaire starts fresh — pick a different path, or answer as things stand today. Your earlier answers and the ideas they produced stay put.</p>
+<% } %>
 <% if (!aiReady) { %><p class="notice">AI key not configured on the server yet — idea generation is disabled until ANTHROPIC_API_KEY is set.</p><% } %>
 <% if (!ideas.length) { %>
   <div class="card center"><p>No ideas yet. Complete the questionnaire and let the AI work its magic.</p></div>
 <% } %>
-<div class="grid">
-  <% ideas.forEach(i => { %>
-    <a class="card idea-card" href="/ideas/<%= i.id %>">
-      <div class="idea-top">
-        <span class="tag"><%= i.category %></span>
-        <% if (i.is_favorited) { %><span>⭐</span><% } %>
-      </div>
-      <h3><%= i.name %></h3>
-      <p class="muted"><%= i.tagline %></p>
-      <div class="scores">
-        <span class="chip">🎯 <%= i.success_likelihood %>% success</span>
-        <span class="chip">📈 demand <%= i.demand_score %>/10</span>
-        <span class="chip">❤️ passion <%= i.passion_score %>/10</span>
-      </div>
-      <p class="muted small">⏱ Revenue in <%= i.time_to_revenue %> · 💰 from <%= i.startup_cost_lean %></p>
-    </a>
-  <% }) %>
-</div>
+<% (typeof groups !== 'undefined' ? groups : [{ ideas: ideas }]).forEach(g => { %>
+  <% if (typeof showRunHeadings !== 'undefined' && showRunHeadings) { %>
+    <h2 class="small muted" style="margin:1.4rem 0 .5rem">
+      <% if (g.runNumber) { %>Questionnaire #<%= g.runNumber %><% if (g.pathLabel) { %> · <%= g.pathLabel %><% } %>
+      <% } else { %>Earlier ideas<% } %>
+      <% if (g.date) { %> · <%= new Date(g.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %><% } %>
+    </h2>
+  <% } %>
+  <div class="grid">
+    <% g.ideas.forEach(i => { %>
+      <a class="card idea-card" href="/ideas/<%= i.id %>">
+        <div class="idea-top">
+          <span class="tag"><%= i.category %></span>
+          <% if (i.is_favorited) { %><span>⭐</span><% } %>
+        </div>
+        <h3><%= i.name %></h3>
+        <p class="muted"><%= i.tagline %></p>
+        <div class="scores">
+          <span class="chip">🎯 <%= i.success_likelihood %>% success</span>
+          <span class="chip">📈 demand <%= i.demand_score %>/10</span>
+          <span class="chip">❤️ passion <%= i.passion_score %>/10</span>
+        </div>
+        <p class="muted small">⏱ Revenue in <%= i.time_to_revenue %> · 💰 from <%= i.startup_cost_lean %></p>
+      </a>
+    <% }) %>
+  </div>
+<% }) %>
 <%- include('partials/foot') %>

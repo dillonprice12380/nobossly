@@ -1,7 +1,14 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
 const ai = require('../ai');
+const qs = require('../questionnaires');
 const { awardXP } = require('../xp');
+
+const PATH_LABELS = {
+  existing: 'Already in business',
+  idea: 'Started from an idea',
+  exploring: 'Started from a blank page'
+};
 
 // Copy shown while the generator runs — each path is doing something different.
 const GENERATING_LABELS = {
@@ -25,17 +32,45 @@ function cleanCompetitors(raw) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { data: ideas } = await req.sb.from('generated_ideas').select('*')
-      .eq('user_id', req.user.id).order('position', { ascending: true });
-    const { data: q } = await req.sb.from('questionnaire_responses').select('id, completed').eq('user_id', req.user.id).maybeSingle();
-    res.render('ideas', { title: 'Your Business Ideas', ideas: ideas || [], hasQuestionnaire: !!(q && q.completed), aiReady: ai.hasKey() });
+    // Newest run first, then the order the generator returned within that run —
+    // for the existing-business path, position 0 is the verdict on their business.
+    const [{ data: ideas }, runs, finishedRuns] = await Promise.all([
+      req.sb.from('generated_ideas').select('*').eq('user_id', req.user.id)
+        .order('created_at', { ascending: false }).order('position', { ascending: true }),
+      qs.all(req.sb, req.user.id),
+      qs.completedCount(req.sb, req.user.id)
+    ]);
+    const runMap = {};
+    runs.forEach(r => { runMap[r.id] = r; });
+    const groups = [];
+    const byRun = {};
+    (ideas || []).forEach(i => {
+      const key = i.questionnaire_id || 'unlinked';
+      if (!byRun[key]) {
+        const run = runMap[i.questionnaire_id] || null;
+        byRun[key] = {
+          key,
+          runNumber: run ? run.run_number : null,
+          pathLabel: run ? (PATH_LABELS[run.founder_path] || '') : '',
+          date: i.created_at,
+          ideas: []
+        };
+        groups.push(byRun[key]);
+      }
+      byRun[key].ideas.push(i);
+    });
+    res.render('ideas', {
+      title: 'Your Business Ideas', ideas: ideas || [], groups,
+      showRunHeadings: groups.length > 1,
+      hasQuestionnaire: finishedRuns > 0, aiReady: ai.hasKey()
+    });
   } catch (e) { next(e); }
 });
 
 router.get('/generate', async (req, res, next) => {
   try {
-    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
-    if (!q || !q.completed) return res.redirect('/questionnaire');
+    const q = await qs.latestCompleted(req.sb, req.user.id);
+    if (!q) return res.redirect('/questionnaire');
     res.render('generating', { title: 'Generating ideas', action: '/ideas/generate', label: GENERATING_LABELS[ai.pathOf(q)] });
   } catch (e) { next(e); }
 });
@@ -115,8 +150,8 @@ async function runIdeaGeneration(req, q, plan, jobId) {
 
 router.post('/generate', async (req, res) => {
   try {
-    const { data: q } = await req.sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
-    if (!q || !q.completed) return res.json({ redirect: '/questionnaire' });
+    const q = await qs.latestCompleted(req.sb, req.user.id);
+    if (!q) return res.json({ redirect: '/questionnaire' });
     const plan = planOf(req.profile);
     if (plan === 'free' && (req.profile.generations_used || 0) >= 1) {
       return res.json({ error: 'The free plan includes 1 AI idea generation. Upgrade for unlimited generations, AI roadmaps and more.', redirect: '/pricing?upgrade=1' });
