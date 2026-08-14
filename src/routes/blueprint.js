@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const ai = require('../ai');
+const qs = require('../questionnaires');
 const { awardXP } = require('../xp');
 const { planOf } = require('../middleware/auth');
 
@@ -57,7 +58,10 @@ async function runBlueprintGeneration(req, idea, jobId) {
     .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
     .then(() => {}, e => console.error('job update', e && e.message));
   try {
-    const { data: q } = await sb.from('questionnaire_responses').select('*').eq('user_id', req.user.id).maybeSingle();
+    // Use the questionnaire run this idea actually came from, so a blueprint built
+    // from an older idea isn't described using answers from a later run.
+    const q = (await qs.byId(sb, req.user.id, idea.questionnaire_id))
+      || (await qs.latestCompleted(sb, req.user.id));
     const bp = await ai.generateBlueprint(req.accessToken, idea, q || {});
     const row = {
       user_id: req.user.id, idea_id: idea.id,
