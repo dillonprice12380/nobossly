@@ -16,6 +16,21 @@ app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Turbo Drive submits forms over fetch and expects the redirect that follows to
+// be a 303, so the browser re-requests the destination as a GET. Express sends
+// 302 by default; upgrade non-GET redirects centrally rather than editing every
+// route. Explicit res.redirect(status, url) calls are left alone.
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  const redirect = res.redirect.bind(res);
+  res.redirect = function (...args) {
+    if (args.length === 1 && typeof args[0] === 'string') return redirect(303, args[0]);
+    return redirect(...args);
+  };
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModified: true, cacheControl: true, maxAge: '5m' }));
 app.use(require('./src/middleware/ogPrerender')); // crawler OG tags for /blog/:slug + /guides/:slug — must precede route handlers
 app.use(attachUser);
