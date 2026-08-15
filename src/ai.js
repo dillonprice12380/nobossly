@@ -19,7 +19,13 @@ async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
       max_searches: opts.maxSearches || undefined
     })
   });
-  const j = await r.json().catch(() => ({}));
+  // Read as text first: a body that isn't valid JSON means the response was cut
+  // off in transit, which is a different fault from the model returning prose.
+  const raw = await r.text();
+  let j = {};
+  let bodyParsed = true;
+  try { j = raw ? JSON.parse(raw) : {}; } catch (_) { bodyParsed = false; }
+
   if (!r.ok || j.error) {
     // 546/504 mean the edge function was killed at its 150s request limit, not that
     // anything is broken. Say so plainly instead of surfacing a bare status code.
@@ -31,7 +37,11 @@ async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
       : '';
     throw new Error((j.error || ('AI proxy HTTP ' + r.status)) + hint);
   }
+  if (!bodyParsed) {
+    throw new Error('the AI response was cut off in transit after ' + raw.length + ' bytes. Please try again.');
+  }
   let text = String(j.text || '').trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+  if (!text) throw new Error('the AI returned an empty response. Please try again.');
   const start = Math.min(...['[', '{'].map(c => { const i = text.indexOf(c); return i === -1 ? Infinity : i; }));
   const end = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
   if (start === Infinity || end === -1) throw new Error('AI returned no JSON');
