@@ -1,49 +1,80 @@
-document.querySelectorAll('.task').forEach(el => {
-  el.querySelector('.task-check').addEventListener('click', async () => {
-    const id = el.dataset.id;
-    const r = await fetch('/dashboard/task/' + id + '/toggle', { method: 'POST' });
-    const j = await r.json();
-    if (j.ok) location.reload();
-  });
-});
-
-// hamburger nav (mobile/tablet)
+// Turbo Drive re-evaluates body scripts on every visit, so anything bound to
+// `document` here would stack up a duplicate listener per navigation. Guard the
+// whole file, and use event delegation so nav/dropdowns keep working against
+// markup that Turbo swapped in after this ran.
 (function () {
-  const toggle = document.getElementById('nav-toggle');
-  const links = document.getElementById('nav-links');
-  if (!toggle || !links) return;
-  toggle.addEventListener('click', () => {
-    const open = links.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', open);
+  if (window.__nbAppInit) return;
+  window.__nbAppInit = true;
+
+  // Refresh in place when Turbo is present: same result as location.reload(),
+  // without the white flash or losing scroll position.
+  const refresh = () => (window.Turbo
+    ? window.Turbo.visit(window.location.href, { action: 'replace' })
+    : window.location.reload());
+  window.nbRefresh = refresh;
+
+  // Dashboard task check-off
+  document.addEventListener('click', async e => {
+    const chk = e.target.closest('.task .task-check');
+    if (!chk) return;
+    const el = chk.closest('.task');
+    if (!el) return;
+    try {
+      const r = await fetch('/dashboard/task/' + el.dataset.id + '/toggle', { method: 'POST' });
+      const j = await r.json();
+      if (j.ok) refresh();
+    } catch (_) { /* leave the box as-is; a refresh will show the truth */ }
   });
+
+  // Hamburger nav (mobile/tablet)
   document.addEventListener('click', e => {
-    if (!links.contains(e.target) && !toggle.contains(e.target)) links.classList.remove('open');
+    const links = document.getElementById('nav-links');
+    if (!links) return;
+    const toggle = e.target.closest('#nav-toggle');
+    if (toggle) {
+      const open = links.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open);
+      return;
+    }
+    if (!links.contains(e.target)) links.classList.remove('open');
+  });
+
+  // Avatar dropdown
+  document.addEventListener('click', e => {
+    const dd = document.getElementById('avatar-dropdown');
+    if (!dd) return;
+    const btn = e.target.closest('#avatar-btn');
+    if (btn) {
+      const open = dd.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      return;
+    }
+    if (!dd.contains(e.target)) dd.classList.remove('open');
+  });
+
+  // Nav dropdowns (Resources, etc.)
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-dd] .nav-dd-btn');
+    if (btn) {
+      const wrap = btn.closest('[data-dd]');
+      const menu = wrap && wrap.querySelector('.nav-dd-menu');
+      if (!menu) return;
+      document.querySelectorAll('.nav-dd-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
+      const open = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      return;
+    }
+    document.querySelectorAll('[data-dd]').forEach(wrap => {
+      if (!wrap.contains(e.target)) {
+        const menu = wrap.querySelector('.nav-dd-menu');
+        if (menu) menu.classList.remove('open');
+      }
+    });
+  });
+
+  // An open menu should never survive a page transition.
+  document.addEventListener('turbo:before-render', () => {
+    document.querySelectorAll('.nav-dd-menu.open, .avatar-dropdown.open, .nav-links.open')
+      .forEach(el => el.classList.remove('open'));
   });
 })();
-
-// avatar dropdown
-(function () {
-  const btn = document.getElementById('avatar-btn');
-  const dd = document.getElementById('avatar-dropdown');
-  if (!btn || !dd) return;
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    const open = dd.classList.toggle('open');
-    btn.setAttribute('aria-expanded', open);
-  });
-  document.addEventListener('click', e => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
-})();
-
-// nav dropdowns (Resources, etc.)
-document.querySelectorAll('[data-dd]').forEach(dd => {
-  const btn = dd.querySelector('.nav-dd-btn');
-  const menu = dd.querySelector('.nav-dd-menu');
-  if (!btn || !menu) return;
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    document.querySelectorAll('.nav-dd-menu.open').forEach(m => { if (m !== menu) m.classList.remove('open'); });
-    const open = menu.classList.toggle('open');
-    btn.setAttribute('aria-expanded', open);
-  });
-  document.addEventListener('click', e => { if (!dd.contains(e.target)) menu.classList.remove('open'); });
-});
