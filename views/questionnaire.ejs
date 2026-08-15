@@ -47,6 +47,7 @@
   .path-card:has(input:checked) { border-color: var(--accent); background: rgba(16,185,129,.1); }
   .path-title { grid-column: 2; display: block; font-weight: 700; }
   .path-desc { grid-column: 2; display: block; font-size: .9rem; font-weight: 400; color: var(--muted); line-height: 1.45; }
+  .field-hint { display: block; margin-top: .3rem; font-weight: 400; }
 </style>
 <div class="card form-card">
   <div class="progress"><div class="progress-bar" style="width:<%= Math.round(step/steps*100) %>%"></div></div>
@@ -93,6 +94,7 @@
       <% } else if (step === 3) { %>
         <h2>Your business</h2>
         <label>Business name<input name="biz_name" value="<%= q.biz_name || '' %>" required></label>
+        <label>Website<input name="biz_url" type="url" inputmode="url" value="<%= q.biz_url || '' %>" placeholder="https://yourbusiness.com"><span class="muted small field-hint">We'll read your site so the analysis is about your actual business, not what the name suggests. Leave blank if you don't have one yet.</span></label>
         <label>What does it sell, and to whom?<textarea name="biz_description" rows="3" required placeholder="Be specific — the offer, the customer, how it gets delivered."><%= q.biz_description || '' %></textarea></label>
         <label>Where is it right now?<select name="biz_stage"><%- opts(['Registered but not selling yet','Launched, no revenue yet','First few sales','Steady but small revenue','Growing steadily','Revenue is flat or falling'], q.biz_stage, 'Choose one…') %></select></label>
         <label>How long has it been running?<select name="biz_age"><%- opts(['Less than 3 months','3-6 months','6-12 months','1-2 years','2-5 years','5+ years'], q.biz_age, 'Choose one…') %></select></label>
