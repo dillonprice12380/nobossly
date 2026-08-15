@@ -21,6 +21,11 @@ async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.error) {
+    // 546/504 mean the edge function was killed at its 150s request limit, not that
+    // anything is broken. Say so plainly instead of surfacing a bare status code.
+    if (r.status === 546 || r.status === 504) {
+      throw new Error('the AI request ran past the server time limit. Please try again — it usually goes through on a second attempt.');
+    }
     const hint = j.similar_secret_names && j.similar_secret_names.length
       ? ' (found similar secret names: ' + j.similar_secret_names.join(', ') + ')'
       : '';
@@ -121,6 +126,39 @@ function profileSummaryText(q) {
   return 'Founder profile:\n' + founderCore(q) + '\n\n' + block;
 }
 
+// --- market scan -------------------------------------------------------------
+// Web search and idea generation used to happen in one call, which ran ~150s and
+// tripped the edge function's request limit. They're split now: a short search
+// pass first, then generation with those findings pasted in. Each stays well
+// inside the limit, and a failed scan degrades to an ungrounded generation
+// rather than killing the whole run.
+
+async function marketScan(token, q) {
+  const path = pathOf(q);
+  if (path === 'exploring') return null;
+  const subject = path === 'existing'
+    ? `An existing business: ${val(q.biz_name)} — ${val(q.biz_description)}
+Model: ${val(q.biz_model)} | Serves: ${val(q.target_customer)} | Based in: ${val(q.location)}
+Monthly revenue: ${val(q.biz_revenue_monthly) || 'unstated'} | Trend: ${val(q.biz_trend) || 'unstated'}
+Where the founder says they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}`
+    : `A business idea: ${val(q.idea_description)}
+Problem it solves: ${val(q.idea_problem)} | First customer: ${val(q.idea_customer)}
+How it would make money: ${val(q.idea_monetization)} | Based in: ${val(q.location)}
+Competitors the founder already named: ${val(q.idea_known_competitors) || 'none named'}`;
+
+  const system = 'You are NoBossly\'s market analyst. You use web search to establish the current state of a market. Every claim must come from something you actually found in search results — never invent statistics, company names, or sources. Thin evidence stated plainly is worth more than confident filler.';
+  const prompt = `${subject}
+
+Search the web for the current state of this market. Return a compact JSON object:
+{ "demand": "2-3 sentences on real, current demand — growing, flat, or shrinking, and on what evidence",
+  "competitors": [ { "name": "a real, named company or product", "note": "one sentence on what they offer and where they're weak" } ],
+  "openings": ["2-4 specific gaps or underserved segments you actually found"],
+  "risks": ["2-4 real headwinds — saturation, price pressure, regulation, platform dependence, seasonality"],
+  "sources": ["the named sources you drew on"] }
+Include 3-5 competitors. Keep every field short. If the evidence is thin or mixed, say that in "demand" rather than filling the gap.`;
+  return askJSON(token, system, prompt, 1800, { webSearch: true, maxSearches: 4 });
+}
+
 // --- idea generation ---------------------------------------------------------
 
 const IDEA_JSON_SPEC = `Return a JSON array where each element has these string fields unless noted:
@@ -135,7 +173,7 @@ name, tagline, category, profile_summary (2-3 sentences on why this fits their s
 Be honest and specific. If the space is crowded, reflect that with strong competitors; if it's wide open, name the closest substitutes people use today. Never invent fake company names — if unsure of a specific name, describe the competitor type precisely instead.
 success_likelihood is a genuine probability, not a motivational number. A weak option should score low.`;
 
-const BRIEF_EXISTING = `This founder already runs the business described above. Search the web for current, real demand and competitive conditions in their market before answering.
+const BRIEF_EXISTING = `This founder already runs the business described above. Ground your read in the live market scan where one is given.
 
 Return exactly 4 strategic paths, in this order:
 1. Their current business, analyzed honestly. Use their business name for "name". "success_likelihood" is your genuine probability that continuing on this exact path reaches their 12-month goal. Open "profile_summary" with a one-word verdict — "Double down", "Optimize", or "Pivot" — then the reasoning behind it.
@@ -145,7 +183,7 @@ Return exactly 4 strategic paths, in this order:
 
 "first_steps" must start from where they actually are, not from zero — reference their real revenue, customers, pricing, and channels wherever they gave them. Weigh their stated openness to changing direction, but do not let it soften the verdict: if the honest read is that the current path is capped, say so plainly in option 1.`;
 
-const BRIEF_IDEA = `This founder has the idea described above but has not built a business around it yet. Search the web for current demand, search interest, spending, and the competitive field for this idea before answering.
+const BRIEF_IDEA = `This founder has the idea described above but has not built a business around it yet. Ground your read in the live market scan where one is given.
 
 Return exactly 4 options, in this order:
 1. Their idea, stacked against what the market actually wants right now. Keep the concept recognizable, but correct it where the evidence points somewhere else. "market_analysis" must state plainly where their idea lines up with real demand and where it doesn't. "success_likelihood" is your honest read on the idea as they described it.
@@ -161,15 +199,16 @@ async function generateIdeas(token, q, opts = {}) {
   const path = pathOf(q);
   const system = 'You are NoBossly, an expert startup advisor who matches founders with viable, realistic business paths tailored to their skills, constraints, and personality. You are candid — a founder is better served by an honest read on their odds than by encouragement.';
   const brief = path === 'existing' ? BRIEF_EXISTING : path === 'idea' ? BRIEF_IDEA : BRIEF_EXPLORING;
-  const prompt = `${profileSummaryText(q)}
+  const scan = opts.scan
+    ? '\n\nLIVE MARKET SCAN (web search run moments ago — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it):\n'
+      + JSON.stringify(opts.scan)
+    : '';
+  const prompt = `${profileSummaryText(q)}${scan}
 
 ${brief}
 
 ${IDEA_JSON_SPEC}`;
-  return askJSON(token, system, prompt, 8000, {
-    webSearch: !!opts.webSearch,
-    maxSearches: opts.maxSearches || (opts.webSearch ? 8 : undefined)
-  });
+  return askJSON(token, system, prompt, 8000);
 }
 
 // Live demand evidence for a generated idea. Uses server-side web search via the
@@ -276,4 +315,4 @@ Call out over-budget categories, unspent room, and lean-startup suggestions. Be 
   return askJSON(token, system, prompt, 2000);
 }
 
-module.exports = { generateIdeas, demandEvidence, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey, pathOf };
+module.exports = { generateIdeas, marketScan, demandEvidence, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey, pathOf };

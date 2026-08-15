@@ -83,9 +83,17 @@ async function runIdeaGeneration(req, q, plan, jobId) {
     .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
     .then(() => {}, e => console.error('job update', e && e.message));
   try {
-    // Founders with a business or an idea get a web-grounded market read; the
-    // blank-page path is matched from the profile alone.
-    const ideas = await ai.generateIdeas(req.accessToken, q, { webSearch: ai.pathOf(q) !== 'exploring' });
+    // Two calls rather than one: a short web-search pass, then generation with
+    // those findings pasted in. A single search-enabled generation ran ~150s and
+    // got killed at the edge function's request limit. If the scan fails we push
+    // on without it — an ungrounded set of ideas beats no ideas at all.
+    let scan = null;
+    if (ai.pathOf(q) !== 'exploring') {
+      try {
+        scan = await ai.marketScan(req.accessToken, q);
+      } catch (err) { console.error('market scan', err && err.message); }
+    }
+    const ideas = await ai.generateIdeas(req.accessToken, q, { scan });
     const { count } = await sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const rows = ideas.slice(0, 6).map((i, idx) => ({
       user_id: req.user.id, questionnaire_id: q.id,
