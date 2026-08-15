@@ -28,14 +28,25 @@
   var MODELS = ['Services / freelancing', 'Digital products', 'E-commerce', 'SaaS / software', 'Content & audience', 'Local business', 'Coaching / consulting'];
 %>
 <style>
-  .path-grid { display: grid; gap: 12px; margin: 18px 0 6px; }
-  .path-card { display: block; position: relative; border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
-    padding: 16px 18px 16px 46px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
-  .path-card:hover { border-color: rgba(16,185,129,.55); }
-  .path-card input { position: absolute; left: 18px; top: 20px; }
-  .path-card:has(input:checked) { border-color: #10b981; background: rgba(16,185,129,.07); }
-  .path-title { display: block; font-weight: 600; margin-bottom: 4px; }
-  .path-desc { display: block; font-size: .9rem; opacity: .72; line-height: 1.45; }
+  .path-grid { display: grid; gap: .8rem; margin: 1.1rem 0 .6rem; }
+  /* Two-row grid so the radio sits in its own column and can never ride over the
+     text. The global "input { width:100% }" rule applies to radios too, which is
+     what pushed the control into the middle of the title — hence width:auto. */
+  .path-card {
+    display: grid; grid-template-columns: auto 1fr; column-gap: .75rem; row-gap: .2rem;
+    align-items: start; margin: 0; padding: 1rem 1.1rem; cursor: pointer; font-weight: 400;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .path-card:hover { border-color: var(--accent); }
+  .path-card input[type="radio"] {
+    grid-row: 1 / span 2; align-self: start;
+    width: auto; min-width: 0; margin: .3rem 0 0; padding: 0;
+    accent-color: var(--accent);
+  }
+  .path-card:has(input:checked) { border-color: var(--accent); background: rgba(16,185,129,.1); }
+  .path-title { grid-column: 2; display: block; font-weight: 700; }
+  .path-desc { grid-column: 2; display: block; font-size: .9rem; font-weight: 400; color: var(--muted); line-height: 1.45; }
 </style>
 <div class="card form-card">
   <div class="progress"><div class="progress-bar" style="width:<%= Math.round(step/steps*100) %>%"></div></div>
