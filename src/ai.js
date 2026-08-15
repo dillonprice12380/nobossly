@@ -83,6 +83,9 @@ function founderCore(q) {
 function existingBlock(q) {
   return 'CURRENT BUSINESS (this founder is already trading):\n' + lines([
     ['Business name', q.biz_name], ['Website', q.biz_url], ['What it sells', q.biz_description],
+    ['Everything they offer (their own words)', q.biz_offerings],
+    ['What people wrongly assume about it', q.biz_misconceptions],
+    ['Leading non-revenue metric and trend', q.biz_traction_metric],
     ['Stage', q.biz_stage], ['Time running', q.biz_age], ['Model', q.biz_model],
     ['Serves', q.target_customer], ['Monthly revenue', q.biz_revenue_monthly],
     ['Revenue trend', q.biz_trend], ['Profitability', q.biz_profitability],
@@ -165,17 +168,40 @@ function htmlToText(html) {
   ].filter(Boolean).join('\n');
 }
 
-async function fetchSite(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') return null;
-  let u;
-  try { u = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : 'https://' + rawUrl.trim()); }
-  catch (_) { return null; }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
-  if (BLOCKED_HOST.test(u.hostname) || !u.hostname.includes('.')) return null;
+// Pages worth reading beyond the homepage. A multi-segment business rarely puts
+// every offering on its landing page — the segment that gets missed is exactly the
+// one the analysis then judges the company for not having.
+const PAGE_HINTS = /(about|how-it-works|how_it_works|howitworks|services|what-we-do|pricing|faq|employers?|seekers?|candidates?|jobs?|for-|our-story|solutions)/i;
+
+function sameSiteLinks(html, baseUrl) {
+  const base = new URL(baseUrl);
+  const seen = new Set();
+  const out = [];
+  const re = /<a[^>]+href=["']([^"'>]+)["']/gi;
+  let m;
+  let guard = 0;
+  while ((m = re.exec(html)) && guard++ < 300) {
+    let u;
+    try { u = new URL(m[1], base); } catch (_) { continue; }
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;
+    if (u.hostname !== base.hostname) continue;
+    u.hash = ''; u.search = '';
+    const href = u.toString().replace(/\/$/, '');
+    if (href === base.toString().replace(/\/$/, '')) continue;
+    if (/\.(pdf|jpg|jpeg|png|gif|svg|webp|zip|mp4|css|js)$/i.test(u.pathname)) continue;
+    if (!PAGE_HINTS.test(u.pathname)) continue;
+    if (seen.has(href)) continue;
+    seen.add(href);
+    out.push(href);
+  }
+  return out;
+}
+
+async function fetchPage(url) {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(u.toString(), {
+    const r = await fetch(url, {
       redirect: 'follow',
       signal: ctrl.signal,
       headers: { 'User-Agent': 'NoBosslyBot/1.0 (+https://nobossly.com)', 'Accept': 'text/html,text/plain' }
@@ -184,12 +210,40 @@ async function fetchSite(rawUrl) {
     if (!r.ok) return null;
     if (!/text\/html|text\/plain/i.test(r.headers.get('content-type') || '')) return null;
     const html = (await r.text()).slice(0, 400000);
-    const text = htmlToText(html);
-    if (text.length < 40) return null;
-    return { url: u.toString(), text: text.slice(0, 6000) };
+    return { url: r.url || url, html, text: htmlToText(html) };
   } catch (_) {
     return null;
   }
+}
+
+async function fetchSite(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : 'https://' + rawUrl.trim()); }
+  catch (_) { return null; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+  if (BLOCKED_HOST.test(u.hostname) || !u.hostname.includes('.')) return null;
+
+  const home = await fetchPage(u.toString());
+  if (!home || home.text.length < 40) return null;
+
+  // Read a few of the most descriptive inner pages in parallel, bounded so a slow
+  // site can't stall generation.
+  let extras = [];
+  try {
+    const links = sameSiteLinks(home.html, home.url).slice(0, 4);
+    const pages = await Promise.all(links.map(l => fetchPage(l)));
+    extras = pages.filter(pg => pg && pg.text.length > 80);
+  } catch (_) { /* homepage alone is still useful */ }
+
+  const parts = [`--- ${home.url} ---\n${home.text.slice(0, 5000)}`];
+  extras.forEach(pg => parts.push(`--- ${pg.url} ---\n${pg.text.slice(0, 2000)}`));
+
+  return {
+    url: home.url,
+    pagesRead: 1 + extras.length,
+    text: parts.join('\n\n').slice(0, 12000)
+  };
 }
 
 // --- market scan -------------------------------------------------------------
@@ -207,7 +261,7 @@ async function marketScan(token, q) {
   const siteBlock = site
     ? `
 
-THEIR WEBSITE, fetched moments ago from ${site.url}. This is what the business actually is — trust it over anything the company name might suggest:
+THEIR WEBSITE, ${site.pagesRead} page(s) fetched moments ago starting from ${site.url}. This is what the business actually is — trust it over anything the company name might suggest:
 """
 ${site.text}
 """`
@@ -217,13 +271,21 @@ ${site.text}
 The founder gave the website ${val(q.biz_url)} but it could not be read automatically. Try to find it via search before drawing any conclusion about what they do.`
       : '');
 
+  const misread = val(q.biz_misconceptions)
+    ? `
+WHAT PEOPLE GET WRONG ABOUT IT, in the founder's words: ${val(q.biz_misconceptions)}
+Do not repeat that mistake.`
+    : '';
+
   const subject = path === 'existing'
     ? `An existing business the founder actually runs.
 Business name: ${val(q.biz_name)}
 Website: ${val(q.biz_url) || 'not given'}
 What the founder says it sells: ${val(q.biz_description)}
+Everything the founder says they offer: ${val(q.biz_offerings) || 'not itemized'}${misread}
 Model: ${val(q.biz_model)} | Serves: ${val(q.target_customer)} | Based in: ${val(q.location)}
 Monthly revenue: ${val(q.biz_revenue_monthly) || 'unstated'} | Trend: ${val(q.biz_trend) || 'unstated'}
+Leading non-revenue metric: ${val(q.biz_traction_metric) || 'not given'}
 Where the founder says they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}${siteBlock}`
     : `A business idea: ${val(q.idea_description)}
 Problem it solves: ${val(q.idea_problem)} | First customer: ${val(q.idea_customer)}
@@ -232,11 +294,13 @@ Competitors the founder already named: ${val(q.idea_known_competitors) || 'none 
 
   const system = 'You are NoBossly\'s market analyst. You use web search to establish the current state of a market. Every claim must come from something you actually found in search results or in material you were given — never invent statistics, company names, or sources. You never infer what a company does from its name; you check. Thin evidence stated plainly is worth more than confident filler.';
 
-  const existingTask = `First establish what THIS SPECIFIC business actually is. Read the website text above closely, and search for the exact business name and for its website domain to find any real public footprint — listings, coverage, reviews, social profiles, competitors naming it.
+  const existingTask = `First establish what THIS SPECIFIC business actually is. Read every page of website text above closely, and search for the exact business name and for its website domain to find any real public footprint — listings, coverage, reviews, social profiles, competitors naming it.
 
-Do not guess the business model from the company name. A name that resembles a familiar category usually is not that category, and assessing the wrong market makes the entire analysis worthless. If the site and your searches show it is something narrower or different from what the name implies, state exactly what it is and analyze THAT.
+Do not guess the business model from the company name, and do not collapse the business into the nearest well-known category. A name that resembles a familiar category usually is not that category, and assessing the wrong market makes the entire analysis worthless.
 
-Then assess the market the business is genuinely in.`;
+Enumerate EVERY distinct offering, audience, and segment the site and the founder describe — every job type, worker situation, location arrangement, and customer side. A business serving several segments is not the same business as one serving only the most obvious segment, and judging it on the obvious one alone is the single most common way this analysis goes wrong. If the founder lists offerings you cannot verify on the site, still include them and note they are unverified rather than dropping them.
+
+Then assess the market the business is genuinely in, across all of its segments.`;
 
   const ideaTask = 'Assess the current state of the market this idea would be entering.';
 
@@ -253,6 +317,7 @@ ${path === 'existing' ? existingTask : ideaTask}
 
 Return a compact JSON object:
 { "business": "${businessField}",
+  "segments": [${path === 'existing' ? '"each distinct offering, audience, or job type this business actually serves — one short phrase each, covering all of them, not just the headline one"' : '"the one or two segments this idea would serve"'}],
   "visibility": "${visibilityField}",
   "demand": "2-3 sentences on real, current demand in that market — growing, flat, or shrinking, and on what evidence",
   "competitors": [ { "name": "a real, named company or product competing with what this business ACTUALLY does", "note": "one sentence on what they offer and where they are weak" } ],
@@ -278,6 +343,12 @@ name, tagline, category, profile_summary (2-3 sentences on why this fits their s
 Be honest and specific. If the space is crowded, reflect that with strong competitors; if it's wide open, name the closest substitutes people use today. Never invent fake company names — if unsure of a specific name, describe the competitor type precisely instead.
 success_likelihood is a genuine probability, not a motivational number. A weak option should score low.`;
 
+const EXISTING_JUDGEMENT = `How to judge this business fairly:
+- Analyze every segment it actually serves, not just the most recognizable one. If the market scan lists several segments, your market_analysis and competitors must reflect all of them. Writing the business off because the most obvious segment is crowded, while ignoring the segments that are not, is a failure of analysis.
+- If it is a marketplace, network, or two-sided business, weigh the leading indicator the founder is actually moving — supply, audience, or demand growth — rather than early revenue. Chicken-and-egg sequencing means one side is deliberately built before money arrives; pre-revenue during that phase is the expected path, not evidence of failure. Where the founder gave a non-revenue metric with a trend, cite the actual numbers and reason about the rate of change.
+- Do not invent kill criteria or arbitrary revenue deadlines. If you propose a decision gate, tie it to the metric the founder is genuinely growing, give a horizon realistic for this type of business, and say what result would justify continuing. Never recommend shutting a business down on a short revenue window while its non-revenue traction is compounding.
+- Be honest about real problems, and be equally honest about real progress. Candour cuts both ways: overstating the odds is a failure, and so is dismissing a business you have not correctly identified.`;
+
 // The four options are produced by two calls of two, run in parallel. One call
 // writing all four ran past the edge function's 150s wall clock limit (which is
 // a hard ceiling on worker lifetime — streaming and keepalives do not extend it).
@@ -291,7 +362,9 @@ Return exactly 2 strategic paths, in this order:
 1. Their current business, analyzed honestly. Use their business name for "name". "success_likelihood" is your genuine probability that continuing on this exact path reaches their 12-month goal. Open "profile_summary" with a one-word verdict — "Double down", "Optimize", or "Pivot" — then the reasoning behind it.
 2. A sharpened version of the same business: same customers or same capability, but repositioned, repriced, or narrowed specifically to break the bottleneck they described.
 
-"first_steps" must start from where they actually are, not from zero — reference their real revenue, customers, pricing, and channels wherever they gave them. Weigh their stated openness to changing direction, but do not let it soften the verdict: if the honest read is that the current path is capped, say so plainly in option 1.`,
+"first_steps" must start from where they actually are, not from zero — reference their real revenue, customers, pricing, and channels wherever they gave them. Weigh their stated openness to changing direction, but do not let it soften the verdict: if the honest read is that the current path is capped, say so plainly in option 1.
+
+${EXISTING_JUDGEMENT}`,
 
     `This founder already runs the business described above. Ground your read in the live market scan where one is given.
 
@@ -299,7 +372,9 @@ Another analyst is separately covering their current business as-is and a sharpe
 1. An adjacent pivot that reuses their existing customers, skills, channels, or assets in a market with stronger demand.
 2. A clean-break option worth weighing if the current path turns out to be capped.
 
-"first_steps" must start from what they already have — their customers, skills, channels, and revenue — rather than from zero. Be honest about switching costs: if leaving their current market would waste a real advantage they hold, say so.`
+"first_steps" must start from what they already have — their customers, skills, channels, and revenue — rather than from zero. Be honest about switching costs: if leaving their current market would waste a real advantage they hold, say so.
+
+${EXISTING_JUDGEMENT}`
   ],
   idea: [
     `This founder has the idea described above but has not built a business around it yet. Ground your read in the live market scan where one is given.
@@ -339,7 +414,7 @@ async function generateIdeas(token, q, opts = {}) {
   const path = pathOf(q);
   const system = 'You are NoBossly, an expert startup advisor who matches founders with viable, realistic business paths tailored to their skills, constraints, and personality. You are candid — a founder is better served by an honest read on their odds than by encouragement.';
   const scan = opts.scan
-    ? '\n\nLIVE MARKET SCAN (web search run moments ago, including a read of the founder\'s own website where they gave one — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it). Where it contains a "business" field, that is the verified description of what this company actually does: use it, and do not substitute your own assumption based on the company name:\n'
+    ? '\n\nLIVE MARKET SCAN (web search run moments ago, including a read of the founder\'s own website where they gave one — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it). Where it contains a "business" field, that is the verified description of what this company actually does: use it, and do not substitute your own assumption based on the company name. Where it contains "segments", the business serves all of them:\n'
       + JSON.stringify(opts.scan)
     : '';
   const profile = profileSummaryText(q);
@@ -400,7 +475,12 @@ revenue_type (string), revenue_rationale (2 sentences), pricing_tiers (array of 
 projection_month3 (string like "$500 MRR"), projection_month6 (string), projection_month12 (string),
 differentiators (array of strings), roadmap_summary (3-4 sentences),
 gtm_strategy (3-4 sentences), gtm_first_customer (how to land customer #1), gtm_channels (array of {channel, why, effort}), gtm_week1_actions (array of 5-7 strings).
-If the founder is already trading, build from their current traction rather than from zero.`;
+
+If the founder is already trading, build from their current traction rather than from zero, and follow these rules:
+- Serve every segment the business actually has. If the profile lists several offerings, audiences, or job types, the positioning, ideal customer and pricing must account for all of them rather than only the most obvious one.
+- If it is a marketplace or two-sided business, respect the sequencing: name which side is being built first and why, and do not price or plan as though both sides are already liquid.
+- Ground projections in the founder's real current numbers, including any non-revenue metric they gave and its trend. State the assumption behind each projection so it can be checked. Do not present a projection as a target the founder must hit to justify continuing.
+- Keep every field under 200 characters where it will be displayed as a label or chip: revenue_type, icp_archetype, pricing tier names and prices. Put the reasoning in the prose fields, not in the short ones.`;
   return askJSON(token, system, prompt, 6000);
 }
 
