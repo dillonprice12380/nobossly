@@ -17,6 +17,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Views need the current path to highlight the active dashboard section.
+app.use((req, res, next) => { res.locals.currentPath = req.path; next(); });
+
 // Turbo Drive submits forms over fetch and expects the redirect that follows to
 // be a 303, so the browser re-requests the destination as a GET. Express sends
 // 302 by default; upgrade non-GET redirects centrally rather than editing every
