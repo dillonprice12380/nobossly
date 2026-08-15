@@ -27,11 +27,16 @@ router.get('/', async (req, res, next) => {
       .or(`user_id.eq.${req.user.id},assigned_to.eq.${req.user.id}`)
       .order('position');
     if (listFilter) q = q.eq('list_id', listFilter);
-    const [{ data: lists }, { data: tasks }, team] = await Promise.all([
+    const [{ data: lists }, { data: tasks }, team, { data: listed }] = await Promise.all([
       req.sb.from('task_lists').select('*').eq('user_id', req.user.id).order('created_at'),
       q,
-      getTeam(req.sb, req.user.id)
+      getTeam(req.sb, req.user.id),
+      // Every task the founder owns, just for per-list counts so the remove
+      // dialog can say exactly what it is about to delete.
+      req.sb.from('tasks').select('list_id').eq('user_id', req.user.id)
     ]);
+    const listCounts = {};
+    (listed || []).forEach(t => { if (t.list_id) listCounts[t.list_id] = (listCounts[t.list_id] || 0) + 1; });
     const ids = (tasks || []).map(t => t.id);
     const { data: subsRaw } = ids.length
       ? await req.sb.from('tasks').select('*').in('parent_id', ids).order('created_at')
@@ -43,7 +48,7 @@ router.get('/', async (req, res, next) => {
     const pmap = { [req.user.id]: req.profile };
     team.forEach(p => pmap[p.id] = p);
     res.render('tasks', {
-      title: 'Tasks', lists: lists || [], byStatus, subs,
+      title: 'Tasks', lists: lists || [], byStatus, subs, listCounts,
       statuses: STATUSES, priorities: PRIORITIES, listFilter, team, pmap, me: req.user.id
     });
   } catch (e) { next(e); }
@@ -59,7 +64,16 @@ router.post('/list', async (req, res, next) => {
 
 router.post('/list/:id/delete', async (req, res, next) => {
   try {
-    await req.sb.from('task_lists').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+    const { data: list } = await req.sb.from('task_lists').select('id')
+      .eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!list) return res.redirect('/tasks');
+    // The list_id foreign key is ON DELETE SET NULL, so removing a list normally
+    // just unfiles its tasks. Clearing an idea off the board means removing the
+    // tasks too, which only happens when explicitly asked for.
+    if (req.body.mode === 'tasks') {
+      await req.sb.from('tasks').delete().eq('user_id', req.user.id).eq('list_id', list.id);
+    }
+    await req.sb.from('task_lists').delete().eq('id', list.id).eq('user_id', req.user.id);
     res.redirect('/tasks');
   } catch (e) { next(e); }
 });

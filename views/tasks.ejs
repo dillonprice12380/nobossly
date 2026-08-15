@@ -4,11 +4,18 @@
   <button class="btn btn-primary" onclick="document.getElementById('new-task-modal').classList.remove('hidden')">+ New task</button>
 </div>
 
-<div class="toolbar">
+<div class="toolbar" id="list-bar">
   <a class="chip <%= !listFilter ? 'chip-active' : '' %>" href="/tasks">All lists</a>
-  <% lists.forEach(l => { %>
-    <a class="chip <%= listFilter === l.id ? 'chip-active' : '' %>" href="/tasks?list=<%= l.id %>" style="border-color:<%= l.color %>"><%= l.name %></a>
+  <% lists.forEach(l => { const n = (typeof listCounts !== 'undefined' && listCounts && listCounts[l.id]) || 0; %>
+    <span class="chip-wrap">
+      <a class="chip <%= listFilter === l.id ? 'chip-active' : '' %>" href="/tasks?list=<%= l.id %>" style="border-color:<%= l.color %>"><%= l.name %><% if (n) { %> <span class="chip-count"><%= n %></span><% } %></a>
+      <button type="button" class="chip-del" title="Remove <%= l.name %>"
+        data-id="<%= l.id %>" data-name="<%= l.name %>" data-count="<%= n %>">×</button>
+    </span>
   <% }) %>
+  <% if (lists.length) { %>
+    <button type="button" class="btn btn-ghost btn-sm" id="lists-edit-toggle">Edit lists</button>
+  <% } %>
   <form method="post" action="/tasks/list" class="inline-form">
     <input name="name" placeholder="New list…" required>
     <button class="btn btn-ghost btn-sm">Add</button>
@@ -51,6 +58,26 @@
       </div>
     </div>
   <% }) %>
+</div>
+
+<div id="list-delete-modal" class="modal hidden">
+  <div class="modal-card card">
+    <button type="button" class="modal-close" data-close-list-modal>&times;</button>
+    <h3>Remove list</h3>
+    <p id="ld-name" class="lead"></p>
+    <p class="muted small" id="ld-note"></p>
+    <form method="post" id="ld-form-keep" class="ld-form">
+      <input type="hidden" name="mode" value="keep">
+      <button class="btn btn-ghost">Remove list, keep its tasks</button>
+    </form>
+    <form method="post" id="ld-form-tasks" class="ld-form">
+      <input type="hidden" name="mode" value="tasks">
+      <button class="btn btn-primary" id="ld-tasks-btn">Remove list and its tasks</button>
+    </form>
+    <div class="cta-row">
+      <button type="button" class="btn btn-ghost" data-close-list-modal>Cancel</button>
+    </div>
+  </div>
 </div>
 
 <div id="new-task-modal" class="modal hidden">
@@ -106,5 +133,57 @@
     </form>
   </div>
 </div>
+<style>
+  /* The remove control only appears in edit mode, so a mis-tap on a crowded
+     phone toolbar can't start deleting an idea's tasks. */
+  .chip-wrap{display:inline-flex;align-items:center;position:relative;max-width:100%}
+  .chip-count{opacity:.6;font-variant-numeric:tabular-nums}
+  .chip-del{display:none;margin-left:-.5rem;width:1.5rem;height:1.5rem;flex:none;border-radius:50%;
+    border:1px solid var(--border);background:var(--panel-2);color:var(--muted);
+    font-size:1rem;line-height:1;cursor:pointer;padding:0;align-items:center;justify-content:center}
+  #list-bar.is-editing .chip-del{display:inline-flex}
+  #list-bar.is-editing .chip-del:hover{border-color:#b91c1c;color:#b91c1c}
+  #lists-edit-toggle.is-on{background:var(--accent);color:#fff}
+  .ld-form{margin:.5rem 0}
+  .ld-form .btn{width:100%}
+  #list-delete-modal .lead{margin:.2rem 0 .4rem;overflow-wrap:break-word}
+</style>
+<script>
+(function(){
+  var bar = document.getElementById('list-bar');
+  var toggle = document.getElementById('lists-edit-toggle');
+  if (toggle) toggle.addEventListener('click', function(){
+    var on = bar.classList.toggle('is-editing');
+    toggle.classList.toggle('is-on', on);
+    toggle.textContent = on ? 'Done' : 'Edit lists';
+  });
+
+  var modal = document.getElementById('list-delete-modal');
+  function closeModal(){ modal.classList.add('hidden'); }
+  document.querySelectorAll('[data-close-list-modal]').forEach(function(b){
+    b.addEventListener('click', closeModal);
+  });
+  modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+
+  document.querySelectorAll('.chip-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.dataset.id, name = btn.dataset.name, n = parseInt(btn.dataset.count, 10) || 0;
+      var action = '/tasks/list/' + id + '/delete';
+      document.getElementById('ld-form-keep').action = action;
+      document.getElementById('ld-form-tasks').action = action;
+      document.getElementById('ld-name').textContent = name;
+      document.getElementById('ld-note').textContent = n
+        ? 'This list has ' + n + ' task' + (n === 1 ? '' : 's') + '. Choose what happens to them.'
+        : 'This list has no tasks in it.';
+      // With nothing inside, the two options are identical — only offer one.
+      document.getElementById('ld-form-keep').style.display = n ? '' : 'none';
+      document.getElementById('ld-tasks-btn').textContent = n
+        ? 'Remove list and its ' + n + ' task' + (n === 1 ? '' : 's')
+        : 'Remove list';
+      modal.classList.remove('hidden');
+    });
+  });
+})();
+</script>
 <script src="/js/tasks.js?v=5"></script>
 <%- include('partials/foot') %>
