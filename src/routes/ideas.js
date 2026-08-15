@@ -23,7 +23,7 @@ const GENERATING_LABELS = {
 const IDEA_STEPS = {
   existing: [
     { id: 'queued', label: 'Reading your questionnaire answers' },
-    { id: 'scan', label: 'Searching the web for current demand and competitors' },
+    { id: 'scan', label: 'Reading your website and searching for your business' },
     { id: 'generate', label: 'Weighing your business against what the market is doing' },
     { id: 'save', label: 'Scoring each path and writing your first steps' }
   ],
@@ -162,7 +162,17 @@ async function runIdeaGeneration(req, q, plan, jobId) {
     try {
       const top = rows[0];
       if (plan === 'paid' && top && top.first_steps) {
-        const { data: list } = await sb.from('task_lists').insert({ user_id: req.user.id, name: ('Idea: ' + top.name).slice(0, 60), color: '#10b981' }).select().maybeSingle();
+        // Reuse a list of the same name rather than stacking a fresh duplicate on
+        // every regeneration — that is what filled the board with repeats.
+        const listName = ('Idea: ' + top.name).slice(0, 60);
+        const { data: found } = await sb.from('task_lists').select('id')
+          .eq('user_id', req.user.id).eq('name', listName).limit(1);
+        let list = found && found[0];
+        if (!list) {
+          const { data: made } = await sb.from('task_lists')
+            .insert({ user_id: req.user.id, name: listName, color: '#10b981' }).select('id').maybeSingle();
+          list = made;
+        }
         const steps = String(top.first_steps).split(/\n+/).map(t => t.replace(/^\s*\d+[).:-]?\s*/, '').trim()).filter(t => t.length > 3).slice(0, 7);
         const taskRows = steps.map((title, i) => ({
           user_id: req.user.id, list_id: list ? list.id : null, title: title.slice(0, 200),
