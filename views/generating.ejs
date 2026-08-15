@@ -1,20 +1,111 @@
 <%- include('partials/head') %>
+<style>
+  .gen-progress { margin-top: 1.2rem; text-align: left; }
+  .gen-meta { display: flex; justify-content: space-between; margin: .35rem 0 0; }
+  .gen-steps { list-style: none; padding: 0; margin: 1rem 0 0; }
+  .gen-steps li { display: grid; grid-template-columns: auto 1fr; gap: .6rem; align-items: start; padding: .35rem 0; font-size: .9rem; color: var(--muted); }
+  .gen-dot { width: 15px; height: 15px; margin-top: .22rem; border-radius: 50%; border: 2px solid var(--border); flex: none; transition: background .2s, border-color .2s, box-shadow .2s; }
+  .gen-steps li.active { color: var(--text); font-weight: 600; }
+  .gen-steps li.active .gen-dot { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16,185,129,.18); }
+  .gen-steps li.done { color: var(--text); }
+  .gen-steps li.done .gen-dot { background: var(--accent); border-color: var(--accent); }
+</style>
 <div class="card auth-card center">
-  <div class="spinner"></div>
+  <div class="spinner" id="gen-spin"></div>
   <h2>Working on it…</h2>
   <p id="gen-label"><%= label %></p>
+  <% var genSteps = (typeof steps !== 'undefined' && steps) ? steps : []; %>
+  <% if (genSteps.length) { %>
+    <div class="gen-progress" id="gen-progress">
+      <div class="progress"><div class="progress-bar" id="gen-bar" style="width:0%"></div></div>
+      <p class="gen-meta muted small"><span id="gen-pct">0%</span><span id="gen-elapsed">0:00</span></p>
+      <ul class="gen-steps" id="gen-steps">
+        <% genSteps.forEach(function (s) { %>
+          <li data-stage="<%= s.id %>"><span class="gen-dot"></span><span><%= s.label %></span></li>
+        <% }) %>
+      </ul>
+    </div>
+  <% } %>
   <p class="error hidden" id="gen-error"></p>
   <a class="btn btn-ghost hidden" id="gen-back" href="/dashboard">Back</a>
 </div>
 <script>
 (async function () {
+  const startedAt = Date.now();
+  const barEl = document.getElementById('gen-bar');
+  const pctEl = document.getElementById('gen-pct');
+  const elapsedEl = document.getElementById('gen-elapsed');
+  const stepEls = Array.from(document.querySelectorAll('#gen-steps li'));
+  const labelEl = document.getElementById('gen-label');
+
+  // Each stage owns a slice of the bar. Within a slice the bar eases toward that
+  // slice's ceiling without ever reaching it, so it keeps moving during a long AI
+  // call but can't claim a step is finished before the server says so. "secs" is
+  // the observed typical duration of that step, which sets the easing pace.
+  const PACE = {
+    queued:   { to: 6,  secs: 4 },
+    scan:     { to: 38, secs: 38 },
+    generate: { to: 88, secs: 85 },
+    save:     { to: 97, secs: 8 }
+  };
+
+  let seg = { stage: null, from: 0, to: 6, secs: 6, at: Date.now() };
+  let shown = 0;
+  let finished = false;
+
+  function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function markSteps(stage) {
+    const idx = stepEls.findIndex(li => li.dataset.stage === stage);
+    stepEls.forEach((li, i) => {
+      li.classList.toggle('done', idx === -1 ? false : i < idx);
+      li.classList.toggle('active', i === idx);
+    });
+  }
+
+  function enterStage(stage, progress, text) {
+    if (text && labelEl) labelEl.textContent = text;
+    if (!stage || stage === seg.stage) return;
+    const pace = PACE[stage] || { to: Math.min(99, (progress || shown) + 12), secs: 30 };
+    // Never rewind: a new stage starts at whichever is further along, the server's
+    // floor for that stage or what the user has already been shown.
+    seg = { stage, from: Math.max(shown, progress || 0), to: pace.to, secs: pace.secs, at: Date.now() };
+    markSteps(stage);
+  }
+
+  function paint() {
+    if (!barEl) return;
+    if (!finished) {
+      const el = (Date.now() - seg.at) / 1000;
+      const eased = seg.from + (seg.to - seg.from) * (1 - Math.exp(-el / seg.secs));
+      if (eased > shown) shown = eased;
+    }
+    barEl.style.width = shown.toFixed(1) + '%';
+    pctEl.textContent = Math.floor(shown) + '%';
+    elapsedEl.textContent = fmt(Date.now() - startedAt);
+  }
+  if (barEl) { paint(); setInterval(paint, 250); }
+
+  function complete() {
+    finished = true;
+    shown = 100;
+    stepEls.forEach(li => { li.classList.remove('active'); li.classList.add('done'); });
+    paint();
+  }
+
   function fail(msg) {
-    document.querySelector('.spinner').classList.add('hidden');
-    document.getElementById('gen-label').classList.add('hidden');
+    document.getElementById('gen-spin').classList.add('hidden');
+    labelEl.classList.add('hidden');
+    const prog = document.getElementById('gen-progress');
+    if (prog) prog.classList.add('hidden');
     const el = document.getElementById('gen-error');
     el.textContent = msg; el.classList.remove('hidden');
     document.getElementById('gen-back').classList.remove('hidden');
   }
+
   // Parse defensively: proxies/gateways can return HTML error pages (timeouts,
   // restarts) that would otherwise surface as a raw "Unexpected token '<'" error.
   async function parse(r) {
@@ -22,7 +113,9 @@
     try { return JSON.parse(t); }
     catch (e) { throw new Error('The server was interrupted or took too long. Please try again in a minute.'); }
   }
+
   try {
+    enterStage('queued', 2, null);
     const r = await fetch('<%= action %>', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const j = await parse(r);
     if (j.redirect) return location.href = j.redirect;
@@ -33,7 +126,12 @@
         await new Promise(s => setTimeout(s, 2500));
         let sJ = null;
         try { sJ = await parse(await fetch('/jobs/' + j.job)); } catch (e) { continue; }
-        if (sJ.status === 'done' && sJ.redirect) return location.href = sJ.redirect;
+        if (sJ.stage) enterStage(sJ.stage, sJ.progress, sJ.stage_label);
+        if (sJ.status === 'done' && sJ.redirect) {
+          complete();
+          await new Promise(s => setTimeout(s, 450));
+          return location.href = sJ.redirect;
+        }
         if (sJ.status === 'error') return fail(sJ.error || 'Generation failed. Please try again.');
       }
       return fail('This is taking longer than expected. Your generation may still complete — check the relevant page in a couple of minutes before retrying.');

@@ -17,6 +17,34 @@ const GENERATING_LABELS = {
   exploring: 'Analyzing your profile and generating tailored business ideas…'
 };
 
+// The steps the generating screen lists, in order. Each id maps to a slice of the
+// progress bar in generating.ejs; the server reports a stage as it actually starts
+// it, so the bar can never run ahead of the work.
+const IDEA_STEPS = {
+  existing: [
+    { id: 'queued', label: 'Reading your questionnaire answers' },
+    { id: 'scan', label: 'Searching the web for current demand and competitors' },
+    { id: 'generate', label: 'Weighing your business against what the market is doing' },
+    { id: 'save', label: 'Scoring each path and writing your first steps' }
+  ],
+  idea: [
+    { id: 'queued', label: 'Reading your questionnaire answers' },
+    { id: 'scan', label: 'Searching the web for demand and competitors in your space' },
+    { id: 'generate', label: 'Stacking your idea against the market and finding your angle' },
+    { id: 'save', label: 'Scoring each option and writing your first steps' }
+  ],
+  exploring: [
+    { id: 'queued', label: 'Reading your questionnaire answers' },
+    { id: 'generate', label: 'Matching your skills and constraints to business models' },
+    { id: 'save', label: 'Scoring each idea and writing your first steps' }
+  ]
+};
+
+// Where each stage starts on the bar. The scan-less path hands its slice to generate.
+const FLOORS = { queued: 2, scan: 6, generate: 38, generateNoScan: 6, save: 88 };
+
+const stepLabel = (path, id) => (IDEA_STEPS[path].find(s => s.id === id) || {}).label || '';
+
 // Normalize the AI competitors field into a clean array of exactly the shape the view expects.
 function cleanCompetitors(raw) {
   if (!Array.isArray(raw)) return null;
@@ -71,7 +99,11 @@ router.get('/generate', async (req, res, next) => {
   try {
     const q = await qs.latestCompleted(req.sb, req.user.id);
     if (!q) return res.redirect('/questionnaire');
-    res.render('generating', { title: 'Generating ideas', action: '/ideas/generate', label: GENERATING_LABELS[ai.pathOf(q)] });
+    const path = ai.pathOf(q);
+    res.render('generating', {
+      title: 'Generating ideas', action: '/ideas/generate',
+      label: GENERATING_LABELS[path], steps: IDEA_STEPS[path]
+    });
   } catch (e) { next(e); }
 });
 
@@ -79,21 +111,34 @@ router.get('/generate', async (req, res, next) => {
 // request never outlives the host proxy's timeout during long AI generations.
 async function runIdeaGeneration(req, q, plan, jobId) {
   const sb = req.sb;
-  const finish = patch => sb.from('generation_jobs')
+  const path = ai.pathOf(q);
+  const patchJob = patch => sb.from('generation_jobs')
     .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
     .then(() => {}, e => console.error('job update', e && e.message));
+  const finish = patchJob;
+  // Reported as each step actually begins, so the progress bar reflects real work
+  // rather than a timer. Failing to write progress must never fail the generation.
+  const report = (stage, progress, label) =>
+    patchJob({ stage, progress, stage_label: label || stepLabel(path, stage) });
+
   try {
+    await report('queued', FLOORS.queued);
     // Two calls rather than one: a short web-search pass, then generation with
     // those findings pasted in. A single search-enabled generation ran ~150s and
     // got killed at the edge function's request limit. If the scan fails we push
     // on without it — an ungrounded set of ideas beats no ideas at all.
     let scan = null;
-    if (ai.pathOf(q) !== 'exploring') {
+    let scanFailed = false;
+    if (path !== 'exploring') {
+      await report('scan', FLOORS.scan);
       try {
         scan = await ai.marketScan(req.accessToken, q);
-      } catch (err) { console.error('market scan', err && err.message); }
+      } catch (err) { scanFailed = true; console.error('market scan', err && err.message); }
     }
+    await report('generate', path === 'exploring' ? FLOORS.generateNoScan : FLOORS.generate,
+      scanFailed ? 'Live market data was unavailable — generating from your profile instead…' : null);
     const ideas = await ai.generateIdeas(req.accessToken, q, { scan });
+    await report('save', FLOORS.save);
     const { count } = await sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const rows = ideas.slice(0, 6).map((i, idx) => ({
       user_id: req.user.id, questionnaire_id: q.id,
@@ -149,7 +194,7 @@ async function runIdeaGeneration(req, q, plan, jobId) {
         })();
       }
     } catch (e3) { console.error('auto evidence setup', e3.message); }
-    await finish({ status: 'done', redirect: '/ideas' });
+    await finish({ status: 'done', progress: 100, stage: 'done', redirect: '/ideas' });
   } catch (e) {
     console.error('idea generation', e);
     await finish({ status: 'error', error: 'Idea generation failed: ' + e.message });
