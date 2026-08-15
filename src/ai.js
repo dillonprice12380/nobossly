@@ -82,7 +82,7 @@ function founderCore(q) {
 
 function existingBlock(q) {
   return 'CURRENT BUSINESS (this founder is already trading):\n' + lines([
-    ['Business name', q.biz_name], ['What it sells', q.biz_description],
+    ['Business name', q.biz_name], ['Website', q.biz_url], ['What it sells', q.biz_description],
     ['Stage', q.biz_stage], ['Time running', q.biz_age], ['Model', q.biz_model],
     ['Serves', q.target_customer], ['Monthly revenue', q.biz_revenue_monthly],
     ['Revenue trend', q.biz_trend], ['Profitability', q.biz_profitability],
@@ -136,6 +136,62 @@ function profileSummaryText(q) {
   return 'Founder profile:\n' + founderCore(q) + '\n\n' + block;
 }
 
+// --- website reading ---------------------------------------------------------
+// A business name alone is a trap: "EnRoute Jobs" reads as a generic job board
+// unless you look at the actual site. We fetch it server-side rather than relying
+// on the model's search finding it, since a small or new site may not be indexed.
+
+// Block anything pointing back inside the network — the URL comes from a user.
+const BLOCKED_HOST = /^(localhost$|.*\.local$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0|\[?::1\]?$|172\.(1[6-9]|2\d|3[01])\.)/i;
+
+function htmlToText(html) {
+  const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '';
+  const desc = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i) || [])[1] || '';
+  const og = (html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)/i) || [])[1] || '';
+  const body = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'").replace(/&apos;/gi, "'").replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return [
+    title && 'Page title: ' + title.trim(),
+    (desc || og) && 'Meta description: ' + (desc || og).trim(),
+    body
+  ].filter(Boolean).join('\n');
+}
+
+async function fetchSite(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(rawUrl.trim()) ? rawUrl.trim() : 'https://' + rawUrl.trim()); }
+  catch (_) { return null; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+  if (BLOCKED_HOST.test(u.hostname) || !u.hostname.includes('.')) return null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(u.toString(), {
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'NoBosslyBot/1.0 (+https://nobossly.com)', 'Accept': 'text/html,text/plain' }
+    });
+    clearTimeout(timer);
+    if (!r.ok) return null;
+    if (!/text\/html|text\/plain/i.test(r.headers.get('content-type') || '')) return null;
+    const html = (await r.text()).slice(0, 400000);
+    const text = htmlToText(html);
+    if (text.length < 40) return null;
+    return { url: u.toString(), text: text.slice(0, 6000) };
+  } catch (_) {
+    return null;
+  }
+}
+
 // --- market scan -------------------------------------------------------------
 // Web search and idea generation used to happen in one call, which ran ~150s and
 // tripped the edge function's request limit. They're split now: a short search
@@ -146,27 +202,66 @@ function profileSummaryText(q) {
 async function marketScan(token, q) {
   const path = pathOf(q);
   if (path === 'exploring') return null;
+
+  const site = path === 'existing' ? await fetchSite(q.biz_url) : null;
+  const siteBlock = site
+    ? `
+
+THEIR WEBSITE, fetched moments ago from ${site.url}. This is what the business actually is — trust it over anything the company name might suggest:
+"""
+${site.text}
+"""`
+    : (path === 'existing' && val(q.biz_url)
+      ? `
+
+The founder gave the website ${val(q.biz_url)} but it could not be read automatically. Try to find it via search before drawing any conclusion about what they do.`
+      : '');
+
   const subject = path === 'existing'
-    ? `An existing business: ${val(q.biz_name)} — ${val(q.biz_description)}
+    ? `An existing business the founder actually runs.
+Business name: ${val(q.biz_name)}
+Website: ${val(q.biz_url) || 'not given'}
+What the founder says it sells: ${val(q.biz_description)}
 Model: ${val(q.biz_model)} | Serves: ${val(q.target_customer)} | Based in: ${val(q.location)}
 Monthly revenue: ${val(q.biz_revenue_monthly) || 'unstated'} | Trend: ${val(q.biz_trend) || 'unstated'}
-Where the founder says they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}`
+Where the founder says they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}${siteBlock}`
     : `A business idea: ${val(q.idea_description)}
 Problem it solves: ${val(q.idea_problem)} | First customer: ${val(q.idea_customer)}
 How it would make money: ${val(q.idea_monetization)} | Based in: ${val(q.location)}
 Competitors the founder already named: ${val(q.idea_known_competitors) || 'none named'}`;
 
-  const system = 'You are NoBossly\'s market analyst. You use web search to establish the current state of a market. Every claim must come from something you actually found in search results — never invent statistics, company names, or sources. Thin evidence stated plainly is worth more than confident filler.';
+  const system = 'You are NoBossly\'s market analyst. You use web search to establish the current state of a market. Every claim must come from something you actually found in search results or in material you were given — never invent statistics, company names, or sources. You never infer what a company does from its name; you check. Thin evidence stated plainly is worth more than confident filler.';
+
+  const existingTask = `First establish what THIS SPECIFIC business actually is. Read the website text above closely, and search for the exact business name and for its website domain to find any real public footprint — listings, coverage, reviews, social profiles, competitors naming it.
+
+Do not guess the business model from the company name. A name that resembles a familiar category usually is not that category, and assessing the wrong market makes the entire analysis worthless. If the site and your searches show it is something narrower or different from what the name implies, state exactly what it is and analyze THAT.
+
+Then assess the market the business is genuinely in.`;
+
+  const ideaTask = 'Assess the current state of the market this idea would be entering.';
+
+  const businessField = path === 'existing'
+    ? '1-2 sentences on what this specific company actually does, per its own site and anything you found — its real niche, not the category its name suggests'
+    : 'one sentence restating the idea in concrete terms';
+  const visibilityField = path === 'existing'
+    ? 'one sentence on how findable it is publicly — what you actually found, or plainly that you found little or nothing'
+    : 'one sentence on how crowded the space already looks';
+
   const prompt = `${subject}
 
-Search the web for the current state of this market. Return a compact JSON object:
-{ "demand": "2-3 sentences on real, current demand — growing, flat, or shrinking, and on what evidence",
-  "competitors": [ { "name": "a real, named company or product", "note": "one sentence on what they offer and where they're weak" } ],
+${path === 'existing' ? existingTask : ideaTask}
+
+Return a compact JSON object:
+{ "business": "${businessField}",
+  "visibility": "${visibilityField}",
+  "demand": "2-3 sentences on real, current demand in that market — growing, flat, or shrinking, and on what evidence",
+  "competitors": [ { "name": "a real, named company or product competing with what this business ACTUALLY does", "note": "one sentence on what they offer and where they are weak" } ],
   "openings": ["2-4 specific gaps or underserved segments you actually found"],
   "risks": ["2-4 real headwinds — saturation, price pressure, regulation, platform dependence, seasonality"],
   "sources": ["the named sources you drew on"] }
-Include 3-5 competitors. Keep every field short. If the evidence is thin or mixed, say that in "demand" rather than filling the gap.`;
-  return askJSON(token, system, prompt, 1800, { webSearch: true, maxSearches: 4 });
+Include 3-5 competitors. Keep every field short. If the evidence is thin or mixed, say so plainly rather than filling the gap. Finding little public information about a small business is normal and is not by itself evidence that the business is failing.`;
+
+  return askJSON(token, system, prompt, 2000, { webSearch: true, maxSearches: path === 'existing' ? 5 : 4 });
 }
 
 // --- idea generation ---------------------------------------------------------
@@ -244,7 +339,7 @@ async function generateIdeas(token, q, opts = {}) {
   const path = pathOf(q);
   const system = 'You are NoBossly, an expert startup advisor who matches founders with viable, realistic business paths tailored to their skills, constraints, and personality. You are candid — a founder is better served by an honest read on their odds than by encouragement.';
   const scan = opts.scan
-    ? '\n\nLIVE MARKET SCAN (web search run moments ago — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it):\n'
+    ? '\n\nLIVE MARKET SCAN (web search run moments ago, including a read of the founder\'s own website where they gave one — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it). Where it contains a "business" field, that is the verified description of what this company actually does: use it, and do not substitute your own assumption based on the company name:\n'
       + JSON.stringify(opts.scan)
     : '';
   const profile = profileSummaryText(q);
