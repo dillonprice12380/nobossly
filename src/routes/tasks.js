@@ -31,8 +31,8 @@ router.get('/', async (req, res, next) => {
       req.sb.from('task_lists').select('*').eq('user_id', req.user.id).order('created_at'),
       q,
       getTeam(req.sb, req.user.id),
-      // Every task the founder owns, just for per-list counts so the remove
-      // dialog can say exactly what it is about to delete.
+      // Every task the founder owns, just for per-list counts so the manage panel
+      // can say exactly what each delete button is about to remove.
       req.sb.from('tasks').select('list_id').eq('user_id', req.user.id)
     ]);
     const listCounts = {};
@@ -74,6 +74,22 @@ router.post('/list/:id/delete', async (req, res, next) => {
       await req.sb.from('tasks').delete().eq('user_id', req.user.id).eq('list_id', list.id);
     }
     await req.sb.from('task_lists').delete().eq('id', list.id).eq('user_id', req.user.id);
+    res.redirect('/tasks');
+  } catch (e) { next(e); }
+});
+
+// Bulk cleanup for the duplicate empty lists left behind by earlier generations.
+router.post('/lists/prune-empty', async (req, res, next) => {
+  try {
+    const [{ data: lists }, { data: tasks }] = await Promise.all([
+      req.sb.from('task_lists').select('id').eq('user_id', req.user.id),
+      req.sb.from('tasks').select('list_id').eq('user_id', req.user.id)
+    ]);
+    const used = new Set((tasks || []).map(t => t.list_id).filter(Boolean));
+    const empty = (lists || []).filter(l => !used.has(l.id)).map(l => l.id);
+    if (empty.length) {
+      await req.sb.from('task_lists').delete().in('id', empty).eq('user_id', req.user.id);
+    }
     res.redirect('/tasks');
   } catch (e) { next(e); }
 });
