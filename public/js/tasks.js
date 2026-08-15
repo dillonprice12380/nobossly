@@ -1,5 +1,8 @@
 (function () {
   const post = (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json());
+  // Re-render through Turbo where available so a status change or new task no
+  // longer costs a full white-flash page load.
+  const refresh = () => (window.nbRefresh ? window.nbRefresh() : window.location.reload());
 
   document.querySelectorAll('.kcard').forEach(card => {
     card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
@@ -12,7 +15,7 @@
       e.preventDefault(); col.classList.remove('dragover');
       const id = e.dataTransfer.getData('text/plain');
       const j = await post('/tasks/' + id + '/update', { status: col.dataset.status });
-      if (j.ok) location.reload(); else alert(j.error || 'Failed');
+      if (j.ok) refresh(); else alert(j.error || 'Failed');
     });
   });
 
@@ -27,7 +30,7 @@
     const title = prompt('Subtask title:');
     if (!title) return;
     const j = await post('/tasks/create', { title, parent_id: btn.dataset.id });
-    if (j.ok) location.reload(); else alert(j.error || 'Failed');
+    if (j.ok) refresh(); else alert(j.error || 'Failed');
   }));
 
   document.querySelectorAll('.subchk').forEach(chk => chk.addEventListener('change', async e => {
@@ -41,7 +44,7 @@
     e.preventDefault();
     const data = Object.fromEntries(new FormData(form).entries());
     const j = await post('/tasks/create', data);
-    if (j.ok) location.reload(); else alert(j.error || 'Failed');
+    if (j.ok) refresh(); else alert(j.error || 'Failed');
   });
 
   const modal = document.getElementById('new-task-modal');
@@ -49,16 +52,21 @@
   [modal, editModal].forEach(m => {
     if (m) m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
   });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { if (modal) modal.classList.add('hidden'); if (editModal) editModal.classList.add('hidden'); }
-  });
+  // Bound to document, so register once even though Turbo re-runs this file.
+  if (!window.__nbTaskKeys) {
+    window.__nbTaskKeys = true;
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('#new-task-modal, #edit-task-modal').forEach(m => m.classList.add('hidden'));
+    });
+  }
 
   // inline status change (no drag needed)
   document.querySelectorAll('.kstatus').forEach(sel => {
     sel.addEventListener('click', e => e.stopPropagation());
     sel.addEventListener('change', async () => {
       const j = await post('/tasks/' + sel.dataset.id + '/update', { status: sel.value });
-      if (j.ok) location.reload(); else alert(j.error || 'Failed');
+      if (j.ok) refresh(); else alert(j.error || 'Failed');
     });
   });
 
@@ -90,13 +98,13 @@
     const data = Object.fromEntries(new FormData(editForm).entries());
     const id = data.id; delete data.id;
     const j = await post('/tasks/' + id + '/update', data);
-    if (j.ok) location.reload(); else alert(j.error || 'Failed');
+    if (j.ok) refresh(); else alert(j.error || 'Failed');
   });
 
   const delBtn = document.getElementById('e-delete');
   if (delBtn) delBtn.addEventListener('click', async () => {
     if (!confirm('Delete this task?')) return;
     const j = await post('/tasks/' + $('e-id').value + '/delete', {});
-    if (j.ok) location.reload(); else alert(j.error || 'Failed');
+    if (j.ok) refresh(); else alert(j.error || 'Failed');
   });
 })();
