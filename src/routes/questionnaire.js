@@ -3,6 +3,7 @@ const qs = require('../questionnaires');
 
 const csvToArr = v => (v || '').split(',').map(s => s.trim()).filter(Boolean);
 const arrField = v => Array.isArray(v) ? v : (v ? [v] : []);
+const val0 = v => !!(v && String(v).trim());
 const num = (v, d) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : d; };
 
 const PATHS = ['existing', 'idea', 'exploring'];
@@ -17,13 +18,16 @@ const FIELDS = {
       skills: csvToArr(b.skills)
     }),
     3: b => ({
-      biz_name: b.biz_name, biz_url: b.biz_url, biz_description: b.biz_description, biz_stage: b.biz_stage,
-      biz_age: b.biz_age, biz_model: b.biz_model, target_customer: b.target_customer
+      biz_name: b.biz_name, biz_url: b.biz_url, biz_description: b.biz_description,
+      biz_offerings: b.biz_offerings, biz_misconceptions: b.biz_misconceptions,
+      biz_stage: b.biz_stage, biz_age: b.biz_age, biz_model: b.biz_model,
+      target_customer: b.target_customer
     }),
     4: b => ({
       biz_revenue_monthly: b.biz_revenue_monthly, biz_trend: b.biz_trend,
       biz_profitability: b.biz_profitability, biz_customer_count: b.biz_customer_count,
-      biz_pricing: b.biz_pricing, biz_channels: arrField(b.biz_channels), biz_best_channel: b.biz_best_channel
+      biz_pricing: b.biz_pricing, biz_channels: arrField(b.biz_channels), biz_best_channel: b.biz_best_channel,
+      biz_traction_metric: b.biz_traction_metric
     }),
     5: b => ({
       biz_whats_working: b.biz_whats_working, biz_whats_stuck: b.biz_whats_stuck,
@@ -96,7 +100,8 @@ const FIELDS = {
 
 // Columns only ever written by one path, cleared when a run switches paths.
 const PATH_ONLY = {
-  existing: ['biz_name', 'biz_url', 'biz_description', 'biz_stage', 'biz_age', 'biz_model', 'biz_revenue_monthly',
+  existing: ['biz_name', 'biz_url', 'biz_description', 'biz_offerings', 'biz_misconceptions',
+    'biz_traction_metric', 'biz_stage', 'biz_age', 'biz_model', 'biz_revenue_monthly',
     'biz_trend', 'biz_profitability', 'biz_customer_count', 'biz_pricing', 'biz_channels',
     'biz_best_channel', 'biz_whats_working', 'biz_whats_stuck', 'biz_growth_blocker',
     'biz_pivot_openness', 'biz_goal_12mo'],
@@ -121,7 +126,8 @@ function readinessScore(q) {
   let pts = 0;
   if (path === 'existing') {
     if (q.biz_revenue_monthly && q.biz_revenue_monthly !== '$0') pts++;
-    if (q.biz_customer_count && q.biz_customer_count !== '0') pts++;
+    // A growing supply-side metric is real traction even before revenue exists.
+    if ((q.biz_customer_count && q.biz_customer_count !== '0') || val0(q.biz_traction_metric)) pts++;
     if ((q.biz_channels || []).length >= 2) pts++;
     if (hasTime) pts++;
     if (q.biz_whats_working) pts++;
