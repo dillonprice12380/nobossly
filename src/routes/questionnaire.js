@@ -17,7 +17,7 @@ const FIELDS = {
       skills: csvToArr(b.skills)
     }),
     3: b => ({
-      biz_name: b.biz_name, biz_description: b.biz_description, biz_stage: b.biz_stage,
+      biz_name: b.biz_name, biz_url: b.biz_url, biz_description: b.biz_description, biz_stage: b.biz_stage,
       biz_age: b.biz_age, biz_model: b.biz_model, target_customer: b.target_customer
     }),
     4: b => ({
@@ -96,7 +96,7 @@ const FIELDS = {
 
 // Columns only ever written by one path, cleared when a run switches paths.
 const PATH_ONLY = {
-  existing: ['biz_name', 'biz_description', 'biz_stage', 'biz_age', 'biz_model', 'biz_revenue_monthly',
+  existing: ['biz_name', 'biz_url', 'biz_description', 'biz_stage', 'biz_age', 'biz_model', 'biz_revenue_monthly',
     'biz_trend', 'biz_profitability', 'biz_customer_count', 'biz_pricing', 'biz_channels',
     'biz_best_channel', 'biz_whats_working', 'biz_whats_stuck', 'biz_growth_blocker',
     'biz_pivot_openness', 'biz_goal_12mo'],
