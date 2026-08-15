@@ -47,7 +47,7 @@
   .path-card:has(input:checked) { border-color: var(--accent); background: rgba(16,185,129,.1); }
   .path-title { grid-column: 2; display: block; font-weight: 700; }
   .path-desc { grid-column: 2; display: block; font-size: .9rem; font-weight: 400; color: var(--muted); line-height: 1.45; }
-  .field-hint { display: block; margin-top: .3rem; font-weight: 400; }
+  .field-hint { display: block; margin-top: .3rem; font-weight: 400; line-height: 1.4; }
 </style>
 <div class="card form-card">
   <div class="progress"><div class="progress-bar" style="width:<%= Math.round(step/steps*100) %>%"></div></div>
@@ -96,6 +96,8 @@
         <label>Business name<input name="biz_name" value="<%= q.biz_name || '' %>" required></label>
         <label>Website<input name="biz_url" type="url" inputmode="url" value="<%= q.biz_url || '' %>" placeholder="https://yourbusiness.com"><span class="muted small field-hint">We'll read your site so the analysis is about your actual business, not what the name suggests. Leave blank if you don't have one yet.</span></label>
         <label>What does it sell, and to whom?<textarea name="biz_description" rows="3" required placeholder="Be specific — the offer, the customer, how it gets delivered."><%= q.biz_description || '' %></textarea></label>
+        <label>Everything you actually offer<textarea name="biz_offerings" rows="3" placeholder="List every distinct service, product, job type, or audience — not just the headline one. e.g. remote roles, on-site seasonal work for travelers, visa-sponsored roles that can be on-site or hybrid."><%= q.biz_offerings || '' %></textarea><span class="muted small field-hint">The analysis judges what you list here. Anything you leave out, it won't know about.</span></label>
+        <label>What do people get wrong about your business?<textarea name="biz_misconceptions" rows="2" placeholder="e.g. people assume we're just another remote job board"><%= q.biz_misconceptions || '' %></textarea><span class="muted small field-hint">Say what you're mistaken for and why it's wrong — the analysis is told not to repeat that mistake.</span></label>
         <label>Where is it right now?<select name="biz_stage"><%- opts(['Registered but not selling yet','Launched, no revenue yet','First few sales','Steady but small revenue','Growing steadily','Revenue is flat or falling'], q.biz_stage, 'Choose one…') %></select></label>
         <label>How long has it been running?<select name="biz_age"><%- opts(['Less than 3 months','3-6 months','6-12 months','1-2 years','2-5 years','5+ years'], q.biz_age, 'Choose one…') %></select></label>
         <label>Business model<select name="biz_model"><%- opts(MODELS.concat(['Something else']), q.biz_model, 'Choose one…') %></select></label>
@@ -112,6 +114,7 @@
           <%- checks('biz_channels', ['Word of mouth / referrals','Cold outreach','Social media','SEO / blog','Paid ads','Marketplaces (Etsy, Amazon, Upwork…)','Email list','Local / foot traffic','Partnerships','Nothing consistent yet'], q.biz_channels) %>
         </fieldset>
         <label>Which one actually brings your best customers?<input name="biz_best_channel" value="<%= q.biz_best_channel || '' %>" placeholder="the channel that pays, not the one you post on most"></label>
+        <label>Your most important non-revenue number, and how it's moved<input name="biz_traction_metric" value="<%= q.biz_traction_metric || '' %>" placeholder="e.g. job seekers: 65 in May, 350+ now"><span class="muted small field-hint">If you're building supply before revenue, this is the number that matters. Include the dates so the trend is visible.</span></label>
 
       <% } else if (step === 5) { %>
         <h2>What's working, what isn't</h2>
