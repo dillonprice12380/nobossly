@@ -68,8 +68,8 @@
       <div class="grid">
         <% (bp.pricing_tiers||[]).forEach(t=>{ %>
           <div class="card price-card" style="margin:0">
-            <h3 style="margin:.2rem 0"><%= t.name %></h3>
-            <p class="price" style="font-size:1.4rem"><%= t.price %></p>
+            <h3 class="price-name"><%= t.name %></h3>
+            <p class="price"><%= t.price %></p>
             <p class="muted small"><%= t.includes %></p>
           </div>
         <% }) %>
@@ -180,19 +180,31 @@
   .bp-panel{display:none;animation:bpfade .25s ease}
   .bp-panel.is-active{display:block}
   @keyframes bpfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  /* AI-written strings are arbitrary length; nothing here may push the page wider
+     than the viewport. The global .chip is nowrap, which sent a 520px revenue-model
+     label off the side of a 360px screen. */
+  .bp-panel .card{overflow-wrap:break-word}
+  .bp-panel .idea-top{flex-wrap:wrap;align-items:flex-start;gap:.4rem .6rem}
+  .bp-panel .idea-top .chip{white-space:normal;overflow-wrap:break-word;max-width:100%;line-height:1.35;text-align:left;border-radius:12px}
   .pill-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
-  .pill{background:var(--card-2,rgba(16,185,129,.08));border:1px solid var(--border);border-radius:999px;padding:.35rem .75rem;font-size:.9rem}
+  .pill{background:var(--card-2,rgba(16,185,129,.08));border:1px solid var(--border);border-radius:999px;padding:.35rem .75rem;font-size:.9rem;max-width:100%;overflow-wrap:break-word}
   .clean-list{list-style:none;padding:0;margin:.25rem 0}
-  .clean-list li{padding:.3rem 0 .3rem 1.1rem;position:relative}
+  .clean-list li{padding:.3rem 0 .3rem 1.1rem;position:relative;overflow-wrap:break-word}
   .clean-list li::before{content:'•';position:absolute;left:.2rem;color:var(--accent,#10b981)}
-  .bp-metrics{display:flex;gap:.75rem;flex-wrap:wrap;margin:.5rem 0}
-  .bp-metric{flex:1;min-width:8rem;background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;text-align:center}
+  .bp-panel .price-card{min-width:0}
+  .bp-panel .price-name{margin:.2rem 0;font-size:1.05rem;line-height:1.3;overflow-wrap:break-word}
+  .bp-panel .price-card .price{font-size:1.15rem;line-height:1.35;margin:.3rem 0;overflow-wrap:break-word}
+  /* Projections carry a full sentence of assumptions, so they read as stacked
+     blocks on a phone rather than three squeezed columns. */
+  .bp-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.75rem;margin:.5rem 0}
+  .bp-metric{min-width:0;background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:.8rem .9rem;text-align:left}
   .bp-metric-label{display:block;font-size:.8rem;color:var(--muted)}
-  .bp-metric-val{display:block;font-size:1.3rem;font-weight:700;margin-top:.2rem}
+  .bp-metric-val{display:block;font-size:1.05rem;font-weight:700;line-height:1.35;margin-top:.2rem;overflow-wrap:break-word}
+  @media (max-width:560px){.bp-metrics{grid-template-columns:1fr}}
   .callout{background:var(--card-2,rgba(16,185,129,.06));border:1px solid var(--border);border-radius:12px;padding:1rem;margin:.75rem 0}
   /* GTM channels — dedicated layout so long effort text never collides with the name */
   .bp-channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.75rem;margin:.5rem 0}
-  .bp-channel{border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;background:var(--card-2,rgba(16,185,129,.04))}
+  .bp-channel{border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;background:var(--card-2,rgba(16,185,129,.04));min-width:0}
   .bp-channel-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.4rem .6rem;margin-bottom:.35rem}
   .bp-channel-name{font-size:1.02rem;line-height:1.25;overflow-wrap:anywhere}
   .bp-effort{flex:none;white-space:nowrap;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em;padding:.15rem .5rem;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
@@ -204,8 +216,9 @@
   .bp-checklist{list-style:none;counter-reset:step;padding:0;margin:.75rem 0 0}
   .bp-checklist li{counter-increment:step;border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;margin:.4rem 0;display:flex;gap:.6rem;align-items:flex-start}
   .bp-checklist li::before{content:counter(step);flex-shrink:0;width:1.5rem;height:1.5rem;border-radius:50%;background:var(--accent,#10b981);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
-  .bp-check{display:flex;gap:.55rem;align-items:flex-start;cursor:pointer;margin:0}
-  .bp-check input{margin-top:.2rem}
+  .bp-check{display:flex;gap:.55rem;align-items:flex-start;cursor:pointer;margin:0;min-width:0}
+  .bp-check input{margin-top:.2rem;width:auto;flex:none}
+  .bp-check span{overflow-wrap:break-word;min-width:0}
   .bp-check input:checked + span{text-decoration:line-through;color:var(--muted)}
 </style>
 <script>
