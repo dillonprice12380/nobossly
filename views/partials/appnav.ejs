@@ -1,0 +1,114 @@
+<%
+  // Section nav for the logged-in workspace. Renders as a tab row on desktop and
+  // a fixed bottom bar on mobile. Only appears inside the app itself, never on
+  // marketing or article pages.
+  var _p = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
+  var APP_NAV = [
+    { href: '/dashboard',      label: 'Home',       short: 'Home',   icon: 'i-suitcase',  match: ['/dashboard'] },
+    { href: '/ideas',          label: 'Ideas',      short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
+    { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
+    { href: '/challenges',     label: 'Challenges', short: 'Goals',  icon: 'i-challenge', match: ['/challenges'] },
+    { href: '/milestones',     label: 'Milestones', short: 'Wins',   icon: 'i-milestone', match: ['/milestones'] },
+    { href: '/collaborations', label: 'Teams',      short: 'Teams',  icon: 'i-team',      match: ['/collaborations'] },
+    { href: '/budget',         label: 'Budget',     short: 'Budget', icon: 'i-market',    match: ['/budget'] },
+    { href: '/community',      label: 'Community',  short: 'Forum',  icon: 'i-community', match: ['/community'] }
+  ];
+  var _active = function (item) {
+    for (var i = 0; i < item.match.length; i++) {
+      var m = item.match[i];
+      if (_p === m || _p.indexOf(m + '/') === 0) return true;
+    }
+    return false;
+  };
+  var _inApp = APP_NAV.some(_active);
+  // Four primary destinations on a phone; the rest live behind More.
+  var _primary = APP_NAV.slice(0, 4);
+  var _rest = APP_NAV.slice(4);
+  var _restActive = _rest.some(_active);
+%>
+<% if (_inApp) { %>
+<nav class="appnav" aria-label="Dashboard sections">
+  <div class="appnav-tabs">
+    <% APP_NAV.forEach(function (item) { %>
+      <a class="appnav-tab <%= _active(item) ? 'is-active' : '' %>" href="<%= item.href %>"<%= _active(item) ? ' aria-current="page"' : '' %>>
+        <svg class="appnav-ico"><use href="#<%= item.icon %>"/></svg><span><%= item.label %></span>
+      </a>
+    <% }) %>
+  </div>
+</nav>
+
+<nav class="appbar" aria-label="Dashboard sections">
+  <% _primary.forEach(function (item) { %>
+    <a class="appbar-item <%= _active(item) ? 'is-active' : '' %>" href="<%= item.href %>"<%= _active(item) ? ' aria-current="page"' : '' %>>
+      <svg class="appbar-ico"><use href="#<%= item.icon %>"/></svg><span><%= item.short %></span>
+    </a>
+  <% }) %>
+  <details class="appbar-more <%= _restActive ? 'is-active' : '' %>">
+    <summary class="appbar-item" aria-label="More sections">
+      <svg class="appbar-ico"><use href="#<%= _restActive ? APP_NAV.filter(_active)[0].icon : 'i-star' %>"/></svg>
+      <span>More</span>
+    </summary>
+    <div class="appbar-sheet">
+      <% _rest.forEach(function (item) { %>
+        <a class="<%= _active(item) ? 'is-active' : '' %>" href="<%= item.href %>">
+          <svg class="appbar-ico"><use href="#<%= item.icon %>"/></svg><span><%= item.label %></span>
+        </a>
+      <% }) %>
+    </div>
+  </details>
+</nav>
+
+<style>
+  /* Desktop / tablet: a scrollable tab row directly under the site nav.
+     Deliberately not sticky: the site nav's own positioning lives in style.css
+     and two stacked sticky bars would fight each other. */
+  .appnav { background: var(--panel-2); border-bottom: 1px solid var(--border); }
+  .appnav-tabs { display: flex; gap: .15rem; overflow-x: auto; scrollbar-width: none;
+    max-width: 1100px; margin: 0 auto; padding: 0 .5rem; }
+  .appnav-tabs::-webkit-scrollbar { display: none; }
+  .appnav-tab { display: inline-flex; align-items: center; gap: .45rem; flex: none;
+    padding: .8rem .85rem; color: var(--muted); text-decoration: none; font-size: .93rem;
+    border-bottom: 2px solid transparent; white-space: nowrap; }
+  .appnav-tab:hover { color: var(--text); }
+  .appnav-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .appnav-ico { width: 18px; height: 18px; fill: currentColor; flex: none; }
+
+  /* Phone: fixed bottom bar. */
+  .appbar { display: none; }
+  @media (max-width: 820px) {
+    .appnav { display: none; }
+    .appbar {
+      display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+      background: var(--panel-2); border-top: 1px solid var(--border);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -2px 12px rgba(0,0,0,.06);
+    }
+    .appbar-item {
+      flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: .15rem; padding: .5rem .2rem .55rem;
+      color: var(--muted); text-decoration: none; font-size: .68rem; line-height: 1.1;
+      background: none; border: 0; cursor: pointer; list-style: none;
+    }
+    .appbar-item::-webkit-details-marker { display: none; }
+    .appbar-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .appbar-item.is-active, .appbar-more.is-active > .appbar-item { color: var(--accent); font-weight: 600; }
+    .appbar-ico { width: 21px; height: 21px; fill: currentColor; }
+    .appbar-more { flex: 1 1 0; min-width: 0; position: relative; }
+    .appbar-more > summary { width: 100%; }
+    /* Absolute inside the fixed bar, so 100% means "above this button" rather
+       than "above the viewport". */
+    .appbar-sheet {
+      position: absolute; right: .25rem; bottom: 100%; margin-bottom: .45rem;
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: .35rem; min-width: 11rem;
+    }
+    .appbar-sheet a {
+      display: flex; align-items: center; gap: .6rem; padding: .7rem .8rem;
+      color: var(--text); text-decoration: none; border-radius: 10px; font-size: .95rem;
+    }
+    .appbar-sheet a.is-active { color: var(--accent); font-weight: 600; background: rgba(16,185,129,.1); }
+    /* Keep the fixed bar from covering the end of the page. */
+    body { padding-bottom: calc(4.2rem + env(safe-area-inset-bottom)); }
+  }
+</style>
+<% } %>
