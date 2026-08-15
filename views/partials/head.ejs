@@ -8,6 +8,12 @@
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
 <link rel="stylesheet" href="/css/style.css?v=14">
 <link rel="stylesheet" href="/css/list.css?v=2">
+<!-- Turbo Drive: intercepts link clicks and form submits, swaps the <body> in
+     place instead of reloading. No route changes needed — pages still render
+     server-side exactly as before. Add data-turbo="false" to any link, form or
+     container that must fall back to a real page load. -->
+<meta name="turbo-cache-control" content="no-preview">
+<script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8973F7WW8N"></script>
 <script>
@@ -15,6 +21,20 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-8973F7WW8N');
+  // Turbo navigations don't reload the document, so gtag's automatic page_view
+  // only ever fires once. Send one per visit instead, skipping the first (the
+  // config call above already counted it).
+  (function () {
+    var first = true;
+    document.addEventListener('turbo:load', function () {
+      if (first) { first = false; return; }
+      gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+        page_location: location.href,
+        page_title: document.title
+      });
+    });
+  })();
 </script>
 </head>
 <body class="<%= typeof bodyTheme !== 'undefined' ? bodyTheme : 'theme-light' %>">
