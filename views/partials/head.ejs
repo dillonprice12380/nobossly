@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><%= title %> &middot; NoBossly</title>
 <meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly turns your skills and passions into a real business with AI-matched ideas, launch blueprints, and weekly sprints.' %>">
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
@@ -88,6 +88,7 @@
     <% } %>
   </div>
 </nav>
+<% if (user) { %><%- include('appnav') %><% } %>
 <% if (typeof pendingDeletion !== 'undefined' && pendingDeletion) { %>
 <div class="warn-banner">⚠️ Your account is scheduled for permanent deletion on <%= new Date(new Date(pendingDeletion).getTime() + 7*86400000).toLocaleDateString() %>. <form method="post" action="/account/cancel-deletion" class="inline"><button class="btn btn-sm btn-primary">Cancel deletion</button></form></div>
 <% } %>
