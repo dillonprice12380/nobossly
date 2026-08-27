@@ -10,6 +10,22 @@ const { attachUser, requireAuth, requireAdmin, requirePaid } = require('./src/mi
 const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Canonical host redirect, kept first so it runs ahead of every other
+// middleware and route. www.nobossly.com and nobossly.com were both live and
+// separately crawlable — Seobility flags this directly ("This website uses
+// both www and non-www URLs. This can result in duplicate content and
+// impact your rankings."), the same issue found and fixed on EnRoute Jobs.
+// Apex is canonical here too — sitemap.xml's own base URL below already
+// uses it. req.hostname reads the raw Host header (no trust-proxy config
+// needed for that), so this holds regardless of what's in front of the app.
+app.use((req, res, next) => {
+  if (req.hostname === 'www.nobossly.com') {
+    return res.redirect(301, `https://nobossly.com${req.originalUrl}`);
+  }
+  next();
+});
+
 const billing = require('./src/routes/billing');
 app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
 
