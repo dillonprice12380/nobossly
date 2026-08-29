@@ -33,8 +33,32 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Views need the current path to highlight the active dashboard section.
-app.use((req, res, next) => { res.locals.currentPath = req.path; next(); });
+// Views need the current path to highlight the active dashboard section, and
+// every page needs a self-referencing canonical. There was none anywhere, so
+// for as long as www and apex were both live every page was indexable at two
+// hostnames, and the faceted guides listing (?q=, ?cat=, ?loc=) multiplied
+// that again into a large duplicate URL space with no consolidating signal.
+//
+// Canonical is built on the apex host from the clean path. Only `page` is
+// carried through, so paginated listings self-canonicalize while filter
+// combinations collapse onto the unfiltered listing — Google's documented
+// handling for faceted navigation. Deliberately no noindex alongside this:
+// a noindex on a URL that canonicalizes to a page we want indexed is a
+// conflicting signal and Google may apply it to the canonical target.
+const CANONICAL_HOST = 'https://nobossly.com';
+const CANONICAL_KEEP = ['page'];
+app.use((req, res, next) => {
+  res.locals.currentPath = req.path;
+  const clean = req.path.length > 1 ? (req.path.replace(/\/+$/, '') || '/') : '/';
+  const keep = new URLSearchParams();
+  for (const k of CANONICAL_KEEP) {
+    const v = req.query[k];
+    if (typeof v === 'string' && /^[0-9]+$/.test(v) && v !== '1') keep.set(k, v);
+  }
+  const qs = keep.toString();
+  res.locals.canonicalUrl = CANONICAL_HOST + clean + (qs ? '?' + qs : '');
+  next();
+});
 
 // Turbo Drive submits forms over fetch and expects the redirect that follows to
 // be a 303, so the browser re-requests the destination as a GET. Express sends
