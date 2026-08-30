@@ -19,10 +19,20 @@ router.get('/', async (req, res, next) => {
     const accMap = {};
     (acc || []).forEach(a => accMap[a.challenge_id] = a);
     const all = challenges || [];
+    // Accepted-and-active challenges float to the top, completed sink to the
+    // bottom, everything else keeps its curated position in between. Without
+    // this, an accepted challenge stays buried wherever `position` put it.
+    const rank = c => {
+      const a = accMap[c.id];
+      if (a && a.status === 'active') return 0;
+      if (a && a.status === 'completed') return 2;
+      return 1;
+    };
+    const sorted = arr => arr.slice().sort((x, y) => rank(x) - rank(y) || (x.position || 0) - (y.position || 0));
     res.render('challenges', {
       title: 'Challenges',
-      challenges: all.filter(c => !c.is_cohort),
-      cohorts: all.filter(c => c.is_cohort),
+      challenges: sorted(all.filter(c => !c.is_cohort)),
+      cohorts: sorted(all.filter(c => c.is_cohort)),
       accMap, paid, custom: custom || [], msg: req.query.msg || null,
       streak: { days: req.profile.streak_days || 0, longest: req.profile.longest_streak || 0 }
     });
