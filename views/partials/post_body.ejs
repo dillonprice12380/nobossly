@@ -23,10 +23,10 @@
       </details>
     <% } %>
     <div class="article-body"><%- post.body %></div>
-    <% if (isGuide) { %>
+    <% if (isGuide || isBlog) { %>
       <div class="cta-band">
-        <p>Ready to turn this into a real business? NoBossly matches you with a validated idea and a step-by-step plan to launch it.</p>
-        <a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= user ? '/dashboard' : '/signup' %>"><%= user ? 'Go to your dashboard' : 'Get started free' %></a>
+        <p><strong>You just read the manual — now play the game.</strong> NoBossly turns starting a business into ten real-life levels: draw your Founder Compass, choose your own idea, and climb to your first sale with an AI advisor and a community of witnesses.</p>
+        <a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= user ? '/dashboard' : '/signup' %>"><%= user ? 'Back to the climb →' : 'Draw my Founder Compass — free →' %></a>
       </div>
     <% } %>
   </article>
