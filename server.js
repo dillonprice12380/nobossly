@@ -115,7 +115,7 @@ app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'AI-Powered Business Builder', bodyTheme: 'theme-dark', metaDescription: 'NoBossly matches you with AI-generated business ideas, builds your launch blueprint, and keeps you accountable with sprints, challenges, and a founder community.' });
+  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
 });
 
 app.get('/robots.txt', (req, res) => {
