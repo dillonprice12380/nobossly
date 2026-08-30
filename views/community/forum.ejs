@@ -1,7 +1,10 @@
 <%- include('../partials/head') %>
 <div class="page-head">
   <div><h1><svg class="icon icon-lg"><use href="#i-community"/></svg> Community</h1><p class="muted">Connect with other founders.</p></div>
-  <% if (user) { %><a class="btn btn-ghost" href="/groups"><svg class="icon"><use href="#i-team"/></svg> Groups</a> <a class="btn btn-ghost" href="/members"><svg class="icon"><use href="#i-profile"/></svg> Members</a> <a class="btn btn-primary" href="/community/collab"><svg class="icon"><use href="#i-collab"/></svg> Collaboration hub</a><% } else { %><a class="btn btn-primary" href="/signup">Join the community</a><% } %>
+  <%# Groups and the Collaboration hub are parked until there are members to
+      fill them — empty social surfaces signal a ghost town. Routes stay
+      mounted; restore the buttons when the community has people. %>
+  <% if (user) { %><a class="btn btn-ghost" href="/members"><svg class="icon"><use href="#i-profile"/></svg> Members</a><% } else { %><a class="btn btn-primary" href="/signup">Join the community</a><% } %>
 </div>
 
 <form method="get" action="/community" class="card forum-search">
@@ -18,7 +21,7 @@
 <div class="forum-layout">
   <div class="forum-main">
     <% if (results) { %>
-      <h3><%= results.length %> result<%= results.length === 1 ? '' : 's' %><%= q ? ' for "' + q + '"' : '' %><%= filterTag ? ' tagged #' + filterTag : '' %></h3>
+      <h3><%= results.length %> result<%= results.length === 1 ? '' : 's' %><%= q ? ' for \"' + q + '\"' : '' %><%= filterTag ? ' tagged #' + filterTag : '' %></h3>
       <% results.forEach(t => { %>
         <a class="card thread-row" href="/community/t/<%= t.id %>">
           <div><strong><%= t.title %></strong>

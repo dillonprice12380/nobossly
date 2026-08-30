@@ -2,6 +2,10 @@
   // Section nav for the logged-in workspace. Renders as a tab row on desktop and
   // a fixed bottom bar on mobile. Only appears inside the app itself, never on
   // marketing or article pages.
+  //
+  // Teams (/collaborations) is deliberately absent: the collab hub has no
+  // members yet, and an empty team surface reads as a ghost town to a new
+  // signup. The route stays mounted; re-add the tab once there are people.
   var _p = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
   var APP_NAV = [
     { href: '/dashboard',      label: 'Home',       short: 'Home',   icon: 'i-suitcase',  match: ['/dashboard'] },
@@ -9,7 +13,6 @@
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
     { href: '/challenges',     label: 'Challenges', short: 'Goals',  icon: 'i-challenge', match: ['/challenges'] },
     { href: '/milestones',     label: 'Milestones', short: 'Wins',   icon: 'i-milestone', match: ['/milestones'] },
-    { href: '/collaborations', label: 'Teams',      short: 'Teams',  icon: 'i-team',      match: ['/collaborations'] },
     { href: '/budget',         label: 'Budget',     short: 'Budget', icon: 'i-market',    match: ['/budget'] },
     { href: '/community',      label: 'Community',  short: 'Forum',  icon: 'i-community', match: ['/community'] }
   ];

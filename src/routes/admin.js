@@ -220,13 +220,14 @@ router.post('/guides/save', async (req, res, next) => {
     const rawMode = b.mode === 'raw';
     let blocks = null;
     if (!rawMode) { try { blocks = b.blocks ? JSON.parse(b.blocks) : null; } catch (_) { blocks = null; } }
+    // cms_guides has no featured_image column (dropped) — writing it made
+    // PostgREST reject every guide save from this form.
     const row = {
       slug: slugify(b.slug || b.title),
       title: (b.title || 'Untitled').trim(),
       excerpt: b.excerpt || '',
       body: rawMode ? (b.body || '') : (blocks && blocks.length ? blocksToHtml(blocks) : (b.body || '')),
       blocks: rawMode ? null : blocks,
-      featured_image: b.featured_image || null,
       status: b.status === 'published' ? 'published' : 'draft',
       seo_title: b.seo_title || null,
       seo_description: b.seo_description || null,
