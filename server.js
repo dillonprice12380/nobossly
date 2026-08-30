@@ -90,6 +90,7 @@ app.use((req, res, next) => {
 
 app.use('/', require('./src/routes/auth'));
 app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
+app.use('/compass', requireAuth, require('./src/routes/compass')); // Founder Compass + draft-your-idea advisor
 app.use('/ideas', requireAuth, require('./src/routes/ideas'));
 app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
 app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling

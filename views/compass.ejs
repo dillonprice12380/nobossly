@@ -8,78 +8,78 @@
   var avoid = Array.isArray(d.avoid_list) ? d.avoid_list : [];
   var kit = Array.isArray(d.toolkit) ? d.toolkit : [];
   var tempChip = function (t) {
-    if (t === 'hot') return '\uD83D\uDD25 hot';
-    if (t === 'warm') return '\uD83C\uDF24\uFE0F warm';
-    return '\uD83C\uDF31 steady';
+    if (t === 'hot') return '🔥 hot';
+    if (t === 'warm') return '🌤️ warm';
+    return '🌱 steady';
   };
 %>
 <div class="page-head">
-  <div><h1>\uD83E\uDDED Your Founder Compass</h1>
-  <p class="muted">Your map, your call \u2014 the Compass sharpens your judgement, you choose the direction.</p></div>
+  <div><h1>🧭 Your Founder Compass</h1>
+  <p class="muted">Your map, your call — the Compass sharpens your judgement, you choose the direction.</p></div>
   <a class="btn btn-ghost" href="/compass/generate">Redraw Compass</a>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
 <div class="card" style="text-align:center">
-  <div style="font-size:2.6rem;line-height:1"><%= arch.emoji || '\uD83E\uDDED' %></div>
+  <div style="font-size:2.6rem;line-height:1"><%= arch.emoji || '🧭' %></div>
   <h2 style="margin:.35rem 0 .15rem"><%= arch.name || 'Your archetype' %></h2>
   <p style="margin:.2rem 0"><strong><%= arch.tagline || '' %></strong></p>
   <p class="muted" style="max-width:44rem;margin:.4rem auto 0"><%= arch.description || '' %></p>
 </div>
 
 <div class="card">
-  <h2>\uD83C\uDF92 Your loadout</h2>
+  <h2>🎒 Your loadout</h2>
   <div class="grid">
     <div><h3 class="small">Strengths</h3><% (lo.strengths || []).forEach(function (x) { %><span class="chip" style="margin:.15rem .2rem .15rem 0;display:inline-block"><%= x %></span><% }) %></div>
     <div><h3 class="small">Unfair advantages</h3><% (lo.advantages || []).forEach(function (x) { %><span class="chip chip-success" style="margin:.15rem .2rem .15rem 0;display:inline-block"><%= x %></span><% }) %></div>
-    <div><h3 class="small">Binding constraints</h3><% (lo.constraints || []).forEach(function (x) { %><p class="muted small" style="margin:.2rem 0">\u26D3\uFE0F <%= x %></p><% }) %></div>
+    <div><h3 class="small">Binding constraints</h3><% (lo.constraints || []).forEach(function (x) { %><p class="muted small" style="margin:.2rem 0">⛓️ <%= x %></p><% }) %></div>
   </div>
   <% if ((lo.honest_notes || []).length) { %>
     <div style="border-top:1px solid var(--border);margin-top:.8rem;padding-top:.7rem">
       <h3 class="small">Straight talk</h3>
-      <% lo.honest_notes.forEach(function (x) { %><p class="small" style="margin:.25rem 0">\uD83D\uDCAC <%= x %></p><% }) %>
+      <% lo.honest_notes.forEach(function (x) { %><p class="small" style="margin:.25rem 0">💬 <%= x %></p><% }) %>
     </div>
   <% } %>
 </div>
 
-<h2 style="margin:1.1rem 0 .5rem">\uD83D\uDDFA\uFE0F <%= compass.founder_path === 'existing' ? 'Your strategic directions' : 'Territories worth exploring' %></h2>
+<h2 style="margin:1.1rem 0 .5rem">🗺️ <%= compass.founder_path === 'existing' ? 'Your strategic directions' : 'Territories worth exploring' %></h2>
 <div class="grid">
   <% terrs.forEach(function (t) { %>
     <div class="card">
       <div class="page-head" style="margin-bottom:.3rem"><h3 style="margin:0"><%= t.name || '' %></h3><span class="chip"><%= tempChip(t.temperature) %></span></div>
       <p class="small"><%= t.why_you || '' %></p>
-      <% if ((t.example_plays || []).length) { %><p class="muted small" style="margin:.35rem 0 0"><strong>Example plays:</strong> <%= (t.example_plays || []).join(' \u00b7 ') %></p><% } %>
-      <% if (t.watch_out) { %><p class="muted small" style="margin:.35rem 0 0">\u26A0\uFE0F <%= t.watch_out %></p><% } %>
+      <% if ((t.example_plays || []).length) { %><p class="muted small" style="margin:.35rem 0 0"><strong>Example plays:</strong> <%= (t.example_plays || []).join(' · ') %></p><% } %>
+      <% if (t.watch_out) { %><p class="muted small" style="margin:.35rem 0 0">⚠️ <%= t.watch_out %></p><% } %>
     </div>
   <% }) %>
 </div>
 
 <div class="grid" style="margin-top:1rem">
   <div class="card">
-    <h2>\u2705 Your 5-point fit test</h2>
-    <p class="muted small">Any idea you choose \u2014 yours or anyone's \u2014 should pass these. They came from your own answers.</p>
+    <h2>✅ Your 5-point fit test</h2>
+    <p class="muted small">Any idea you choose — yours or anyone's — should pass these. They came from your own answers.</p>
     <ol style="padding-left:1.2rem;margin:.5rem 0 0">
       <% fit.forEach(function (f) { %><li style="margin:.4rem 0"><strong><%= f.criterion || '' %></strong><br><span class="muted small"><%= f.why || '' %></span></li><% }) %>
     </ol>
   </div>
   <div class="card">
-    <h2>\uD83D\uDEAB Tempting, but not for you</h2>
+    <h2>🚫 Tempting, but not for you</h2>
     <% avoid.forEach(function (a) { %>
       <p style="margin:.45rem 0"><strong><%= a.territory || '' %></strong><br><span class="muted small"><%= a.reason || '' %></span></p>
     <% }) %>
     <% if (kit.length) { %>
       <div style="border-top:1px solid var(--border);margin-top:.7rem;padding-top:.6rem">
-        <h3 class="small">\uD83E\uDDF0 Starter toolkit</h3>
-        <% kit.forEach(function (k) { %><p class="small" style="margin:.25rem 0"><strong><%= k.name || '' %></strong> \u2014 <%= k.purpose || '' %> <span class="chip" style="font-size:.7rem"><%= k.cost || '' %></span></p><% }) %>
+        <h3 class="small">🧰 Starter toolkit</h3>
+        <% kit.forEach(function (k) { %><p class="small" style="margin:.25rem 0"><strong><%= k.name || '' %></strong> — <%= k.purpose || '' %> <span class="chip" style="font-size:.7rem"><%= k.cost || '' %></span></p><% }) %>
       </div>
     <% } %>
   </div>
 </div>
 
 <div class="card" style="margin-top:1rem">
-  <h2>\u270D\uFE0F Draft YOUR idea</h2>
-  <p class="muted small">You choose the direction \u2014 in your own words. Your advisor will stress-test it against your fit test and the live market, show you where it holds and where it strains, and offer a sharper wedge. Then it's your call. Takes about a minute.</p>
-  <form method="post" action="/compass/draft" data-turbo="false" onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Your advisor is thinking\u2026 (about a minute)';">
+  <h2>✍️ Draft YOUR idea</h2>
+  <p class="muted small">You choose the direction — in your own words. Your advisor will stress-test it against your fit test and the live market, show you where it holds and where it strains, and offer a sharper wedge. Then it's your call. Takes about a minute.</p>
+  <form method="post" action="/compass/draft" data-turbo="false" onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Your advisor is thinking… (about a minute)';">
     <label class="small">Idea name *<input name="name" maxlength="140" required placeholder="e.g. Route-Ready Bookkeeping"></label>
     <label class="small">One-liner<input name="tagline" maxlength="200" placeholder="What it does, in one sentence"></label>
     <label class="small">Describe it<textarea name="description" rows="3" maxlength="2000" placeholder="What you'd offer, and roughly how"></textarea></label>

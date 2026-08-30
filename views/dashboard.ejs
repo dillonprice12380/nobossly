@@ -36,12 +36,12 @@
 <div class="card">
   <h2><svg class="icon icon-lg"><use href="#i-suitcase"/></svg> Workspace</h2>
   <div class="workspace-grid">
-    <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>Ideas</strong><span class="muted small">AI business ideas</span></a>
+    <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Your founder map</span></a>
+    <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>Ideas</strong><span class="muted small">Your ideas & advisor</span></a>
     <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
     <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
     <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Push your limits<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
     <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses & budgets<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
-    
   </div>
 </div>
 
@@ -70,8 +70,8 @@
       <p>Pick an idea, build its blueprint, then launch your first 7-day sprint.</p>
       <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/ideas">Browse your ideas</a>
     <% } else { %>
-      <p>Start by generating your AI-matched business ideas.</p>
-      <a class="btn btn-primary" href="/ideas/generate">✨ Generate ideas</a>
+      <p>Start with your Founder Compass — your archetype, your strengths, and the territories worth exploring. Then draft your idea and run it past your advisor.</p>
+      <a class="btn btn-primary" href="/compass">🧭 Get your Founder Compass</a>
     <% } %>
   </div>
 <% } %>
