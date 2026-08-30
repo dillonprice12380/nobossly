@@ -1,0 +1,184 @@
+const router = require('express').Router();
+const ai = require('../ai');
+const cai = require('../compass_ai');
+const qsvc = require('../questionnaires');
+const { awardXP } = require('../xp');
+
+const LABELS = {
+  existing: 'Reading your business and the market around it, then drawing your Compass\u2026',
+  idea: 'Reading your idea against the live market, then drawing your Compass\u2026',
+  exploring: 'Reading your profile and drawing your Founder Compass\u2026'
+};
+
+const STEPS = path => path === 'exploring' ? [
+  { id: 'queued', label: 'Reading your questionnaire answers' },
+  { id: 'generate', label: 'Naming your archetype and mapping your territories' },
+  { id: 'save', label: 'Writing your fit test, avoid list and toolkit' }
+] : [
+  { id: 'queued', label: 'Reading your questionnaire answers' },
+  { id: 'scan', label: 'Searching the live market around you' },
+  { id: 'generate', label: 'Naming your archetype and mapping your territories' },
+  { id: 'save', label: 'Writing your fit test, avoid list and toolkit' }
+];
+
+const FLOORS = { queued: 2, scan: 8, generate: 40, generateNoScan: 8, save: 90 };
+
+// The Compass page: latest compass, or route the user to generate one.
+router.get('/', async (req, res, next) => {
+  try {
+    const { data: compass } = await req.sb.from('founder_compasses').select('*')
+      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!compass) {
+      const q = await qsvc.latestCompleted(req.sb, req.user.id);
+      return res.redirect(q ? '/compass/generate' : '/questionnaire');
+    }
+    res.render('compass', { title: 'Your Founder Compass', compass, msg: req.query.msg || null });
+  } catch (e) { next(e); }
+});
+
+router.get('/generate', async (req, res, next) => {
+  try {
+    const q = await qsvc.latestCompleted(req.sb, req.user.id);
+    if (!q) return res.redirect('/questionnaire');
+    const path = ai.pathOf(q);
+    res.render('generating', { title: 'Drawing your Compass', action: '/compass/generate', label: LABELS[path], steps: STEPS(path) });
+  } catch (e) { next(e); }
+});
+
+async function runCompassGeneration(req, q, jobId) {
+  const sb = req.sb;
+  const path = ai.pathOf(q);
+  const patchJob = patch => sb.from('generation_jobs')
+    .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
+    .then(() => {}, e => console.error('compass job update', e && e.message));
+  const report = (stage, progress, label) => patchJob({ stage, progress, stage_label: label || (STEPS(path).find(s => s.id === stage) || {}).label || '' });
+  try {
+    await report('queued', FLOORS.queued);
+    let scan = null;
+    if (path !== 'exploring') {
+      await report('scan', FLOORS.scan);
+      try { scan = await ai.marketScan(req.accessToken, q); }
+      catch (err) { console.error('compass market scan', err && err.message); }
+    }
+    await report('generate', path === 'exploring' ? FLOORS.generateNoScan : FLOORS.generate);
+    const data = await cai.generateCompass(req.accessToken, q, scan);
+    await report('save', FLOORS.save);
+    const { error } = await sb.from('founder_compasses').insert({
+      user_id: req.user.id, questionnaire_id: q.id, founder_path: path, data
+    });
+    if (error) throw error;
+    await awardXP(sb, req.user.id, req.profile, 25, 'Founder Compass drawn', 'founder_compasses', null);
+    await patchJob({ status: 'done', progress: 100, stage: 'done', redirect: '/compass' });
+  } catch (e) {
+    console.error('compass generation', e);
+    await patchJob({ status: 'error', error: 'Compass generation failed: ' + e.message });
+  }
+}
+
+router.post('/generate', async (req, res) => {
+  try {
+    const q = await qsvc.latestCompleted(req.sb, req.user.id);
+    if (!q) return res.json({ redirect: '/questionnaire' });
+    const { data: job, error: jobErr } = await req.sb.from('generation_jobs')
+      .insert({ user_id: req.user.id, kind: 'compass' }).select('id').maybeSingle();
+    if (jobErr || !job) throw (jobErr || new Error('could not create generation job'));
+    res.json({ job: job.id });
+    runCompassGeneration(req, q, job.id);
+  } catch (e) {
+    console.error('compass generation start', e);
+    res.json({ error: 'Compass generation failed to start: ' + e.message });
+  }
+});
+
+const s = (v, n) => (v == null ? '' : String(v)).trim().slice(0, n || 400);
+
+function cleanCompetitors(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = raw.slice(0, 3).map(c => {
+    if (!c || typeof c !== 'object') return null;
+    const name = s(c.name, 120);
+    if (!name) return null;
+    return { name, what_they_do: s(c.what_they_do), strength: s(c.strength), weakness: s(c.weakness), your_edge: s(c.your_edge) };
+  }).filter(Boolean);
+  return out.length ? out : null;
+}
+
+async function runAdvisor(req, idea, compassData, q, draft) {
+  const adv = await cai.adviseIdea(req.accessToken, q, compassData, draft);
+  const patch = {
+    name: s(adv.name, 140) || idea.name,
+    tagline: s(adv.tagline, 200) || idea.tagline,
+    category: s(adv.category, 80) || 'Your idea',
+    profile_summary: s(adv.profile_summary, 1000),
+    why_you: s(adv.why_you, 1000),
+    market_analysis: s(adv.market_analysis, 1500),
+    competitor_landscape: s(adv.competitor_landscape, 1000),
+    competitors: cleanCompetitors(adv.competitors),
+    success_likelihood: Math.min(100, Math.max(0, parseInt(adv.success_likelihood, 10) || 50)),
+    demand_score: Math.min(10, Math.max(1, parseInt(adv.demand_score, 10) || 5)),
+    passion_score: Math.min(10, Math.max(1, parseInt(adv.passion_score, 10) || 5)),
+    time_to_revenue: s(adv.time_to_revenue, 60), startup_cost_lean: s(adv.startup_cost_lean, 60),
+    startup_cost_standard: s(adv.startup_cost_standard, 60), startup_cost_full: s(adv.startup_cost_full, 60),
+    legal_nuances: s(adv.legal_nuances, 600), first_steps: s(adv.first_steps, 2000),
+    advisor: {
+      fit_results: Array.isArray(adv.fit_results) ? adv.fit_results.slice(0, 5).map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) })) : null,
+      sharper_version: s(adv.sharper_version, 800),
+      considerations: Array.isArray(adv.considerations) ? adv.considerations.slice(0, 5).map(c => s(c, 300)).filter(Boolean) : null,
+      advised_at: new Date().toISOString()
+    },
+    updated_at: new Date().toISOString()
+  };
+  await req.sb.from('generated_ideas').update(patch).eq('id', idea.id).eq('user_id', req.user.id);
+}
+
+// The founder drafts THEIR idea; the advisor stress-tests it against their
+// Compass. The idea is saved first so a failed advisory never loses the draft.
+router.post('/draft', async (req, res, next) => {
+  try {
+    const b = req.body;
+    const name = s(b.name, 140);
+    if (!name) return res.redirect('/compass?msg=' + encodeURIComponent('Give your idea a name to get started.'));
+    const q = await qsvc.latestCompleted(req.sb, req.user.id);
+    if (!q) return res.redirect('/questionnaire');
+    const { data: compass } = await req.sb.from('founder_compasses').select('*')
+      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const draft = { name, tagline: s(b.tagline, 200), description: s(b.description, 2000), problem: s(b.problem, 1000), customer: s(b.customer, 500), monetization: s(b.monetization, 500) };
+    const { count } = await req.sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
+    const { data: idea, error } = await req.sb.from('generated_ideas').insert({
+      user_id: req.user.id, questionnaire_id: q.id, source: 'user',
+      name: draft.name, tagline: draft.tagline, category: 'Your idea',
+      profile_summary: draft.description, why_you: '',
+      status: 'active', position: (count || 0)
+    }).select('*').maybeSingle();
+    if (error || !idea) throw (error || new Error('could not save your idea'));
+    await awardXP(req.sb, req.user.id, req.profile, 15, 'Drafted your own idea: ' + draft.name, 'generated_ideas', idea.id);
+    try {
+      await runAdvisor(req, idea, compass && compass.data, q, draft);
+      return res.redirect('/ideas/' + idea.id);
+    } catch (err) {
+      console.error('advisor', err && err.message);
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your idea is saved. The advisor could not run just now (' + err.message + ') \u2014 you can retry from your Compass.'));
+    }
+  } catch (e) { next(e); }
+});
+
+// Re-run the advisor on a user-authored idea (e.g. after the first pass failed
+// or after they rethink the draft).
+router.post('/draft/:id/advise', async (req, res, next) => {
+  try {
+    const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!idea) return res.redirect('/compass');
+    const q = await qsvc.latestCompleted(req.sb, req.user.id);
+    const { data: compass } = await req.sb.from('founder_compasses').select('*')
+      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const draft = { name: idea.name, tagline: idea.tagline, description: idea.profile_summary, problem: '', customer: '', monetization: '' };
+    try {
+      await runAdvisor(req, idea, compass && compass.data, q || {}, draft);
+      return res.redirect('/ideas/' + idea.id);
+    } catch (err) {
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('The advisor could not run: ' + err.message));
+    }
+  } catch (e) { next(e); }
+});
+
+module.exports = router;

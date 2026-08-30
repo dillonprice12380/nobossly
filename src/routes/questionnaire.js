@@ -207,11 +207,13 @@ router.post('/', async (req, res, next) => {
 
     if (step < STEPS) return res.redirect('/questionnaire?step=' + (step + 1));
 
-    // Final step: compute readiness, mark complete
+    // Final step: compute readiness, mark complete, then draw the Founder
+    // Compass — the questionnaire's output is a judgement-sharpening map the
+    // founder chooses from, not a list of prescribed businesses.
     const q = await qs.byId(req.sb, req.user.id, runId);
     await req.sb.from('questionnaire_responses').update({ completed: true, readiness_score: readinessScore(q) }).eq('id', q.id);
     await req.sb.from('profiles').update({ onboarding_completed: true, display_name: q.founder_name || undefined }).eq('id', req.user.id);
-    res.redirect('/ideas/generate');
+    res.redirect('/compass/generate');
   } catch (e) { next(e); }
 });
 
