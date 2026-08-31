@@ -59,8 +59,12 @@
   }
   window.nbCelebrate = celebrate;
 
-  // --- Quest accepted: popup (audio intentionally removed; clips are being
-  // replaced — the popup runs silent until the new soundbites are wired in) --
+  // --- Quest accepted: popup + soundbite --------------------------------
+  // The clip is served by our own app at /challenges/sound (embedded in the
+  // database, integrity-verified). Playback must start inside the submit
+  // gesture; Turbo swaps the <body> without a document reload, so the Audio
+  // object keeps playing across the navigation. Failure is silent — the
+  // popup still shows.
   function questPopup() {
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
@@ -85,13 +89,18 @@
   }
   window.nbQuestPopup = questPopup;
 
-  // Catch the accept form on its way out and flag the popup to show on the
-  // page that comes back.
+  // Catch the accept form on its way out: start the sound in the gesture,
+  // flag the popup to show on the page that comes back.
   document.addEventListener('submit', e => {
     const form = e.target;
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
     if (!/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) return;
+    try {
+      const clip = new Audio('/challenges/sound');
+      clip.volume = 0.9;
+      clip.play().catch(() => { /* autoplay blocked or offline — stay silent */ });
+    } catch (_) { /* audio unsupported — stay silent */ }
     try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
   });
 
