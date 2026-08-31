@@ -30,17 +30,18 @@
 
 <%# Active challenges sit at the top of the dashboard — an accepted challenge
     is a commitment the founder just made, so it should be the first thing
-    they see, not buried under the workspace grid below the fold. %>
+    they see. Curated AND AI-custom challenges both pin here; the form routes
+    differ (custom challenges live in their own table). %>
 <% if (typeof pinned !== 'undefined' && pinned.length) { %>
   <div class="card challenge-pin">
     <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active challenges</h2>
-    <% pinned.forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); %>
+    <% pinned.forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/challenges/custom/' + a.id : '/challenges/' + a.challenge_id; %>
       <div class="milestone-row">
         <div><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
-        <p class="muted small"><%= a.duration_days %>-day challenge · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP</p></div>
+        <p class="muted small"><%= a.duration_days %>-day challenge · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🤖 tailored' : '' %></p></div>
         <div class="cta-row" style="margin:0">
-          <form method="post" action="/challenges/<%= a.challenge_id %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form>
-          <form method="post" action="/challenges/<%= a.challenge_id %>/abandon" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+          <form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form>
+          <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? It comes off your board and you can re-accept it later.')"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Abandon</button></form>
         </div>
       </div>
     <% }) %>

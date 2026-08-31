@@ -8,11 +8,12 @@ router.get('/', async (req, res, next) => {
     const p = req.profile || {};
     if (!p.onboarding_completed) return res.redirect('/questionnaire');
 
-    const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }] = await Promise.all([
+    const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }, { data: customAcc }] = await Promise.all([
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       req.sb.from('generated_ideas').select('id,name,tagline,status,is_favorited,success_likelihood').eq('user_id', req.user.id).order('position'),
       req.sb.from('founder_levels').select('*').order('xp_required'),
-      req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date')
+      req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
+      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date')
     ]);
     let pinned = [];
     if (acc && acc.length) {
@@ -20,6 +21,16 @@ router.get('/', async (req, res, next) => {
       const chMap = {}; (chs || []).forEach(c => chMap[c.id] = c);
       pinned = acc.map(a => ({ ...a, challenge: chMap[a.challenge_id] || {} }));
     }
+    // AI-tailored (custom) challenges pin alongside curated ones — an accepted
+    // commitment is an accepted commitment, whichever table it lives in.
+    (customAcc || []).forEach(c => {
+      pinned.push({
+        custom: true, id: c.id, challenge_id: c.id,
+        duration_days: c.duration_days, due_date: c.due_date,
+        challenge: { title: c.title, emoji: c.emoji || '\ud83c\udfc1', xp_reward: c.xp_reward || 0 }
+      });
+    });
+    pinned.sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
 
     let tasks = [];
     let checkinToday = null;
@@ -34,13 +45,14 @@ router.get('/', async (req, res, next) => {
 
     // The Coach: rule-based, real-time guidance matched to exactly where this
     // founder is — no AI calls, so it costs nothing and renders instantly.
+    const allActive = (acc || []).concat(customAcc || []);
     const coach = await getGuidance(req.sb, req.user, p, {
-      sprint, acceptances: acc || [], checkinToday: !!checkinToday,
+      sprint, acceptances: allActive, checkinToday: !!checkinToday,
       ideasCount: (ideas || []).length, plan: res.locals.plan
     });
 
     const lvls = levels || [];
-    const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '🌱' };
+    const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '\ud83c\udf31' };
     const next = lvls.find(l => l.level === (p.current_level || 1) + 1);
 
     // progress analytics (paid)
@@ -83,7 +95,7 @@ router.get('/sprint/start/:blueprintId', async (req, res, next) => {
   try {
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.blueprintId).eq('user_id', req.user.id).maybeSingle();
     if (!bp) return res.redirect('/ideas');
-    res.render('generating', { title: 'Planning sprint', action: '/dashboard/sprint/start/' + bp.id, label: 'Planning your first 7-day sprint…' });
+    res.render('generating', { title: 'Planning sprint', action: '/dashboard/sprint/start/' + bp.id, label: 'Planning your first 7-day sprint\u2026' });
   } catch (e) { next(e); }
 });
 
