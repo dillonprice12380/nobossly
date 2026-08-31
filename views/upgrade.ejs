@@ -1,0 +1,16 @@
+<%- include('partials/head') %>
+<div class="card form-card" style="max-width:34rem">
+  <p class="chip" style="margin:0 0 .8rem">🔒 Founder plan</p>
+  <h1 style="margin:0 0 .5rem;font-size:1.6rem"><%= feature.title %></h1>
+  <p class="muted" style="margin:0 0 1rem"><%= feature.blurb %></p>
+
+  <ul class="feature-list" style="margin:0 0 1.2rem">
+    <% (feature.gets || []).forEach(function (g) { %><li><%= g %></li><% }) %>
+  </ul>
+
+  <div class="cta-row" style="margin:0">
+    <a class="btn btn-primary" href="/pricing?upgrade=1">See plans →</a>
+    <a class="btn btn-ghost" href="<%= back.href %>"><%= back.label %></a>
+  </div>
+</div>
+<%- include('partials/foot') %>

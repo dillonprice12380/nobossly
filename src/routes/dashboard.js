@@ -33,15 +33,19 @@ router.get('/', async (req, res, next) => {
     });
     pinned.sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
 
+    // The check-in is the daily loop, and it used to be reachable only after a
+    // sprint existed — five gates deep from signup, which is why not one has ever
+    // been logged. It now stands on its own: anyone who has finished onboarding
+    // can check in, sprint or no sprint.
+    const { data: checkinRow } = await req.sb.from('daily_checkins')
+      .select('id').eq('user_id', req.user.id)
+      .eq('checkin_date', new Date().toISOString().slice(0, 10)).maybeSingle();
+    const checkinToday = checkinRow;
+
     let tasks = [];
-    let checkinToday = null;
     if (sprint) {
-      const [{ data: t }, { data: c }] = await Promise.all([
-        req.sb.from('sprint_tasks').select('*').eq('sprint_id', sprint.id).order('position'),
-        req.sb.from('daily_checkins').select('id').eq('user_id', req.user.id).eq('checkin_date', new Date().toISOString().slice(0, 10)).maybeSingle()
-      ]);
+      const { data: t } = await req.sb.from('sprint_tasks').select('*').eq('sprint_id', sprint.id).order('position');
       tasks = t || [];
-      checkinToday = c;
     }
 
     // The Coach: rule-based, real-time guidance matched to exactly where this

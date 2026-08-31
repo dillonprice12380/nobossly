@@ -26,6 +26,10 @@
   var COMPETITION = ['Something niche with less competition', 'Something commonplace with more competition (proven demand)', 'No strong preference'];
   var ENERGIZING = ['Creating things', 'Helping people', 'Solving problems', 'Teaching', 'Selling & persuading', 'Organizing & systems'];
   var MODELS = ['Services / freelancing', 'Digital products', 'E-commerce', 'SaaS / software', 'Content & audience', 'Local business', 'Coaching / consulting'];
+  // Shared by the core step and the matching depth step, so a value chosen in
+  // one always round-trips in the other.
+  var STAGE = ['Registered but not selling yet','Launched, no revenue yet','First few sales','Steady but small revenue','Growing steadily','Revenue is flat or falling'];
+  var REVENUE = ['$0','Under $500','$500-2,000','$2,000-5,000','$5,000-10,000','$10,000-25,000','$25,000+'];
 %>
 <style>
   .path-grid { display: grid; gap: .8rem; margin: 1.1rem 0 .6rem; }
@@ -49,15 +53,35 @@
   .path-desc { grid-column: 2; display: block; font-size: .9rem; font-weight: 400; color: var(--muted); line-height: 1.45; }
   .field-hint { display: block; margin-top: .3rem; font-weight: 400; line-height: 1.4; }
 </style>
+<%
+  // Onboarding is the first two steps. Everything past that is optional depth a
+  // founder opts into after seeing their Compass, so it gets its own framing and
+  // its own progress track rather than pretending to be a seven-step form.
+  var _deep = (typeof deepening !== 'undefined') && deepening;
+  var _reqd = (typeof required !== 'undefined') ? required : 2;
+  var _pct = _deep
+    ? Math.round((step - _reqd) / (steps - _reqd) * 100)
+    : Math.round(step / _reqd * 100);
+%>
 <div class="card form-card">
-  <div class="progress"><div class="progress-bar" style="width:<%= Math.round(step/steps*100) %>%"></div></div>
-  <p class="muted">Step <%= step %> of <%= steps %><% if (typeof run !== 'undefined' && run > 1) { %> · questionnaire #<%= run %><% } %></p>
+  <% if (_deep) { %>
+    <p class="chip" style="margin:0 0 .7rem">🧭 Optional — sharpening your Compass</p>
+  <% } %>
+  <div class="progress"><div class="progress-bar" style="width:<%= _pct %>%"></div></div>
+  <p class="muted">
+    <% if (_deep) { %>
+      Extra <%= step - _reqd %> of <%= steps - _reqd %> · <a href="/compass">stop here and keep my Compass</a>
+    <% } else { %>
+      Step <%= step %> of <%= _reqd %> · about 2 minutes<% if (typeof run !== 'undefined' && run > 1) { %> · questionnaire #<%= run %><% } %>
+    <% } %>
+  </p>
+  <p class="muted small" style="margin:-.35rem 0 .2rem">Every step saves as you go — you can close this and pick up where you left off.</p>
   <form method="post" action="/questionnaire">
     <input type="hidden" name="step" value="<%= step %>">
 
     <% if (step === 1) { %>
       <h2>Where are you starting from?</h2>
-      <p class="muted">This decides which questions you get and how the idea engine reads your situation.</p>
+      <p class="muted">This decides which questions you get. It is seven questions either way &mdash; about two minutes &mdash; and then your Compass is drawn.</p>
       <div class="path-grid">
         <label class="path-card">
           <input type="radio" name="founder_path" value="existing" required <%= path === 'existing' ? 'checked' : '' %>>
@@ -82,6 +106,17 @@
     } else if (path === 'existing') { %>
 
       <% if (step === 2) { %>
+        <h2>The essentials</h2>
+        <p class="muted">Seven questions. That's all it takes to draw your Compass — you can go deeper afterwards if you want to.</p>
+        <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
+        <label>What's the business called?<input name="biz_name" value="<%= q.biz_name || '' %>" required></label>
+        <label>What does it do, in a sentence or two?<textarea name="biz_description" rows="3" required><%= q.biz_description || '' %></textarea></label>
+        <label>What stage is it at?<select name="biz_stage"><%- opts(STAGE, q.biz_stage, 'Choose one…') %></select></label>
+        <label>Roughly what does it bring in each month?<select name="biz_revenue_monthly"><%- opts(REVENUE, q.biz_revenue_monthly, 'Choose one…') %></select></label>
+        <label>What's stuck right now?<textarea name="biz_whats_stuck" rows="2" required placeholder="the bottleneck you'd most like gone"><%= q.biz_whats_stuck || '' %></textarea></label>
+        <label>Hours per week you can commit<select name="hours_per_week"><%- opts(HOURS, q.hours_per_week) %></select></label>
+
+      <% } else if (step === 3) { %>
         <h2>About you</h2>
         <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
         <label>Age range<select name="age_range"><%- opts(AGES, q.age_range) %></select></label>
@@ -91,21 +126,21 @@
         <label>Credentials or qualifications (optional)<input name="credentials" value="<%= q.credentials || '' %>" placeholder="degrees, licenses, certifications"></label>
         <label>Your top skills (comma-separated)<input name="skills" value="<%= (q.skills||[]).join(', ') %>" placeholder="sales, operations, design…" required></label>
 
-      <% } else if (step === 3) { %>
+      <% } else if (step === 4) { %>
         <h2>Your business</h2>
         <label>Business name<input name="biz_name" value="<%= q.biz_name || '' %>" required></label>
         <label>Website<input name="biz_url" type="url" inputmode="url" value="<%= q.biz_url || '' %>" placeholder="https://yourbusiness.com"><span class="muted small field-hint">We'll read your site so the analysis is about your actual business, not what the name suggests. Leave blank if you don't have one yet.</span></label>
         <label>What does it sell, and to whom?<textarea name="biz_description" rows="3" required placeholder="Be specific — the offer, the customer, how it gets delivered."><%= q.biz_description || '' %></textarea></label>
         <label>Everything you actually offer<textarea name="biz_offerings" rows="3" placeholder="List every distinct service, product, job type, or audience — not just the headline one. e.g. remote roles, on-site seasonal work for travelers, visa-sponsored roles that can be on-site or hybrid."><%= q.biz_offerings || '' %></textarea><span class="muted small field-hint">The analysis judges what you list here. Anything you leave out, it won't know about.</span></label>
         <label>What do people get wrong about your business?<textarea name="biz_misconceptions" rows="2" placeholder="e.g. people assume we're just another remote job board"><%= q.biz_misconceptions || '' %></textarea><span class="muted small field-hint">Say what you're mistaken for and why it's wrong — the analysis is told not to repeat that mistake.</span></label>
-        <label>Where is it right now?<select name="biz_stage"><%- opts(['Registered but not selling yet','Launched, no revenue yet','First few sales','Steady but small revenue','Growing steadily','Revenue is flat or falling'], q.biz_stage, 'Choose one…') %></select></label>
+        <label>Where is it right now?<select name="biz_stage"><%- opts(STAGE, q.biz_stage, 'Choose one…') %></select></label>
         <label>How long has it been running?<select name="biz_age"><%- opts(['Less than 3 months','3-6 months','6-12 months','1-2 years','2-5 years','5+ years'], q.biz_age, 'Choose one…') %></select></label>
         <label>Business model<select name="biz_model"><%- opts(MODELS.concat(['Something else']), q.biz_model, 'Choose one…') %></select></label>
         <label>Who do you serve?<select name="target_customer"><%- opts(CUSTOMER, q.target_customer) %></select></label>
 
-      <% } else if (step === 4) { %>
+      <% } else if (step === 5) { %>
         <h2>Traction &amp; money</h2>
-        <label>Current monthly revenue<select name="biz_revenue_monthly"><%- opts(['$0','Under $500','$500-2,000','$2,000-5,000','$5,000-10,000','$10,000-25,000','$25,000+'], q.biz_revenue_monthly, 'Choose one…') %></select></label>
+        <label>Current monthly revenue<select name="biz_revenue_monthly"><%- opts(REVENUE, q.biz_revenue_monthly, 'Choose one…') %></select></label>
         <label>Which way is it moving?<select name="biz_trend"><%- opts(['Growing month over month','Flat','Falling','Too early to tell'], q.biz_trend, 'Choose one…') %></select></label>
         <label>Are you profitable?<select name="biz_profitability"><%- opts(['Losing money','Breaking even','Profitable but thin','Comfortably profitable','Not tracking it yet'], q.biz_profitability, 'Choose one…') %></select></label>
         <label>Paying customers to date<select name="biz_customer_count"><%- opts(['0','1-5','6-20','21-100','100-1,000','1,000+'], q.biz_customer_count, 'Choose one…') %></select></label>
@@ -116,7 +151,7 @@
         <label>Which one actually brings your best customers?<input name="biz_best_channel" value="<%= q.biz_best_channel || '' %>" placeholder="the channel that pays, not the one you post on most"></label>
         <label>Your most important non-revenue number, and how it's moved<input name="biz_traction_metric" value="<%= q.biz_traction_metric || '' %>" placeholder="e.g. job seekers: 65 in May, 350+ now"><span class="muted small field-hint">If you're building supply before revenue, this is the number that matters. Include the dates so the trend is visible.</span></label>
 
-      <% } else if (step === 5) { %>
+      <% } else if (step === 6) { %>
         <h2>What's working, what isn't</h2>
         <label>What's clearly working?<textarea name="biz_whats_working" rows="2" placeholder="the offer, a channel, a customer type, your delivery…"><%= q.biz_whats_working || '' %></textarea></label>
         <label>Where are you stuck?<textarea name="biz_whats_stuck" rows="2" placeholder="be blunt — this drives the analysis"><%= q.biz_whats_stuck || '' %></textarea></label>
@@ -145,6 +180,17 @@
     } else if (path === 'idea') { %>
 
       <% if (step === 2) { %>
+        <h2>The essentials</h2>
+        <p class="muted">Seven questions. That's all it takes to draw your Compass — you can go deeper afterwards if you want to.</p>
+        <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
+        <label>What's the idea?<textarea name="idea_description" rows="3" required placeholder="a sentence or two — rough is fine"><%= q.idea_description || '' %></textarea></label>
+        <label>What problem does it solve?<textarea name="idea_problem" rows="2" required><%= q.idea_problem || '' %></textarea></label>
+        <label>Who's the first customer?<input name="idea_customer" value="<%= q.idea_customer || '' %>" required placeholder="be as specific as you can"></label>
+        <label>Your top skills (comma-separated)<input name="skills" value="<%= (q.skills||[]).join(', ') %>" placeholder="writing, sales, design…" required></label>
+        <label>Hours per week you can commit<select name="hours_per_week"><%- opts(HOURS, q.hours_per_week) %></select></label>
+        <label>Launch budget<select name="launch_budget"><%- opts(BUDGET, q.launch_budget) %></select></label>
+
+      <% } else if (step === 3) { %>
         <h2>About you</h2>
         <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
         <label>Age range<select name="age_range"><%- opts(AGES, q.age_range) %></select></label>
@@ -153,7 +199,7 @@
         <label>Industry / field you know best<input name="industry_field" value="<%= q.industry_field || '' %>" placeholder="e.g. healthcare, retail, software"></label>
         <label>Credentials or qualifications (optional)<input name="credentials" value="<%= q.credentials || '' %>" placeholder="degrees, licenses, certifications"></label>
 
-      <% } else if (step === 3) { %>
+      <% } else if (step === 4) { %>
         <h2>Your background &amp; edge</h2>
         <p class="muted">Ideas are cheap. What you bring to one isn't — this is how we find your angle.</p>
         <label>Your top skills (comma-separated)<input name="skills" value="<%= (q.skills||[]).join(', ') %>" placeholder="writing, sales, design…" required></label>
@@ -166,7 +212,7 @@
         <label>What could you do here that a stranger couldn't?<textarea name="unfair_advantage" rows="2" placeholder="industry access, a credential, lived experience, an audience, a rare skill…"><%= q.unfair_advantage || '' %></textarea></label>
         <label>What do you already have on hand?<textarea name="existing_assets" rows="2" placeholder="audience, network, equipment, savings, software, a first customer…"><%= q.existing_assets || '' %></textarea></label>
 
-      <% } else if (step === 4) { %>
+      <% } else if (step === 5) { %>
         <h2>The idea</h2>
         <label>Describe it in a few sentences<textarea name="idea_description" rows="4" required placeholder="What it is, who buys it, and what they get."><%= q.idea_description || '' %></textarea></label>
         <label>How far along is it?<select name="idea_stage"><%- opts(['Just a thought I keep coming back to','I\'ve researched it a bit','I\'ve talked to potential customers','I have a prototype or first version','I\'ve had informal interest or pre-orders'], q.idea_stage, 'Choose one…') %></select></label>
@@ -175,7 +221,7 @@
         <label>How would it make money?<input name="idea_monetization" value="<%= q.idea_monetization || '' %>" placeholder="e.g. $99/mo subscription, one-off $500 build, 20% commission"></label>
         <label>Why is now the right moment for it?<input name="idea_why_now" value="<%= q.idea_why_now || '' %>" placeholder="what changed — tech, regulation, a habit, a cost"></label>
 
-      <% } else if (step === 5) { %>
+      <% } else if (step === 6) { %>
         <h2>Validation &amp; competition</h2>
         <label>What have you done so far to test whether people want this?<textarea name="idea_validation" rows="3" placeholder="conversations, waitlist, pre-sales, search research — or nothing yet, which is fine to say"><%= q.idea_validation || '' %></textarea></label>
         <label>Who's already doing something like it?<input name="idea_known_competitors" value="<%= q.idea_known_competitors || '' %>" placeholder="name real ones if you know them"></label>
@@ -202,6 +248,19 @@
     } else { %>
 
       <% if (step === 2) { %>
+        <h2>The essentials</h2>
+        <p class="muted">Seven questions. That's all it takes to draw your Compass — you can go deeper afterwards if you want to.</p>
+        <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
+        <label>Your top skills (comma-separated)<input name="skills" value="<%= (q.skills||[]).join(', ') %>" placeholder="writing, sales, design…" required></label>
+        <fieldset><legend>What kind of work energizes you?</legend>
+          <%- checks('energizing_work', ENERGIZING, q.energizing_work) %>
+        </fieldset>
+        <label>Industry / field you know best<input name="industry_field" value="<%= q.industry_field || '' %>" placeholder="e.g. healthcare, retail, software"></label>
+        <label>A problem that genuinely frustrates you<textarea name="problem_pain" rows="2" required><%= q.problem_pain || '' %></textarea></label>
+        <label>Hours per week you can commit<select name="hours_per_week"><%- opts(HOURS, q.hours_per_week) %></select></label>
+        <label>Launch budget<select name="launch_budget"><%- opts(BUDGET, q.launch_budget) %></select></label>
+
+      <% } else if (step === 3) { %>
         <h2>About you</h2>
         <label>Your first name<input name="founder_name" value="<%= q.founder_name || '' %>" required></label>
         <label>Age range<select name="age_range"><%- opts(AGES, q.age_range) %></select></label>
@@ -210,7 +269,7 @@
         <label>Where are you based?<input name="location" value="<%= q.location || '' %>" placeholder="City, country"></label>
         <label>Credentials or qualifications (optional)<input name="credentials" value="<%= q.credentials || '' %>" placeholder="degrees, licenses, certifications"></label>
 
-      <% } else if (step === 3) { %>
+      <% } else if (step === 4) { %>
         <h2>Skills &amp; passions</h2>
         <label>Your top skills (comma-separated)<input name="skills" value="<%= (q.skills||[]).join(', ') %>" placeholder="writing, sales, design…" required></label>
         <label>Hobbies (comma-separated)<input name="hobbies" value="<%= (q.hobbies||[]).join(', ') %>"></label>
@@ -224,7 +283,7 @@
         <label>Tech comfort level (1 = newbie, 5 = builder)<select name="tech_level"><%- opts(SCALE, q.tech_level) %></select></label>
         <label>What do you already have on hand?<textarea name="existing_assets" rows="2" placeholder="audience, network, equipment, savings, a workshop, industry access…"><%= q.existing_assets || '' %></textarea></label>
 
-      <% } else if (step === 4) { %>
+      <% } else if (step === 5) { %>
         <h2>Work style</h2>
         <label>Preferred work mode<select name="work_mode"><%- opts(['Fully online','Local / in-person','Hybrid'], q.work_mode) %></select></label>
         <label>Solo or with others?<select name="team_preference"><%- opts(['Solo founder','Co-founder wanted','Small team eventually'], q.team_preference) %></select></label>
@@ -234,7 +293,7 @@
         <label>Hours per week you can commit<select name="hours_per_week"><%- opts(HOURS, q.hours_per_week) %></select></label>
         <label>How much new skill are you willing to pick up?<select name="learning_appetite"><%- opts(['Use what I already know','Happy to learn a skill or two','I\'ll learn whatever it takes'], q.learning_appetite, 'Choose one…') %></select></label>
 
-      <% } else if (step === 5) { %>
+      <% } else if (step === 6) { %>
         <h2>Goals &amp; constraints</h2>
         <label>Launch budget<select name="launch_budget"><%- opts(BUDGET, q.launch_budget) %></select></label>
         <label>Financial runway<select name="runway"><%- opts(RUNWAY, q.runway) %></select></label>
@@ -267,7 +326,11 @@
     <div class="cta-row">
       <% if (step > 1) { %><a class="btn btn-ghost" href="/questionnaire?step=<%= step-1 %>">Back</a>
       <% } else if (typeof canCancel !== 'undefined' && canCancel) { %><a class="btn btn-ghost" href="/ideas">Cancel</a><% } %>
-      <button class="btn btn-primary"><%= step === steps ? 'Finish & generate my ideas →' : 'Continue →' %></button>
+      <button class="btn btn-primary">
+        <% if (step === _reqd) { %>Draw my Founder Compass →
+        <% } else if (step === steps) { %>Save &amp; redraw my Compass →
+        <% } else { %>Continue →<% } %>
+      </button>
     </div>
   </form>
 </div>

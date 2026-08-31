@@ -4,6 +4,7 @@ const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { ensureClassified, getElectives } = require('../tailor');
+const { gate } = require('../upgrade');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 const nameOf = req => (req.profile.display_name || req.profile.username || 'A founder');
@@ -238,7 +239,7 @@ router.post('/tailored/:id/accept', async (req, res, next) => {
 // ---------- AI-tailored challenge sets (paid) ----------
 router.post('/generate', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'ai_challenges');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/challenges?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor challenges to it.'));
     let items;

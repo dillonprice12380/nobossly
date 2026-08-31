@@ -20,6 +20,18 @@
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
+<%# Onboarding asks seven questions. The rest of the questionnaire is offered
+    here instead, where the founder can see what a sharper Compass would sharpen. %>
+<% if (typeof canDeepen !== 'undefined' && canDeepen) { %>
+  <div class="card" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
+    <div style="flex:1;min-width:16rem">
+      <h2 style="margin:0 0 .2rem">Want a sharper Compass?</h2>
+      <p class="muted small" style="margin:0">This one was drawn from seven answers. Five more short rounds — your constraints, your work style, what you'd regret — and it gets redrawn against the fuller picture. Stop whenever you like; you keep what you have.</p>
+    </div>
+    <a class="btn btn-primary" style="flex:none" href="/questionnaire?step=3">Sharpen it →</a>
+  </div>
+<% } %>
+
 <div class="card" style="text-align:center">
   <div style="font-size:2.6rem;line-height:1"><%= arch.emoji || '🧭' %></div>
   <h2 style="margin:.35rem 0 .15rem"><%= arch.name || 'Your archetype' %></h2>

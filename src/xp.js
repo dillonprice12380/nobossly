@@ -1,4 +1,9 @@
 // XP + streak helpers. All writes use the user's own client (RLS applies).
+//
+// bumpStreak is called ONLY by the daily check-in. It used to run at the end of
+// awardXP too, which meant the streak advanced on any XP event at all — ticking
+// a task, drafting an idea — while the dashboard and homepage sold it as daily
+// check-in discipline. The number and the label now mean the same thing.
 
 async function bumpStreak(sb, userId, profile) {
   try {
@@ -112,7 +117,6 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
         await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
       }
     }
-    await bumpStreak(sb, userId, profile);
     return { newTotal, level, leveledUp: level > current };
   } catch (e) {
     console.error('awardXP', e.message);

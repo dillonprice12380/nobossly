@@ -3,13 +3,14 @@
   <div><h1>Hey <%= profile.display_name || 'founder' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
   <p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
   <% if (levelInfo.next) { %> · <%= levelInfo.next.xp_required - (profile.xp_total||0) %> XP to <%= levelInfo.next.title %><% } %></p></div>
-  <% if (sprint && !checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
-  <% } else if (sprint) { %><span class="chip">✅ Checked in today</span><% } %>
+  <%# The check-in no longer waits on a sprint — it is the daily loop for everyone. %>
+  <% if (!checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
+  <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
 </div>
 
 <div class="stat-row">
   <div class="stat card"><span class="stat-num"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
-  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day streak</span></div>
+  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day check-in streak</span></div>
   <div class="stat card"><span class="stat-num"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
   <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
@@ -66,9 +67,9 @@
     <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Your founder map</span></a>
     <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>Ideas</strong><span class="muted small">Your ideas &amp; advisor</span></a>
     <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
-    <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
-    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Your quest board<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
-    <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses &amp; budgets<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins</span></a>
+    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Your quest board</span></a>
+    <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses &amp; budgets</span></a>
   </div>
 </div>
 

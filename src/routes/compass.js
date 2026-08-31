@@ -28,11 +28,12 @@ router.get('/', async (req, res, next) => {
   try {
     const { data: compass } = await req.sb.from('founder_compasses').select('*')
       .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!compass) {
-      const q = await qsvc.latestCompleted(req.sb, req.user.id);
-      return res.redirect(q ? '/compass/generate' : '/questionnaire');
-    }
-    res.render('compass', { title: 'Your Founder Compass', compass, msg: req.query.msg || null });
+    const q = await qsvc.latestCompleted(req.sb, req.user.id);
+    if (!compass) return res.redirect(q ? '/compass/generate' : '/questionnaire');
+    // `motivation` is only ever asked in the final depth step, so its absence is
+    // an exact test for "this founder has only answered the core seven".
+    const canDeepen = !!q && !q.motivation;
+    res.render('compass', { title: 'Your Founder Compass', compass, canDeepen, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
 

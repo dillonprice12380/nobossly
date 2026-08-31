@@ -85,6 +85,7 @@ app.use((req, res, next) => {
   if (!req.user || !req.profile || !req.profile.needs_username) return next();
   const p = req.path;
   if (p === '/choose-username' || p === '/logout' || p === '/debug' || p.startsWith('/auth/')) return next();
+  if (p === '/forgot' || p === '/reset' || p === '/reset/session') return next();
   return res.redirect('/choose-username');
 });
 
@@ -119,6 +120,17 @@ app.get('/', (req, res) => {
   res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
 });
 
+// The Compass is the product's best asset and was invisible to anyone who
+// hadn't already finished the questionnaire. This is one worked example,
+// public and indexable, so a visitor can judge it before signing up.
+app.get('/sample-compass', (req, res) => {
+  res.render('compass_sample', {
+    title: 'A real Founder Compass, worked through',
+    compass: require('./src/sample_compass'),
+    metaDescription: 'See exactly what a NoBossly Founder Compass gives you: your founder archetype, your real strengths and constraints, the territories where you hold an edge, a 5-point fit test and an honest avoid list — worked through for one founder, start to finish.'
+  });
+});
+
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /tasks\nDisallow: /messages\nSitemap: https://nobossly.com/sitemap.xml\n');
 });
@@ -139,6 +151,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/community', pri: '0.8' },
       { loc: base + '/blog', pri: '0.8' },
       { loc: base + '/pricing', pri: '0.8' },
+      { loc: base + '/sample-compass', pri: '0.9' },
       { loc: base + '/guides', pri: '0.8' },
       { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },
@@ -155,7 +168,9 @@ app.get('/sitemap.xml', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-app.get('/debug', async (req, res) => {
+// Admin-only: this reports which secrets are configured and the Stripe key
+// prefix, which is not something to hand an anonymous visitor.
+app.get('/debug', requireAdmin, async (req, res) => {
   const steps = [];
   const log = m => { steps.push(m); console.log('DEBUG:', m); };
   try {
@@ -189,6 +204,17 @@ setInterval(() => {
     () => {}
   );
 }, 10 * 60 * 1000);
+
+// Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
+// Every nudge is once-per-user for life, so running this again after a restart
+// re-sends nothing. Inert unless RESEND_API_KEY and the service role key are set.
+const mailer = require('./src/mailer');
+const sweepEmail = () => mailer.runSweep().then(
+  r => { if (r && (r.resume || r.comeback)) console.log('re-engagement emails sent:', r); },
+  e => console.error('email sweep', e && e.message)
+);
+setTimeout(sweepEmail, 2 * 60 * 1000);
+setInterval(sweepEmail, 12 * 60 * 60 * 1000);
 
 app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'Page not found.' }));
 app.use((err, req, res, next) => {

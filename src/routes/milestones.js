@@ -4,6 +4,7 @@ const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { sweepMilestones } = require('../milestones_engine');
+const { gate } = require('../upgrade');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -53,7 +54,7 @@ router.post('/:id/achieve', (req, res) => res.redirect('/milestones'));
 // Generate an AI-tailored set of personal goals from the founder's active blueprint (paid only).
 router.post('/generate', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'ai_milestones');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/milestones?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor goals to it.'));
     let items;
@@ -79,7 +80,7 @@ router.post('/generate', async (req, res, next) => {
 // self-tracked goals — distinct from trophies, which only the engine awards.
 router.post('/custom/:id/achieve', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'ai_milestones');
     const { data: m } = await req.sb.from('user_custom_milestones').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (m && !m.achieved) {
       await req.sb.from('user_custom_milestones').update({

@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ai = require('../ai');
 const { planOf } = require('../middleware/auth');
+const { gate } = require('../upgrade');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -77,7 +78,7 @@ router.post('/expense/:id/delete', async (req, res, next) => {
 // Suggest a lean startup budget tailored to the founder's active blueprint.
 router.post('/ai/suggest', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'ai_budget');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/budget?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor a startup budget to it.'));
     let items;
@@ -96,7 +97,7 @@ router.post('/ai/suggest', async (req, res, next) => {
 // AI read on current spending vs. budget (paid). Rendered inline, no redirect.
 router.post('/ai/insights', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'ai_budget');
     const payload = await loadBudget(req);
     const summary = {
       month: payload.monthLabel,

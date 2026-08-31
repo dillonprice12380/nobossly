@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
+const { gate, gateJson } = require('../upgrade');
 const ai = require('../ai');
 const qs = require('../questionnaires');
 const { awardXP } = require('../xp');
@@ -217,7 +218,7 @@ router.post('/generate', async (req, res) => {
     if (!q) return res.json({ redirect: '/questionnaire' });
     const plan = planOf(req.profile);
     if (plan === 'free' && (req.profile.generations_used || 0) >= 1) {
-      return res.json({ error: 'The free plan includes 1 AI idea generation. Upgrade for unlimited generations, AI roadmaps and more.', redirect: '/pricing?upgrade=1' });
+      return gateJson(res, 'extra_generation');
     }
     const { data: job, error: jobErr } = await req.sb.from('generation_jobs')
       .insert({ user_id: req.user.id, kind: 'ideas' }).select('id').maybeSingle();
@@ -243,7 +244,7 @@ router.get('/:id', async (req, res, next) => {
 // disables itself client-side while the ~20-30s search runs, then we redirect back.
 router.post('/:id/evidence', async (req, res, next) => {
   try {
-    if (planOf(req.profile) !== 'paid') return res.redirect('/pricing?upgrade=1');
+    if (planOf(req.profile) !== 'paid') return gate(res, 'demand_evidence');
     const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!idea) return res.redirect('/ideas');
     try {
@@ -260,7 +261,11 @@ router.post('/:id/evidence', async (req, res, next) => {
 router.post('/:id/favorite', async (req, res) => {
   const { data: idea } = await req.sb.from('generated_ideas').select('is_favorited').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
   if (idea) await req.sb.from('generated_ideas').update({ is_favorited: !idea.is_favorited }).eq('id', req.params.id);
-  res.redirect('back' in req.headers ? req.headers.referer || '/ideas' : '/ideas');
+  // Same-origin only — never bounce the founder off-site on the strength of a
+  // header someone else's page can set.
+  const ref = req.get('referer') || '';
+  const sameOrigin = ref.startsWith(req.protocol + '://' + req.get('host') + '/');
+  res.redirect(sameOrigin ? ref : '/ideas');
 });
 
 module.exports = router;

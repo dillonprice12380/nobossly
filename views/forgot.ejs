@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<div class="auth-card card">
+  <h2>Reset your password</h2>
+  <p class="muted small" style="margin-top:-.3rem">Enter the email you signed up with and we'll send you a link to set a new one.</p>
+  <% if (message) { %><p class="notice"><%= message %></p><% } %>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <form method="post" action="/forgot">
+    <label>Email<input type="email" name="email" required autocomplete="email"></label>
+    <button class="btn btn-primary btn-block">Send reset link</button>
+  </form>
+  <p class="muted">Remembered it? <a href="/login">Log in</a></p>
+</div>
+<%- include('partials/foot') %>

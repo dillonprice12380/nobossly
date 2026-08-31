@@ -3,6 +3,7 @@ const ai = require('../ai');
 const qs = require('../questionnaires');
 const { awardXP } = require('../xp');
 const { planOf } = require('../middleware/auth');
+const { gate, gateJson } = require('../upgrade');
 
 const clampXP = v => Math.max(10, Math.min(200, parseInt(v, 10) || 50));
 const okDays = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
@@ -44,7 +45,7 @@ router.get('/start/:ideaId', async (req, res, next) => {
     // Free founders can create ONE blueprint; paid is unlimited.
     if (planOf(req.profile) !== 'paid') {
       const { count } = await req.sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
-      if ((count || 0) >= 1) return res.redirect('/pricing?upgrade=1');
+      if ((count || 0) >= 1) return gate(res, 'extra_blueprint');
     }
     res.render('generating', { title: 'Building blueprint', action: '/blueprint/start/' + idea.id, label: 'Building your launch blueprint for "' + idea.name + '"…' });
   } catch (e) { next(e); }
@@ -101,7 +102,7 @@ router.post('/start/:ideaId', async (req, res) => {
     // Free founders can create ONE blueprint; paid is unlimited.
     if (planOf(req.profile) !== 'paid') {
       const { count } = await req.sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
-      if ((count || 0) >= 1) return res.json({ redirect: '/pricing?upgrade=1' });
+      if ((count || 0) >= 1) return gateJson(res, 'extra_blueprint');
     }
     const { data: job, error: jobErr } = await req.sb.from('generation_jobs')
       .insert({ user_id: req.user.id, kind: 'blueprint' }).select('id').maybeSingle();
@@ -136,7 +137,7 @@ router.get('/:id', async (req, res, next) => {
 router.post('/:id/disperse', async (req, res, next) => {
   try {
     const enc = encodeURIComponent;
-    if (planOf(req.profile) !== 'paid') return res.redirect('/pricing?upgrade=1');
+    if (planOf(req.profile) !== 'paid') return gate(res, 'disperse_tasks');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!bp) return res.redirect('/ideas');
     // Idempotent: don't double-disperse the same blueprint.

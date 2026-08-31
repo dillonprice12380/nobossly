@@ -151,9 +151,12 @@ function planOf(profile) {
   return 'free';
 }
 
+// Generic guard. Prefer gate(res, '<feature>') from src/upgrade.js, which tells
+// the founder what is actually behind the gate instead of dumping them on the
+// price list; this stays as the catch-all for routes with no specific copy.
 function requirePaid(req, res, next) {
   if (planOf(req.profile) === 'paid') return next();
-  res.redirect('/pricing?upgrade=1');
+  require('../upgrade').gate(res, null);
 }
 
 module.exports = { attachUser, requireAuth, requireAdmin, requirePaid, planOf, setSessionCookies, clearSessionCookies, COOKIE_DOMAIN };

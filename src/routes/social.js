@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const { requireAuth, requirePaid } = require('../middleware/auth');
+const { requireAuth, planOf } = require('../middleware/auth');
+const { gate } = require('../upgrade');
 
 const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || ('group-' + Date.now());
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -126,7 +127,7 @@ router.get('/groups', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/groups', requireAuth, requirePaid, async (req, res, next) => {
+router.post('/groups', requireAuth, (req, res, next) => (planOf(req.profile) === 'paid' ? next() : gate(res, 'groups')), async (req, res, next) => {
   try {
     const name = (req.body.name || '').trim().slice(0, 80);
     if (!name) return res.redirect('/groups');

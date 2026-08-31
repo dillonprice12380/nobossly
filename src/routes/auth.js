@@ -2,6 +2,7 @@ const router = require('express').Router();
 const crypto = require('crypto');
 const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies } = require('../middleware/auth');
+const mailer = require('../mailer');
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
 const cookieDomainOpts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
 function callbackBase(req) {
@@ -44,11 +45,87 @@ router.post('/signup', async (req, res) => {
   if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.' });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message });
+  // Fire-and-forget: a mail failure must never block a signup.
+  if (data.user) mailer.send('welcome', email, username, { userId: data.user.id }).catch(() => {});
   if (data.session) {
     setSessionCookies(res, data.session);
     return res.redirect('/questionnaire');
   }
   res.redirect('/login?m=' + encodeURIComponent('Check your email to confirm your account, then log in.'));
+});
+
+// ---------- Password reset ----------
+// Supabase mails a recovery link that lands on /reset with the session in the
+// URL fragment. Fragments never reach the server, so the page hands them to
+// /reset/session, which validates them and sets the normal session cookies.
+
+router.get('/forgot', (req, res) => {
+  res.render('forgot', { title: 'Reset your password', error: null, message: null });
+});
+
+router.post('/forgot', async (req, res) => {
+  const email = String(req.body.email || '').trim();
+  // The reply is identical whether or not the address has an account — telling
+  // a stranger which emails are registered is an account-enumeration leak.
+  const sent = 'If an account exists for that address, a reset link is on its way. Check your inbox and spam folder.';
+  if (!email) return res.render('forgot', { title: 'Reset your password', error: 'Enter your email address.', message: null });
+  try {
+    await anonClient().auth.resetPasswordForEmail(email, { redirectTo: callbackBase(req) + '/reset' });
+  } catch (e) {
+    console.error('reset request', e && e.message);
+  }
+  res.render('forgot', { title: 'Reset your password', error: null, message: sent });
+});
+
+router.get('/reset', (req, res) => {
+  res.render('reset', { title: 'Choose a new password' });
+});
+
+// Exchanges the recovery tokens from the email link for session cookies. The
+// tokens must already be valid — this grants nothing the caller didn't hold.
+router.post('/reset/session', async (req, res) => {
+  try {
+    const access = String((req.body && req.body.access_token) || '');
+    const refresh = String((req.body && req.body.refresh_token) || '');
+    if (!access || !refresh) {
+      // No fragment supplied: only report ok if a session is already established.
+      return res.json({ ok: !!req.user });
+    }
+    const { data, error } = await userClient(access).auth.getUser(access);
+    if (error || !data || !data.user) return res.json({ ok: false });
+    setSessionCookies(res, { access_token: access, refresh_token: refresh });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('reset session', e && e.message);
+    res.json({ ok: false });
+  }
+});
+
+router.post('/reset', async (req, res) => {
+  const password = String(req.body.password || '');
+  const confirm = String(req.body.confirm || '');
+  const fail = m => res.render('forgot', { title: 'Reset your password', error: m, message: null });
+  if (password.length < 8) return fail('Your new password must be at least 8 characters.');
+  if (password !== confirm) return fail('Those two passwords did not match. Please try again.');
+  if (!req.accessToken) return fail('Your reset link has expired. Request a new one below.');
+  try {
+    const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+    const r = await fetch(base + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + req.accessToken
+      },
+      body: JSON.stringify({ password })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return fail(j.msg || j.error_description || j.error || 'Could not update your password. Request a fresh reset link and try again.');
+  } catch (e) {
+    console.error('password update', e && e.message);
+    return fail('Could not update your password just now. Please try again.');
+  }
+  res.redirect('/dashboard');
 });
 
 router.post('/logout', (req, res) => {

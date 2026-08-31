@@ -1,0 +1,82 @@
+<%- include('partials/head') %>
+<%
+  var d = (compass && compass.data) || {};
+  var arch = d.archetype || {};
+  var lo = d.loadout || {};
+  var terrs = Array.isArray(d.territories) ? d.territories : [];
+  var fit = Array.isArray(d.fit_test) ? d.fit_test : [];
+  var avoid = Array.isArray(d.avoid_list) ? d.avoid_list : [];
+  var kit = Array.isArray(d.toolkit) ? d.toolkit : [];
+  var tempChip = function (t) {
+    if (t === 'hot') return '🔥 hot';
+    if (t === 'warm') return '🌤️ warm';
+    return '🌱 steady';
+  };
+%>
+<div class="page-head">
+  <div>
+    <p class="chip" style="margin:0 0 .5rem">Example Compass — not a real member</p>
+    <h1>🧭 What your Founder Compass looks like</h1>
+    <p class="muted">This one was drawn for <strong><%= compass.founder.name %></strong>: <%= compass.founder.summary %> Yours is drawn from your answers, in about two minutes.</p>
+  </div>
+  <a class="btn btn-primary" href="/signup">Draw mine free →</a>
+</div>
+
+<div class="card" style="text-align:center">
+  <div style="font-size:2.6rem;line-height:1"><%= arch.emoji %></div>
+  <h2 style="margin:.35rem 0 .15rem"><%= arch.name %></h2>
+  <p style="margin:.2rem 0"><strong><%= arch.tagline %></strong></p>
+  <p class="muted" style="max-width:44rem;margin:.4rem auto 0"><%= arch.description %></p>
+</div>
+
+<div class="card">
+  <h2>🎒 The loadout</h2>
+  <div class="grid">
+    <div><h3 class="small">Strengths</h3><% lo.strengths.forEach(function (x) { %><span class="chip" style="margin:.15rem .2rem .15rem 0;display:inline-block"><%= x %></span><% }) %></div>
+    <div><h3 class="small">Unfair advantages</h3><% lo.advantages.forEach(function (x) { %><span class="chip chip-success" style="margin:.15rem .2rem .15rem 0;display:inline-block"><%= x %></span><% }) %></div>
+    <div><h3 class="small">Binding constraints</h3><% lo.constraints.forEach(function (x) { %><p class="muted small" style="margin:.2rem 0">⛓️ <%= x %></p><% }) %></div>
+  </div>
+  <div style="border-top:1px solid var(--border);margin-top:.8rem;padding-top:.7rem">
+    <h3 class="small">Straight talk</h3>
+    <% lo.honest_notes.forEach(function (x) { %><p class="small" style="margin:.25rem 0">💬 <%= x %></p><% }) %>
+  </div>
+</div>
+
+<h2 style="margin:1.1rem 0 .5rem">🗺️ Territories worth exploring</h2>
+<div class="grid">
+  <% terrs.forEach(function (t) { %>
+    <div class="card">
+      <div class="page-head" style="margin-bottom:.3rem"><h3 style="margin:0"><%= t.name %></h3><span class="chip"><%= tempChip(t.temperature) %></span></div>
+      <p class="small"><%= t.why_you %></p>
+      <p class="muted small" style="margin:.35rem 0 0"><strong>Example plays:</strong> <%= t.example_plays.join(' · ') %></p>
+      <p class="muted small" style="margin:.35rem 0 0">⚠️ <%= t.watch_out %></p>
+    </div>
+  <% }) %>
+</div>
+
+<div class="grid" style="margin-top:1rem">
+  <div class="card">
+    <h2>✅ The 5-point fit test</h2>
+    <p class="muted small">Any idea — theirs or anyone's — has to pass these. They come from the founder's own answers.</p>
+    <ol style="padding-left:1.2rem;margin:.5rem 0 0">
+      <% fit.forEach(function (f) { %><li style="margin:.4rem 0"><strong><%= f.criterion %></strong><br><span class="muted small"><%= f.why %></span></li><% }) %>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>🚫 Tempting, but not for them</h2>
+    <% avoid.forEach(function (a) { %>
+      <p style="margin:.45rem 0"><strong><%= a.territory %></strong><br><span class="muted small"><%= a.reason %></span></p>
+    <% }) %>
+    <div style="border-top:1px solid var(--border);margin-top:.7rem;padding-top:.6rem">
+      <h3 class="small">🧰 Starter toolkit</h3>
+      <% kit.forEach(function (k) { %><p class="small" style="margin:.25rem 0"><strong><%= k.name %></strong> — <%= k.purpose %> <span class="chip" style="font-size:.7rem"><%= k.cost %></span></p><% }) %>
+    </div>
+  </div>
+</div>
+
+<section class="cta-band" style="margin-top:1.4rem">
+  <h2>Yours takes seven questions.</h2>
+  <p class="muted">No card, no idea required. Answer seven questions and your own Compass is drawn — your archetype, your real constraints, and the territories where you actually hold an edge.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup">Draw my Founder Compass →</a>
+</section>
+<%- include('partials/foot') %>

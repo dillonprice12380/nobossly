@@ -1,0 +1,73 @@
+<%- include('partials/head') %>
+<%# Supabase's recovery link lands here with the session in the URL *fragment*,
+    which never reaches the server. The script below hands those tokens to
+    /reset/session, which sets the normal session cookies, and only then reveals
+    the new-password form. data-turbo="false" keeps Turbo from swapping this page
+    in without running the script. %>
+<div class="auth-card card" data-turbo="false">
+  <h2>Choose a new password</h2>
+
+  <div id="reset-checking">
+    <p class="muted small">Checking your reset link…</p>
+  </div>
+
+  <div id="reset-bad" class="hidden">
+    <p class="error">This reset link has expired or was already used.</p>
+    <p class="muted"><a href="/forgot">Send me a new one</a></p>
+  </div>
+
+  <form id="reset-form" class="hidden" method="post" action="/reset">
+    <label>New password (8+ characters)
+      <input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+    <label>Confirm new password
+      <input type="password" name="confirm" minlength="8" required autocomplete="new-password"></label>
+    <p class="error hidden" id="reset-mismatch">Those two passwords don't match.</p>
+    <button class="btn btn-primary btn-block">Set new password</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  var checking = document.getElementById('reset-checking');
+  var bad = document.getElementById('reset-bad');
+  var form = document.getElementById('reset-form');
+  var mismatch = document.getElementById('reset-mismatch');
+
+  function fail() { checking.classList.add('hidden'); bad.classList.remove('hidden'); }
+  function ready() { checking.classList.add('hidden'); form.classList.remove('hidden'); }
+
+  var hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  var access = hash.get('access_token');
+  var refresh = hash.get('refresh_token');
+
+  // Clear the tokens out of the address bar before anything else, so they don't
+  // sit in history or leak through a Referer header.
+  if (location.hash) history.replaceState(null, '', location.pathname);
+
+  if (!access || !refresh) {
+    // No fragment: either the link is stale, or the server already established
+    // the session (Supabase can also deliver recovery as a normal sign-in).
+    fetch('/reset/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { j && j.ok ? ready() : fail(); })
+      .catch(fail);
+    return;
+  }
+
+  fetch('/reset/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ access_token: access, refresh_token: refresh })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { j && j.ok ? ready() : fail(); })
+    .catch(fail);
+
+  form.addEventListener('submit', function (e) {
+    var pw = form.querySelector('[name=password]').value;
+    var cf = form.querySelector('[name=confirm]').value;
+    if (pw !== cf) { e.preventDefault(); mismatch.classList.remove('hidden'); }
+  });
+})();
+</script>
+<%- include('partials/foot') %>

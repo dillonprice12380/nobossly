@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { requireAuth, planOf } = require('../middleware/auth');
-const { anonClient } = require('../supabase');
+const { anonClient, serviceClient } = require('../supabase');
 
 const STRIPE_KEY = () => process.env.STRIPE_SECRET_KEY || '';
 const SUB_SECRET = () => process.env.SUB_SYNC_SECRET || '';
@@ -21,8 +21,23 @@ async function stripe(method, path, params) {
   return j;
 }
 
+// apply_subscription grants paid access, and it is currently EXECUTE-able by the
+// `anon` role — meaning anyone holding the (public) anon key can call it, with
+// only the shared secret in the way. Prefer the service role so the grant runs
+// on a trusted connection; the anon client stays as a fallback so billing keeps
+// working on deployments where SUPABASE_SERVICE_ROLE_KEY isn't set yet.
+// Once the key is confirmed in production, run the revoke in
+// migrations/2026-08-31_lock_down_security_definer.sql to close the hole.
+function subClient() {
+  try { return serviceClient(); }
+  catch (_) {
+    console.warn('SUPABASE_SERVICE_ROLE_KEY unset — applying subscription over the anon client');
+    return anonClient();
+  }
+}
+
 async function applySub(userId, { tier, status, customer, subId, periodEnd, lifetime }) {
-  const sb = anonClient();
+  const sb = subClient();
   const { error } = await sb.rpc('apply_subscription', {
     p_secret: SUB_SECRET(), p_user: userId,
     p_tier: tier || null, p_status: status || null,

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
+const { gate } = require('../upgrade');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -31,7 +32,7 @@ router.get('/', async (req, res, next) => {
 
 router.post('/create', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'collaborations');
     const name = (req.body.name || '').trim().slice(0, 80);
     if (!name) return res.redirect('/collaborations?err=' + encodeURIComponent('Project name is required.'));
     await req.sb.from('collab_projects').insert({
@@ -43,7 +44,7 @@ router.post('/create', async (req, res, next) => {
 
 router.post('/:id/invite', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
+    if (!isPaid(req)) return gate(res, 'collaborations');
     const username = (req.body.username || '').trim().replace(/^@/, '');
     const { data: project } = await req.sb.from('collab_projects').select('*').eq('id', req.params.id).eq('owner_id', req.user.id).maybeSingle();
     if (!project) return res.redirect('/collaborations?err=' + encodeURIComponent('Project not found.'));

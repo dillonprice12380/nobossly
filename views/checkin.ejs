@@ -1,7 +1,8 @@
 <%- include('partials/head') %>
 <div class="card form-card">
   <h2>📝 Daily check-in</h2>
-  <% if (sprint) { %><p class="muted">Sprint: <%= sprint.theme %> — <%= sprint.goal %></p><% } %>
+  <% if (sprint) { %><p class="muted">Sprint: <%= sprint.theme %> — <%= sprint.goal %></p>
+  <% } else { %><p class="muted">One minute a day keeps your streak alive — no sprint needed.</p><% } %>
   <form method="post" action="/dashboard/checkin">
     <input type="hidden" name="sprint_id" value="<%= sprint ? sprint.id : '' %>">
     <label>How are you feeling today?
