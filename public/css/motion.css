@@ -64,8 +64,38 @@
 .nb-confetti { position: fixed; top: 42%; left: 50%; width: 9px; height: 13px; z-index: 94; pointer-events: none; border-radius: 2px; animation: nb-confetti 1.5s ease-out forwards; }
 @keyframes nb-confetti { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
 
+/* Quest accepted: punch-in card + expanding shockwave ring,
+   paired with the "Let's do this!" soundbite in app.js */
+.quest-pop {
+  background: var(--panel-2, #fff); border: 1px solid var(--border, #ddd);
+  border-radius: 18px; padding: 1.3rem 2.2rem; text-align: center;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .28);
+  animation: nb-quest 1.7s cubic-bezier(.3, 1.5, .4, 1) forwards;
+}
+.quest-pop .quest-emoji { font-size: 2.2rem; display: block; margin-bottom: .15rem; }
+.quest-pop strong { font-size: 1.2rem; display: block; letter-spacing: .04em; }
+.quest-pop em { font-style: normal; color: var(--muted, #777); font-size: .95rem; }
+@keyframes nb-quest {
+  0%   { opacity: 0; transform: scale(.4) rotate(-4deg); }
+  14%  { opacity: 1; transform: scale(1.08) rotate(1deg); }
+  22%  { transform: scale(1) rotate(0deg); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(.97); }
+}
+.quest-ring {
+  position: fixed; top: 50%; left: 50%; z-index: 94; pointer-events: none;
+  width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  border: 3px solid #10b981; border-radius: 50%;
+  animation: nb-ring .8s ease-out forwards;
+}
+@keyframes nb-ring {
+  from { opacity: .9; transform: scale(.5); }
+  to   { opacity: 0; transform: scale(9); }
+}
+
 /* Accessibility: motion off means motion off */
 @media (prefers-reduced-motion: reduce) {
   .progress-bar, .coach-card, .flame-live, .task.just-done, .task.just-done .task-check,
-  .xp-float, .levelup-badge, .nb-confetti { animation: none !important; }
+  .xp-float, .levelup-badge, .nb-confetti, .quest-pop, .quest-ring { animation: none !important; }
+  .quest-pop, .levelup-badge { opacity: 1; }
 }

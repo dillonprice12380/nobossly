@@ -59,6 +59,76 @@
   }
   window.nbCelebrate = celebrate;
 
+  // --- Quest accepted: popup + "Let's do this!" -------------------------
+  // Sound must start inside the click/submit gesture. Turbo swaps the <body>
+  // without reloading the document, so an Audio object created here keeps
+  // playing across the navigation. If the recorded clip isn't uploaded (or
+  // fails to load), the Web Speech API says the line instead — upload a real
+  // recording to R2 at Site Sounds/lets-do-this.mp3 to upgrade the voice.
+  const QUEST_SOUND_URL = 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this.mp3';
+  function saySound() {
+    try {
+      const a = new Audio(QUEST_SOUND_URL);
+      a.volume = 0.9;
+      const speak = () => {
+        try {
+          if (!window.speechSynthesis) return;
+          const u = new SpeechSynthesisUtterance("Let's do this!");
+          u.rate = 1.05; u.pitch = 1.1;
+          window.speechSynthesis.speak(u);
+        } catch (_) { /* silence is acceptable */ }
+      };
+      a.addEventListener('error', speak);
+      a.play().catch(speak);
+    } catch (_) { /* silence is acceptable */ }
+  }
+
+  function questPopup() {
+    const overlay = document.createElement('div');
+    overlay.className = 'nb-overlay';
+    const card = document.createElement('div');
+    card.className = 'quest-pop';
+    const emoji = document.createElement('span');
+    emoji.className = 'quest-emoji';
+    emoji.textContent = '\u2694\ufe0f';
+    const label = document.createElement('strong');
+    label.textContent = 'CHALLENGE ACCEPTED';
+    const sub = document.createElement('em');
+    sub.textContent = "Let's do this!";
+    card.appendChild(emoji);
+    card.appendChild(label);
+    card.appendChild(sub);
+    overlay.appendChild(card);
+    const ring = document.createElement('span');
+    ring.className = 'quest-ring';
+    document.body.appendChild(ring);
+    document.body.appendChild(overlay);
+    setTimeout(() => { overlay.remove(); ring.remove(); }, 1800);
+  }
+  window.nbQuestPopup = questPopup;
+
+  // Catch the accept form on its way out: play the sound in the gesture,
+  // flag the popup to show on the page that comes back.
+  document.addEventListener('submit', e => {
+    const form = e.target;
+    if (!form || !form.getAttribute) return;
+    const action = form.getAttribute('action') || '';
+    if (!/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) return;
+    saySound();
+    try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
+  });
+
+  function maybeQuestPopup() {
+    try {
+      if (sessionStorage.getItem('nbQuestAccepted') !== '1') return;
+      sessionStorage.removeItem('nbQuestAccepted');
+      questPopup();
+    } catch (_) { /* ignore */ }
+  }
+  document.addEventListener('turbo:load', maybeQuestPopup);
+  if (document.readyState !== 'loading') maybeQuestPopup();
+  else document.addEventListener('DOMContentLoaded', maybeQuestPopup);
+
   // Dashboard task check-off: optimistic done state, XP float, then refresh.
   // On a level-up the celebration plays out before the page swaps.
   document.addEventListener('click', async e => {
