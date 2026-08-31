@@ -13,16 +13,74 @@
     : window.location.reload());
   window.nbRefresh = refresh;
 
-  // Dashboard task check-off
+  const reduceMotion = window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // --- Game juice -------------------------------------------------------
+  // +XP chip that floats up from where the action happened.
+  function floatXP(x, y, amount) {
+    const chip = document.createElement('span');
+    chip.className = 'xp-float';
+    chip.textContent = '+' + amount + ' XP';
+    chip.style.left = Math.round(x) + 'px';
+    chip.style.top = Math.round(y - 8) + 'px';
+    document.body.appendChild(chip);
+    setTimeout(() => chip.remove(), 1000);
+  }
+
+  // Level-up celebration: badge + CSS confetti. Rare, so it can be theatrical.
+  function celebrate(level) {
+    const overlay = document.createElement('div');
+    overlay.className = 'nb-overlay';
+    const badge = document.createElement('div');
+    badge.className = 'levelup-badge';
+    const emoji = document.createElement('span');
+    emoji.className = 'lvl-emoji';
+    emoji.textContent = '\u2b06\ufe0f';
+    const label = document.createElement('strong');
+    label.textContent = 'LEVEL UP! Level ' + level;
+    badge.appendChild(emoji);
+    badge.appendChild(label);
+    overlay.appendChild(badge);
+    document.body.appendChild(overlay);
+    const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#a855f7'];
+    const bits = [];
+    for (let i = 0; i < 26; i++) {
+      const bit = document.createElement('span');
+      bit.className = 'nb-confetti';
+      bit.style.background = colors[i % colors.length];
+      bit.style.setProperty('--dx', Math.round((Math.random() - 0.5) * 420) + 'px');
+      bit.style.setProperty('--dy', Math.round(120 + Math.random() * 260) + 'px');
+      bit.style.setProperty('--rot', Math.round((Math.random() - 0.5) * 720) + 'deg');
+      document.body.appendChild(bit);
+      bits.push(bit);
+    }
+    setTimeout(() => { overlay.remove(); bits.forEach(b => b.remove()); }, 1900);
+  }
+  window.nbCelebrate = celebrate;
+
+  // Dashboard task check-off: optimistic done state, XP float, then refresh.
+  // On a level-up the celebration plays out before the page swaps.
   document.addEventListener('click', async e => {
     const chk = e.target.closest('.task .task-check');
     if (!chk) return;
     const el = chk.closest('.task');
-    if (!el) return;
+    if (!el || !el.dataset.id) return;
+    const rect = chk.getBoundingClientRect();
     try {
       const r = await fetch('/dashboard/task/' + el.dataset.id + '/toggle', { method: 'POST' });
       const j = await r.json();
-      if (j.ok) refresh();
+      if (!j.ok) return;
+      if (reduceMotion || !j.done) return refresh();
+      el.classList.add('done', 'just-done');
+      chk.textContent = '\u2713';
+      floatXP(rect.left, rect.top, 10);
+      if (j.xp && j.xp.leveledUp) {
+        celebrate(j.xp.level);
+        setTimeout(refresh, 1900);
+      } else {
+        setTimeout(refresh, 750);
+      }
     } catch (_) { /* leave the box as-is; a refresh will show the truth */ }
   });
 
