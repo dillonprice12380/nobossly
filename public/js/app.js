@@ -62,15 +62,12 @@
   // --- Quest accepted: popup + "Let's do this!" -------------------------
   // Sound must start inside the click/submit gesture. Turbo swaps the <body>
   // without reloading the document, so an Audio object created here keeps
-  // playing across the navigation. Multiple soundbites rotate in order (a
-  // localStorage cursor survives sessions) so back-to-back accepts don't
-  // repeat. If a clip is missing or fails, the next one is tried, and the
-  // Web Speech API says the line as a last resort. To add a soundbite:
-  // upload to R2 under Site Sounds/ and append its URL here.
-  const QUEST_SOUNDS = [
-    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this.mp3',
-    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this-2.mp3'
-  ];
+  // playing across the navigation. The server resolves the actual R2 object
+  // keys at /challenges/sound/:n (probing likely names once and caching), so
+  // the client never breaks on a renamed upload. Soundbites rotate via a
+  // localStorage cursor; a failed clip falls through to the next, then to
+  // the Web Speech API as a last resort.
+  const QUEST_SOUNDS = ['/challenges/sound/1', '/challenges/sound/2'];
   function saySound() {
     const speak = () => {
       try {
@@ -248,7 +245,7 @@
     list.textContent = '';
     const loading = document.createElement('p');
     loading.className = 'muted small notif-msg';
-    loading.textContent = 'Loading…';
+    loading.textContent = 'Loading\u2026';
     list.appendChild(loading);
     let data;
     try {
