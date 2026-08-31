@@ -9,7 +9,7 @@
 
 <div class="stat-row">
   <div class="stat card"><span class="stat-num"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
-  <div class="stat card"><span class="stat-num"><svg class="icon" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day streak</span></div>
+  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day streak</span></div>
   <div class="stat card"><span class="stat-num"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
   <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
@@ -17,7 +17,7 @@
 <%# The Coach: rule-matched tips for exactly where this founder is right now.
     Rendered first — it is the platform talking to the player. %>
 <% if (typeof coach !== 'undefined' && coach && coach.length) { %>
-  <div class="card" style="border-left:3px solid var(--accent)">
+  <div class="card coach-card" style="border-left:3px solid var(--accent)">
     <h2>🎙️ Coach</h2>
     <% coach.forEach(function (t) { %>
       <div class="milestone-row">
