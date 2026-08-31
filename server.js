@@ -110,6 +110,7 @@ app.use('/', billing.router); // /pricing + /billing/*
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends, groups
 app.use('/upload', requireAuth, require('./src/routes/uploads'));
 app.get('/profile', requireAuth, (req, res) => res.redirect('/members/' + req.profile.username));
+app.use('/admin/sounds', requireAdmin, require('./src/routes/admin_sounds')); // game soundbite uploads — before /admin so its own routes win
 app.use('/admin', requireAdmin, require('./src/routes/admin'));
 app.use('/', require('./src/routes/publiccms'));
 
