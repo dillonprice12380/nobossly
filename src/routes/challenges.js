@@ -40,6 +40,24 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---------- Quest soundbite ----------
+// The accept sound is embedded in the database (site_assets, base64) and
+// served from our own domain — no external object storage, no filename
+// matching. Decoded once, then held in memory.
+let questSound = null;
+router.get('/sound', async (req, res) => {
+  try {
+    if (!questSound) {
+      const { data } = await req.sb.from('site_assets').select('mime, data_b64').eq('key', 'quest-accept').maybeSingle();
+      if (!data) return res.status(404).end();
+      questSound = { mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
+    }
+    res.set('Content-Type', questSound.mime);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(questSound.buf);
+  } catch (_) { res.status(404).end(); }
+});
+
 // ---------- Level verification (privacy-first) ----------
 // Financial documents are never required. Evidence can be the founder's own
 // specifics, a public-footprint link (live site, testimonial, review), a
