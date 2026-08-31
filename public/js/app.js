@@ -76,6 +76,29 @@
   }
   window.nbCelebrate = celebrate;
 
+  // Trophy unlocked: reuses the quest popup styling — same energy, different
+  // occasion. Shown when a task completion tips a milestone over its target.
+  function trophyPopup(t) {
+    const overlay = document.createElement('div');
+    overlay.className = 'nb-overlay';
+    const card = document.createElement('div');
+    card.className = 'quest-pop';
+    const emoji = document.createElement('span');
+    emoji.className = 'quest-emoji';
+    emoji.textContent = '\ud83c\udfc6';
+    const label = document.createElement('strong');
+    label.textContent = 'TROPHY UNLOCKED';
+    const sub = document.createElement('em');
+    sub.textContent = (t.emoji ? t.emoji + ' ' : '') + (t.title || '');
+    card.appendChild(emoji);
+    card.appendChild(label);
+    card.appendChild(sub);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.remove(), 1900);
+  }
+  window.nbTrophyPopup = trophyPopup;
+
   // --- Quest accepted: popup + soundbite --------------------------------
   function questPopup() {
     const overlay = document.createElement('div');
@@ -130,7 +153,7 @@
   else document.addEventListener('DOMContentLoaded', maybeQuestPopup);
 
   // Dashboard task check-off: optimistic done state, XP float, then refresh.
-  // On a level-up the celebration plays out before the page swaps.
+  // Level-ups and trophy unlocks each get their moment before the page swaps.
   document.addEventListener('click', async e => {
     const chk = e.target.closest('.task .task-check');
     if (!chk) return;
@@ -145,9 +168,18 @@
       el.classList.add('done', 'just-done');
       chk.textContent = '\u2713';
       floatXP(rect.left, rect.top, 10);
+      const trophies = j.trophies || [];
       if (j.xp && j.xp.leveledUp) {
         celebrate(j.xp.level);
-        setTimeout(refresh, 1900);
+        if (trophies.length) {
+          setTimeout(() => trophyPopup(trophies[0]), 1950);
+          setTimeout(refresh, 3800);
+        } else {
+          setTimeout(refresh, 1900);
+        }
+      } else if (trophies.length) {
+        trophyPopup(trophies[0]);
+        setTimeout(refresh, 2000);
       } else {
         setTimeout(refresh, 750);
       }
