@@ -1,0 +1,49 @@
+<%- include('../partials/head') %>
+<div class="page-head">
+  <div><h1>✅ Level verifications</h1>
+  <p class="muted">Privacy rule: whatever evidence is attached is for your eyes only, and the link is wiped automatically when you decide — approve or reject, it does not stay stored.</p></div>
+  <a class="btn btn-ghost" href="/admin">Back to admin</a>
+</div>
+
+<% var pending = rows.filter(function (r) { return r.status === 'pending'; }); %>
+<% var done = rows.filter(function (r) { return r.status !== 'pending'; }); %>
+
+<h2>Pending (<%= pending.length %>)</h2>
+<% if (!pending.length) { %><div class="card center"><p class="muted">Nothing waiting. The Ladder is honest today.</p></div><% } %>
+<% pending.forEach(function (r) { var u = pmap[r.user_id] || {}; %>
+  <div class="card">
+    <div class="page-head" style="margin-bottom:.4rem">
+      <div><strong>@<%= u.username || r.user_id %></strong> <span class="chip">Level <%= r.level %></span> <span class="chip"><%= r.evidence_kind || 'no evidence yet' %></span>
+      <p class="muted small" style="margin:.2rem 0 0">Game level <%= u.current_level || '?' %> · verified <%= u.verified_level || 1 %> · requested <%= new Date(r.created_at).toLocaleDateString() %></p></div>
+    </div>
+    <% if (r.evidence_note) { %><p style="margin:.3rem 0"><%= r.evidence_note %></p><% } else { %><p class="muted small">The founder hasn't submitted evidence yet.</p><% } %>
+    <% if (r.evidence_url) { %><p class="small"><a href="<%= r.evidence_url %>" target="_blank" rel="noopener">Open evidence link</a> <span class="muted small">(admin-only; cleared on decision)</span></p><% } %>
+    <form method="post" action="/admin/verifications/<%= r.id %>" class="cta-row" style="align-items:center">
+      <input name="reviewer_note" maxlength="300" placeholder="Optional note to the founder" style="flex:1;min-width:12rem">
+      <button class="btn btn-primary btn-sm" name="action" value="approve">Approve</button>
+      <button class="btn btn-ghost btn-sm" name="action" value="reject">Reject</button>
+    </form>
+  </div>
+<% }) %>
+
+<% if (flagged.length) { %>
+  <h2 style="margin-top:1.5rem">⚠️ Flagged quest completions</h2>
+  <p class="muted small">Big quests finished less than 24h after acceptance. Flags are a prompt to look, not a verdict — sometimes people accept after the work is done.</p>
+  <% flagged.forEach(function (f) { var u = pmap[f.user_id] || {}; var c = cmap[f.challenge_id] || {}; %>
+    <div class="card">
+      <strong>@<%= u.username || f.user_id %></strong> — <%= c.title || 'challenge' %>
+      <p class="muted small" style="margin:.2rem 0">completed <%= f.completed_at ? new Date(f.completed_at).toLocaleString() : '' %></p>
+      <% if (f.proof_note) { %><p class="small" style="margin:.2rem 0"><%= f.proof_note %></p><% } %>
+    </div>
+  <% }) %>
+<% } %>
+
+<% if (done.length) { %>
+  <h2 style="margin-top:1.5rem">Decided</h2>
+  <% done.slice(0, 20).forEach(function (r) { var u = pmap[r.user_id] || {}; %>
+    <div class="card" style="padding:.7rem 1rem">
+      <span><strong>@<%= u.username || r.user_id %></strong> · Level <%= r.level %> · <span class="chip <%= r.status === 'approved' ? 'chip-success' : '' %>"><%= r.status %></span> <span class="muted small"><%= r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString() : '' %></span></span>
+    </div>
+  <% }) %>
+<% } %>
+<%- include('../partials/foot') %>

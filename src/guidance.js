@@ -50,7 +50,7 @@ async function computeState(sb, user, profile, pre = {}) {
   const today = dstr(now);
   const head = q => q.then(r => r.count || 0, () => 0);
 
-  const [compassN, blueprintN, ideasN, openN, overdueN, completionsN, winsN, forumN, milestonesN, xpToday, qrun] = await Promise.all([
+  const [compassN, blueprintN, ideasN, openN, overdueN, completionsN, winsN, forumN, milestonesN, pendingVerifN, xpToday, qrun] = await Promise.all([
     head(sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     pre.ideasCount != null ? Promise.resolve(pre.ideasCount)
@@ -61,6 +61,7 @@ async function computeState(sb, user, profile, pre = {}) {
     head(sb.from('wins').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('forum_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('user_milestones').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+    head(sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'pending')),
     sb.from('xp_events').select('reason').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z').limit(50).then(r => r.data || [], () => []),
     sb.from('questionnaire_responses').select('founder_path').eq('user_id', user.id).eq('completed', true)
       .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null)
@@ -78,6 +79,8 @@ async function computeState(sb, user, profile, pre = {}) {
     name: (profile.display_name || profile.username || 'founder').split(' ')[0],
     plan: pre.plan || 'free',
     level: profile.current_level || 1,
+    verified_level: profile.verified_level || 1,
+    verification_pending: pendingVerifN > 0,
     founder_path: (qrun && qrun.founder_path) || 'exploring',
     has_compass: compassN > 0,
     has_blueprint: blueprintN > 0,
