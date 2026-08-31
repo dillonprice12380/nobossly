@@ -16,6 +16,20 @@
   const reduceMotion = window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // --- Game soundbites --------------------------------------------------
+  // All clips are served by our own app at /challenges/sound/:name (stored in
+  // the database, uploaded via /admin/sounds). Playback is best started inside
+  // a user gesture; Turbo swaps the <body> without a document reload, so the
+  // Audio object keeps playing across the navigation. Failure is always
+  // silent — sound is seasoning, never load-bearing.
+  function playSound(name) {
+    try {
+      const clip = new Audio('/challenges/sound/' + name);
+      clip.volume = 0.9;
+      clip.play().catch(() => { /* autoplay blocked or offline — stay silent */ });
+    } catch (_) { /* audio unsupported — stay silent */ }
+  }
+
   // --- Game juice -------------------------------------------------------
   // +XP chip that floats up from where the action happened.
   function floatXP(x, y, amount) {
@@ -28,8 +42,11 @@
     setTimeout(() => chip.remove(), 1000);
   }
 
-  // Level-up celebration: badge + CSS confetti. Rare, so it can be theatrical.
+  // Level-up celebration: badge + CSS confetti + the Level Up clip. Rare, so
+  // it can be theatrical. Called right after a click's fetch resolves, which
+  // is close enough to the gesture that browsers allow the audio.
   function celebrate(level) {
+    playSound('levelup');
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
     const badge = document.createElement('div');
@@ -60,11 +77,6 @@
   window.nbCelebrate = celebrate;
 
   // --- Quest accepted: popup + soundbite --------------------------------
-  // The clip is served by our own app at /challenges/sound (embedded in the
-  // database, integrity-verified). Playback must start inside the submit
-  // gesture; Turbo swaps the <body> without a document reload, so the Audio
-  // object keeps playing across the navigation. Failure is silent — the
-  // popup still shows.
   function questPopup() {
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
@@ -89,19 +101,21 @@
   }
   window.nbQuestPopup = questPopup;
 
-  // Catch the accept form on its way out: start the sound in the gesture,
-  // flag the popup to show on the page that comes back.
+  // Catch challenge forms on their way out: start the right sound inside the
+  // submit gesture. Native validation (required proof notes, confirms) has
+  // already passed by the time `submit` fires, so the sound tracks success.
   document.addEventListener('submit', e => {
     const form = e.target;
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
-    if (!/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) return;
-    try {
-      const clip = new Audio('/challenges/sound');
-      clip.volume = 0.9;
-      clip.play().catch(() => { /* autoplay blocked or offline — stay silent */ });
-    } catch (_) { /* audio unsupported — stay silent */ }
-    try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
+    if (/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) {
+      playSound('accept');
+      try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
+      return;
+    }
+    if (/^\/challenges\/(custom\/)?[^/]+\/finish$/.test(action)) {
+      playSound('complete');
+    }
   });
 
   function maybeQuestPopup() {
