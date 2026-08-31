@@ -1,9 +1,5 @@
 // XP + streak helpers. All writes use the user's own client (RLS applies).
 
-// Daily activity streak. Any XP-earning action counts as activity for the day
-// (awardXP calls this), and manual dashboard check-ins still work too.
-// One automatic "streak freeze" per calendar month silently covers a single
-// missed day, WIP-style, so one busy Tuesday doesn't erase a 40-day streak.
 async function bumpStreak(sb, userId, profile) {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -26,8 +22,6 @@ async function bumpStreak(sb, userId, profile) {
     patch.streak_days = streak;
     patch.longest_streak = Math.max(profile.longest_streak || 0, streak);
     await sb.from('profiles').update(patch).eq('id', userId);
-    // Keep the in-memory profile current so repeat calls within one request
-    // are no-ops and can't double-consume the monthly freeze.
     profile.streak_days = streak;
     profile.last_checkin_date = today;
     profile.longest_streak = patch.longest_streak;
@@ -40,11 +34,11 @@ async function bumpStreak(sb, userId, profile) {
 }
 
 // ---------- The Founder's Ladder ----------
-// Levels gate on real accomplishments, not XP alone. founder_levels.requirements
-// holds {"min": N?, "quests": [{"type":"challenge"|"milestone","title":"..."}]};
-// a quest is met when the user has a challenge_completions row (matched by
-// challenge title) or a user_milestones row (matched by predefined milestone
-// title or custom_title). Matching is case-insensitive on title.
+// Levels gate on real accomplishments (see founder_levels.requirements).
+// current_level is the game score; verified_level is what real-world unlocks
+// check. Levels 1-7 self-verify on the honor-plus-witnesses system; reaching
+// 8+ opens a verification_request that an admin reviews — privacy-first, no
+// financial documents ever required.
 
 async function achievedQuests(sb, userId) {
   const have = new Set();
@@ -88,31 +82,36 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
     let level = current;
     if (levels && levels.length) {
       const maxXpLevel = levels.reduce((m, l) => (newTotal >= l.xp_required ? Math.max(m, l.level) : m), 1);
-      // Only pay for the quest lookups when XP alone would already advance them.
       if (maxXpLevel > current) {
         const have = await achievedQuests(sb, userId);
         for (const l of levels) {
           if (l.level <= level) continue;
           if (newTotal < l.xp_required) break;
-          // Rungs are climbed in order: the next level's quests must be met to
-          // pass it, so XP can never carry someone over an unearned rung.
           if (!meetsRequirements(l.requirements, have)) break;
           level = l.level;
         }
       }
     }
-    // Never demote: accounts that levelled under the old XP-only rules keep
-    // their level and simply need the quests for the NEXT rung.
     level = Math.max(level, current);
-    await sb.from('profiles').update({ xp_total: newTotal, current_level: level, last_active_at: new Date().toISOString() }).eq('id', userId);
+    const patch = { xp_total: newTotal, current_level: level, last_active_at: new Date().toISOString() };
+    // Levels 1-7 self-verify; 8+ waits for admin review of a verification request.
+    if (level <= 7) patch.verified_level = Math.max(profile.verified_level || 1, level);
+    await sb.from('profiles').update(patch).eq('id', userId);
     profile.xp_total = newTotal;
+    if (patch.verified_level) profile.verified_level = patch.verified_level;
     if (level > current) {
       profile.current_level = level;
       const info = (levels || []).find(l => l.level === level) || {};
       const msg = 'LEVEL UP! ' + (info.emoji || '\u2b06\ufe0f') + ' You are now Level ' + level + ' \u2014 ' + (info.title || '') + '. ' + (info.unlock_text || '');
       await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+      if (level >= 8) {
+        // Real-world unlocks (accelerator track, cohort leader, featured playbook)
+        // check verified_level, so they open on approval. Unique(user_id, level)
+        // makes the insert idempotent.
+        await sb.from('verification_requests').insert({ user_id: userId, level }).then(() => {}, () => {});
+        await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+      }
     }
-    // Every XP-earning action keeps the daily streak alive.
     await bumpStreak(sb, userId, profile);
     return { newTotal, level, leveledUp: level > current };
   } catch (e) {

@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<div class="card" style="max-width:44rem;margin:1rem auto">
+  <h1>✅ Verify Level <%= vr.level %></h1>
+  <p class="muted">Level <%= vr.level %> unlocks touch the real world (accelerator track, cohort leader, featured playbook), so they open after a quick human review. This usually takes a day or two.</p>
+  <div class="card" style="background:var(--panel-2)">
+    <h3 class="small">🔒 Your privacy, first</h3>
+    <p class="muted small" style="margin:.3rem 0">Never upload bank statements or full financial documents. Good evidence: a link with a public footprint (your live site with pricing, a testimonial, a customer review), a screenshot with everything sensitive cropped or blacked out except the relevant total, or just book a quick call. Whatever you attach is visible to the NoBossly admin only — never to other members — and is deleted after review.</p>
+  </div>
+  <% if (msg) { %><p class="error"><%= msg %></p><% } %>
+  <form method="post" action="/challenges/verify">
+    <label class="small">Evidence type
+      <select name="evidence_kind">
+        <option value="public_link">Public link (live site, testimonial, review)</option>
+        <option value="redacted_screenshot">Redacted screenshot (sensitive parts cropped)</option>
+        <option value="call">I''d rather do a quick call</option>
+        <option value="note_only">Written account only</option>
+      </select>
+    </label>
+    <label class="small">Tell the story (required)
+      <textarea name="evidence_note" rows="4" maxlength="2000" required placeholder="What you achieved, roughly when, and how — the specifics only someone who did it would know."></textarea>
+    </label>
+    <label class="small">Link (optional — public page or an uploaded redacted image URL)
+      <input name="evidence_url" maxlength="500" placeholder="https://…">
+    </label>
+    <div class="cta-row">
+      <button class="btn btn-primary">Submit for review</button>
+      <a class="btn btn-ghost" href="/dashboard">Back to dashboard</a>
+    </div>
+  </form>
+</div>
+<%- include('partials/foot') %>

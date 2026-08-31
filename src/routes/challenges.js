@@ -20,8 +20,7 @@ router.get('/', async (req, res, next) => {
     (acc || []).forEach(a => accMap[a.challenge_id] = a);
     const all = challenges || [];
     // Accepted-and-active challenges float to the top, completed sink to the
-    // bottom, everything else keeps its curated position in between. Without
-    // this, an accepted challenge stays buried wherever `position` put it.
+    // bottom, everything else keeps its curated position in between.
     const rank = c => {
       const a = accMap[c.id];
       if (a && a.status === 'active') return 0;
@@ -36,6 +35,37 @@ router.get('/', async (req, res, next) => {
       accMap, paid, custom: custom || [], msg: req.query.msg || null,
       streak: { days: req.profile.streak_days || 0, longest: req.profile.longest_streak || 0 }
     });
+  } catch (e) { next(e); }
+});
+
+// ---------- Level verification (privacy-first) ----------
+// Financial documents are never required. Evidence can be the founder's own
+// specifics, a public-footprint link (live site, testimonial, review), a
+// REDACTED screenshot, or a call. Whatever is attached is visible to admin
+// only, never public, and can be deleted after review.
+router.get('/verify', async (req, res, next) => {
+  try {
+    const { data: vr } = await req.sb.from('verification_requests').select('*')
+      .eq('user_id', req.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!vr) return res.redirect('/challenges?msg=' + encodeURIComponent('No verification is pending — keep climbing!'));
+    res.render('verify_level', { title: 'Verify Level ' + vr.level, vr, msg: req.query.msg || null });
+  } catch (e) { next(e); }
+});
+
+router.post('/verify', async (req, res, next) => {
+  try {
+    const b = req.body;
+    const kind = ['public_link', 'redacted_screenshot', 'call', 'note_only'].includes(b.evidence_kind) ? b.evidence_kind : 'note_only';
+    const note = String(b.evidence_note || '').trim().slice(0, 2000);
+    if (note.length < 30) {
+      return res.redirect('/challenges/verify?msg=' + encodeURIComponent('Add a bit more detail — a few sentences on what you did and how it went.'));
+    }
+    const url = String(b.evidence_url || '').trim().slice(0, 500) || null;
+    const { error } = await req.sb.from('verification_requests')
+      .update({ evidence_kind: kind, evidence_note: note, evidence_url: url })
+      .eq('user_id', req.user.id).eq('status', 'pending');
+    if (error) throw error;
+    res.redirect('/challenges?msg=' + encodeURIComponent('Evidence submitted — your verification is in review. Unlocks open on approval.'));
   } catch (e) { next(e); }
 });
 
@@ -79,33 +109,49 @@ router.post('/:id/accept', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Finish a pre-chosen challenge. Free users earn XP + a personal completion record;
-// the community post and profile badge are paid-only.
+// Finish a pre-chosen challenge. Quest challenges (requires_proof) demand a
+// short proof note — specifics deter casual gaming of the Ladder — and the
+// completion auto-posts to the Wins wall for admin review + witnesses.
+// Suspiciously fast big-quest completions are flagged for review, not blocked.
 router.post('/:id/finish', async (req, res, next) => {
   try {
     const paid = isPaid(req);
-    const { data: a } = await req.sb.from('challenge_acceptances').select('*').eq('challenge_id', req.params.id).eq('user_id', req.user.id).maybeSingle();
-    if (a && a.status === 'active') {
+    const back = req.body.from === 'dashboard' ? '/dashboard' : '/challenges';
+    const [{ data: a }, { data: ch }] = await Promise.all([
+      req.sb.from('challenge_acceptances').select('*').eq('challenge_id', req.params.id).eq('user_id', req.user.id).maybeSingle(),
+      req.sb.from('challenges').select('*').eq('id', req.params.id).maybeSingle()
+    ]);
+    if (a && a.status === 'active' && ch) {
+      const proof = String(req.body.proof_note || '').trim();
+      if (ch.requires_proof && proof.length < 25) {
+        return res.redirect('/challenges?msg=' + encodeURIComponent('“' + ch.title + '” is a quest — add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
+      }
+      const acceptedMs = a.accepted_at ? new Date(a.accepted_at).getTime() : 0;
+      const flagged = !!(ch.requires_proof && (ch.xp_reward || 0) >= 150 && acceptedMs && (Date.now() - acceptedMs) < 86400000);
       await req.sb.from('challenge_acceptances').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', a.id);
-      const { data: ch } = await req.sb.from('challenges').select('*').eq('id', a.challenge_id).maybeSingle();
       const { data: existing } = await req.sb.from('challenge_completions').select('id').eq('user_id', req.user.id).eq('challenge_id', a.challenge_id).maybeSingle();
-      if (!existing) await req.sb.from('challenge_completions').insert({ user_id: req.user.id, challenge_id: a.challenge_id, proof_note: req.body.proof_note || '' });
-      if (ch) {
-        await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
-        if (paid) {
-          await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge “' + ch.title + '” 🎉', 'challenges', ch.id);
-          if (ch.badge_id) {
-            const { data: hasBadge } = await req.sb.from('user_badges').select('id').eq('user_id', req.user.id).eq('badge_id', ch.badge_id).maybeSingle();
-            if (!hasBadge) {
-              await req.sb.from('user_badges').insert({ user_id: req.user.id, badge_id: ch.badge_id });
-              const { data: bdg } = await req.sb.from('badges').select('name, emoji').eq('id', ch.badge_id).maybeSingle();
-              if (bdg) await notifySocial(req.sb, req.user.id, nameOf(req) + ' earned the ' + bdg.emoji + ' “' + bdg.name + '” badge', 'badges', ch.badge_id);
-            }
+      if (!existing) await req.sb.from('challenge_completions').insert({ user_id: req.user.id, challenge_id: a.challenge_id, proof_note: proof, flagged });
+      // Witnessed progress: quest completions go to the Wins wall (admin-reviewed).
+      if (ch.requires_proof && proof) {
+        await req.sb.from('wins').insert({
+          user_id: req.user.id, title: '🏆 Quest complete: ' + ch.title,
+          category: 'challenge', story: proof.slice(0, 1000)
+        }).then(() => {}, () => {});
+      }
+      await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
+      if (paid) {
+        await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge “' + ch.title + '” 🎉', 'challenges', ch.id);
+        if (ch.badge_id) {
+          const { data: hasBadge } = await req.sb.from('user_badges').select('id').eq('user_id', req.user.id).eq('badge_id', ch.badge_id).maybeSingle();
+          if (!hasBadge) {
+            await req.sb.from('user_badges').insert({ user_id: req.user.id, badge_id: ch.badge_id });
+            const { data: bdg } = await req.sb.from('badges').select('name, emoji').eq('id', ch.badge_id).maybeSingle();
+            if (bdg) await notifySocial(req.sb, req.user.id, nameOf(req) + ' earned the ' + bdg.emoji + ' “' + bdg.name + '” badge', 'badges', ch.badge_id);
           }
         }
       }
     }
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(back);
   } catch (e) { next(e); }
 });
 
