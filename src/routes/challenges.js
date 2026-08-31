@@ -40,21 +40,27 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ---------- Quest soundbite ----------
-// The accept sound is embedded in the database (site_assets, base64) and
-// served from our own domain — no external object storage, no filename
-// matching. Decoded once, then held in memory.
-let questSound = null;
-router.get('/sound', async (req, res) => {
+// ---------- Quest soundbites ----------
+// The game sounds are stored in the database (site_assets, base64) and served
+// from our own domain — no external object storage, no filename matching.
+// Admins upload or replace them at /admin/sounds. Cached in memory for 60s so
+// a re-upload takes effect without a restart; browsers hold them for 5m.
+// Bare /challenges/sound stays the accept clip for older cached client JS.
+const SOUND_KEYS = { accept: 'quest-accept', complete: 'challenge-complete', levelup: 'level-up' };
+const soundCache = {};
+router.get('/sound/:name?', async (req, res) => {
   try {
-    if (!questSound) {
-      const { data } = await req.sb.from('site_assets').select('mime, data_b64').eq('key', 'quest-accept').maybeSingle();
+    const key = SOUND_KEYS[req.params.name || 'accept'];
+    if (!key) return res.status(404).end();
+    let hit = soundCache[key];
+    if (!hit || Date.now() - hit.at > 60000) {
+      const { data } = await req.sb.from('site_assets').select('mime, data_b64').eq('key', key).maybeSingle();
       if (!data) return res.status(404).end();
-      questSound = { mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
+      hit = soundCache[key] = { at: Date.now(), mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
     }
-    res.set('Content-Type', questSound.mime);
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.send(questSound.buf);
+    res.set('Content-Type', hit.mime);
+    res.set('Cache-Control', 'public, max-age=300');
+    res.send(hit.buf);
   } catch (_) { res.status(404).end(); }
 });
 
