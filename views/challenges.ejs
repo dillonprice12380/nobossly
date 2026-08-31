@@ -1,9 +1,10 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Quests big and small. The weekly sprint carries you between rungs; the challenges below are how rungs get earned.</p></div>
-  <% if (streak && streak.days > 0) { %>
-    <div><span class="chip">🔥 <%= streak.days %>-day streak</span><% if (streak.longest > streak.days) { %> <span class="chip">best: <%= streak.longest %></span><% } %></div>
-  <% } %>
+  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Quests matched to where you are. Core challenges fit your level; electives fit your business. The weekly sprint carries you between rungs.</p></div>
+  <div>
+    <span class="chip">⚔️ Level <%= level %></span>
+    <% if (streak && streak.days > 0) { %><span class="chip">🔥 <%= streak.days %>-day streak</span><% } %>
+  </div>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
@@ -66,14 +67,89 @@
   </div>
 <% } %>
 
-<% if (paid) { %>
+<div class="card">
+  <h2>🧭 Core challenges</h2>
+  <p class="muted small">The path every founder walks — filtered to your level. New challenges unlock as you climb; the ones you've taken on stay put.</p>
+  <div class="grid">
+    <% challenges.forEach(c => { const a = accMap[c.id]; %>
+      <div class="card">
+        <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+        <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
+        <p class="muted"><%= c.description %></p>
+        <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
+        <% if (!a) { %>
+          <form method="post" action="/challenges/<%= c.id %>/accept">
+            <label class="small">Timeline
+              <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
+            </label>
+            <button class="btn btn-primary btn-sm">Accept challenge</button>
+          </form>
+        <% } else if (a.status === 'active') { %>
+          <span class="chip">⏳ Due <%= a.due_date %> (<%= a.duration_days %>-day)</span>
+          <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
+            <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
+            <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
+              <button class="btn btn-primary btn-sm">Mark complete</button>
+            </div>
+          </form>
+          <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? You can re-accept it later.')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Abandon</button></form>
+        <% } else if (a.status === 'completed') { %>
+          <span class="chip chip-success">✅ Completed</span>
+        <% } else { %>
+          <form method="post" action="/challenges/<%= c.id %>/accept">
+            <span class="chip">Abandoned</span>
+            <label class="small">Try again
+              <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
+            </label>
+            <button class="btn btn-ghost btn-sm">Re-accept</button>
+          </form>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🎯 Electives for your business</h2>
+  <% if (unclassified) { %>
+    <p class="muted">Electives are challenges matched to your exact kind of business — its type, industry, customers, and what it promises them. Draw your Founder Compass and pick an idea, and this section fills itself in.</p>
+    <a class="btn btn-primary btn-sm" href="/compass">Draw your Compass</a>
+  <% } else if (!electives.length) { %>
+    <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up<%= paid ? ' and as the AI writes more for your profile' : '' %>.</p>
+  <% } else { %>
+    <p class="muted small">Matched to your business type, industry, and customers. Accept the ones that move your needle.</p>
+    <div class="grid">
+      <% electives.forEach(t => { %>
+        <div class="card">
+          <div class="idea-top"><span style="font-size:1.6rem"><%= t.emoji || '🏁' %></span><span class="chip">⚡ <%= t.xp_reward %> XP</span></div>
+          <h3><%= t.title %></h3>
+          <p class="muted"><%= t.description %></p>
+          <% if (t.source === 'ai') { %><p class="muted small">✨ Written for your exact business profile.</p><% } %>
+          <form method="post" action="/challenges/tailored/<%= t.id %>/accept">
+            <label class="small">Timeline
+              <select name="duration_days">
+                <option value="30" <%= t.suggested_days === 30 ? 'selected' : '' %>>30 days</option>
+                <option value="60" <%= t.suggested_days === 60 ? 'selected' : '' %>>60 days</option>
+                <option value="90" <%= t.suggested_days === 90 ? 'selected' : '' %>>90 days</option>
+              </select>
+            </label>
+            <button class="btn btn-primary btn-sm">Accept elective</button>
+          </form>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<% const hasPersonal = custom && custom.length; %>
+<% if (hasPersonal || paid) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2>✨ Your AI-tailored challenges</h2><p class="muted small">Personalized to your launch blueprint.</p></div>
-      <form method="post" action="/challenges/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
+      <div><h2>🛡️ Your personal challenges</h2><p class="muted small">Electives you've accepted, plus your AI-generated set built from your launch blueprint.</p></div>
+      <% if (paid) { %><form method="post" action="/challenges/generate"><button class="btn btn-primary btn-sm"><%= hasPersonal ? '↻ Regenerate AI set' : 'Generate AI set' %></button></form><% } %>
     </div>
-    <% if (!custom.length) { %>
-      <p class="muted">No tailored challenges yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
+    <% if (!hasPersonal) { %>
+      <p class="muted">Nothing here yet. Accept an elective above<%= paid ? ', or click Generate to build a set from your blueprint' : '' %>.</p>
     <% } else { %>
       <div class="grid">
         <% custom.forEach(c => { %>
@@ -109,48 +185,9 @@
   </div>
 <% } else { %>
   <div class="card" style="border:1px dashed var(--border)">
-    <h2>✨ Want challenges tailored to YOUR business?</h2>
-    <p class="muted">Upgrade to get an AI-built set of challenges drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
+    <h2>✨ Want an AI challenge set built for YOUR business?</h2>
+    <p class="muted">Upgrade to get a full AI-generated challenge set drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
     <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
   </div>
-  <p class="muted small">You can take on the challenges below to track your progress and earn XP. Badges and profile awards are part of the paid plan.</p>
 <% } %>
-
-<div class="grid">
-  <% challenges.forEach(c => { const a = accMap[c.id]; %>
-    <div class="card">
-      <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
-      <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
-      <p class="muted"><%= c.description %></p>
-      <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
-      <% if (!a) { %>
-        <form method="post" action="/challenges/<%= c.id %>/accept">
-          <label class="small">Timeline
-            <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
-          </label>
-          <button class="btn btn-primary btn-sm">Accept challenge</button>
-        </form>
-      <% } else if (a.status === 'active') { %>
-        <span class="chip">⏳ Due <%= a.due_date %> (<%= a.duration_days %>-day)</span>
-        <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
-          <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
-          <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
-            <button class="btn btn-primary btn-sm">Mark complete</button>
-          </div>
-        </form>
-        <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? You can re-accept it later.')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Abandon</button></form>
-      <% } else if (a.status === 'completed') { %>
-        <span class="chip chip-success">✅ Completed</span>
-      <% } else { %>
-        <form method="post" action="/challenges/<%= c.id %>/accept">
-          <span class="chip">Abandoned</span>
-          <label class="small">Try again
-            <select name="duration_days"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>
-          </label>
-          <button class="btn btn-ghost btn-sm">Re-accept</button>
-        </form>
-      <% } %>
-    </div>
-  <% }) %>
-</div>
 <%- include('partials/foot') %>
