@@ -99,19 +99,20 @@
   }
   window.nbTrophyPopup = trophyPopup;
 
-  // --- Quest accepted: popup + soundbite --------------------------------
-  function questPopup() {
+  // --- Quest accepted / completed: popup + soundbite --------------------
+  // Both popups share one skeleton; only the flavor differs.
+  function questCard(emojiChar, labelText, subText) {
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
     const card = document.createElement('div');
     card.className = 'quest-pop';
     const emoji = document.createElement('span');
     emoji.className = 'quest-emoji';
-    emoji.textContent = '\u2694\ufe0f';
+    emoji.textContent = emojiChar;
     const label = document.createElement('strong');
-    label.textContent = 'CHALLENGE ACCEPTED';
+    label.textContent = labelText;
     const sub = document.createElement('em');
-    sub.textContent = "Let's do this!";
+    sub.textContent = subText;
     card.appendChild(emoji);
     card.appendChild(label);
     card.appendChild(sub);
@@ -122,11 +123,15 @@
     document.body.appendChild(overlay);
     setTimeout(() => { overlay.remove(); ring.remove(); }, 1800);
   }
+  const questPopup = () => questCard('\u2694\ufe0f', 'CHALLENGE ACCEPTED', "Let's do this!");
+  const completePopup = () => questCard('\ud83c\udfc6', 'CHALLENGE COMPLETE', 'Congratulations!');
   window.nbQuestPopup = questPopup;
+  window.nbCompletePopup = completePopup;
 
   // Catch challenge forms on their way out: start the right sound inside the
-  // submit gesture. Native validation (required proof notes, confirms) has
-  // already passed by the time `submit` fires, so the sound tracks success.
+  // submit gesture and flag the matching popup to show on the page that comes
+  // back. Native validation (required proof notes, confirms) has already
+  // passed by the time `submit` fires, so the celebration tracks success.
   document.addEventListener('submit', e => {
     const form = e.target;
     if (!form || !form.getAttribute) return;
@@ -138,14 +143,19 @@
     }
     if (/^\/challenges\/(custom\/)?[^/]+\/finish$/.test(action)) {
       playSound('complete');
+      try { sessionStorage.setItem('nbQuestComplete', '1'); } catch (_) { /* popup is a bonus */ }
     }
   });
 
   function maybeQuestPopup() {
     try {
-      if (sessionStorage.getItem('nbQuestAccepted') !== '1') return;
-      sessionStorage.removeItem('nbQuestAccepted');
-      questPopup();
+      if (sessionStorage.getItem('nbQuestAccepted') === '1') {
+        sessionStorage.removeItem('nbQuestAccepted');
+        questPopup();
+      } else if (sessionStorage.getItem('nbQuestComplete') === '1') {
+        sessionStorage.removeItem('nbQuestComplete');
+        completePopup();
+      }
     } catch (_) { /* ignore */ }
   }
   document.addEventListener('turbo:load', maybeQuestPopup);
