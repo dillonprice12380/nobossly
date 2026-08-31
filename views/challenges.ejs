@@ -8,8 +8,42 @@
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
-<%# The weekly sprint IS a challenge — the repeating 7-day quest. It lives
-    here with the rest of the quest board instead of being a separate world. %>
+<%# Everything in play, pinned first. Core + cohort actives come from
+    accMap, personal actives (accepted electives + AI set) from custom. %>
+<% const activePinned = []
+     .concat(challenges.concat(cohorts).filter(c => accMap[c.id] && accMap[c.id].status === 'active')
+       .map(c => ({ kind: c.is_cohort ? 'cohort' : 'core', ch: c, acc: accMap[c.id], due: accMap[c.id].due_date })))
+     .concat(custom.filter(c => c.status === 'active')
+       .map(c => ({ kind: 'custom', ch: c, acc: c, due: c.due_date })))
+     .sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999'))); %>
+<% if (activePinned.length) { %>
+  <div class="card challenge-pin" style="border-left:3px solid var(--accent)">
+    <h2>⚔️ Active challenges</h2>
+    <% activePinned.forEach(p => {
+         const days = Math.ceil((new Date(p.due) - Date.now()) / 86400000);
+         const base = p.kind === 'custom' ? '/challenges/custom/' + p.ch.id : '/challenges/' + p.ch.id;
+         const needsProof = p.kind !== 'custom' && p.ch.requires_proof; %>
+      <div class="milestone-row">
+        <div style="flex:1"><strong><%= p.ch.emoji || '🏁' %> <%= p.ch.title %></strong>
+        <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 tailored' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
+        <% if (needsProof) { %>
+          <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
+            <textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note to complete: who, what, result — a few honest sentences."></textarea>
+            <button class="btn btn-primary btn-sm" style="margin-top:.35rem">Mark complete</button>
+          </form>
+        <% } %>
+        </div>
+        <div class="cta-row" style="margin:0">
+          <% if (!needsProof) { %><form method="post" action="<%= base %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form><% } %>
+          <% if (p.kind === 'cohort') { %><a class="btn btn-ghost btn-sm" href="/challenges/<%= p.ch.id %>/leaderboard">🏆</a><% } %>
+          <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('<%= p.kind === 'cohort' ? 'Leave this cohort?' : 'Abandon this challenge? You can re-accept it later.' %>')"><button class="btn btn-ghost btn-sm"><%= p.kind === 'cohort' ? 'Leave' : 'Abandon' %></button></form>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<%# The weekly sprint IS a challenge — the repeating 7-day quest. %>
 <div class="card" id="weekly-sprint" style="border-left:3px solid var(--accent)">
   <div class="page-head" style="margin:0 0 .4rem">
     <div><h2>🏃 Your weekly sprint</h2><p class="muted small">The repeating 7-day quest. Every challenge below gets won one sprint at a time.</p></div>
@@ -49,14 +83,7 @@
           <% if (a && a.status === 'completed') { %>
             <span class="chip chip-success">✅ Completed</span>
           <% } else if (a && a.status === 'active') { %>
-            <span class="chip">🎯 You're in — finish by <%= a.due_date %></span>
-            <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
-              <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
-              <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
-                <button class="btn btn-primary btn-sm">Mark complete</button>
-              </div>
-            </form>
-            <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Leave this cohort?')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Leave cohort</button></form>
+            <span class="chip">🎯 You're in — manage it from the top of the page ⤴</span>
           <% } else if (state !== 'ended') { %>
             <form method="post" action="/challenges/<%= c.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Join the cohort</button></form>
           <% } %>
@@ -69,9 +96,9 @@
 
 <div class="card">
   <h2>🧭 Core challenges</h2>
-  <p class="muted small">The path every founder walks — filtered to your level. New challenges unlock as you climb; the ones you've taken on stay put.</p>
+  <p class="muted small">The path every founder walks — filtered to your level. New challenges unlock as you climb; active ones are pinned at the top of the page.</p>
   <div class="grid">
-    <% challenges.forEach(c => { const a = accMap[c.id]; %>
+    <% challenges.filter(c => !(accMap[c.id] && accMap[c.id].status === 'active')).forEach(c => { const a = accMap[c.id]; %>
       <div class="card">
         <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
         <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
@@ -84,15 +111,6 @@
             </label>
             <button class="btn btn-primary btn-sm">Accept challenge</button>
           </form>
-        <% } else if (a.status === 'active') { %>
-          <span class="chip">⏳ Due <%= a.due_date %> (<%= a.duration_days %>-day)</span>
-          <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
-            <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
-            <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
-              <button class="btn btn-primary btn-sm">Mark complete</button>
-            </div>
-          </form>
-          <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? You can re-accept it later.')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Abandon</button></form>
         <% } else if (a.status === 'completed') { %>
           <span class="chip chip-success">✅ Completed</span>
         <% } else { %>
@@ -141,29 +159,23 @@
   <% } %>
 </div>
 
-<% const hasPersonal = custom && custom.length; %>
-<% if (hasPersonal || paid) { %>
+<% const nonActiveCustom = custom.filter(c => c.status !== 'active'); %>
+<% if (nonActiveCustom.length || paid) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2>🛡️ Your personal challenges</h2><p class="muted small">Electives you've accepted, plus your AI-generated set built from your launch blueprint.</p></div>
-      <% if (paid) { %><form method="post" action="/challenges/generate"><button class="btn btn-primary btn-sm"><%= hasPersonal ? '↻ Regenerate AI set' : 'Generate AI set' %></button></form><% } %>
+      <div><h2>🛡️ Your personal challenges</h2><p class="muted small">Electives you've taken and your AI-generated set. Active ones are pinned at the top of the page.</p></div>
+      <% if (paid) { %><form method="post" action="/challenges/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate AI set' : 'Generate AI set' %></button></form><% } %>
     </div>
-    <% if (!hasPersonal) { %>
-      <p class="muted">Nothing here yet. Accept an elective above<%= paid ? ', or click Generate to build a set from your blueprint' : '' %>.</p>
+    <% if (!nonActiveCustom.length) { %>
+      <p class="muted"><%= custom.length ? 'Everything here is active and pinned above.' : 'Nothing here yet. Accept an elective above' + (paid ? ', or click Generate to build a set from your blueprint.' : '.') %></p>
     <% } else { %>
       <div class="grid">
-        <% custom.forEach(c => { %>
+        <% nonActiveCustom.forEach(c => { %>
           <div class="card">
             <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
             <h3><%= c.title %></h3>
             <p class="muted"><%= c.description %></p>
-            <% if (c.status === 'active') { %>
-              <span class="chip">⏳ Due <%= c.due_date %> (<%= c.duration_days %>-day)</span>
-              <div class="cta-row" style="justify-content:flex-start">
-                <form method="post" action="/challenges/custom/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
-                <form method="post" action="/challenges/custom/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge?')"><button class="btn btn-ghost btn-sm">Abandon</button></form>
-              </div>
-            <% } else if (c.status === 'completed') { %>
+            <% if (c.status === 'completed') { %>
               <span class="chip chip-success">✅ Completed</span>
             <% } else { %>
               <form method="post" action="/challenges/custom/<%= c.id %>/accept">
