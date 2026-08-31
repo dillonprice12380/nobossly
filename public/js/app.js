@@ -62,25 +62,39 @@
   // --- Quest accepted: popup + "Let's do this!" -------------------------
   // Sound must start inside the click/submit gesture. Turbo swaps the <body>
   // without reloading the document, so an Audio object created here keeps
-  // playing across the navigation. If the recorded clip isn't uploaded (or
-  // fails to load), the Web Speech API says the line instead — upload a real
-  // recording to R2 at Site Sounds/lets-do-this.mp3 to upgrade the voice.
-  const QUEST_SOUND_URL = 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this.mp3';
+  // playing across the navigation. Multiple soundbites rotate in order (a
+  // localStorage cursor survives sessions) so back-to-back accepts don't
+  // repeat. If a clip is missing or fails, the next one is tried, and the
+  // Web Speech API says the line as a last resort. To add a soundbite:
+  // upload to R2 under Site Sounds/ and append its URL here.
+  const QUEST_SOUNDS = [
+    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this.mp3',
+    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Sounds/lets-do-this-2.mp3'
+  ];
   function saySound() {
+    const speak = () => {
+      try {
+        if (!window.speechSynthesis) return;
+        const u = new SpeechSynthesisUtterance("Let's do this!");
+        u.rate = 1.05; u.pitch = 1.1;
+        window.speechSynthesis.speak(u);
+      } catch (_) { /* silence is acceptable */ }
+    };
+    let start = 0;
     try {
-      const a = new Audio(QUEST_SOUND_URL);
-      a.volume = 0.9;
-      const speak = () => {
-        try {
-          if (!window.speechSynthesis) return;
-          const u = new SpeechSynthesisUtterance("Let's do this!");
-          u.rate = 1.05; u.pitch = 1.1;
-          window.speechSynthesis.speak(u);
-        } catch (_) { /* silence is acceptable */ }
-      };
-      a.addEventListener('error', speak);
-      a.play().catch(speak);
-    } catch (_) { /* silence is acceptable */ }
+      start = (parseInt(localStorage.getItem('nbQuestSound') || '-1', 10) + 1) % QUEST_SOUNDS.length;
+      localStorage.setItem('nbQuestSound', String(start));
+    } catch (_) { start = Math.floor(Math.random() * QUEST_SOUNDS.length); }
+    const tryPlay = i => {
+      if (i >= QUEST_SOUNDS.length) return speak();
+      try {
+        const a = new Audio(QUEST_SOUNDS[(start + i) % QUEST_SOUNDS.length]);
+        a.volume = 0.9;
+        a.addEventListener('error', () => tryPlay(i + 1));
+        a.play().catch(() => tryPlay(i + 1));
+      } catch (_) { speak(); }
+    };
+    tryPlay(0);
   }
 
   function questPopup() {
