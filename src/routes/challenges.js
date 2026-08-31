@@ -3,6 +3,7 @@ const ai = require('../ai');
 const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
+const { ensureClassified, getElectives } = require('../tailor');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 const nameOf = req => (req.profile.display_name || req.profile.username || 'A founder');
@@ -11,6 +12,13 @@ const cleanDuration = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 
 router.get('/', async (req, res, next) => {
   try {
     const paid = isPaid(req);
+    const level = req.profile.current_level || 1;
+
+    // Make sure this founder is classified (type/industry/segment/value prop)
+    // so electives can be matched. One AI call ever — then cached on the
+    // profile until their blueprint changes.
+    const profile = await ensureClassified(req.sb, req.accessToken, req.user.id, req.profile);
+
     const [{ data: challenges }, { data: acc }, { data: custom }, { data: sprint }] = await Promise.all([
       req.sb.from('challenges').select('*').eq('is_active', true).order('position'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id),
@@ -19,7 +27,13 @@ router.get('/', async (req, res, next) => {
     ]);
     const accMap = {};
     (acc || []).forEach(a => accMap[a.challenge_id] = a);
-    const all = challenges || [];
+
+    // Core challenges are for everyone, but only the ones that fit this
+    // founder's current level — plus anything they've already accepted or
+    // completed, which stays visible regardless of the band it came from.
+    const inBand = c => c.min_level <= level && level <= c.max_level;
+    const all = (challenges || []).filter(c => c.is_cohort || accMap[c.id] || inBand(c));
+
     // Accepted-and-active challenges float to the top, completed sink to the
     // bottom, everything else keeps its curated position in between.
     const rank = c => {
@@ -29,11 +43,19 @@ router.get('/', async (req, res, next) => {
       return 1;
     };
     const sorted = arr => arr.slice().sort((x, y) => rank(x) - rank(y) || (x.position || 0) - (y.position || 0));
+
+    // Electives, matched to their business classification. AI top-up inside
+    // is paid-only; pool matches are for everyone.
+    let electives = [], unclassified = false;
+    try { ({ electives, unclassified } = await getElectives(req.sb, { ...profile, id: req.user.id }, level, { paid, accessToken: req.accessToken })); }
+    catch (e) { console.error('electives', e); }
+
     res.render('challenges', {
       title: 'Challenges',
       challenges: sorted(all.filter(c => !c.is_cohort)),
       cohorts: sorted(all.filter(c => c.is_cohort)),
       accMap, paid, custom: custom || [], sprint: sprint || null,
+      electives, unclassified, level,
       msg: req.query.msg || null,
       streak: { days: req.profile.streak_days || 0, longest: req.profile.longest_streak || 0 }
     });
@@ -188,7 +210,32 @@ router.post('/:id/abandon', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ---------- AI-tailored challenges (paid) ----------
+// ---------- Tailored electives ----------
+// Accepting an elective copies it into user_custom_challenges, which already
+// has the full accept/finish/abandon/dashboard-pinning plumbing. tailored_id
+// remembers where it came from so the same elective is never offered twice.
+router.post('/tailored/:id/accept', async (req, res, next) => {
+  try {
+    const { data: t } = await req.sb.from('tailored_challenges').select('*').eq('id', req.params.id).eq('is_active', true).maybeSingle();
+    if (!t) return res.redirect('/challenges');
+    const { data: existing } = await req.sb.from('user_custom_challenges').select('id, status').eq('user_id', req.user.id).eq('tailored_id', t.id).maybeSingle();
+    if (existing) return res.redirect('/challenges');
+    const duration = cleanDuration(req.body.duration_days || t.suggested_days);
+    await req.sb.from('user_custom_challenges').insert({
+      user_id: req.user.id, tailored_id: t.id,
+      title: t.title, description: t.description, emoji: t.emoji,
+      xp_reward: t.xp_reward, suggested_days: t.suggested_days,
+      status: 'active', duration_days: duration,
+      due_date: new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10),
+      accepted_at: new Date().toISOString()
+    });
+    await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted challenge: ' + t.title, 'tailored_challenges', t.id);
+    if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + t.title + '\u201d', 'tailored_challenges', t.id);
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+  } catch (e) { next(e); }
+});
+
+// ---------- AI-tailored challenge sets (paid) ----------
 router.post('/generate', async (req, res, next) => {
   try {
     if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
@@ -199,7 +246,7 @@ router.post('/generate', async (req, res, next) => {
     catch (err) { return res.redirect('/challenges?msg=' + encodeURIComponent('Could not generate challenges: ' + err.message)); }
     if (!Array.isArray(items) || !items.length) return res.redirect('/challenges?msg=' + encodeURIComponent('No challenges were generated \u2014 please try again.'));
     // Replace not-yet-completed AI challenges (pending/abandoned) with the fresh set.
-    await req.sb.from('user_custom_challenges').delete().eq('user_id', req.user.id).in('status', ['pending', 'abandoned']);
+    await req.sb.from('user_custom_challenges').delete().eq('user_id', req.user.id).in('status', ['pending', 'abandoned']).is('tailored_id', null);
     const rows = items.slice(0, 10).map(c => ({
       user_id: req.user.id, blueprint_id: bp.id,
       title: String(c.title || 'Challenge').slice(0, 120),
@@ -213,16 +260,18 @@ router.post('/generate', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Accept/finish/abandon a personal challenge (AI set or accepted elective).
+// No paywall here: whoever holds a challenge can play it out — the paywall
+// sits on generation, not on finishing what you started.
 router.post('/custom/:id/accept', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
     const duration = cleanDuration(req.body.duration_days);
     const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (c && c.status !== 'completed') {
       const due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
       await req.sb.from('user_custom_challenges').update({ status: 'active', duration_days: duration, due_date: due, accepted_at: new Date().toISOString(), completed_at: null }).eq('id', c.id);
       await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted challenge: ' + c.title, 'user_custom_challenges', c.id);
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + c.title + '\u201d', 'user_custom_challenges', c.id);
+      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + c.title + '\u201d', 'user_custom_challenges', c.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
   } catch (e) { next(e); }
@@ -230,12 +279,11 @@ router.post('/custom/:id/accept', async (req, res, next) => {
 
 router.post('/custom/:id/finish', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
     const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (c && c.status === 'active') {
       await req.sb.from('user_custom_challenges').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', c.id);
       await awardXP(req.sb, req.user.id, req.profile, c.xp_reward || 50, 'Completed challenge: ' + c.title, 'user_custom_challenges', c.id);
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
+      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
   } catch (e) { next(e); }
@@ -243,7 +291,6 @@ router.post('/custom/:id/finish', async (req, res, next) => {
 
 router.post('/custom/:id/abandon', async (req, res, next) => {
   try {
-    if (!isPaid(req)) return res.redirect('/pricing?upgrade=1');
     await req.sb.from('user_custom_challenges').update({ status: 'abandoned' }).eq('id', req.params.id).eq('user_id', req.user.id);
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
   } catch (e) { next(e); }
