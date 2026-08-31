@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ai = require('../ai');
 const { awardXP, bumpStreak } = require('../xp');
+const { getGuidance } = require('../guidance');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -30,6 +31,13 @@ router.get('/', async (req, res, next) => {
       tasks = t || [];
       checkinToday = c;
     }
+
+    // The Coach: rule-based, real-time guidance matched to exactly where this
+    // founder is — no AI calls, so it costs nothing and renders instantly.
+    const coach = await getGuidance(req.sb, req.user, p, {
+      sprint, acceptances: acc || [], checkinToday: !!checkinToday,
+      ideasCount: (ideas || []).length, plan: res.locals.plan
+    });
 
     const lvls = levels || [];
     const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '🌱' };
@@ -65,7 +73,7 @@ router.get('/', async (req, res, next) => {
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
-      levelInfo: { current: cur, next }, aiReady: ai.hasKey(), pinned, analytics
+      levelInfo: { current: cur, next }, aiReady: ai.hasKey(), pinned, analytics, coach
     });
   } catch (e) { next(e); }
 });

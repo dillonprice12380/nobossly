@@ -14,6 +14,20 @@
   <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
 
+<%# The Coach: rule-matched tips for exactly where this founder is right now.
+    Rendered first — it is the platform talking to the player. %>
+<% if (typeof coach !== 'undefined' && coach && coach.length) { %>
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <h2>🎙️ Coach</h2>
+    <% coach.forEach(function (t) { %>
+      <div class="milestone-row">
+        <p style="margin:.25rem 0"><%= t.message %></p>
+        <% if (t.cta_href) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= t.cta_href %>"><%= t.cta_label || 'Go' %></a><% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
 <%# Active challenges sit at the top of the dashboard — an accepted challenge
     is a commitment the founder just made, so it should be the first thing
     they see, not buried under the workspace grid below the fold. %>
