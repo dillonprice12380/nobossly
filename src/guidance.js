@@ -125,14 +125,24 @@ async function pickTips(sb, userId, state, limit = 2) {
     if (!lastSeen[s.rule_key] || t > lastSeen[s.rule_key]) lastSeen[s.rule_key] = t;
   });
   const now = Date.now();
-  const eligible = rules.filter(r => {
-    if (!matches(r.conditions, state)) return false;
+  const matched = rules.filter(r => matches(r.conditions, state));
+  let eligible = matched.filter(r => {
     const last = lastSeen[r.key];
     return !last || (now - last) >= (r.cooldown_days || 3) * DAY;
   });
-  eligible.sort((a, b) => (b.priority - a.priority) || (Math.random() - 0.5));
+  let logSeen = true;
+  if (!eligible.length && matched.length) {
+    // Every matching rule is inside its cooldown (heavy usage burns through
+    // the library fast). The Coach should never go silent: surface the
+    // least-recently-shown matches instead, and don't re-log them so the
+    // real cooldown clock keeps its original timestamps.
+    eligible = matched.slice().sort((a, b) => (lastSeen[a.key] || 0) - (lastSeen[b.key] || 0) || b.priority - a.priority);
+    logSeen = false;
+  } else {
+    eligible.sort((a, b) => (b.priority - a.priority) || (Math.random() - 0.5));
+  }
   const picked = eligible.slice(0, limit);
-  if (picked.length) {
+  if (picked.length && logSeen) {
     sb.from('guidance_seen').insert(picked.map(p => ({ user_id: userId, rule_key: p.key })))
       .then(() => {}, () => {});
   }
