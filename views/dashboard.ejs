@@ -28,19 +28,32 @@
   </div>
 <% } %>
 
-<%# Active challenges sit at the top of the dashboard — an accepted challenge
-    is a commitment the founder just made, so it should be the first thing
-    they see. Curated AND AI-custom challenges both pin here; the form routes
-    differ (custom challenges live in their own table). %>
-<% if (typeof pinned !== 'undefined' && pinned.length) { %>
+<%# Active quests: the weekly sprint and every accepted challenge (curated
+    AND AI-tailored) in one card — one quest board, not separate worlds. %>
+<% if ((typeof pinned !== 'undefined' && pinned.length) || sprint) { %>
   <div class="card challenge-pin">
-    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active challenges</h2>
-    <% pinned.forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/challenges/custom/' + a.id : '/challenges/' + a.challenge_id; %>
+    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active quests</h2>
+    <% if (sprint) { %>
       <div class="milestone-row">
-        <div><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
-        <p class="muted small"><%= a.duration_days %>-day challenge · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🤖 tailored' : '' %></p></div>
+        <div><strong>🏃 Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></strong>
+        <p class="muted small">7-day quest · <%= sprint.tasks_done %>/<%= sprint.tasks_total %> tasks · <%= sprint.velocity_pct || 0 %>% velocity · ends <%= sprint.end_date %></p></div>
+        <div class="cta-row" style="margin:0"><a class="btn btn-ghost btn-sm" href="#sprint-card">Tasks ↓</a></div>
+      </div>
+    <% } %>
+    <% (typeof pinned !== 'undefined' ? pinned : []).forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/challenges/custom/' + a.id : '/challenges/' + a.challenge_id; const needsProof = !a.custom && a.challenge.requires_proof; %>
+      <div class="milestone-row">
+        <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
+        <p class="muted small"><%= a.duration_days %>-day challenge · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🤖 tailored' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
+        <% if (needsProof) { %>
+          <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
+            <input type="hidden" name="from" value="dashboard">
+            <textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note to complete: who, what, result — a few honest sentences."></textarea>
+            <button class="btn btn-primary btn-sm" style="margin-top:.35rem">Done!</button>
+          </form>
+        <% } %>
+        </div>
         <div class="cta-row" style="margin:0">
-          <form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form>
+          <% if (!needsProof) { %><form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form><% } %>
           <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? It comes off your board and you can re-accept it later.')"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Abandon</button></form>
         </div>
       </div>
@@ -55,13 +68,13 @@
     <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>Ideas</strong><span class="muted small">Your ideas & advisor</span></a>
     <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
     <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
-    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Push your limits<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
+    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Your quest board<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
     <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses & budgets<% if (typeof plan !== 'undefined' && plan === 'free') { %> · 🔒 paid<% } %></span></a>
   </div>
 </div>
 
 <% if (sprint) { %>
-  <div class="card">
+  <div class="card" id="sprint-card">
     <div class="page-head">
       <div><h2><svg class="icon icon-lg"><use href="#i-target"/></svg> Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></h2>
       <p class="muted"><%= sprint.goal %> · <%= sprint.start_date %> → <%= sprint.end_date %></p></div>

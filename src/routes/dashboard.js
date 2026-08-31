@@ -17,7 +17,7 @@ router.get('/', async (req, res, next) => {
     ]);
     let pinned = [];
     if (acc && acc.length) {
-      const { data: chs } = await req.sb.from('challenges').select('id, title, emoji, xp_reward').in('id', acc.map(a => a.challenge_id));
+      const { data: chs } = await req.sb.from('challenges').select('id, title, emoji, xp_reward, requires_proof').in('id', acc.map(a => a.challenge_id));
       const chMap = {}; (chs || []).forEach(c => chMap[c.id] = c);
       pinned = acc.map(a => ({ ...a, challenge: chMap[a.challenge_id] || {} }));
     }
