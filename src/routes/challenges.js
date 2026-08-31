@@ -40,37 +40,6 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ---------- Quest soundbites ----------
-// The accept sound lives on R2, but object keys are easy to get slightly
-// wrong (folder name case, spaces, original upload filenames). Resolve it
-// server-side ONCE: probe a list of likely keys, cache the first that
-// answers, and 302 the browser there. The client just plays
-// /challenges/sound/1 and /challenges/sound/2 and never cares about keys.
-const R2_BASE = 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/';
-const SOUND_KEYS = {
-  '1': ['Site%20Sounds/lets-do-this.mp3', 'Site%20Sounds/Let_s_Do_This.mp3', 'lets-do-this.mp3', 'Let_s_Do_This.mp3', 'Site%20sounds/lets-do-this.mp3', 'site-sounds/lets-do-this.mp3', 'Site_Sounds/lets-do-this.mp3'],
-  '2': ['Site%20Sounds/lets-do-this-2.mp3', 'Site%20Sounds/Let_s_Do_This__1_.mp3', 'lets-do-this-2.mp3', 'Let_s_Do_This__1_.mp3', 'Site%20sounds/lets-do-this-2.mp3', 'site-sounds/lets-do-this-2.mp3', 'Site_Sounds/lets-do-this-2.mp3']
-};
-const soundCache = {};
-router.get('/sound/:n', async (req, res) => {
-  const n = req.params.n === '2' ? '2' : '1';
-  try {
-    if (!soundCache[n]) {
-      for (const key of SOUND_KEYS[n]) {
-        try {
-          const r = await fetch(R2_BASE + key, { method: 'HEAD' });
-          if (r.ok) { soundCache[n] = R2_BASE + key; break; }
-        } catch (_) { /* try the next candidate */ }
-      }
-    }
-    if (soundCache[n]) {
-      res.set('Cache-Control', 'no-store'); // the redirect target may change after re-uploads
-      return res.redirect(302, soundCache[n]);
-    }
-    res.status(404).end();
-  } catch (_) { res.status(404).end(); }
-});
-
 // ---------- Level verification (privacy-first) ----------
 // Financial documents are never required. Evidence can be the founder's own
 // specifics, a public-footprint link (live site, testimonial, review), a
