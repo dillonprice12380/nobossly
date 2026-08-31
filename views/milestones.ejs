@@ -1,15 +1,64 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Mark the big moments of your journey and earn XP as you go.</p></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Your trophy case. Trophies unlock themselves while you play — complete tasks, finish challenges, keep your streak alive. No claiming, no honor system: the game is watching.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (fresh && fresh.length) { %>
+  <div class="card" style="border:1px solid var(--accent, #10b981)">
+    <h2>🎉 New troph<%= fresh.length === 1 ? 'y' : 'ies' %> unlocked!</h2>
+    <% fresh.forEach(f => { %>
+      <p style="margin:.35rem 0"><strong><%= f.emoji %> <%= f.title %></strong> <span class="chip">⚡ +<%= f.xp_reward %> XP</span></p>
+    <% }) %>
+  </div>
+<% } %>
+
+<% const labels = { momentum: '⚡ Momentum', foundation: '🏛️ Foundation', product: '📦 Product', revenue: '💵 Revenue', traction: '📈 Traction', community: '🌐 Community', personal: '🎯 Personal' }; %>
+<% const order = ['foundation', 'momentum', 'community', 'product', 'revenue', 'traction', 'personal']; %>
+<% order.filter(c => cats[c]).concat(Object.keys(cats).filter(c => !order.includes(c))).forEach(cat => { %>
+  <div class="card">
+    <h2><%= labels[cat] || cat %></h2>
+    <% cats[cat].forEach(m => { const got = earned[m.id]; const have = Math.min(metrics[m.auto_kind] || 0, m.auto_target || 1); const pct = Math.round(100 * have / (m.auto_target || 1)); %>
+      <div class="milestone-row" style="<%= got ? '' : 'opacity:.82' %>">
+        <div style="flex:1;min-width:0">
+          <strong><%= got ? m.emoji : '\ud83d\udd12' %> <%= m.title %></strong>
+          <p class="muted small"><%= m.description %></p>
+          <span class="chip">⚡ <%= m.xp_reward %> XP</span>
+          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '\ud83c\udfc5' : '\ud83d\udd12' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
+          <% if (!got) { %>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-top:.45rem;max-width:280px">
+              <div style="flex:1;height:6px;border-radius:4px;background:var(--border,#e5e7eb);overflow:hidden"><div style="height:100%;width:<%= pct %>%;border-radius:4px;background:var(--accent,#10b981)"></div></div>
+              <span class="muted small" style="white-space:nowrap"><%= have %>/<%= m.auto_target %></span>
+            </div>
+          <% } %>
+        </div>
+        <% if (got) { %>
+          <span class="chip chip-success">🏆 <%= new Date(got.earned_at).toLocaleDateString() %></span>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+<% }) %>
+
+<% if (legacy && legacy.length) { %>
+  <div class="card">
+    <h2>🏆 Trophies from the old days</h2>
+    <p class="muted small">Earned before the trophy case went automatic. They're yours — they stay.</p>
+    <% legacy.forEach(m => { const got = earned[m.id]; %>
+      <div class="milestone-row">
+        <div><strong><%= m.emoji %> <%= m.title %></strong><p class="muted small"><%= m.description %></p></div>
+        <span class="chip chip-success">🏆 <%= new Date(got.earned_at).toLocaleDateString() %></span>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
 
 <% if (paid) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2>✨ Your AI-tailored milestones</h2><p class="muted small">Personalized to your launch blueprint.</p></div>
+      <div><h2>✨ Your personal goals</h2><p class="muted small">AI-tailored to your launch blueprint. These are your own targets — you check them off yourself; trophies above are earned only by playing.</p></div>
       <form method="post" action="/milestones/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
     </div>
     <% if (!custom.length) { %>
-      <p class="muted">No tailored milestones yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
+      <p class="muted">No tailored goals yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
     <% } else { %>
       <% custom.forEach(m => { %>
         <div class="milestone-row">
@@ -29,32 +78,9 @@
   </div>
 <% } else { %>
   <div class="card" style="border:1px dashed var(--border)">
-    <h2>✨ Want milestones tailored to YOUR business?</h2>
-    <p class="muted">Upgrade to get an AI-built set of milestones drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
+    <h2>✨ Want goals tailored to YOUR business?</h2>
+    <p class="muted">Upgrade to get an AI-built set of personal goals drawn from your launch blueprint — plus badges and awards pinned to your public profile as you earn trophies.</p>
     <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
   </div>
-  <p class="muted small">You can use the milestones below to track your journey and earn XP. Badges and profile awards are part of the paid plan.</p>
 <% } %>
-
-<% const labels = { foundation: '🏛️ Foundation', product: '📦 Product', revenue: '💵 Revenue', traction: '📈 Traction', community: '🌐 Community', personal: '🎯 Personal' }; %>
-<% Object.keys(cats).forEach(cat => { %>
-  <div class="card">
-    <h2><%= labels[cat] || cat %></h2>
-    <% cats[cat].forEach(m => { const got = earned[m.id]; %>
-      <div class="milestone-row">
-        <div>
-          <strong><%= m.emoji %> <%= m.title %></strong>
-          <p class="muted small"><%= m.description %></p>
-          <span class="chip">⚡ <%= m.xp_reward %> XP</span>
-          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '🏅' : '🔒' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
-        </div>
-        <% if (got) { %>
-          <span class="chip chip-success">✅ <%= new Date(got.earned_at).toLocaleDateString() %></span>
-        <% } else { %>
-          <form method="post" action="/milestones/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
-        <% } %>
-      </div>
-    <% }) %>
-  </div>
-<% }) %>
 <%- include('partials/foot') %>
