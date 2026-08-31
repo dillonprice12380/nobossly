@@ -59,41 +59,8 @@
   }
   window.nbCelebrate = celebrate;
 
-  // --- Quest accepted: popup + "Let's do this!" -------------------------
-  // Sound must start inside the click/submit gesture. Turbo swaps the <body>
-  // without reloading the document, so an Audio object created here keeps
-  // playing across the navigation. The server resolves the actual R2 object
-  // keys at /challenges/sound/:n (probing likely names once and caching), so
-  // the client never breaks on a renamed upload. Soundbites rotate via a
-  // localStorage cursor; a failed clip falls through to the next, then to
-  // the Web Speech API as a last resort.
-  const QUEST_SOUNDS = ['/challenges/sound/1', '/challenges/sound/2'];
-  function saySound() {
-    const speak = () => {
-      try {
-        if (!window.speechSynthesis) return;
-        const u = new SpeechSynthesisUtterance("Let's do this!");
-        u.rate = 1.05; u.pitch = 1.1;
-        window.speechSynthesis.speak(u);
-      } catch (_) { /* silence is acceptable */ }
-    };
-    let start = 0;
-    try {
-      start = (parseInt(localStorage.getItem('nbQuestSound') || '-1', 10) + 1) % QUEST_SOUNDS.length;
-      localStorage.setItem('nbQuestSound', String(start));
-    } catch (_) { start = Math.floor(Math.random() * QUEST_SOUNDS.length); }
-    const tryPlay = i => {
-      if (i >= QUEST_SOUNDS.length) return speak();
-      try {
-        const a = new Audio(QUEST_SOUNDS[(start + i) % QUEST_SOUNDS.length]);
-        a.volume = 0.9;
-        a.addEventListener('error', () => tryPlay(i + 1));
-        a.play().catch(() => tryPlay(i + 1));
-      } catch (_) { speak(); }
-    };
-    tryPlay(0);
-  }
-
+  // --- Quest accepted: popup (audio intentionally removed; clips are being
+  // replaced — the popup runs silent until the new soundbites are wired in) --
   function questPopup() {
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
@@ -118,14 +85,13 @@
   }
   window.nbQuestPopup = questPopup;
 
-  // Catch the accept form on its way out: play the sound in the gesture,
-  // flag the popup to show on the page that comes back.
+  // Catch the accept form on its way out and flag the popup to show on the
+  // page that comes back.
   document.addEventListener('submit', e => {
     const form = e.target;
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
     if (!/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) return;
-    saySound();
     try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
   });
 
