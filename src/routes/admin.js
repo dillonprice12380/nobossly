@@ -32,20 +32,72 @@ const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g,
 router.get('/', async (req, res, next) => {
   try {
     const count = t => req.sb.from(t).select('id', { count: 'exact', head: true });
-    const [users, threads, contents, ideas, bare] = await Promise.all([
+    const [users, threads, contents, ideas, bare, pendingVerif] = await Promise.all([
       count('profiles'),
       count('forum_threads'),
       count('cms_contents'),
       count('generated_ideas'),
-      req.sb.from('profiles').select('id', { count: 'exact', head: true }).is('username', null)
+      req.sb.from('profiles').select('id', { count: 'exact', head: true }).is('username', null),
+      req.sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
     ]);
     res.render('admin/home', {
       title: 'Admin',
       stats: { users: users.count || 0, threads: threads.count || 0, contents: contents.count || 0, ideas: ideas.count || 0 },
       bareProfileCount: bare.count || 0,
+      pendingVerifications: pendingVerif.count || 0,
       backfilled: req.query.backfilled !== undefined ? req.query.backfilled : null,
       backfillErr: req.query.backfillErr || null
     });
+  } catch (e) { next(e); }
+});
+
+// ---------- Level verifications (privacy-first) ----------
+// Evidence is admin-only and the link is wiped on decision, whichever way it
+// goes — the platform keeps the founder's account of events, never documents.
+router.get('/verifications', async (req, res, next) => {
+  try {
+    const [{ data: reqs }, { data: flaggedC }] = await Promise.all([
+      req.sb.from('verification_requests').select('*').order('created_at', { ascending: false }).limit(100),
+      req.sb.from('challenge_completions').select('*').eq('flagged', true).order('completed_at', { ascending: false }).limit(50)
+    ]);
+    const rows = reqs || [];
+    const flagged = flaggedC || [];
+    const uids = [...new Set([...rows.map(r => r.user_id), ...flagged.map(f => f.user_id)])];
+    const { data: profs } = uids.length ? await req.sb.from('profiles').select('id, username, display_name, current_level, verified_level').in('id', uids) : { data: [] };
+    const pmap = {}; (profs || []).forEach(p => pmap[p.id] = p);
+    const chIds = [...new Set(flagged.map(f => f.challenge_id))];
+    const { data: chs } = chIds.length ? await req.sb.from('challenges').select('id, title').in('id', chIds) : { data: [] };
+    const cmap = {}; (chs || []).forEach(c => cmap[c.id] = c);
+    res.render('admin/verifications', { title: 'Level verifications', rows, flagged, pmap, cmap });
+  } catch (e) { next(e); }
+});
+
+router.post('/verifications/:id', async (req, res, next) => {
+  try {
+    const action = req.body.action === 'approve' ? 'approve' : req.body.action === 'reject' ? 'reject' : null;
+    if (!action) return res.redirect('/admin/verifications');
+    const { data: vr } = await req.sb.from('verification_requests').select('*').eq('id', req.params.id).maybeSingle();
+    if (!vr || vr.status !== 'pending') return res.redirect('/admin/verifications');
+    const note = String(req.body.reviewer_note || '').trim().slice(0, 300) || null;
+    if (action === 'approve') {
+      const { data: p } = await req.sb.from('profiles').select('verified_level').eq('id', vr.user_id).maybeSingle();
+      await req.sb.from('profiles').update({ verified_level: Math.max((p && p.verified_level) || 1, vr.level) }).eq('id', vr.user_id);
+    }
+    await req.sb.from('verification_requests').update({
+      status: action === 'approve' ? 'approved' : 'rejected',
+      reviewer_note: note,
+      evidence_url: null, // privacy promise: evidence links do not outlive the review
+      reviewed_at: new Date().toISOString()
+    }).eq('id', vr.id);
+    const msg = action === 'approve'
+      ? '✅ Level ' + vr.level + ' verified — your real-world unlocks are open. ' + (note || '')
+      : 'Your Level ' + vr.level + ' verification needs another look. ' + (note || 'Add more detail or a public link and resubmit from /challenges/verify.');
+    await req.sb.rpc('push_notification', { target_user: vr.user_id, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+    if (action === 'reject') {
+      // Re-open so the founder can improve their evidence and resubmit.
+      await req.sb.from('verification_requests').update({ status: 'pending', reviewed_at: null }).eq('id', vr.id).then(() => {}, () => {});
+    }
+    res.redirect('/admin/verifications');
   } catch (e) { next(e); }
 });
 
