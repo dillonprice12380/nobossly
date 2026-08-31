@@ -2,6 +2,7 @@ const router = require('express').Router();
 const ai = require('../ai');
 const { awardXP, bumpStreak } = require('../xp');
 const { getGuidance } = require('../guidance');
+const { sweepMilestones } = require('../milestones_engine');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -127,6 +128,8 @@ router.post('/sprint/start/:blueprintId', async (req, res) => {
     }));
     if (taskRows.length) await req.sb.from('sprint_tasks').insert(taskRows);
     await awardXP(req.sb, req.user.id, req.profile, 30, 'Started a sprint', 'sprints', sprint.id);
+    // Sprint 1 Started (and friends) unlock the moment it happens.
+    try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) { /* trophies self-heal on the milestones page */ }
     res.json({ redirect: '/dashboard' });
   } catch (e) {
     console.error('sprint start', e);
@@ -154,11 +157,18 @@ router.post('/task/:id/toggle', async (req, res) => {
     }).eq('id', task.sprint_id);
 
     let xp = null;
+    let trophies = [];
     if (done) {
       await req.sb.from('profiles').update({ tasks_completed: (req.profile.tasks_completed || 0) + 1 }).eq('id', req.user.id);
       xp = await awardXP(req.sb, req.user.id, req.profile, 10, 'Completed task: ' + task.title, 'sprint_tasks', task.id);
+      // Trophy sweep: task-count milestones (and a full sprint's worth of tasks
+      // finishing a sprint) unlock right here, and the client gets to celebrate.
+      try {
+        const { fresh } = await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid');
+        trophies = fresh.map(d => ({ emoji: d.emoji, title: d.title }));
+      } catch (_) { /* trophies self-heal on the milestones page */ }
     }
-    res.json({ ok: true, done, doneCount, total, xp });
+    res.json({ ok: true, done, doneCount, total, xp, trophies });
   } catch (e) {
     res.json({ error: e.message });
   }
@@ -186,6 +196,11 @@ router.post('/checkin', async (req, res, next) => {
     });
     const streak = await bumpStreak(req.sb, req.user.id, req.profile);
     await awardXP(req.sb, req.user.id, req.profile, 15, 'Daily check-in (streak ' + streak + ')', 'daily_checkins', null);
+    // Streak + check-in trophies unlock the moment the streak ticks over. The
+    // fresh streak value hasn't landed on req.profile, so pass it along.
+    try {
+      await sweepMilestones(req.sb, req.user.id, { ...req.profile, streak_days: Math.max(streak || 0, req.profile.streak_days || 0) }, res.locals.plan === 'paid');
+    } catch (_) { /* trophies self-heal on the milestones page */ }
     res.redirect('/dashboard');
   } catch (e) { next(e); }
 });
