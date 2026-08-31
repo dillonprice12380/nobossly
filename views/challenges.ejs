@@ -1,11 +1,29 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Accept a challenge, pick your timeline, and it pins to your dashboard.</p></div>
+  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Quests big and small. The weekly sprint carries you between rungs; the challenges below are how rungs get earned.</p></div>
   <% if (streak && streak.days > 0) { %>
     <div><span class="chip">🔥 <%= streak.days %>-day streak</span><% if (streak.longest > streak.days) { %> <span class="chip">best: <%= streak.longest %></span><% } %></div>
   <% } %>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<%# The weekly sprint IS a challenge — the repeating 7-day quest. It lives
+    here with the rest of the quest board instead of being a separate world. %>
+<div class="card" id="weekly-sprint" style="border-left:3px solid var(--accent)">
+  <div class="page-head" style="margin:0 0 .4rem">
+    <div><h2>🏃 Your weekly sprint</h2><p class="muted small">The repeating 7-day quest. Every challenge below gets won one sprint at a time.</p></div>
+    <% if (sprint) { %><span class="chip"><%= sprint.tasks_done %>/<%= sprint.tasks_total %> tasks</span><% } %>
+  </div>
+  <% if (sprint) { %>
+    <strong>Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></strong>
+    <p class="muted small" style="margin:.2rem 0 .6rem"><%= sprint.goal %> · ends <%= sprint.end_date %> · <%= sprint.velocity_pct || 0 %>% velocity</p>
+    <div class="progress"><div class="progress-bar" style="width:<%= sprint.velocity_pct || 0 %>%"></div></div>
+    <a class="btn btn-primary btn-sm" style="margin-top:.7rem;display:inline-block" href="/dashboard#sprint-card">Open the task board</a>
+  <% } else { %>
+    <p class="muted">No sprint running. Pick an idea, build its blueprint, and launch a 7-day sprint — that's the engine behind every quest on this page.</p>
+    <a class="btn btn-primary btn-sm" href="/ideas">Start a sprint</a>
+  <% } %>
+</div>
 
 <% if (cohorts && cohorts.length) { %>
   <div class="card">
@@ -31,10 +49,13 @@
             <span class="chip chip-success">✅ Completed</span>
           <% } else if (a && a.status === 'active') { %>
             <span class="chip">🎯 You're in — finish by <%= a.due_date %></span>
-            <div class="cta-row" style="justify-content:flex-start">
-              <form method="post" action="/challenges/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
-              <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Leave cohort</button></form>
-            </div>
+            <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
+              <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
+              <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
+                <button class="btn btn-primary btn-sm">Mark complete</button>
+              </div>
+            </form>
+            <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Leave this cohort?')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Leave cohort</button></form>
           <% } else if (state !== 'ended') { %>
             <form method="post" action="/challenges/<%= c.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Join the cohort</button></form>
           <% } %>
@@ -64,7 +85,7 @@
               <span class="chip">⏳ Due <%= c.due_date %> (<%= c.duration_days %>-day)</span>
               <div class="cta-row" style="justify-content:flex-start">
                 <form method="post" action="/challenges/custom/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
-                <form method="post" action="/challenges/custom/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+                <form method="post" action="/challenges/custom/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge?')"><button class="btn btn-ghost btn-sm">Abandon</button></form>
               </div>
             <% } else if (c.status === 'completed') { %>
               <span class="chip chip-success">✅ Completed</span>
@@ -99,8 +120,9 @@
   <% challenges.forEach(c => { const a = accMap[c.id]; %>
     <div class="card">
       <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
-      <h3><%= c.title %></h3>
+      <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
       <p class="muted"><%= c.description %></p>
+      <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
       <% if (!a) { %>
         <form method="post" action="/challenges/<%= c.id %>/accept">
           <label class="small">Timeline
@@ -110,10 +132,13 @@
         </form>
       <% } else if (a.status === 'active') { %>
         <span class="chip">⏳ Due <%= a.due_date %> (<%= a.duration_days %>-day)</span>
-        <div class="cta-row" style="justify-content:flex-start">
-          <form method="post" action="/challenges/<%= c.id %>/finish" class="inline"><button class="btn btn-primary btn-sm">Mark complete</button></form>
-          <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline"><button class="btn btn-ghost btn-sm">Abandon</button></form>
-        </div>
+        <form method="post" action="/challenges/<%= c.id %>/finish" style="margin-top:.4rem">
+          <% if (c.requires_proof) { %><textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note: who, what, result — a few honest sentences."></textarea><% } %>
+          <div class="cta-row" style="justify-content:flex-start;margin:.4rem 0 0">
+            <button class="btn btn-primary btn-sm">Mark complete</button>
+          </div>
+        </form>
+        <form method="post" action="/challenges/<%= c.id %>/abandon" class="inline" onsubmit="return confirm('Abandon this challenge? You can re-accept it later.')"><button class="btn btn-ghost btn-sm" style="margin-top:.4rem">Abandon</button></form>
       <% } else if (a.status === 'completed') { %>
         <span class="chip chip-success">✅ Completed</span>
       <% } else { %>
