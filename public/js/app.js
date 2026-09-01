@@ -212,6 +212,9 @@
     if (!chk) return;
     const el = chk.closest('.task');
     if (!el || !el.dataset.id) return;
+    // Completing a task is the only thing that can trigger a level up. Warming
+    // is deduped by URL, so this is free wherever the clip is already buffered.
+    if (window.nbFX) window.nbFX.warmClip('levelUp');
     const rect = chk.getBoundingClientRect();
     try {
       const r = await fetch('/dashboard/task/' + el.dataset.id + '/toggle', { method: 'POST' });

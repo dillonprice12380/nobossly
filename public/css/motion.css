@@ -128,7 +128,6 @@
 /* Backdrops: warm for fire, deep for fireworks so the sparks read. */
 /* Every variant's backdrop needs content/position here — a ::before that only
    sets a background never generates a box, so the dim never appears. */
-.nb-fx-level::before,
 .nb-fx-summit::before,
 .nb-fx-clip::before,
 .nb-fx-plain::before {
@@ -193,83 +192,6 @@
   font-size: clamp(1.3rem, 6vw, 2.4rem);
   position: relative;
   margin: 0;
-}
-
-/* ---------- Level up: everything moves upward ----------
-   The canvas fills the screen with climbing chevrons; these three sit directly
-   above the wordmark and fire in sequence, so the focal point carries the same
-   direction as the field behind it. */
-
-.nb-fx-level::before { background: radial-gradient(ellipse at 50% 80%, rgba(6, 60, 44, .6), rgba(3, 10, 8, .82) 70%); }
-
-.nb-fx-card--level {
-  background: linear-gradient(170deg, rgba(6, 32, 24, .94), rgba(4, 20, 16, .92));
-  border: 2px solid rgba(52, 211, 153, .8);
-  box-shadow: 0 0 0 1px rgba(209, 250, 229, .28) inset,
-              0 18px 70px rgba(16, 185, 129, .42),
-              0 0 130px rgba(52, 211, 153, .28);
-  animation: nb-fx-lift 3s cubic-bezier(.2, 1.3, .3, 1) forwards;
-}
-
-/* The card itself arrives from below and settles — the motion of the thing
-   matching the meaning of the thing. */
-@keyframes nb-fx-lift {
-  0%   { opacity: 0; transform: translateY(64px) scale(.86); }
-  11%  { opacity: 1; transform: translateY(-8px) scale(1.04); }
-  19%  { transform: translateY(0) scale(1); }
-  86%  { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-26px) scale(.98); }
-}
-
-.nb-fx-chevs {
-  display: flex; flex-direction: column; align-items: center;
-  gap: clamp(1px, .5vw, 3px);
-  margin-bottom: clamp(.35rem, 1.6vw, .7rem);
-}
-/* Drawn with borders rather than a glyph so it scales cleanly and needs no
-   font to have loaded. */
-.nb-fx-chev {
-  width: clamp(14px, 4.4vw, 26px);
-  height: clamp(14px, 4.4vw, 26px);
-  border-top: clamp(3px, .9vw, 5px) solid #6ee7b7;
-  border-right: clamp(3px, .9vw, 5px) solid #6ee7b7;
-  transform: rotate(-45deg);
-  opacity: 0;
-  animation: nb-fx-chev 1.5s ease-out infinite;
-}
-/* Bottom chevron leads, so the sequence reads bottom-to-top. */
-.nb-fx-chev:nth-child(3) { animation-delay: 0s; }
-.nb-fx-chev:nth-child(2) { animation-delay: .16s; }
-.nb-fx-chev:nth-child(1) { animation-delay: .32s; }
-
-@keyframes nb-fx-chev {
-  0%   { opacity: 0; transform: rotate(-45deg) translate3d(-6px, 6px, 0); }
-  28%  { opacity: 1; }
-  60%  { opacity: .85; transform: rotate(-45deg) translate3d(0, 0, 0); }
-  100% { opacity: 0; transform: rotate(-45deg) translate3d(6px, -6px, 0); }
-}
-
-.nb-fx-levelup {
-  background: linear-gradient(100deg, #d1fae5 6%, #ffffff 28%, #6ee7b7 50%, #ffffff 74%, #34d399 96%);
-  background-size: 240% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 4px 26px rgba(16, 185, 129, .55));
-  animation: nb-fx-shimmer 2.4s linear infinite;
-  /* Two short words — safe on one line at every size, so no wrap handling. */
-  font-size: clamp(2rem, 12vw, 5rem);
-  letter-spacing: -.035em;
-  white-space: nowrap;
-}
-.nb-fx-card--level .nb-fx-sub { color: #a7f3d0; letter-spacing: .12em; text-transform: uppercase; }
-
-/* Declared here now: it used to live in the fireworks block, which is gone. */
-@keyframes nb-fx-shimmer { to { background-position: 260% 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .nb-fx-card--level { animation: nb-fx-in .2s ease-out forwards; opacity: 1; transform: none; }
-  /* The chevrons still point up; they just stop travelling. */
-  .nb-fx-chev { animation: none; opacity: .9; transform: rotate(-45deg); }
-  .nb-fx-levelup { animation: none; background-position: 0 0; }
 }
 
 /* ---------- Mastered NoBossly: the summit ----------
