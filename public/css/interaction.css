@@ -150,6 +150,66 @@ a:not(.btn):not(.card):not(.chip):not(.ws-tile):not(.social-ico) { transition: c
 .nb-rv-go { transition: opacity var(--dur-enter) var(--ease), transform var(--dur-enter) var(--ease); }
 .nb-rv.in { opacity: 1; transform: none; }
 
+/* ---------- Page transitions ----------
+   Turbo 8 was already loaded and already swapping the body without a reload,
+   but with nothing to soften it — which reads as a flicker rather than a
+   change of scene. The meta tag in head.ejs opts Turbo in; this shapes it.
+
+   The nav and the section tabs are named so the browser treats them as the
+   same element across the swap. They then hold still while the page under
+   them changes, instead of fading out and back in on every click. */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .22s;
+  animation-timing-function: var(--ease);
+}
+.nav { view-transition-name: nb-nav; }
+.appnav { view-transition-name: nb-appnav; }
+
+/* Turbo's progress bar shipped in its default blue, on every navigation, on a
+   site with no blue in it. */
+html .turbo-progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+/* ---------- Pending work ----------
+   A form that takes twenty seconds to come back (gathering demand evidence,
+   generating a challenge set) gave no sign it had heard the click. Applied
+   globally by app.js on turbo:submit-start. */
+
+.nb-pending { position: relative; pointer-events: none; opacity: .8; }
+.nb-pending > * { visibility: hidden; }
+.nb-pending::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: nb-spin .65s linear infinite;
+}
+@keyframes nb-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Skeletons ----------
+   Only for content genuinely fetched after paint. Pages rendered by the server
+   arrive complete, so a skeleton there would be theatre. */
+
+.nb-skel { border-radius: 7px; background: var(--panel-2); position: relative; overflow: hidden; }
+.nb-skel::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .07), transparent);
+  animation: nb-shimmer 1.25s ease-in-out infinite;
+}
+body.theme-light .nb-skel::after { background: linear-gradient(90deg, transparent, rgba(11, 61, 46, .06), transparent); }
+@keyframes nb-shimmer { to { transform: translateX(100%); } }
+.nb-skel-row { height: 13px; margin: .55rem 0; }
+.nb-skel-row.short { width: 55%; }
+
+/* ---------- Elevation the light theme was keeping to itself ---------- */
+
+.kcard { box-shadow: var(--shadow-1); cursor: pointer; }
+.kcard:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.featured-img { box-shadow: var(--shadow-2); }
+
 /* ---------- Reduced motion ----------
    Motion off means motion off: state changes still happen, they just arrive
    instantly. Colour and shadow transitions are kept because they carry no
@@ -166,6 +226,10 @@ a:not(.btn):not(.card):not(.chip):not(.ws-tile):not(.social-ico) { transition: c
     transform: none;
   }
   .price-featured:hover { transform: scale(1.02); }
+  .kcard:hover { transform: none; }
   .nb-rv, .nb-rv.in { opacity: 1; transform: none; }
   .nb-rv-go { transition: none; }
+  .nb-skel::after, .nb-pending::after { animation: none; }
+  /* A cross-fade is still movement; skip the transition entirely. */
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

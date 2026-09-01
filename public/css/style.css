@@ -306,13 +306,11 @@ body.theme-light .kanban-col[data-status="todo"] { --col-accent: #64748b; }
 body.theme-light .kanban-col[data-status="in_progress"] { --col-accent: #0ea5e9; }
 body.theme-light .kanban-col[data-status="blocked"] { --col-accent: #f59e0b; }
 body.theme-light .kanban-col[data-status="done"] { --col-accent: #10b981; }
-body.theme-light .kcard { background: #fff; box-shadow: 0 1px 3px rgba(11,61,46,.08); transition: box-shadow .15s, transform .15s; cursor: pointer; }
-body.theme-light .kcard:hover { box-shadow: 0 4px 14px rgba(11,61,46,.14); transform: translateY(-1px); }
 body.theme-light .modal { background: rgba(11,41,30,.45); backdrop-filter: blur(2px); }
 body.theme-light .seo-checks .ok-check { color: #047857; }
 body.theme-light .assignee-chip { background: #d1fae5; }
-body.theme-light .featured-img { box-shadow: 0 8px 30px rgba(11,61,46,.15); }
 body.theme-light .article-body a { color: #047857; text-decoration: underline; }
+body.theme-light .kcard { background: #fff; }
 body.theme-light .block { background: #f6fbf8; }
 body.theme-light .add-block-bar button { background: #fff; }
 body.theme-light .member-row, body.theme-light .task, body.theme-light .notif, body.theme-light .milestone-row { border-color: var(--border); }

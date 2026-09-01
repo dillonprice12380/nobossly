@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/css/style.css?v=15">
 <link rel="stylesheet" href="/css/list.css?v=2">
 <link rel="stylesheet" href="/css/motion.css?v=2">
-<link rel="stylesheet" href="/css/interaction.css?v=1">
+<link rel="stylesheet" href="/css/interaction.css?v=2">
 <%# Marks that scripting is live, so entrance animations are only ever allowed
     to hide content when something is guaranteed to bring it back. %>
 <script>document.documentElement.classList.add('js');</script>
@@ -25,6 +25,9 @@
      server-side exactly as before. Add data-turbo="false" to any link, form or
      container that must fall back to a real page load. -->
 <meta name="turbo-cache-control" content="no-preview">
+<%# Turbo 8 wraps each body swap in a View Transition when this is present.
+    Browsers without support ignore it and navigate exactly as before. %>
+<meta name="view-transition" content="same-origin">
 <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"></script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8973F7WW8N"></script>

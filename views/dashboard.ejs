@@ -12,11 +12,14 @@
   <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
 </div>
 
+<%# data-count animates the number up from zero on load (app.js). The element
+    still contains the real value, so it is correct with JS off and for anything
+    reading the page rather than watching it. %>
 <div class="stat-row">
-  <div class="stat card"><span class="stat-num"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
-  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <%= profile.streak_days || 0 %></span><span class="muted">day check-in streak</span></div>
-  <div class="stat card"><span class="stat-num"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
-  <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
+  <div class="stat card"><span class="stat-num" data-count="<%= profile.xp_total || 0 %>"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
+  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <span data-count="<%= profile.streak_days || 0 %>"><%= profile.streak_days || 0 %></span></span><span class="muted">day check-in streak</span></div>
+  <div class="stat card"><span class="stat-num" data-count="<%= profile.tasks_completed || 0 %>"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
+  <% if (sprint) { %><div class="stat card"><span class="stat-num"><span data-count="<%= sprint.velocity_pct || 0 %>"><%= sprint.velocity_pct || 0 %></span>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
 
 <%# The Ladder. No view ever rendered a level's requirements or its unlock text,

@@ -274,16 +274,27 @@
     const list = document.querySelector('#notif-menu .notif-list');
     if (!list) return;
     list.textContent = '';
-    const loading = document.createElement('p');
-    loading.className = 'muted small notif-msg';
-    loading.textContent = 'Loading\u2026';
-    list.appendChild(loading);
+    const skel = document.createElement('div');
+    skel.setAttribute('aria-hidden', 'true');
+    skel.innerHTML = '<div class="nb-skel nb-skel-row"></div><div class="nb-skel nb-skel-row short"></div>'
+      + '<div class="nb-skel nb-skel-row"></div><div class="nb-skel nb-skel-row short"></div>';
+    const sr = document.createElement('p');
+    sr.className = 'muted small notif-msg';
+    sr.style.position = 'absolute';
+    sr.style.clip = 'rect(0 0 0 0)';
+    sr.textContent = 'Loading notifications\u2026';
+    list.appendChild(skel);
+    list.appendChild(sr);
     let data;
     try {
       const r = await fetch('/notifications/recent', { headers: { Accept: 'application/json' } });
       data = await r.json();
     } catch (_) {
-      loading.textContent = 'Could not load notifications.';
+      list.textContent = '';
+      const err = document.createElement('p');
+      err.className = 'muted small notif-msg';
+      err.textContent = 'Could not load notifications.';
+      list.appendChild(err);
       return;
     }
     list.textContent = '';
@@ -325,6 +336,35 @@
     setBadge(0);
     loadNotifs();
   });
+
+  // --- Pending submits ------------------------------------------------
+  // Turbo announces the start and end of every form submission, so one pair of
+  // listeners covers every slow POST on the site rather than each template
+  // hand-rolling its own onsubmit. The button keeps its exact box size while
+  // spinning, so nothing reflows around it.
+  document.addEventListener('turbo:submit-start', e => {
+    const btn = (e.detail && e.detail.formSubmission && e.detail.formSubmission.submitter)
+      || (e.target && e.target.querySelector('button[type=submit], button:not([type])'));
+    if (!btn || btn.classList.contains('nb-pending')) return;
+    const r = btn.getBoundingClientRect();
+    if (r.width) { btn.style.minWidth = r.width + 'px'; btn.style.minHeight = r.height + 'px'; }
+    btn.classList.add('nb-pending');
+    btn.setAttribute('aria-busy', 'true');
+    btn.__nbPending = true;
+  });
+
+  const clearPending = () => {
+    document.querySelectorAll('.nb-pending').forEach(btn => {
+      btn.classList.remove('nb-pending');
+      btn.removeAttribute('aria-busy');
+      btn.style.minWidth = '';
+      btn.style.minHeight = '';
+    });
+  };
+  document.addEventListener('turbo:submit-end', clearPending);
+  // A failed or redirected submit may never fire submit-end on this page.
+  document.addEventListener('turbo:load', clearPending);
+  window.addEventListener('pageshow', clearPending);
 
   // An open menu should never survive a page transition.
   document.addEventListener('turbo:before-render', () => {
@@ -401,7 +441,25 @@
     }, 4000);
   }
 
-  const onPage = () => { initReveals(); };
+  // Count-ups on any [data-count] number. The dashboard stat row uses it, so
+  // XP and streak land as something earned rather than something printed.
+  function initCounters() {
+    document.querySelectorAll('[data-count]').forEach(el => {
+      const to = parseInt(el.dataset.count, 10);
+      if (!Number.isFinite(to) || el.dataset.counted) return;
+      el.dataset.counted = '1';
+      if (reduceMotion || to <= 0) { el.textContent = to.toLocaleString(); return; }
+      const start = performance.now(), dur = 850;
+      const frame = now => {
+        const t = Math.min(1, (now - start) / dur);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - t, 3))).toLocaleString();
+        if (t < 1) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  const onPage = () => { initReveals(); initCounters(); };
   document.addEventListener('turbo:load', onPage);
   if (document.readyState !== 'loading') onPage();
   else document.addEventListener('DOMContentLoaded', onPage);
