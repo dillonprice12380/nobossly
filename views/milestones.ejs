@@ -1,5 +1,5 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Your trophy case. Trophies unlock themselves while you play — complete tasks, finish challenges, keep your streak alive. No claiming, no honor system: the game is watching.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Your trophy case. Most trophies unlock themselves while you play. The real-world milestones below — the ones no metric can see — you log yourself, with a written account.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
 <% if (fresh && fresh.length) { %>
@@ -7,6 +7,35 @@
     <h2>🎉 New troph<%= fresh.length === 1 ? 'y' : 'ies' %> unlocked!</h2>
     <% fresh.forEach(f => { %>
       <p style="margin:.35rem 0"><strong><%= f.emoji %> <%= f.title %></strong> <span class="chip">⚡ +<%= f.xp_reward %> XP</span></p>
+    <% }) %>
+  </div>
+<% } %>
+
+<%# The self-attested set. These gate levels 5, 6, 8, 9 and 10 — no metric
+    inside the app can see them, so the founder logs them with a proof note. %>
+<% if (typeof claimable !== 'undefined' && claimable.length) { %>
+  <div class="card">
+    <h2>🌍 Real-world milestones</h2>
+    <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account of what happened. They carry the top rungs of the Ladder.</p>
+    <% claimable.forEach(function (m) {
+         var got = earned[m.id];
+         var gate = gatesLevel[String(m.title).trim().toLowerCase()]; %>
+      <div class="milestone-row" style="<%= got ? '' : 'opacity:.92' %>">
+        <div style="flex:1;min-width:0">
+          <strong><%= got ? m.emoji : '🔒' %> <%= m.title %></strong>
+          <p class="muted small"><%= m.description %></p>
+          <span class="chip">⚡ <%= m.xp_reward %> XP</span>
+          <% if (gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
+          <% if (!got) { %>
+            <form method="post" action="/milestones/claim/<%= m.id %>" style="margin:.5rem 0 0">
+              <textarea name="proof_note" rows="2" required minlength="30"
+                placeholder="What actually happened? A few sentences — when, where, the specifics."></textarea>
+              <button class="btn btn-primary btn-sm" style="margin-top:.35rem">I did this</button>
+            </form>
+          <% } %>
+        </div>
+        <% if (got) { %><span class="chip chip-success">🏆 <%= new Date(got.earned_at).toLocaleDateString() %></span><% } %>
+      </div>
     <% }) %>
   </div>
 <% } %>

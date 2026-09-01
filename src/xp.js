@@ -76,6 +76,46 @@ function meetsRequirements(reqmt, have) {
   return hits >= need;
 }
 
+// What stands between this founder and the next rung, in the two currencies the
+// ladder actually charges: XP, and completed real-world quests. Nothing in the
+// app used to surface the quest half — the dashboard showed an XP countdown
+// only, so a founder blocked on "make your first sale" saw a number ticking
+// down toward a level they could never reach that way.
+async function ladderStatus(sb, userId, profile) {
+  try {
+    const { data: levels } = await sb.from('founder_levels')
+      .select('level, title, emoji, xp_required, requirements, unlock_text').order('level');
+    const cur = profile.current_level || 1;
+    const next = (levels || []).find(l => l.level === cur + 1);
+    if (!next) return null;
+
+    const reqs = next.requirements || {};
+    const list = Array.isArray(reqs.quests) ? reqs.quests : [];
+    const have = list.length ? await achievedQuests(sb, userId) : new Set();
+    const quests = list.map(q => ({
+      type: q.type,
+      title: q.title,
+      href: q.type === 'challenge' ? '/challenges' : '/milestones',
+      done: have.has(String(q.type || '') + ':' + String(q.title || '').trim().toLowerCase())
+    }));
+
+    const needMin = (reqs.min && reqs.min > 0) ? Math.min(reqs.min, quests.length) : quests.length;
+    const doneCount = quests.filter(q => q.done).length;
+    const xpNeeded = Math.max(0, (next.xp_required || 0) - (profile.xp_total || 0));
+    const questsMet = doneCount >= needMin;
+
+    return {
+      next, quests, needMin, doneCount, questsMet, xpNeeded,
+      xpMet: xpNeeded === 0,
+      // What to actually tell them, rather than a bare number.
+      blocker: !questsMet && xpNeeded > 0 ? 'both' : (!questsMet ? 'quests' : (xpNeeded > 0 ? 'xp' : null))
+    };
+  } catch (e) {
+    console.error('ladderStatus', e.message);
+    return null;
+  }
+}
+
 async function awardXP(sb, userId, profile, amount, reason, entityType, entityId) {
   try {
     await sb.from('xp_events').insert({ user_id: userId, amount, reason, entity_type: entityType || null, entity_id: entityId || null });
@@ -124,4 +164,4 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
   }
 }
 
-module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements };
+module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements, ladderStatus };

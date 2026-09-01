@@ -2,7 +2,11 @@
 <div class="page-head">
   <div><h1>Hey <%= profile.display_name || 'founder' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
   <p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
-  <% if (levelInfo.next) { %> · <%= levelInfo.next.xp_required - (profile.xp_total||0) %> XP to <%= levelInfo.next.title %><% } %></p></div>
+  <% if (typeof ladder !== 'undefined' && ladder) { %>
+    <% if (ladder.xpNeeded > 0) { %> · <%= ladder.xpNeeded %> XP to <%= ladder.next.title %>
+    <% } else if (!ladder.questsMet) { %> · XP ready for <%= ladder.next.title %> — <%= ladder.needMin - ladder.doneCount %> quest<%= (ladder.needMin - ladder.doneCount) === 1 ? '' : 's' %> to go
+    <% } %>
+  <% } else if (levelInfo.next) { %> · <%= Math.max(0, levelInfo.next.xp_required - (profile.xp_total||0)) %> XP to <%= levelInfo.next.title %><% } %></p></div>
   <%# The check-in no longer waits on a sprint — it is the daily loop for everyone. %>
   <% if (!checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
   <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
@@ -14,6 +18,61 @@
   <div class="stat card"><span class="stat-num"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
   <% if (sprint) { %><div class="stat card"><span class="stat-num"><%= sprint.velocity_pct || 0 %>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
+
+<%# The Ladder. No view ever rendered a level's requirements or its unlock text,
+    so the spine of the whole game was invisible: players saw an XP bar implying
+    "fill this and advance" while the real gate stayed hidden. %>
+<% if (typeof ladder !== 'undefined' && ladder) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2><%= ladder.next.emoji %> Next rung: Level <%= ladder.next.level %> — <%= ladder.next.title %></h2>
+      <p class="muted small" style="margin:.15rem 0 0">
+        <% if (ladder.blocker === 'both') { %>Needs <%= ladder.xpNeeded %> more XP and the quests below.
+        <% } else if (ladder.blocker === 'quests') { %>You have the XP. These are what's left.
+        <% } else if (ladder.blocker === 'xp') { %>Quests done — <%= ladder.xpNeeded %> XP to go.
+        <% } else { %>Everything is done. Your next action levels you up.<% } %>
+      </p></div>
+      <span class="chip"><%= ladder.doneCount %>/<%= ladder.needMin %> quests</span>
+    </div>
+
+    <% if (ladder.quests.length) { %>
+      <ul class="task-list" style="margin:0">
+        <% ladder.quests.forEach(function (q) { %>
+          <li class="task <%= q.done ? 'done' : '' %>">
+            <span class="task-check" aria-hidden="true" style="cursor:default"><%= q.done ? '✓' : '' %></span>
+            <div style="flex:1">
+              <strong><%= q.title %></strong>
+              <p class="muted small" style="margin:.1rem 0 0"><%= q.type === 'challenge' ? 'Challenge' : 'Real-world milestone' %><%= q.done ? ' · done' : '' %></p>
+            </div>
+            <% if (!q.done) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= q.href %>">Go</a><% } %>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (ladder.needMin < ladder.quests.length) { %>
+        <p class="muted small" style="margin:.5rem 0 0">Any <%= ladder.needMin %> of these <%= ladder.quests.length %> will do.</p>
+      <% } %>
+    <% } %>
+
+    <%# What the rung actually gives, and honestly how. Unlocks marked "arranged
+        with you" are real-world commitments a person fulfils — the app is not
+        pretending to have granted them. %>
+    <% if ((ladder.unlocks || []).length || ladder.next.unlock_text) { %>
+      <div style="border-top:1px solid var(--border);margin:.7rem 0 0;padding-top:.6rem">
+        <% if ((ladder.unlocks || []).length) { %>
+          <% ladder.unlocks.forEach(function (u) { %>
+            <p class="small" style="margin:.25rem 0">
+              <%= u.kind === 'live' ? '🎁' : '🤝' %> <strong><%= u.label %></strong>
+              <span class="muted"><%= u.detail %></span>
+              <% if (u.kind !== 'live') { %><span class="chip" style="font-size:.68rem">arranged with you</span><% } %>
+            </p>
+          <% }) %>
+        <% } else { %>
+          <p class="muted small" style="margin:0">🎁 <%= ladder.next.unlock_text %></p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+<% } %>
 
 <%# Active quests pinned first — the weekly sprint and every accepted
     challenge (curated AND tailored) in one card at the top of the board. %>

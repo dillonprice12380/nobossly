@@ -1,8 +1,9 @@
 const router = require('express').Router();
 const ai = require('../ai');
-const { awardXP, bumpStreak } = require('../xp');
+const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
+const { forLevel } = require('../unlocks');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -60,6 +61,12 @@ router.get('/', async (req, res, next) => {
     const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '\ud83c\udf31' };
     const next = lvls.find(l => l.level === (p.current_level || 1) + 1);
 
+    // The quest log. Levels gate on XP *and* completed real-world quests, but
+    // only the XP half was ever shown — so a founder blocked on a quest just saw
+    // a countdown to a level they couldn't reach.
+    const ladder = await ladderStatus(req.sb, req.user.id, p);
+    if (ladder) ladder.unlocks = forLevel(ladder.next.level);
+
     // progress analytics (paid)
     let analytics = null;
     if (res.locals.plan === 'paid') {
@@ -90,7 +97,7 @@ router.get('/', async (req, res, next) => {
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
-      levelInfo: { current: cur, next }, aiReady: ai.hasKey(), pinned, analytics, coach
+      levelInfo: { current: cur, next }, ladder, aiReady: ai.hasKey(), pinned, analytics, coach
     });
   } catch (e) { next(e); }
 });

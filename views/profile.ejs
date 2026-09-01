@@ -54,9 +54,20 @@
   <% if (p.bio) { %><p style="margin-top:1rem"><%= p.bio %></p><% } %>
   <p class="muted small">
     <% if (p.occupation) { %><%= p.occupation %> · <% } %>
-    <% if (p.location) { %>📍 <%= p.location %> · <% } %>
-    <% if (p.website_url) { %><a href="<%= p.website_url %>" rel="nofollow noopener" target="_blank">🔗 Website</a><% } %>
+    <% if (p.location) { %>📍 <%= p.location %><% } %>
   </p>
+
+  <%# Level 3 — Builder. The business name and link are withheld below it, which
+      is what makes the rung an actual unlock rather than a line of copy. %>
+  <% if (typeof showcase !== 'undefined' && showcase) { %>
+    <div class="card" style="margin:.8rem 0 0;background:var(--panel-2)">
+      <p class="muted small" style="margin:0 0 .2rem">🔨 Building</p>
+      <% if (showcase.businessName) { %><strong style="font-size:1.05rem"><%= showcase.businessName %></strong><br><% } %>
+      <% if (showcase.url) { %><a href="<%= showcase.url %>" rel="nofollow noopener" target="_blank">🔗 <%= showcase.url.replace(/^https?:\/\//, '') %></a><% } %>
+    </div>
+  <% } else if (isMe && typeof canShowcase !== 'undefined' && !canShowcase) { %>
+    <p class="muted small" style="margin-top:.8rem">🔒 Your business name and link show here from <strong>Level <%= showcaseLevel %> — Builder</strong>, once you've shipped something. <a href="/dashboard">See what's left</a>.</p>
+  <% } %>
   <% } %>
 </div>
 <div class="grid-2">

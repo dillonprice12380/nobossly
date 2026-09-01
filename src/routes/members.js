@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { showsBuild, SHOWCASE_LEVEL } = require('../unlocks');
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
 // Uses the service role key so it bypasses RLS entirely. Fast no-op once every
@@ -102,6 +103,20 @@ router.get('/:username', async (req, res, next) => {
     const milestones = [...(preMilestones || []), ...((customM || []).map(c => ({ emoji: c.emoji, title: c.title })))];
     const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
     const isMe = p.id === req.user.id;
+
+    // Level 3 — Builder promises "your business name and link now show on your
+    // public profile". The link used to show from Level 1, so the rung unlocked
+    // nothing. It is withheld until Level 3 now, and the business name comes
+    // from their active blueprint.
+    const canShowcase = showsBuild(p);
+    let showcase = null;
+    if (canShowcase) {
+      const { data: bp } = await req.sb.from('blueprints')
+        .select('business_name').eq('user_id', p.id).eq('is_active', true)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      showcase = { businessName: (bp && bp.business_name) || null, url: p.website_url || null };
+      if (!showcase.businessName && !showcase.url) showcase = null;
+    }
     const isPrivate = p.profile_is_public === false && !isMe;
     const [{ data: followRows }, { count: followerCount }, { count: followingCount }, { data: friendship }, { data: blockRow }, { data: blockedMeRow }, { count: friendCount }] = await Promise.all([
       req.sb.from('follows').select('follower_id').eq('follower_id', req.user.id).eq('following_id', p.id),
@@ -121,7 +136,7 @@ router.get('/:username', async (req, res, next) => {
       iBlocked: !!(blockRow && blockRow.length),
       blockedMe: !!(blockedMeRow && blockedMeRow.length)
     };
-    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social });
+    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL });
   } catch (e) { next(e); }
 });
 

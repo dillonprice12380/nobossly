@@ -19,11 +19,12 @@ router.get('/', async (req, res, next) => {
     try { ({ fresh, metrics } = await sweepMilestones(req.sb, req.user.id, req.profile, paid)); }
     catch (e) { console.error('milestone sweep', e); }
 
-    const [{ data: defs }, { data: mine }, { data: badges }, { data: custom }] = await Promise.all([
+    const [{ data: defs }, { data: mine }, { data: badges }, { data: custom }, { data: levels }] = await Promise.all([
       req.sb.from('predefined_milestones').select('*').order('position'),
       req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', req.user.id),
       req.sb.from('badges').select('id, name, emoji, tier'),
-      req.sb.from('user_custom_milestones').select('*').eq('user_id', req.user.id).order('created_at')
+      req.sb.from('user_custom_milestones').select('*').eq('user_id', req.user.id).order('created_at'),
+      req.sb.from('founder_levels').select('level, title, emoji, xp_required, requirements').order('level')
     ]);
     const earned = {};
     (mine || []).forEach(m => earned[m.predefined_milestone_id] = m);
@@ -34,22 +35,73 @@ router.get('/', async (req, res, next) => {
     // criterion any more) still display if this founder earned them back then.
     const cats = {};
     const legacy = [];
+    // Real-world milestones: the things no metric can see — you registered the
+    // business, you opened the bank account, you hit $1k MRR. Self-attested with
+    // a written proof note, and deliberately kept apart from the auto trophies
+    // so the difference between "the game watched you do this" and "you told us
+    // you did this" stays visible.
+    const claimable = [];
     (defs || []).forEach(d => {
-      if (d.is_active && d.auto_kind) (cats[d.category] = cats[d.category] || []).push(d);
+      if (!d.is_active) { if (earned[d.id]) legacy.push(d); return; }
+      if (d.auto_kind) (cats[d.category] = cats[d.category] || []).push(d);
+      else if (d.is_claimable) claimable.push(d);
       else if (earned[d.id]) legacy.push(d);
     });
     const earnedCount = (defs || []).filter(d => earned[d.id]).length;
 
+    // Which rung each real-world milestone unlocks, so the founder can see why
+    // it matters rather than just what it is worth.
+    const gatesLevel = {};
+    (levels || []).forEach(l => {
+      const qs = (l.requirements && Array.isArray(l.requirements.quests)) ? l.requirements.quests : [];
+      qs.forEach(q => {
+        if (q && q.type === 'milestone' && q.title) {
+          gatesLevel[String(q.title).trim().toLowerCase()] = l;
+        }
+      });
+    });
+
     res.render('milestones', {
       title: 'Milestones', cats, earned, badgeMap, metrics, fresh, legacy, earnedCount,
-      paid, custom: custom || [], msg: req.query.msg || null
+      claimable, gatesLevel, paid, custom: custom || [], msg: req.query.msg || null
     });
   } catch (e) { next(e); }
 });
 
-// Manual claiming is retired. Old cached pages may still POST here — just
-// bounce back to the trophy case, where the sweep tells the truth.
+// Manual claiming of AUTO trophies is retired. Old cached pages may still POST
+// here — just bounce back to the trophy case, where the sweep tells the truth.
 router.post('/:id/achieve', (req, res) => res.redirect('/milestones'));
+
+// Claim a real-world milestone. These carry the ladder's top five rungs and
+// cannot be measured from inside the app, so they are self-attested — but a
+// written account is required, the same standard the proof-gated challenges
+// hold, and it is stored against the claim.
+router.post('/claim/:id', async (req, res, next) => {
+  const back = m => res.redirect('/milestones?msg=' + encodeURIComponent(m));
+  try {
+    const { data: def } = await req.sb.from('predefined_milestones')
+      .select('*').eq('id', req.params.id).eq('is_active', true).eq('is_claimable', true).maybeSingle();
+    if (!def) return res.redirect('/milestones');
+
+    const note = String(req.body.proof_note || '').trim().slice(0, 2000);
+    if (note.length < 30) {
+      return back('Add a bit more detail to \u201c' + def.title + '\u201d \u2014 a few honest sentences on what you actually did.');
+    }
+
+    // Idempotent: the unique index on (user_id, predefined_milestone_id) makes a
+    // double submit a no-op rather than a second XP award.
+    const { error } = await req.sb.from('user_milestones').insert({
+      user_id: req.user.id, predefined_milestone_id: def.id, emoji: def.emoji,
+      custom_description: note, date_achieved: new Date().toISOString().slice(0, 10),
+      pinned: isPaid(req)
+    });
+    if (error) return back('You have already logged \u201c' + def.title + '\u201d.');
+
+    await awardXP(req.sb, req.user.id, req.profile, def.xp_reward || 50, 'Milestone: ' + def.title, 'predefined_milestones', def.id);
+    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A founder') + ' reached the milestone ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
+    back(def.emoji + ' ' + def.title + ' logged \u2014 +' + (def.xp_reward || 50) + ' XP. That is a real one.');
+  } catch (e) { next(e); }
+});
 
 // Generate an AI-tailored set of personal goals from the founder's active blueprint (paid only).
 router.post('/generate', async (req, res, next) => {
