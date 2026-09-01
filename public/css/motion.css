@@ -99,3 +99,146 @@
   .xp-float, .levelup-badge, .nb-confetti, .quest-pop, .quest-ring { animation: none !important; }
   .quest-pop, .levelup-badge { opacity: 1; }
 }
+
+/* ============================================================
+   Celebration FX — the two big moments.
+   Markup and particles come from public/js/fx.js.
+
+   Sizing is clamp()-driven throughout, so the same rules cover a 360px phone
+   and a 1600px desktop without a stack of breakpoints. The one media query
+   below only handles what clamp can't: dropping to a single line of type where
+   "CONGRATULATIONS" stops fitting.
+   ============================================================ */
+
+.nb-fx-overlay {
+  position: fixed; inset: 0; z-index: 96;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  /* Never intercept a click meant for the page underneath. */
+  pointer-events: none;
+  animation: nb-fx-in .22s ease-out;
+}
+.nb-fx-overlay.nb-fx-out { animation: nb-fx-fade .26s ease-in forwards; }
+@keyframes nb-fx-in { from { opacity: 0; } }
+@keyframes nb-fx-fade { to { opacity: 0; } }
+
+/* The canvas sits behind the card but above the page. */
+.nb-fx-canvas { position: fixed; inset: 0; z-index: 95; pointer-events: none; }
+
+/* Backdrops: warm for fire, deep for fireworks so the sparks read. */
+.nb-fx-fire::before,
+.nb-fx-win::before {
+  content: ""; position: absolute; inset: 0;
+  animation: nb-fx-in .3s ease-out;
+}
+.nb-fx-fire::before { background: radial-gradient(ellipse at 50% 100%, rgba(120, 33, 8, .55), rgba(8, 6, 4, .72) 70%); }
+.nb-fx-win::before { background: radial-gradient(ellipse at 50% 45%, rgba(6, 40, 30, .58), rgba(3, 6, 12, .82) 72%); }
+
+.nb-fx-card {
+  position: relative;
+  text-align: center;
+  border-radius: clamp(14px, 3vw, 22px);
+  padding: clamp(1.1rem, 4vw, 2.2rem) clamp(1.2rem, 5vw, 3rem);
+  max-width: min(92vw, 40rem);
+}
+
+.nb-fx-emoji { display: block; font-size: clamp(2.4rem, 11vw, 4.2rem); line-height: 1; margin-bottom: .3rem; }
+
+.nb-fx-title {
+  display: block;
+  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.02;
+  font-size: clamp(1.9rem, 9vw, 4rem);
+}
+.nb-fx-sub {
+  display: block;
+  font-style: normal;
+  margin-top: clamp(.4rem, 1.5vw, .8rem);
+  font-size: clamp(.9rem, 3.2vw, 1.15rem);
+  font-weight: 600;
+}
+
+/* ---------- Fire: arcade slam-in ---------- */
+
+.nb-fx-card--fire {
+  background: linear-gradient(160deg, rgba(28, 12, 4, .94), rgba(60, 20, 6, .92));
+  border: 2px solid rgba(251, 191, 36, .85);
+  box-shadow: 0 0 0 1px rgba(255, 237, 180, .35) inset,
+              0 18px 70px rgba(234, 88, 12, .5),
+              0 0 120px rgba(249, 115, 22, .35);
+  animation: nb-fx-slam 2.6s cubic-bezier(.2, 1.5, .35, 1) forwards;
+}
+.nb-fx-card--fire .nb-fx-title {
+  background: linear-gradient(180deg, #fff6d5 12%, #fbbf24 52%, #f97316 88%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 34px rgba(251, 191, 36, .45);
+}
+.nb-fx-card--fire .nb-fx-sub { color: #fcd9a4; letter-spacing: .12em; text-transform: uppercase; }
+
+@keyframes nb-fx-slam {
+  0%   { opacity: 0; transform: scale(2.1) rotate(-7deg); }
+  9%   { opacity: 1; transform: scale(.94) rotate(1.5deg); }
+  15%  { transform: scale(1.04) rotate(-.5deg); }
+  22%  { transform: scale(1) rotate(0deg); }
+  86%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.96); }
+}
+
+/* Shockwaves punching outward from the card. */
+.nb-fx-ring {
+  position: absolute; top: 50%; left: 50%;
+  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border: 3px solid rgba(251, 191, 36, .9); border-radius: 50%;
+  animation: nb-fx-ring 1s cubic-bezier(.15, .7, .3, 1) forwards;
+}
+.nb-fx-ring2 { animation-delay: .16s; border-color: rgba(249, 115, 22, .75); }
+@keyframes nb-fx-ring {
+  from { opacity: .9; transform: scale(.4); }
+  to   { opacity: 0; transform: scale(16); }
+}
+
+/* ---------- Fireworks: rise and shimmer ---------- */
+
+.nb-fx-card--win { animation: nb-fx-rise 3.4s cubic-bezier(.2, 1.2, .3, 1) forwards; max-width: min(97vw, 62rem); padding-left: 0; padding-right: 0; }
+.nb-fx-congrats {
+  background: linear-gradient(100deg, #fde68a 8%, #ffffff 30%, #6ee7b7 52%, #ffffff 72%, #fbbf24 94%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 26px rgba(16, 185, 129, .5));
+  animation: nb-fx-shimmer 2.6s linear infinite;
+  /* Fifteen characters. Sized off viewport width rather than a fixed scale so
+     it stays on one line from a 320px phone to a 4K desktop — a mid-word break
+     ("CONGRATULATI / ONS") is the one thing that would undercut the moment. */
+  font-size: clamp(1.15rem, 7.6vw, 4.2rem);
+  white-space: nowrap;
+  letter-spacing: -.03em;
+}
+.nb-fx-card--win .nb-fx-sub { color: #d1fae5; letter-spacing: .1em; text-transform: uppercase; }
+
+@keyframes nb-fx-rise {
+  0%   { opacity: 0; transform: scale(.55) translateY(26px); }
+  10%  { opacity: 1; transform: scale(1.06) translateY(0); }
+  17%  { transform: scale(1); }
+  88%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+@keyframes nb-fx-shimmer { to { background-position: 260% 0; } }
+
+/* Short landscape windows — phone on its side — need the vertical budget back. */
+@media (max-height: 460px) {
+  .nb-fx-title { font-size: clamp(1.5rem, 7vh, 2.4rem); }
+  .nb-fx-emoji { font-size: clamp(1.8rem, 9vh, 2.6rem); }
+  .nb-fx-card { padding: 1rem 1.4rem; }
+}
+
+/* ---------- Reduced motion ----------
+   The moment still happens, it just holds still: no canvas is created at all
+   (fx.js checks the query), and the card fades rather than slamming. */
+@media (prefers-reduced-motion: reduce) {
+  .nb-fx-card--fire, .nb-fx-card--win { animation: nb-fx-in .2s ease-out forwards; opacity: 1; transform: none; }
+  .nb-fx-ring { display: none; }
+  .nb-fx-congrats { animation: none; background-position: 0 0; }
+  .nb-fx-overlay { animation: none; }
+}

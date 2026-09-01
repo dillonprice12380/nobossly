@@ -123,8 +123,15 @@
     document.body.appendChild(overlay);
     setTimeout(() => { overlay.remove(); ring.remove(); }, 1800);
   }
-  const questPopup = () => questCard('\u2694\ufe0f', 'CHALLENGE ACCEPTED', "Let's do this!");
-  const completePopup = () => questCard('\ud83c\udfc6', 'CHALLENGE COMPLETE', 'Congratulations!');
+  // The two challenge moments get the full-screen treatment from fx.js —
+  // fire for accepting, fireworks for completing. questCard stays as the
+  // fallback for anything that loads before fx.js, and for trophies.
+  const questPopup = () => (window.nbFX
+    ? window.nbFX.accepted("Let's do this.")
+    : questCard('\ud83d\udd25', 'CHALLENGE ACCEPTED', "Let's do this!"));
+  const completePopup = () => (window.nbFX
+    ? window.nbFX.completed('Challenge complete.')
+    : questCard('\ud83c\udfc6', 'CONGRATULATIONS', 'Challenge complete!'));
   window.nbQuestPopup = questPopup;
   window.nbCompletePopup = completePopup;
 
