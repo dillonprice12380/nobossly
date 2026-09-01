@@ -176,9 +176,18 @@
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
     if (/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) {
-      // No soundbite here any more: the accept celebration is a hosted video
-      // clip that brings its own audio.
-      try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
+      // Play it NOW, inside the click, rather than after the accept round-trip
+      // and re-render — that wait was the whole of the delay. fx.js carries the
+      // overlay into the incoming body so the navigation doesn't kill it, and
+      // being inside a gesture is also what lets the clip play with sound.
+      //
+      // Without Turbo the form does a real page load and takes the overlay with
+      // it, so fall back to flagging it for the page that comes back.
+      if (window.Turbo && window.nbFX) {
+        window.nbFX.accepted();
+      } else {
+        try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
+      }
       return;
     }
     if (/^\/challenges\/(custom\/)?[^/]+\/finish$/.test(action)) {
@@ -499,7 +508,15 @@
     });
   }
 
-  const onPage = () => { initReveals(); initCounters(); };
+  const onPage = () => {
+    initReveals();
+    initCounters();
+    // Only where an Accept button actually exists — no reason to pull a video
+    // down on pages that can never play it.
+    if (window.nbFX && document.querySelector('form[action*="/accept"]')) {
+      window.nbFX.warmAccepted();
+    }
+  };
   document.addEventListener('turbo:load', onPage);
   if (document.readyState !== 'loading') onPage();
   else document.addEventListener('DOMContentLoaded', onPage);

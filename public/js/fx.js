@@ -86,16 +86,29 @@
       document.removeEventListener('click', end, true);
       document.removeEventListener('keydown', end, true);
       document.removeEventListener('visibilitychange', onHide);
+      document.removeEventListener('turbo:before-render', onBeforeRender);
       overlay.classList.add('nb-fx-out');
       setTimeout(function () { overlay.remove(); if (canvas) canvas.destroy(); }, 260);
     }
     function onHide() { if (document.hidden) end(); }
+
+    // Turbo swaps the whole <body> on navigation. A celebration fired from a
+    // click that also navigates would be thrown away mid-play, so carry it into
+    // the incoming body instead.
+    function onBeforeRender(e) {
+      if (done) return;
+      var nb = e.detail && e.detail.newBody;
+      if (!nb) return;
+      nb.appendChild(overlay);
+      if (canvas) nb.appendChild(canvas.el);
+    }
 
     // Any input cuts it short, and a backgrounded tab stops the loop entirely
     // rather than piling up frames nobody is watching.
     document.addEventListener('click', end, true);
     document.addEventListener('keydown', end, true);
     document.addEventListener('visibilitychange', onHide);
+    document.addEventListener('turbo:before-render', onBeforeRender);
 
     if (!reduce && draw) {
       canvas = makeCanvas();
@@ -129,6 +142,24 @@
   var ACCEPTED_CLIP =
     'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Challenge%20Accepted.mp4';
 
+  // Buffered ahead of time, offscreen, on any page that has an Accept button.
+  // The popup then adopts this exact element rather than starting a fresh
+  // download at the worst possible moment — which is what made it feel slow.
+  var warm = null;
+
+  function warmAccepted() {
+    if (reduce || (warm && warm.isConnected)) return;
+    var v = document.createElement('video');
+    v.className = 'nb-fx-video nb-fx-warm';
+    v.setAttribute('playsinline', '');
+    v.preload = 'auto';
+    v.muted = true;              // a muted element may buffer without a gesture
+    v.src = ACCEPTED_CLIP;
+    document.body.appendChild(v);
+    try { v.load(); } catch (_) { /* preload is an optimisation, never required */ }
+    warm = v;
+  }
+
   function accepted() {
     // A full-screen video is motion by definition, so reduced motion gets the
     // confirmation as a plain line instead of the clip.
@@ -141,22 +172,37 @@
     // it cannot load. Nobody should be left staring at a black rectangle.
     var MAX = 20000;
 
-    return stage(
-      '<video class="nb-fx-video" playsinline preload="auto"></video>',
-      'clip', MAX, null,
-      function (overlay, end) {
-        var v = overlay.querySelector('video');
-        var settled = false;
-        var give = function () { if (!settled) { settled = true; end(); } };
-
-        v.addEventListener('ended', give);
-        v.addEventListener('error', give);
-        // A clip that never becomes playable (offline, blocked, 404) should not
-        // hold the screen for the full ceiling.
-        var stall = setTimeout(function () { if (v.readyState < 2) give(); }, 6000);
-        v.addEventListener('loadeddata', function () { clearTimeout(stall); });
-
+    return stage('', 'clip', MAX, null, function (overlay, end) {
+      // Adopt the preloaded element if there is one — it is already buffered,
+      // so playback starts on the same frame instead of after a round trip.
+      var v = (warm && warm.isConnected) ? warm : null;
+      warm = null;
+      if (v) {
+        v.classList.remove('nb-fx-warm');
+      } else {
+        v = document.createElement('video');
+        v.className = 'nb-fx-video';
+        v.setAttribute('playsinline', '');
+        v.preload = 'auto';
         v.src = ACCEPTED_CLIP;
+      }
+      overlay.appendChild(v);
+
+      var settled = false;
+      var give = function () { if (!settled) { settled = true; end(); } };
+
+      v.addEventListener('ended', give);
+      v.addEventListener('error', give);
+      // A clip that never becomes playable (offline, blocked, 404) should not
+      // hold the screen for the full ceiling.
+      var stall = setTimeout(function () { if (v.readyState < 2) give(); }, 6000);
+      v.addEventListener('loadeddata', function () { clearTimeout(stall); });
+
+      // Called inside the click that accepted the challenge, so sound is
+      // allowed here where it would have been refused after a navigation.
+      // On refusal, mute and play anyway: the visual always runs.
+      var go = function () {
+        v.muted = false;
         var withSound = v.play();
         if (withSound && withSound.catch) {
           withSound.catch(function () {
@@ -165,8 +211,14 @@
             if (silent && silent.catch) silent.catch(give);
           });
         }
-      }
-    );
+      };
+      go();
+
+      // Some browsers pause a media element when it is moved between bodies.
+      var resume = function () { if (!settled && v.paused && !v.ended) v.play().catch(function () {}); };
+      document.addEventListener('turbo:render', resume);
+      v.addEventListener('ended', function () { document.removeEventListener('turbo:render', resume); });
+    });
   }
 
   /* ---------- 2. CHALLENGE COMPLETE — fireworks ---------- */
@@ -554,5 +606,5 @@
     });
   }
 
-  window.nbFX = { accepted: accepted, completed: completed, levelUp: levelUp, mastered: mastered };
+  window.nbFX = { accepted: accepted, warmAccepted: warmAccepted, completed: completed, levelUp: levelUp, mastered: mastered };
 })();

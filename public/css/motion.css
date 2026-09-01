@@ -388,3 +388,12 @@
   .nb-fx-boss { color: #14291f; text-shadow: none; }
   .nb-fx-summit::before { background: rgba(255, 251, 235, .96); }
 }
+
+/* The preloading clip: present in the DOM so the browser buffers it, but
+   invisible, unclickable and outside layout. Adopted by the overlay on click,
+   at which point .nb-fx-warm comes off and it fills the screen. */
+.nb-fx-warm {
+  position: fixed; left: -9999px; top: 0;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
