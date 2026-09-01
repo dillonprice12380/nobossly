@@ -159,8 +159,8 @@
   // fire for accepting, fireworks for completing. questCard stays as the
   // fallback for anything that loads before fx.js, and for trophies.
   const questPopup = () => (window.nbFX
-    ? window.nbFX.accepted("Let's do this.")
-    : questCard('\ud83d\udd25', 'CHALLENGE ACCEPTED', "Let's do this!"));
+    ? window.nbFX.accepted()
+    : questCard('\ud83c\udfc1', 'CHALLENGE ACCEPTED', "Let's do this!"));
   const completePopup = () => (window.nbFX
     ? window.nbFX.completed('Challenge complete.')
     : questCard('\ud83c\udfc6', 'CONGRATULATIONS', 'Challenge complete!'));
@@ -176,7 +176,8 @@
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
     if (/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) {
-      playSound('accept');
+      // No soundbite here any more: the accept celebration is a hosted video
+      // clip that brings its own audio.
       try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
       return;
     }

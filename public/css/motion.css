@@ -128,14 +128,14 @@
 /* Backdrops: warm for fire, deep for fireworks so the sparks read. */
 /* Every variant's backdrop needs content/position here — a ::before that only
    sets a background never generates a box, so the dim never appears. */
-.nb-fx-fire::before,
 .nb-fx-win::before,
 .nb-fx-level::before,
-.nb-fx-summit::before {
+.nb-fx-summit::before,
+.nb-fx-clip::before,
+.nb-fx-plain::before {
   content: ""; position: absolute; inset: 0;
   animation: nb-fx-in .3s ease-out;
 }
-.nb-fx-fire::before { background: radial-gradient(ellipse at 50% 100%, rgba(120, 33, 8, .55), rgba(8, 6, 4, .72) 70%); }
 .nb-fx-win::before { background: radial-gradient(ellipse at 50% 45%, rgba(6, 40, 30, .58), rgba(3, 6, 12, .82) 72%); }
 
 .nb-fx-card {
@@ -146,7 +146,6 @@
   max-width: min(92vw, 40rem);
 }
 
-.nb-fx-emoji { display: block; font-size: clamp(2.4rem, 11vw, 4.2rem); line-height: 1; margin-bottom: .3rem; }
 
 .nb-fx-title {
   display: block;
@@ -164,43 +163,38 @@
   font-weight: 600;
 }
 
-/* ---------- Fire: arcade slam-in ---------- */
+/* ---------- Challenge accepted: the hosted clip ----------
+   The clip is the whole effect, so there is no card and no type — just the
+   video, letterboxed on black so nothing in it is ever cropped away. */
 
-.nb-fx-card--fire {
-  background: linear-gradient(160deg, rgba(28, 12, 4, .94), rgba(60, 20, 6, .92));
-  border: 2px solid rgba(251, 191, 36, .85);
-  box-shadow: 0 0 0 1px rgba(255, 237, 180, .35) inset,
-              0 18px 70px rgba(234, 88, 12, .5),
-              0 0 120px rgba(249, 115, 22, .35);
-  animation: nb-fx-slam 2.6s cubic-bezier(.2, 1.5, .35, 1) forwards;
-}
-.nb-fx-card--fire .nb-fx-title {
-  background: linear-gradient(180deg, #fff6d5 12%, #fbbf24 52%, #f97316 88%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 0 34px rgba(251, 191, 36, .45);
-}
-.nb-fx-card--fire .nb-fx-sub { color: #fcd9a4; letter-spacing: .12em; text-transform: uppercase; }
+.nb-fx-clip::before { background: #04070a; }
 
-@keyframes nb-fx-slam {
-  0%   { opacity: 0; transform: scale(2.1) rotate(-7deg); }
-  9%   { opacity: 1; transform: scale(.94) rotate(1.5deg); }
-  15%  { transform: scale(1.04) rotate(-.5deg); }
-  22%  { transform: scale(1) rotate(0deg); }
-  86%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(.96); }
+.nb-fx-video {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  /* contain, not cover: the clip is designed artwork, and cropping a phone
+     down to a landscape frame would cut the words out of it. */
+  object-fit: contain;
+  background: #04070a;
 }
 
-/* Shockwaves punching outward from the card. */
-.nb-fx-ring {
-  position: absolute; top: 50%; left: 50%;
-  width: 56px; height: 56px; margin: -28px 0 0 -28px;
-  border: 3px solid rgba(251, 191, 36, .9); border-radius: 50%;
-  animation: nb-fx-ring 1s cubic-bezier(.15, .7, .3, 1) forwards;
-}
-.nb-fx-ring2 { animation-delay: .16s; border-color: rgba(249, 115, 22, .75); }
-@keyframes nb-fx-ring {
-  from { opacity: .9; transform: scale(.4); }
-  to   { opacity: 0; transform: scale(16); }
+/* The overlay centres its child; the video wants the whole box. */
+.nb-fx-clip { padding: 0; }
+
+/* Reduced motion gets a line of text where the clip would have been. */
+.nb-fx-plain::before { background: rgba(4, 20, 16, .72); }
+.nb-fx-plain {
+  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: #d1fae5;
+  font-size: clamp(1.3rem, 6vw, 2.4rem);
+  position: relative;
+  margin: 0;
 }
 
 /* ---------- Fireworks: rise and shimmer ---------- */
@@ -233,7 +227,6 @@
 /* Short landscape windows — phone on its side — need the vertical budget back. */
 @media (max-height: 460px) {
   .nb-fx-title { font-size: clamp(1.5rem, 7vh, 2.4rem); }
-  .nb-fx-emoji { font-size: clamp(1.8rem, 9vh, 2.6rem); }
   .nb-fx-card { padding: 1rem 1.4rem; }
 }
 
@@ -241,8 +234,7 @@
    The moment still happens, it just holds still: no canvas is created at all
    (fx.js checks the query), and the card fades rather than slamming. */
 @media (prefers-reduced-motion: reduce) {
-  .nb-fx-card--fire, .nb-fx-card--win { animation: nb-fx-in .2s ease-out forwards; opacity: 1; transform: none; }
-  .nb-fx-ring { display: none; }
+  .nb-fx-card--win { animation: nb-fx-in .2s ease-out forwards; opacity: 1; transform: none; }
   .nb-fx-congrats { animation: none; background-position: 0 0; }
   .nb-fx-overlay { animation: none; }
 }

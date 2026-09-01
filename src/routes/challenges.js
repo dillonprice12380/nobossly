@@ -69,9 +69,11 @@ router.get('/', async (req, res, next) => {
 // Admins upload or replace them at /admin/sounds. Cached in memory for 60s so
 // a re-upload takes effect without a restart; browsers hold them for 5m.
 // Bare /challenges/sound stays the accept clip for older cached client JS.
+// `accept` is gone: that celebration is a hosted video clip now and carries its
+// own audio. Bare /challenges/sound still resolves to the complete clip so an
+// old cached client asking for it gets something rather than a 404.
 const SOUND_KEYS = {
-  accept: 'quest-accept', complete: 'challenge-complete',
-  levelup: 'level-up', mastered: 'nobossly-mastered'
+  complete: 'challenge-complete', levelup: 'level-up', mastered: 'nobossly-mastered'
 };
 
 // Some clips ship with the code so they work the moment it deploys, with no
@@ -86,7 +88,7 @@ const BUNDLED = {
 const soundCache = {};
 router.get('/sound/:name?', async (req, res) => {
   try {
-    const key = SOUND_KEYS[req.params.name || 'accept'];
+    const key = SOUND_KEYS[req.params.name || 'complete'];
     if (!key) return res.status(404).end();
     let hit = soundCache[key];
     if (!hit || Date.now() - hit.at > 60000) {

@@ -5,8 +5,9 @@
    counts can scale with the viewport instead of hard-coding a desktop number
    and hoping a phone survives it:
 
-     nbFX.accepted(sub)  — CHALLENGE ACCEPTED. Fire and embers climbing the
-                           screen, arcade slam-in card. Meant to embolden.
+     nbFX.accepted()     — CHALLENGE ACCEPTED. Plays a hosted video clip full
+                           screen. No canvas, no card: the clip is the whole
+                           thing, art and audio both.
      nbFX.completed(sub) — CONGRATULATIONS. Fireworks across the whole
                            viewport. The bigger of the two moments.
      nbFX.levelUp(n, t, e) — LEVEL UP. A field of chevrons climbing the screen
@@ -31,7 +32,6 @@
 
   // Brand first, then the colours that read as celebration.
   var SPARK = ['#10b981', '#34d399', '#fbbf24', '#f59e0b', '#ffffff', '#f472b6', '#38bdf8'];
-  var EMBER = ['#fde68a', '#fbbf24', '#f59e0b', '#f97316', '#ea580c', '#dc2626'];
 
   var pick = function (a) { return a[(Math.random() * a.length) | 0]; };
   var rand = function (lo, hi) { return lo + Math.random() * (hi - lo); };
@@ -69,7 +69,7 @@
 
   /* ---------- the shared shell ---------- */
 
-  function stage(cardHTML, variant, ttl, draw) {
+  function stage(cardHTML, variant, ttl, draw, onMount) {
     var overlay = document.createElement('div');
     overlay.className = 'nb-fx-overlay nb-fx-' + variant;
     overlay.setAttribute('role', 'status');
@@ -109,73 +109,64 @@
       raf = requestAnimationFrame(frame);
     }
 
+    // ttl is a ceiling, not a schedule — onMount can finish sooner (a video
+    // ending) or bail out (a clip that fails to load).
     setTimeout(end, reduce ? 1400 : ttl);
+    if (onMount) onMount(overlay, end);
     return end;
   }
 
-  /* ---------- 1. CHALLENGE ACCEPTED — fire ---------- */
+  /* ---------- 1. CHALLENGE ACCEPTED — hosted clip ----------
+     The canvas fire effect and the accept soundbite are both gone; this clip
+     carries the moment on its own. Hotlinked from the same R2 bucket the site
+     already serves its images from.
 
-  function accepted(sub) {
-    var html =
-      '<div class="nb-fx-card nb-fx-card--fire">' +
-        '<span class="nb-fx-emoji">🔥</span>' +
-        '<strong class="nb-fx-title">CHALLENGE<br>ACCEPTED</strong>' +
-        '<em class="nb-fx-sub">' + (sub || "Let's do this.") + '</em>' +
-      '</div>' +
-      '<span class="nb-fx-ring"></span><span class="nb-fx-ring nb-fx-ring2"></span>';
+     Autoplay with sound is blocked unless the browser counts the moment as a
+     user gesture, and this fires after a Turbo navigation, so it may not. We
+     ask for sound, and on refusal mute and play anyway — the visual always
+     runs even when the audio can't. */
 
-    var embers = null, last = 0;
+  var ACCEPTED_CLIP =
+    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Challenge%20Accepted.mp4';
 
-    stage(html, 'fire', 2600, function (cv, t, now) {
-      var ctx = cv.ctx, w = cv.w, h = cv.h;
-      if (!embers) {
-        embers = [];
-        var n = budget(w, 110);
-        for (var i = 0; i < n; i++) {
-          embers.push({
-            x: Math.random() * w,
-            y: h + Math.random() * h * 0.5,
-            r: rand(1.4, 4.2),
-            vy: rand(0.9, 2.9),
-            drift: rand(-0.5, 0.5),
-            phase: Math.random() * Math.PI * 2,
-            col: pick(EMBER),
-            life: rand(0.55, 1)
+  function accepted() {
+    // A full-screen video is motion by definition, so reduced motion gets the
+    // confirmation as a plain line instead of the clip.
+    if (reduce) {
+      stage('<p class="nb-fx-plain">Challenge accepted</p>', 'plain', 1600);
+      return;
+    }
+
+    // A ceiling only: the overlay closes when the clip ends, or immediately if
+    // it cannot load. Nobody should be left staring at a black rectangle.
+    var MAX = 20000;
+
+    return stage(
+      '<video class="nb-fx-video" playsinline preload="auto"></video>',
+      'clip', MAX, null,
+      function (overlay, end) {
+        var v = overlay.querySelector('video');
+        var settled = false;
+        var give = function () { if (!settled) { settled = true; end(); } };
+
+        v.addEventListener('ended', give);
+        v.addEventListener('error', give);
+        // A clip that never becomes playable (offline, blocked, 404) should not
+        // hold the screen for the full ceiling.
+        var stall = setTimeout(function () { if (v.readyState < 2) give(); }, 6000);
+        v.addEventListener('loadeddata', function () { clearTimeout(stall); });
+
+        v.src = ACCEPTED_CLIP;
+        var withSound = v.play();
+        if (withSound && withSound.catch) {
+          withSound.catch(function () {
+            v.muted = true;
+            var silent = v.play();
+            if (silent && silent.catch) silent.catch(give);
           });
         }
-        last = now;
       }
-      var dt = Math.min(48, now - last) / 16.67;
-      last = now;
-
-      ctx.clearRect(0, 0, w, h);
-
-      // The heat haze at the foot of the screen, rising and fading with the run.
-      var fade = t < 300 ? t / 300 : Math.max(0, 1 - (t - 1500) / 1100);
-      var g = ctx.createLinearGradient(0, h, 0, h * 0.32);
-      g.addColorStop(0, 'rgba(249,115,22,' + (0.5 * fade) + ')');
-      g.addColorStop(0.45, 'rgba(234,88,12,' + (0.16 * fade) + ')');
-      g.addColorStop(1, 'rgba(120,20,10,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.globalCompositeOperation = 'lighter';
-      for (var i = 0; i < embers.length; i++) {
-        var e = embers[i];
-        e.y -= e.vy * dt * 1.6;
-        e.phase += 0.06 * dt;
-        e.x += (e.drift + Math.sin(e.phase) * 0.55) * dt;
-        if (e.y < -20) { e.y = h + rand(0, 60); e.x = Math.random() * w; }
-        var a = e.life * fade * (0.55 + 0.45 * Math.sin(e.phase * 1.7));
-        ctx.globalAlpha = Math.max(0, a);
-        ctx.fillStyle = e.col;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.r, 0, 6.283);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-    });
+    );
   }
 
   /* ---------- 2. CHALLENGE COMPLETE — fireworks ---------- */
