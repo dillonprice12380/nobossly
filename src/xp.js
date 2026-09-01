@@ -157,7 +157,13 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
         await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
       }
     }
-    return { newTotal, level, leveledUp: level > current };
+    // The level's own title and emoji ride along so the celebration can name
+    // the rung the founder just reached rather than only its number.
+    const reached = (levels || []).find(l => l.level === level) || {};
+    return {
+      newTotal, level, leveledUp: level > current,
+      title: reached.title || '', emoji: reached.emoji || ''
+    };
   } catch (e) {
     console.error('awardXP', e.message);
     return null;

@@ -45,8 +45,12 @@
   // Level-up celebration: badge + CSS confetti + the Level Up clip. Rare, so
   // it can be theatrical. Called right after a click's fetch resolves, which
   // is close enough to the gesture that browsers allow the audio.
-  function celebrate(level) {
+  // lvlEmoji, not emoji: the fallback body below declares its own `emoji`.
+  function celebrate(level, lvlTitle, lvlEmoji) {
     playSound('levelup');
+    // Full-screen climbing chevrons when fx.js is available; the original
+    // badge-and-confetti stays as the fallback so a level-up is never silent.
+    if (window.nbFX) return window.nbFX.levelUp(level, lvlTitle, lvlEmoji);
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
     const badge = document.createElement('div');
@@ -187,7 +191,7 @@
       floatXP(rect.left, rect.top, 10);
       const trophies = j.trophies || [];
       if (j.xp && j.xp.leveledUp) {
-        celebrate(j.xp.level);
+        celebrate(j.xp.level, j.xp.title, j.xp.emoji);
         if (trophies.length) {
           setTimeout(() => trophyPopup(trophies[0]), 1950);
           setTimeout(refresh, 3800);

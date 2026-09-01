@@ -9,6 +9,9 @@
                            screen, arcade slam-in card. Meant to embolden.
      nbFX.completed(sub) — CONGRATULATIONS. Fireworks across the whole
                            viewport. The bigger of the two moments.
+     nbFX.levelUp(n, t, e) — LEVEL UP. A field of chevrons climbing the screen
+                           and a shaft of light, because the whole feeling of
+                           this one is upward.
 
    Rules this file keeps:
    - The overlay is pointer-events:none, so a celebration can never eat a
@@ -264,5 +267,89 @@
     });
   }
 
-  window.nbFX = { accepted: accepted, completed: completed };
+
+  /* ---------- 3. LEVEL UP — arrows climbing ---------- */
+
+  function levelUp(level, title, emoji) {
+    var line = level ? ('LEVEL ' + level + (title ? ' \u00b7 ' + title : '')) : (title || '');
+    var html =
+      '<div class="nb-fx-card nb-fx-card--level">' +
+        '<span class="nb-fx-chevs" aria-hidden="true">' +
+          '<b class="nb-fx-chev"></b><b class="nb-fx-chev"></b><b class="nb-fx-chev"></b>' +
+        '</span>' +
+        '<strong class="nb-fx-title nb-fx-levelup">LEVEL UP</strong>' +
+        '<em class="nb-fx-sub">' + (emoji ? emoji + ' ' : '') + line + '</em>' +
+      '</div>';
+
+    var arrows = null, last = 0;
+    var TTL = 3000;
+    var COL = ['#6ee7b7', '#34d399', '#10b981', '#fbbf24', '#ffffff'];
+
+    stage(html, 'level', TTL, function (cv, t, now) {
+      var ctx = cv.ctx, w = cv.w, h = cv.h;
+
+      if (!arrows) {
+        arrows = [];
+        var n = budget(w, 46);
+        for (var i = 0; i < n; i++) {
+          // Depth: a big slow chevron reads as far away, a small fast one as
+          // close. Mixing the two is what stops it looking like wallpaper.
+          var far = Math.random() < 0.45;
+          arrows.push({
+            x: rand(w * 0.02, w * 0.98),
+            y: rand(0, h * 1.6),
+            size: far ? rand(26, 54) : rand(11, 24),
+            speed: far ? rand(1.1, 2.2) : rand(2.6, 5.2),
+            lw: far ? rand(3, 5.5) : rand(2, 3.4),
+            alpha: far ? rand(0.1, 0.24) : rand(0.4, 0.9),
+            col: pick(COL),
+            wob: Math.random() * Math.PI * 2
+          });
+        }
+        last = now;
+      }
+      var dt = Math.min(48, now - last) / 16.67;
+      last = now;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Fade the whole field in, hold, then out with the card.
+      var fade = t < 260 ? t / 260 : Math.max(0, 1 - (t - 2100) / 900);
+
+      // A shaft of light up the middle: the direction of travel, stated once.
+      var shaft = ctx.createLinearGradient(0, h, 0, 0);
+      shaft.addColorStop(0, 'rgba(16,185,129,' + (0.22 * fade) + ')');
+      shaft.addColorStop(0.55, 'rgba(52,211,153,' + (0.08 * fade) + ')');
+      shaft.addColorStop(1, 'rgba(110,231,183,0)');
+      ctx.fillStyle = shaft;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (var j = 0; j < arrows.length; j++) {
+        var a = arrows[j];
+        a.y -= a.speed * dt * 2.2;
+        a.wob += 0.035 * dt;
+        var x = a.x + Math.sin(a.wob) * 5;
+        if (a.y < -a.size * 2) { a.y = h + rand(20, 200); a.x = rand(w * 0.02, w * 0.98); }
+
+        ctx.globalAlpha = a.alpha * fade;
+        ctx.strokeStyle = a.col;
+        ctx.lineWidth = a.lw;
+        // A chevron: up and over. Pointing where the founder is going.
+        ctx.beginPath();
+        ctx.moveTo(x - a.size * 0.5, a.y + a.size * 0.42);
+        ctx.lineTo(x, a.y - a.size * 0.42);
+        ctx.lineTo(x + a.size * 0.5, a.y + a.size * 0.42);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }
+
+  window.nbFX = { accepted: accepted, completed: completed, levelUp: levelUp };
 })();
