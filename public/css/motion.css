@@ -101,13 +101,11 @@
 }
 
 /* ============================================================
-   Celebration FX — the two big moments.
-   Markup and particles come from public/js/fx.js.
+   Celebration FX — the four big moments, staged by public/js/fx.js.
 
-   Sizing is clamp()-driven throughout, so the same rules cover a 360px phone
-   and a 1600px desktop without a stack of breakpoints. The one media query
-   below only handles what clamp can't: dropping to a single line of type where
-   "CONGRATULATIONS" stops fitting.
+   All four are a hosted video clip now, so this is a short file: a backdrop,
+   a box for the video to fill, and the reduced-motion line that stands in for
+   the clip when motion is off.
    ============================================================ */
 
 .nb-fx-overlay {
@@ -122,45 +120,15 @@
 @keyframes nb-fx-in { from { opacity: 0; } }
 @keyframes nb-fx-fade { to { opacity: 0; } }
 
-/* The canvas sits behind the card but above the page. */
-.nb-fx-canvas { position: fixed; inset: 0; z-index: 95; pointer-events: none; }
-
-/* Backdrops: warm for fire, deep for fireworks so the sparks read. */
 /* Every variant's backdrop needs content/position here — a ::before that only
    sets a background never generates a box, so the dim never appears. */
-.nb-fx-summit::before,
 .nb-fx-clip::before,
 .nb-fx-plain::before {
   content: ""; position: absolute; inset: 0;
   animation: nb-fx-in .3s ease-out;
 }
 
-.nb-fx-card {
-  position: relative;
-  text-align: center;
-  border-radius: clamp(14px, 3vw, 22px);
-  padding: clamp(1.1rem, 4vw, 2.2rem) clamp(1.2rem, 5vw, 3rem);
-  max-width: min(92vw, 40rem);
-}
-
-
-.nb-fx-title {
-  display: block;
-  font-family: var(--font-display, 'Sora', system-ui, sans-serif);
-  font-weight: 800;
-  letter-spacing: -.02em;
-  line-height: 1.02;
-  font-size: clamp(1.9rem, 9vw, 4rem);
-}
-.nb-fx-sub {
-  display: block;
-  font-style: normal;
-  margin-top: clamp(.4rem, 1.5vw, .8rem);
-  font-size: clamp(.9rem, 3.2vw, 1.15rem);
-  font-weight: 600;
-}
-
-/* ---------- Challenge accepted: the hosted clip ----------
+/* ---------- The clips ----------
    The clip is the whole effect, so there is no card and no type — just the
    video, letterboxed on black so nothing in it is ever cropped away. */
 
@@ -192,82 +160,6 @@
   font-size: clamp(1.3rem, 6vw, 2.4rem);
   position: relative;
   margin: 0;
-}
-
-/* ---------- Mastered NoBossly: the summit ----------
-   The canvas paints the whole scene, so the backdrop here is only a faint
-   vignette to seat the type — anything heavier would fight the sunrise. */
-
-.nb-fx-summit::before { background: radial-gradient(ellipse at 50% 34%, rgba(0,0,0,0) 38%, rgba(2, 8, 14, .55) 100%); }
-
-/* No panel. A card border around a sunrise would ruin it; the words sit in
-   the scene, held together by their own shadow. */
-.nb-fx-card--summit {
-  background: none; border: 0; box-shadow: none;
-  margin-top: clamp(2rem, 12vh, 8rem);
-  animation: nb-fx-summit-in 11s ease-out forwards;
-}
-@keyframes nb-fx-summit-in {
-  0%, 18%  { opacity: 0; transform: translateY(18px); }
-  30%      { opacity: 1; transform: translateY(0); }
-  90%      { opacity: 1; transform: translateY(0); }
-  100%     { opacity: 0; transform: translateY(-14px); }
-}
-
-.nb-fx-didit {
-  display: block;
-  background: linear-gradient(180deg, #fffdf3 6%, #fde68a 46%, #f2ae1c 96%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 6px 30px rgba(180, 108, 12, .85)) drop-shadow(0 2px 3px rgba(60, 30, 0, .6));
-  /* Two short words plus punctuation — safe on one line everywhere. */
-  font-size: clamp(2rem, 11vw, 5rem);
-  letter-spacing: -.035em;
-  white-space: nowrap;
-  opacity: 0;
-  animation: nb-fx-didit 11s cubic-bezier(.2, 1.2, .3, 1) forwards;
-}
-@keyframes nb-fx-didit {
-  0%, 20%  { opacity: 0; transform: scale(.82) translateY(16px); }
-  27%      { opacity: 1; transform: scale(1.05) translateY(0); }
-  32%      { transform: scale(1); }
-  90%      { opacity: 1; }
-  100%     { opacity: 0; }
-}
-
-.nb-fx-boss {
-  display: block;
-  margin-top: clamp(.5rem, 2vw, 1rem);
-  color: #fff6dc;
-  text-shadow: 0 2px 20px rgba(180, 108, 12, .95), 0 1px 2px rgba(40, 20, 0, .8);
-  font-weight: 700;
-  letter-spacing: clamp(.06em, .8vw, .18em);
-  text-transform: uppercase;
-  font-size: clamp(.78rem, 3.4vw, 1.5rem);
-  white-space: nowrap;
-  opacity: 0;
-  animation: nb-fx-boss 11s ease-out forwards;
-}
-@keyframes nb-fx-boss {
-  0%, 31%  { opacity: 0; transform: translateY(10px); letter-spacing: .02em; }
-  42%      { opacity: 1; transform: translateY(0); }
-  90%      { opacity: 1; }
-  100%     { opacity: 0; }
-}
-
-/* Short landscape windows: the scene needs the vertical room more than the
-   type does, so pull the block back toward the horizon. */
-@media (max-height: 500px) {
-  .nb-fx-card--summit { margin-top: clamp(1rem, 6vh, 3rem); }
-  .nb-fx-didit { font-size: clamp(1.6rem, 9vh, 3rem); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* No canvas is created at all (fx.js checks), so the words carry it alone. */
-  .nb-fx-card--summit { animation: nb-fx-in .25s ease-out forwards; opacity: 1; transform: none; margin-top: 0; }
-  .nb-fx-didit, .nb-fx-boss { animation: none; opacity: 1; transform: none; }
-  .nb-fx-didit { filter: none; color: #f2ae1c; -webkit-text-fill-color: currentColor; }
-  .nb-fx-boss { color: #14291f; text-shadow: none; }
-  .nb-fx-summit::before { background: rgba(255, 251, 235, .96); }
 }
 
 /* The preloading clip: present in the DOM so the browser buffers it, but

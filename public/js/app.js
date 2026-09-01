@@ -31,17 +31,6 @@
     } catch (_) { return null; /* audio unsupported — stay silent */ }
   }
 
-  // Long clips shouldn't outlive the animation they belong to. Ramps the volume
-  // down and stops, so dismissing a celebration silences it too.
-  function fadeOut(clip, ms) {
-    if (!clip) return;
-    const step = 40, dec = clip.volume / Math.max(1, ms / step);
-    const t = setInterval(() => {
-      clip.volume = Math.max(0, clip.volume - dec);
-      if (clip.volume <= 0.001) { clearInterval(t); try { clip.pause(); } catch (_) {} }
-    }, step);
-  }
-
   // --- Game juice -------------------------------------------------------
   // +XP chip that floats up from where the action happened.
   function floatXP(x, y, amount) {
@@ -54,31 +43,20 @@
     setTimeout(() => chip.remove(), 1000);
   }
 
-  // Level-up celebration: badge + CSS confetti + the Level Up clip. Rare, so
-  // it can be theatrical. Called right after a click's fetch resolves, which
-  // is close enough to the gesture that browsers allow the audio.
+  // Level-up celebration. Rare, so it can be theatrical. Called right after a
+  // click's fetch resolves, which is close enough to the gesture that browsers
+  // allow the audio.
   // lvlEmoji, not emoji: the fallback body below declares its own `emoji`.
   function celebrate(level, lvlTitle, lvlEmoji, isMax) {
-    // The final rung gets its own once-ever moment: the summit, and the track
-    // that goes with it. The supplied clip runs about 56 seconds, far longer
-    // than any popup should hold the screen, so it fades with the animation.
-    // Raise SUMMIT_MS (and the matching durations in motion.css) to let more
-    // of it play.
-    if (isMax && window.nbFX) {
-      const SUMMIT_MS = 11000;
-      const clip = playSound('mastered');
-      const stop = window.nbFX.mastered();
-      // fx.js hands back its own end() — wrap it so dismissing kills the audio.
-      const silence = () => fadeOut(clip, 900);
-      setTimeout(silence, SUMMIT_MS - 900);
-      document.addEventListener('click', silence, { once: true, capture: true });
-      document.addEventListener('keydown', silence, { once: true, capture: true });
-      return stop;
-    }
-    playSound('levelup');
-    // Full-screen climbing chevrons when fx.js is available; the original
-    // badge-and-confetti stays as the fallback so a level-up is never silent.
+    // The final rung gets its own once-ever moment. No soundbite alongside
+    // either of these: the clips carry their own audio, and layering the old
+    // one on top would play two tracks at once.
+    if (isMax && window.nbFX) return window.nbFX.mastered();
     if (window.nbFX) return window.nbFX.levelUp(level, lvlTitle, lvlEmoji);
+
+    // No fx.js: the original badge-and-confetti, with the soundbite, so a
+    // level-up is never silent and never nothing.
+    playSound('levelup');
     const overlay = document.createElement('div');
     overlay.className = 'nb-overlay';
     const badge = document.createElement('div');

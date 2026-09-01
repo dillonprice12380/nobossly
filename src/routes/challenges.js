@@ -68,21 +68,13 @@ router.get('/', async (req, res, next) => {
 // from our own domain — no external object storage, no filename matching.
 // Admins upload or replace them at /admin/sounds. Cached in memory for 60s so
 // a re-upload takes effect without a restart; browsers hold them for 5m.
-// Bare /challenges/sound stays the accept clip for older cached client JS.
-// `accept` is gone: that celebration is a hosted video clip now and carries its
-// own audio. Bare /challenges/sound still resolves to the complete clip so an
-// old cached client asking for it gets something rather than a 404.
+// `accept` and `mastered` are gone: those celebrations are hosted video clips
+// now and carry their own audio. `levelup` survives only for the no-fx.js
+// fallback path in app.js. Bare /challenges/sound still resolves to the
+// complete clip so an old cached client asking for it gets something rather
+// than a 404.
 const SOUND_KEYS = {
-  complete: 'challenge-complete', levelup: 'level-up', mastered: 'nobossly-mastered'
-};
-
-// Some clips ship with the code so they work the moment it deploys, with no
-// admin upload step. A site_assets row always wins, so uploading a replacement
-// at /admin/sounds still overrides the bundled default.
-const path = require('path');
-const fs = require('fs');
-const BUNDLED = {
-  'nobossly-mastered': path.join(__dirname, '..', '..', 'public', 'audio', 'youre-the-boss-now.mp3')
+  complete: 'challenge-complete', levelup: 'level-up'
 };
 
 const soundCache = {};
@@ -95,9 +87,10 @@ router.get('/sound/:name?', async (req, res) => {
       const { data } = await req.sb.from('site_assets').select('mime, data_b64').eq('key', key).maybeSingle();
       if (data) {
         hit = soundCache[key] = { at: Date.now(), mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
-      } else if (BUNDLED[key] && fs.existsSync(BUNDLED[key])) {
-        hit = soundCache[key] = { at: Date.now(), mime: 'audio/mpeg', buf: fs.readFileSync(BUNDLED[key]) };
       } else {
+        // Nothing ships with the code any more; every remaining clip is an
+        // admin upload, so a missing one is simply a 404 and app.js stays
+        // silent rather than erroring.
         return res.status(404).end();
       }
     }

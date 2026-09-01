@@ -6,10 +6,12 @@ const express = require('express');
 // matching. This page lets an admin upload or replace any of them without a
 // deploy. The file goes browser → server → database untouched, so what you
 // upload is byte-for-byte what plays.
+// Only the fallback clips are left. Challenge accepted, challenge complete,
+// level up and mastered NoBossly are all hosted video now and carry their own
+// audio, so nothing uploaded here plays over them.
 const SLOTS = [
-  { name: 'complete', key: 'challenge-complete', label: 'Challenge complete', hint: 'Plays when a member completes a challenge.' },
-  { name: 'levelup', key: 'level-up', label: 'Level up', hint: 'Plays when a member reaches a new founder level.' },
-  { name: 'mastered', key: 'nobossly-mastered', label: 'Mastered NoBossly', hint: 'Plays once ever, when a member reaches the final level. Ships with a default track \u2014 upload here to replace it.' }
+  { name: 'complete', key: 'challenge-complete', label: 'Challenge complete', hint: 'Legacy. Only reaches members still running cached JS from before the video clips.' },
+  { name: 'levelup', key: 'level-up', label: 'Level up', hint: 'Fallback only. Plays on a level up where the celebration script failed to load.' }
 ];
 
 router.get('/', async (req, res, next) => {
