@@ -8,11 +8,10 @@
      nbFX.accepted()     — CHALLENGE ACCEPTED. Plays a hosted video clip full
                            screen. No canvas, no card: the clip is the whole
                            thing, art and audio both.
-     nbFX.completed(sub) — CONGRATULATIONS. Fireworks across the whole
-                           viewport. The bigger of the two moments.
-     nbFX.levelUp(n, t, e) — LEVEL COMPLETE. A hosted clip, same as accepted().
-                           The level number and title are only used for the
-                           reduced-motion line, which has no clip to show.
+     nbFX.completed()    — CHALLENGE COMPLETE. Hosted clip (Level Complete.mp4).
+     nbFX.levelUp(n, t, e) — LEVEL UP. A field of chevrons climbing the screen
+                           and a shaft of light, because the whole feeling of
+                           this one is upward.
      nbFX.mastered()     — YOU DID IT / YOU'RE THE BOSS NOW. The summit: cloud
                            banks part, golden light breaks through, ridgelines
                            settle below. Fires once ever, at the final level.
@@ -29,9 +28,6 @@
   if (window.nbFX) return;
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // Brand first, then the colours that read as celebration.
-  var SPARK = ['#10b981', '#34d399', '#fbbf24', '#f59e0b', '#ffffff', '#f472b6', '#38bdf8'];
 
   var pick = function (a) { return a[(Math.random() * a.length) | 0]; };
   var rand = function (lo, hi) { return lo + Math.random() * (hi - lo); };
@@ -86,29 +82,16 @@
       document.removeEventListener('click', end, true);
       document.removeEventListener('keydown', end, true);
       document.removeEventListener('visibilitychange', onHide);
-      document.removeEventListener('turbo:before-render', onBeforeRender);
       overlay.classList.add('nb-fx-out');
       setTimeout(function () { overlay.remove(); if (canvas) canvas.destroy(); }, 260);
     }
     function onHide() { if (document.hidden) end(); }
-
-    // Turbo swaps the whole <body> on navigation. A celebration fired from a
-    // click that also navigates would be thrown away mid-play, so carry it into
-    // the incoming body instead.
-    function onBeforeRender(e) {
-      if (done) return;
-      var nb = e.detail && e.detail.newBody;
-      if (!nb) return;
-      nb.appendChild(overlay);
-      if (canvas) nb.appendChild(canvas.el);
-    }
 
     // Any input cuts it short, and a backgrounded tab stops the loop entirely
     // rather than piling up frames nobody is watching.
     document.addEventListener('click', end, true);
     document.addEventListener('keydown', end, true);
     document.addEventListener('visibilitychange', onHide);
-    document.addEventListener('turbo:before-render', onBeforeRender);
 
     if (!reduce && draw) {
       canvas = makeCanvas();
@@ -138,7 +121,7 @@
 
   var CLIPS = {
     accepted: 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Challenge%20Accepted.mp4',
-    levelUp: 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Level%20Complete.mp4'
+    completed: 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Level%20Complete.mp4'
   };
 
   // Buffered ahead of the moment that needs it. The popup then adopts this
@@ -219,99 +202,86 @@
   }
 
   function accepted() { return playClip('accepted', 'Challenge accepted'); }
+  function completed() { return playClip('completed', 'Challenge complete'); }
 
-  // level/title/emoji survive only for the reduced-motion line — the clip
-  // itself says everything else.
-  function levelUp(level, title) {
-    var line = 'Level up' + (level ? ' \u2014 level ' + level : '') + (title ? ', ' + title : '');
-    return playClip('levelUp', line);
-  }
+  /* ---------- LEVEL UP — arrows climbing ----------
+     Canvas, not a clip: the Level Complete video belongs to finishing a
+     challenge. Restored after I briefly wired it to the wrong moment. */
 
-  /* ---------- 2. CHALLENGE COMPLETE — fireworks ---------- */
-
-  function completed(sub) {
+  function levelUp(level, title, emoji) {
+    var line = level ? ('LEVEL ' + level + (title ? ' \u00b7 ' + title : '')) : (title || '');
     var html =
-      '<div class="nb-fx-card nb-fx-card--win">' +
-        '<strong class="nb-fx-title nb-fx-congrats">CONGRATULATIONS</strong>' +
-        '<em class="nb-fx-sub">' + (sub || 'Challenge complete.') + '</em>' +
+      '<div class="nb-fx-card nb-fx-card--level">' +
+        '<span class="nb-fx-chevs" aria-hidden="true">' +
+          '<b class="nb-fx-chev"></b><b class="nb-fx-chev"></b><b class="nb-fx-chev"></b>' +
+        '</span>' +
+        '<strong class="nb-fx-title nb-fx-levelup">LEVEL UP</strong>' +
+        '<em class="nb-fx-sub">' + (emoji ? emoji + ' ' : '') + line + '</em>' +
       '</div>';
 
-    var shells = [], sparks = [], last = 0, spawned = 0, nextAt = 0;
-    var TTL = 3400;
+    var arrows = null, last = 0;
+    var TTL = 3000;
+    var COL = ['#6ee7b7', '#34d399', '#10b981', '#fbbf24', '#ffffff'];
 
-    stage(html, 'win', TTL, function (cv, t, now) {
+    stage(html, 'level', TTL, function (cv, t, now) {
       var ctx = cv.ctx, w = cv.w, h = cv.h;
-      if (!last) last = now;
+
+      if (!arrows) {
+        arrows = [];
+        var n = budget(w, 46);
+        for (var i = 0; i < n; i++) {
+          // Depth: a big slow chevron reads as far away, a small fast one as
+          // close. Mixing the two is what stops it looking like wallpaper.
+          var far = Math.random() < 0.45;
+          arrows.push({
+            x: rand(w * 0.02, w * 0.98),
+            y: rand(0, h * 1.6),
+            size: far ? rand(26, 54) : rand(11, 24),
+            speed: far ? rand(1.1, 2.2) : rand(2.6, 5.2),
+            lw: far ? rand(3, 5.5) : rand(2, 3.4),
+            alpha: far ? rand(0.1, 0.24) : rand(0.4, 0.9),
+            col: pick(COL),
+            wob: Math.random() * Math.PI * 2
+          });
+        }
+        last = now;
+      }
       var dt = Math.min(48, now - last) / 16.67;
       last = now;
 
-      // Shells keep launching for most of the run, then stop so the last
-      // bursts have time to fall and fade instead of being cut off.
-      var maxShells = w < 560 ? 12 : w < 1000 ? 18 : 26;
-      if (t < TTL - 1300 && t > nextAt && spawned < maxShells) {
-        spawned++;
-        nextAt = t + rand(55, 155);
-        shells.push({
-          x: rand(w * 0.06, w * 0.94),
-          y: h + 10,
-          vy: -rand(9.5, 13.5) * (h / 800),
-          col: pick(SPARK),
-          burstAt: rand(h * 0.08, h * 0.62)
-        });
-      }
+      ctx.clearRect(0, 0, w, h);
 
-      // Trails rather than a hard clear, so everything leaves a streak.
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = 'rgba(6,10,18,0.17)';
+      // Fade the whole field in, hold, then out with the card.
+      var fade = t < 260 ? t / 260 : Math.max(0, 1 - (t - 2100) / 900);
+
+      // A shaft of light up the middle: the direction of travel, stated once.
+      var shaft = ctx.createLinearGradient(0, h, 0, 0);
+      shaft.addColorStop(0, 'rgba(16,185,129,' + (0.22 * fade) + ')');
+      shaft.addColorStop(0.55, 'rgba(52,211,153,' + (0.08 * fade) + ')');
+      shaft.addColorStop(1, 'rgba(110,231,183,0)');
+      ctx.fillStyle = shaft;
       ctx.fillRect(0, 0, w, h);
+
       ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
 
-      for (var i = shells.length - 1; i >= 0; i--) {
-        var s = shells[i];
-        s.y += s.vy * dt;
-        s.vy += 0.16 * dt;
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = s.col;
+      for (var j = 0; j < arrows.length; j++) {
+        var a = arrows[j];
+        a.y -= a.speed * dt * 2.2;
+        a.wob += 0.035 * dt;
+        var x = a.x + Math.sin(a.wob) * 5;
+        if (a.y < -a.size * 2) { a.y = h + rand(20, 200); a.x = rand(w * 0.02, w * 0.98); }
+
+        ctx.globalAlpha = a.alpha * fade;
+        ctx.strokeStyle = a.col;
+        ctx.lineWidth = a.lw;
+        // A chevron: up and over. Pointing where the founder is going.
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 2.4, 0, 6.283);
-        ctx.fill();
-
-        if (s.y <= s.burstAt || s.vy >= 0) {
-          shells.splice(i, 1);
-          var n = budget(w, 96);
-          // Burst radius scales with the viewport so a desktop shell reads as big
-          // as a phone one relative to the screen it is on.
-          var spread = rand(5, 9) * Math.min(1.25, Math.max(0.6, w / 1280));
-          for (var k = 0; k < n; k++) {
-            var ang = (k / n) * 6.283 + rand(-0.08, 0.08);
-            var sp = spread * rand(0.35, 1);
-            sparks.push({
-              x: s.x, y: s.y,
-              vx: Math.cos(ang) * sp,
-              vy: Math.sin(ang) * sp,
-              col: Math.random() < 0.22 ? '#ffffff' : s.col,
-              r: rand(1.5, 3.4),
-              life: 1,
-              decay: rand(0.006, 0.014)
-            });
-          }
-        }
-      }
-
-      for (var j = sparks.length - 1; j >= 0; j--) {
-        var p = sparks[j];
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 0.085 * dt;   // gravity
-        p.vx *= 0.985;         // drag
-        p.vy *= 0.985;
-        p.life -= p.decay * dt;
-        if (p.life <= 0) { sparks.splice(j, 1); continue; }
-        ctx.globalAlpha = Math.max(0, p.life);
-        ctx.fillStyle = p.col;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * p.life, 0, 6.283);
-        ctx.fill();
+        ctx.moveTo(x - a.size * 0.5, a.y + a.size * 0.42);
+        ctx.lineTo(x, a.y - a.size * 0.42);
+        ctx.lineTo(x + a.size * 0.5, a.y + a.size * 0.42);
+        ctx.stroke();
       }
 
       ctx.globalAlpha = 1;

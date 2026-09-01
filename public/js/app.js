@@ -162,8 +162,8 @@
     ? window.nbFX.accepted()
     : questCard('\ud83c\udfc1', 'CHALLENGE ACCEPTED', "Let's do this!"));
   const completePopup = () => (window.nbFX
-    ? window.nbFX.completed('Challenge complete.')
-    : questCard('\ud83c\udfc6', 'CONGRATULATIONS', 'Challenge complete!'));
+    ? window.nbFX.completed()
+    : questCard('\ud83c\udfc6', 'CHALLENGE COMPLETE', 'Nice work!'));
   window.nbQuestPopup = questPopup;
   window.nbCompletePopup = completePopup;
 
@@ -175,23 +175,17 @@
     const form = e.target;
     if (!form || !form.getAttribute) return;
     const action = form.getAttribute('action') || '';
+    // Both celebrations show on the page that comes back, not on the click.
+    // Playing on the click needed the overlay to survive Turbo replacing
+    // <body>, which did not hold up in production — it showed nothing at all.
+    // Speed comes from preloading the clip instead: by the time the new page
+    // renders the file is in the browser cache, so it starts immediately.
     if (/^\/challenges\/(custom\/)?[^/]+\/accept$/.test(action)) {
-      // Play it NOW, inside the click, rather than after the accept round-trip
-      // and re-render — that wait was the whole of the delay. fx.js carries the
-      // overlay into the incoming body so the navigation doesn't kill it, and
-      // being inside a gesture is also what lets the clip play with sound.
-      //
-      // Without Turbo the form does a real page load and takes the overlay with
-      // it, so fall back to flagging it for the page that comes back.
-      if (window.Turbo && window.nbFX) {
-        window.nbFX.accepted();
-      } else {
-        try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
-      }
+      try { sessionStorage.setItem('nbQuestAccepted', '1'); } catch (_) { /* popup is a bonus */ }
       return;
     }
     if (/^\/challenges\/(custom\/)?[^/]+\/finish$/.test(action)) {
-      playSound('complete');
+      // No soundbite: Level Complete.mp4 carries its own audio.
       try { sessionStorage.setItem('nbQuestComplete', '1'); } catch (_) { /* popup is a bonus */ }
     }
   });
@@ -218,11 +212,6 @@
     if (!chk) return;
     const el = chk.closest('.task');
     if (!el || !el.dataset.id) return;
-    // Completing a task is the only thing that can tip someone into a new
-    // level, so start buffering the clip here rather than on every page view —
-    // levelling is rare and the file is not small. Once per session; the
-    // browser cache covers any later toggles.
-    if (window.nbFX) window.nbFX.warmClip('levelUp');
     const rect = chk.getBoundingClientRect();
     try {
       const r = await fetch('/dashboard/task/' + el.dataset.id + '/toggle', { method: 'POST' });
@@ -516,10 +505,11 @@
   const onPage = () => {
     initReveals();
     initCounters();
-    // Only where an Accept button actually exists — no reason to pull a video
-    // down on pages that can never play it.
-    if (window.nbFX && document.querySelector('form[action*="/accept"]')) {
-      window.nbFX.warmClip('accepted');
+    // Preload each clip only where its trigger exists, so no page pulls down a
+    // video it can never play.
+    if (window.nbFX) {
+      if (document.querySelector('form[action*="/accept"]')) window.nbFX.warmClip('accepted');
+      if (document.querySelector('form[action*="/finish"]')) window.nbFX.warmClip('completed');
     }
   };
   document.addEventListener('turbo:load', onPage);
