@@ -7,9 +7,19 @@
 <meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly turns your skills and passions into a real business with AI-matched ideas, launch blueprints, and weekly sprints.' %>">
 <link rel="canonical" href="<%= typeof canonicalUrl !== 'undefined' && canonicalUrl ? canonicalUrl : 'https://nobossly.com' %>">
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
-<link rel="stylesheet" href="/css/style.css?v=14">
+<%# Sora carries display type, Manrope the body. Replaces Segoe UI, which
+    ships on Windows only — every other visitor silently got a fallback, so the
+    brand had no typographic identity on most traffic. %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css?v=15">
 <link rel="stylesheet" href="/css/list.css?v=2">
 <link rel="stylesheet" href="/css/motion.css?v=2">
+<link rel="stylesheet" href="/css/interaction.css?v=1">
+<%# Marks that scripting is live, so entrance animations are only ever allowed
+    to hide content when something is guaranteed to bring it back. %>
+<script>document.documentElement.classList.add('js');</script>
 <!-- Turbo Drive: intercepts link clicks and form submits, swaps the <body> in
      place instead of reloading. No route changes needed — pages still render
      server-side exactly as before. Add data-turbo="false" to any link, form or

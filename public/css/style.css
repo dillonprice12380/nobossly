@@ -2,18 +2,48 @@
   --bg: #0d1117; --panel: #161b27; --panel-2: #1c2333; --border: #2a3247;
   --text: #e6e9f0; --muted: #8b93a7; color-scheme: dark; --accent: #10b981; --accent-2: #34d399;
   --danger: #ff6b6b; --radius: 14px;
+
+  /* Type. Segoe UI shipped on Windows only, so every Mac, iPhone and Android
+     visitor silently fell through to a different face and the brand had no
+     typographic identity on most traffic. Two webfonts, same everywhere. */
+  --font-display: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+
+  /* Motion. One easing vocabulary so everything on the site moves alike:
+     -ease for travel, -ease-pop for anything that should feel springy. */
+  --ease: cubic-bezier(.2, .8, .3, 1);
+  --ease-pop: cubic-bezier(.3, 1.3, .5, 1);
+  --dur-press: .12s;
+  --dur-hover: .18s;
+  --dur-enter: .5s;
+
+  /* Elevation. Previously only body.theme-light had shadows at all, so the
+     dark marketing pages — the first thing a stranger sees — were the flattest
+     surface on the site. Both themes now draw from the same two steps. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, .38), 0 2px 6px rgba(0, 0, 0, .22);
+  --shadow-accent: 0 8px 24px rgba(16, 185, 129, .26);
+  --ring: 0 0 0 3px var(--bg), 0 0 0 5.5px var(--accent-2);
 }
 * { box-sizing: border-box; margin: 0; }
-body { background: var(--bg); color: var(--text); font: 16px/1.55 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
 a { color: var(--accent-2); text-decoration: none; }
-h1 { font-size: 2rem; line-height: 1.2; } h2 { margin-bottom: .5rem; } h3 { margin-bottom: .4rem; }
-h4 { margin: .8rem 0 .2rem; color: var(--muted); text-transform: uppercase; font-size: .75rem; letter-spacing: .05em; }
+h1, h2, h3, .brand, .stat-num, .counter, .thread-title, .seo-score, .big-number,
+.price-card .price, .levelup-badge strong, .quest-pop strong {
+  font-family: var(--font-display);
+}
+/* Display type needs negative tracking to stop looking like a default template;
+   the larger it is, the tighter it wants to be. */
+h1 { font-size: 2rem; line-height: 1.18; letter-spacing: -.025em; font-weight: 700; }
+h2 { margin-bottom: .5rem; letter-spacing: -.02em; font-weight: 700; }
+h3 { margin-bottom: .4rem; letter-spacing: -.015em; font-weight: 700; }
+h4 { margin: .8rem 0 .2rem; color: var(--muted); text-transform: uppercase; font-size: .75rem; letter-spacing: .05em; font-family: var(--font-body); }
 ul, ol { padding-left: 1.2rem; }
 .container { max-width: 1080px; width: 100%; margin: 0 auto; padding: 2rem 1.25rem; flex: 1; }
 .nav { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1.5rem; border-bottom: 1px solid var(--border); background: rgba(13,17,23,.9); position: sticky; top: 0; backdrop-filter: blur(8px); z-index: 5; }
 .nav-links { display: flex; gap: 1rem; align-items: center; }
 .nav-links a { color: var(--text); }
-.brand { font-weight: 800; font-size: 1.3rem; color: var(--text); }
+.brand { font-weight: 800; font-size: 1.3rem; color: var(--text); letter-spacing: -.02em; }
 .brand span { color: var(--accent); }
 .footer { text-align: center; color: var(--muted); padding: 1.5rem; border-top: 1px solid var(--border); font-size: .85rem; }
 .btn { display: inline-block; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); padding: .55rem 1.1rem; border-radius: 10px; cursor: pointer; font-size: .95rem; }
@@ -32,7 +62,7 @@ ul, ol { padding-left: 1.2rem; }
 .span-2 { grid-column: span 2; }
 @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } .span-2 { grid-column: span 1; } }
 .hero { text-align: center; padding: 4.5rem 1rem 3rem; }
-.hero h1 { font-size: 3.2rem; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero h1 { font-size: 3.2rem; letter-spacing: -.035em; font-weight: 800; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lead { color: var(--muted); max-width: 640px; margin: 1rem auto; font-size: 1.1rem; }
 .cta-row { display: flex; gap: .8rem; justify-content: center; margin: 1.4rem 0; flex-wrap: wrap; }
 .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem; margin-top: 1rem; }
@@ -140,7 +170,7 @@ body:not(.theme-light) input[type="date"]::-webkit-calendar-picker-indicator { f
 /* home page */
 .home-hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 2.5rem; align-items: center; padding: 4rem 0 3rem; }
 @media (max-width: 800px) { .home-hero { grid-template-columns: 1fr; } }
-.home-hero h1 { font-size: 3rem; line-height: 1.1; }
+.home-hero h1 { font-size: 3rem; line-height: 1.06; letter-spacing: -.035em; font-weight: 800; }
 .home-hero .accent-text { color: var(--accent); }
 .hero-img { width: 100%; max-width: 380px; margin: 0 auto; display: block; filter: drop-shadow(0 12px 40px rgba(16,185,129,.25)); animation: float 5s ease-in-out infinite; }
 @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
@@ -234,6 +264,9 @@ body.theme-light {
   --bg: #eef7f1; --panel: #ffffff; --panel-2: #f3faf6; --border: #d4e6db;
   --text: #14291f; --muted: #5e7a6c; --accent: #047857; --accent-2: #10b981;
   --danger: #dc2626;
+  --shadow-1: 0 1px 3px rgba(11, 61, 46, .07), 0 6px 18px rgba(11, 61, 46, .05);
+  --shadow-2: 0 2px 6px rgba(11, 61, 46, .09), 0 12px 30px rgba(11, 61, 46, .12);
+  --shadow-accent: 0 8px 24px rgba(4, 120, 87, .28);
   color-scheme: light;
   background: linear-gradient(180deg, #e7f4ec 0%, #eef7f1 240px);
 }
@@ -247,12 +280,8 @@ body.theme-light .nav-links a, body.theme-light .brand { color: #eafff5; }
 body.theme-light .nav-links a:hover { color: #6ee7b7; }
 body.theme-light .nav .btn-ghost { color: #eafff5; border-color: rgba(255,255,255,.3); }
 body.theme-light .nav .btn-primary { background: #10b981; border-color: #10b981; }
-body.theme-light .card {
-  box-shadow: 0 1px 3px rgba(11,61,46,.07), 0 6px 18px rgba(11,61,46,.05);
-  transition: box-shadow .15s ease, transform .15s ease;
-}
-body.theme-light .card:hover { box-shadow: 0 2px 6px rgba(11,61,46,.09), 0 10px 26px rgba(11,61,46,.08); }
-body.theme-light .idea-card:hover, body.theme-light a.card:hover { transform: translateY(-2px); }
+/* Card elevation and hover now live in interaction.css for BOTH themes; the
+   light theme only supplies its own shadow values. */
 body.theme-light .btn-primary { background: var(--accent); border-color: var(--accent); }
 body.theme-light .btn-primary:hover { background: #065f46; filter: none; }
 body.theme-light .chip { background: #e6f5ec; border-color: #c4e3d2; color: #1f5c43; }
@@ -389,12 +418,16 @@ body.theme-light .nav .nav-dd-btn { color: #eafff5; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* swipe-in reveals */
-.reveal { opacity: 0; transition: opacity .7s ease, transform .7s ease; will-change: opacity, transform; }
-.reveal-left { transform: translateX(-44px); }
-.reveal-right { transform: translateX(44px); }
-.reveal-up { transform: translateY(36px); }
-.reveal.in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .marquee-track { animation: none; } }
+/* Only hide when JS is running — a CSS-only opacity:0 meant a blocked or
+   failed script left the whole homepage invisible. No will-change: it creates
+   a containing block that breaks position:fixed children (modals) for as long
+   as it is set. */
+.js .reveal { opacity: 0; transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.js .reveal-left { transform: translateX(-44px); }
+.js .reveal-right { transform: translateX(44px); }
+.js .reveal-up { transform: translateY(36px); }
+.js .reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } .marquee-track { animation: none; } }
 
 /* single (image-less) feature rows */
 .feature-row.single { grid-template-columns: 1fr; max-width: 760px; margin-left: auto; margin-right: auto; text-align: left; }

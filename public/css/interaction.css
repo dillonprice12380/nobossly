@@ -1,0 +1,171 @@
+/* ============================================================
+   NoBossly interaction layer.
+
+   The audit found zero :active rules, zero :focus-visible rules, and no
+   transition on .btn at all — so every click in the product landed with no
+   acknowledgement, which is most of what "feels dated" actually means. This
+   file adds the response layer to the surfaces people point at, using the
+   motion and elevation tokens in style.css so both themes stay in step.
+
+   Loaded AFTER style.css. Everything here is presentational: no layout
+   changes, no markup changes, nothing that alters behaviour.
+   ============================================================ */
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  transition: transform var(--dur-press) var(--ease-pop),
+              box-shadow var(--dur-hover) var(--ease),
+              background var(--dur-hover) var(--ease),
+              border-color var(--dur-hover) var(--ease),
+              color var(--dur-hover) var(--ease);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.btn-primary { box-shadow: var(--shadow-1); }
+.btn-primary:hover { box-shadow: var(--shadow-accent); }
+
+/* Press. The transition shortens on the way down so the button meets the
+   finger immediately and only eases on release. */
+.btn:active { transform: translateY(0) scale(.97); box-shadow: var(--shadow-1); transition-duration: .06s; }
+
+/* A disabled control should not pretend to be pressable. */
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.btn:disabled:hover, .btn[aria-disabled="true"]:hover { transform: none; box-shadow: none; }
+
+/* ---------- Focus ----------
+   :focus-visible only, so the ring appears for keyboard and assistive
+   navigation and never as a click artefact. There was no styled focus state
+   anywhere on the site before this. */
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+.btn:focus-visible,
+.task-check:focus-visible,
+.avatar-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 8px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+/* Softer than the old hard 2px outline, and it eases in. */
+input, select, textarea { transition: border-color var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent-2) 24%, transparent);
+}
+/* color-mix is widely supported but not universal; this is the fallback and is
+   overridden by the rule above wherever it parses. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3.5px rgba(16, 185, 129, .24); }
+}
+
+/* ---------- Cards ----------
+   Elevation and hover were previously defined only under body.theme-light,
+   which left the dark marketing pages completely flat. Both themes now. */
+
+.card { box-shadow: var(--shadow-1); transition: transform var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease); }
+
+/* Only cards that actually go somewhere respond — a static panel that reacts
+   to the cursor is a lie about what it does. */
+a.card:hover, .idea-card:hover, .ws-tile:hover, .forum-cat:hover, .thread-row:hover, .price-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+}
+
+/* The featured plan is pre-scaled in style.css; compose with it rather than
+   replacing it, or the card shrinks on hover. */
+.price-featured:hover { transform: scale(1.02) translateY(-3px); }
+a.card:active, .idea-card:active, .ws-tile:active { transform: translateY(-1px); transition-duration: .06s; }
+
+.ws-tile, .forum-cat, .thread-row, .price-card, .badge-chip, .kcard {
+  transition: transform var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease);
+}
+
+/* ---------- Rows ----------
+   Lists were static top to bottom. A quiet tint is enough to tell the eye
+   which row it is on without turning the page into a light show. */
+
+.task, .milestone-row, .member-row, .notif, .msg-row {
+  transition: background var(--dur-hover) var(--ease);
+  border-radius: 8px;
+}
+.task:hover, .milestone-row:hover, .member-row:hover, .notif:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .task:hover, .milestone-row:hover, .member-row:hover, .notif:hover { background: rgba(16, 185, 129, .06); }
+}
+
+/* The check circle is the most-clicked control in the app. */
+.task-check { transition: transform var(--dur-press) var(--ease-pop), background var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease); }
+.task-check:hover { transform: scale(1.12); border-color: var(--accent-2); }
+.task-check:active { transform: scale(.9); transition-duration: .06s; }
+
+/* ---------- Chips and tags ----------
+   Static chips are labels and stay inert; only ones you can act on respond. */
+
+a.chip, button.chip, label.chip { transition: transform var(--dur-press) var(--ease-pop), background var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease); cursor: pointer; }
+a.chip:hover, button.chip:hover, label.chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+a.chip:active, button.chip:active { transform: translateY(0) scale(.96); transition-duration: .06s; }
+
+/* ---------- Navigation ---------- */
+
+/* :not(.btn) matters — these selectors are more specific than .btn, so without
+   it a button sitting in the nav or footer silently loses its own transition
+   (and with it the hover lift and press). */
+.nav-links a:not(.btn), .footer-grid a:not(.btn), .admin-nav a:not(.btn),
+.avatar-dropdown a:not(.btn), .avatar-dropdown button:not(.btn) {
+  transition: color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease);
+}
+.appnav-tab { transition: color var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease); }
+.appbar-item { transition: color var(--dur-hover) var(--ease); }
+.appbar-item:active { transform: scale(.94); }
+.nav-ico, .appnav-ico, .appbar-ico { transition: transform var(--dur-hover) var(--ease-pop), stroke var(--dur-hover) var(--ease), fill var(--dur-hover) var(--ease); }
+.nav-links a:hover .nav-ico { transform: translateY(-1px); }
+.social-ico { transition: transform var(--dur-hover) var(--ease-pop), opacity var(--dur-hover) var(--ease); }
+a.social-ico:hover { transform: translateY(-2px) scale(1.08); }
+
+.avatar-btn { transition: transform var(--dur-press) var(--ease-pop), box-shadow var(--dur-hover) var(--ease); }
+.avatar-btn:hover { transform: scale(1.06); box-shadow: var(--shadow-accent); }
+.avatar-btn:active { transform: scale(.95); transition-duration: .06s; }
+
+/* ---------- Links ---------- */
+
+a:not(.btn):not(.card):not(.chip):not(.ws-tile):not(.social-ico) { transition: color var(--dur-hover) var(--ease); }
+
+/* ---------- Entrance ----------
+   Applied by app.js, never by CSS alone: an opacity:0 that depends on a script
+   to clear it blanks the page whenever that script fails to run.
+
+   Deliberately no will-change — it creates a containing block for the whole
+   lifetime of the element, which breaks position:fixed descendants (every
+   modal in the app) even when nothing is animating. */
+
+.nb-rv { opacity: 0; transform: translateY(14px); }
+.nb-rv-go { transition: opacity var(--dur-enter) var(--ease), transform var(--dur-enter) var(--ease); }
+.nb-rv.in { opacity: 1; transform: none; }
+
+/* ---------- Reduced motion ----------
+   Motion off means motion off: state changes still happen, they just arrive
+   instantly. Colour and shadow transitions are kept because they carry no
+   movement and removing them makes hover states feel broken. */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover, .btn:active,
+  a.card:hover, .idea-card:hover, .ws-tile:hover, .forum-cat:hover, .thread-row:hover, .price-card:hover,
+  a.card:active, .idea-card:active, .ws-tile:active,
+  .task-check:hover, .task-check:active,
+  a.chip:hover, button.chip:hover, label.chip:hover, a.chip:active, button.chip:active,
+  .avatar-btn:hover, .avatar-btn:active, .appbar-item:active,
+  a.social-ico:hover, .nav-links a:hover .nav-ico {
+    transform: none;
+  }
+  .price-featured:hover { transform: scale(1.02); }
+  .nb-rv, .nb-rv.in { opacity: 1; transform: none; }
+  .nb-rv-go { transition: none; }
+}

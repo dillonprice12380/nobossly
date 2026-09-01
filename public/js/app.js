@@ -332,4 +332,77 @@
       .forEach(el => el.classList.remove('open'));
     document.querySelectorAll('#notif-menu[open]').forEach(d => d.removeAttribute('open'));
   });
+
+  // --- Entrance motion -------------------------------------------------
+  // Scroll reveals used to live in home.js, loaded by the marketing homepage
+  // and nothing else — one view out of seventy. This runs everywhere by
+  // reading the page structure instead of asking every template to opt in.
+  //
+  // The hidden state is applied by JS and never by CSS, so a blocked or broken
+  // script can't leave a page blank. Anything already on screen animates in a
+  // short stagger; anything below the fold waits for the scroll.
+
+  const REVEAL_MAX = 14;      // beyond this a page is a list, not a composition
+  const STAGGER_MS = 55;
+  const STAGGER_CAP = 5;      // never delay the 6th item further than the 5th
+
+  function revealTargets() {
+    const main = document.querySelector('main.container');
+    if (!main) return [];
+    return Array.from(main.children).filter(el => {
+      if (el.classList.contains('reveal')) return false;      // homepage runs its own
+      if (el.classList.contains('nb-rv')) return false;        // already processed
+      if (el.classList.contains('modal')) return false;
+      // A transform on an ancestor re-bases position:fixed, so anything
+      // containing a modal is left alone entirely.
+      if (el.querySelector('.modal')) return false;
+      if (el.hidden || el.getAttribute('aria-hidden') === 'true') return false;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.position === 'fixed' || cs.position === 'sticky') return false;
+      return el.getBoundingClientRect().height > 0;
+    }).slice(0, REVEAL_MAX);
+  }
+
+  function initReveals() {
+    if (reduceMotion) return;
+    const els = revealTargets();
+    if (els.length < 2) return;   // a single block reads as a glitch, not motion
+
+    els.forEach(el => el.classList.add('nb-rv'));
+
+    let shown = 0;
+    const show = el => {
+      const delay = Math.min(shown, STAGGER_CAP) * STAGGER_MS;
+      shown++;
+      setTimeout(() => {
+        el.classList.add('nb-rv-go');
+        requestAnimationFrame(() => el.classList.add('in'));
+        // Drop the transform entirely once it has played, so nothing is left
+        // creating a containing block for descendants.
+        setTimeout(() => el.classList.remove('nb-rv', 'nb-rv-go', 'in'), 900);
+      }, delay);
+    };
+
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        io.unobserve(e.target);
+        show(e.target);
+      });
+    }, { threshold: 0.06, rootMargin: '0px 0px -40px 0px' });
+
+    els.forEach(el => io.observe(el));
+
+    // A safety net: if the observer never fires for anything (an odd layout,
+    // a zero-height parent), clear the hidden state rather than hide content.
+    setTimeout(() => {
+      els.forEach(el => el.classList.remove('nb-rv', 'nb-rv-go'));
+      io.disconnect();
+    }, 4000);
+  }
+
+  const onPage = () => { initReveals(); };
+  document.addEventListener('turbo:load', onPage);
+  if (document.readyState !== 'loading') onPage();
+  else document.addEventListener('DOMContentLoaded', onPage);
 })();
