@@ -10,9 +10,9 @@
                            thing, art and audio both.
      nbFX.completed(sub) — CONGRATULATIONS. Fireworks across the whole
                            viewport. The bigger of the two moments.
-     nbFX.levelUp(n, t, e) — LEVEL UP. A field of chevrons climbing the screen
-                           and a shaft of light, because the whole feeling of
-                           this one is upward.
+     nbFX.levelUp(n, t, e) — LEVEL COMPLETE. A hosted clip, same as accepted().
+                           The level number and title are only used for the
+                           reduced-motion line, which has no clip to show.
      nbFX.mastered()     — YOU DID IT / YOU'RE THE BOSS NOW. The summit: cloud
                            banks part, golden light breaks through, ridgelines
                            settle below. Fires once ever, at the final level.
@@ -129,42 +129,43 @@
     return end;
   }
 
-  /* ---------- 1. CHALLENGE ACCEPTED — hosted clip ----------
-     The canvas fire effect and the accept soundbite are both gone; this clip
-     carries the moment on its own. Hotlinked from the same R2 bucket the site
-     already serves its images from.
+  /* ---------- Hosted clips ----------
+     Two celebrations are now video rather than canvas. They share everything
+     except the file and the reduced-motion line, so they share the code too.
 
-     Autoplay with sound is blocked unless the browser counts the moment as a
-     user gesture, and this fires after a Turbo navigation, so it may not. We
-     ask for sound, and on refusal mute and play anyway — the visual always
-     runs even when the audio can't. */
+     Hotlinked from the same R2 bucket the site already serves its images from.
+     head.ejs preconnects to it, so DNS and TLS are off the critical path. */
 
-  var ACCEPTED_CLIP =
-    'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Challenge%20Accepted.mp4';
+  var CLIPS = {
+    accepted: 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Challenge%20Accepted.mp4',
+    levelUp: 'https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Video%20Clips/Level%20Complete.mp4'
+  };
 
-  // Buffered ahead of time, offscreen, on any page that has an Accept button.
-  // The popup then adopts this exact element rather than starting a fresh
-  // download at the worst possible moment — which is what made it feel slow.
-  var warm = null;
+  // Buffered ahead of the moment that needs it. The popup then adopts this
+  // exact element rather than starting a fresh download at the worst possible
+  // time — which is what made the first version feel slow.
+  var warm = {};
 
-  function warmAccepted() {
-    if (reduce || (warm && warm.isConnected)) return;
+  function warmClip(name) {
+    var url = CLIPS[name];
+    if (reduce || !url) return;
+    if (warm[name] && warm[name].isConnected) return;
     var v = document.createElement('video');
     v.className = 'nb-fx-video nb-fx-warm';
     v.setAttribute('playsinline', '');
     v.preload = 'auto';
     v.muted = true;              // a muted element may buffer without a gesture
-    v.src = ACCEPTED_CLIP;
+    v.src = url;
     document.body.appendChild(v);
     try { v.load(); } catch (_) { /* preload is an optimisation, never required */ }
-    warm = v;
+    warm[name] = v;
   }
 
-  function accepted() {
+  function playClip(name, plainText) {
     // A full-screen video is motion by definition, so reduced motion gets the
     // confirmation as a plain line instead of the clip.
     if (reduce) {
-      stage('<p class="nb-fx-plain">Challenge accepted</p>', 'plain', 1600);
+      stage('<p class="nb-fx-plain">' + plainText + '</p>', 'plain', 1600);
       return;
     }
 
@@ -175,8 +176,8 @@
     return stage('', 'clip', MAX, null, function (overlay, end) {
       // Adopt the preloaded element if there is one — it is already buffered,
       // so playback starts on the same frame instead of after a round trip.
-      var v = (warm && warm.isConnected) ? warm : null;
-      warm = null;
+      var v = (warm[name] && warm[name].isConnected) ? warm[name] : null;
+      warm[name] = null;
       if (v) {
         v.classList.remove('nb-fx-warm');
       } else {
@@ -184,7 +185,7 @@
         v.className = 'nb-fx-video';
         v.setAttribute('playsinline', '');
         v.preload = 'auto';
-        v.src = ACCEPTED_CLIP;
+        v.src = CLIPS[name];
       }
       overlay.appendChild(v);
 
@@ -198,27 +199,32 @@
       var stall = setTimeout(function () { if (v.readyState < 2) give(); }, 6000);
       v.addEventListener('loadeddata', function () { clearTimeout(stall); });
 
-      // Called inside the click that accepted the challenge, so sound is
-      // allowed here where it would have been refused after a navigation.
-      // On refusal, mute and play anyway: the visual always runs.
-      var go = function () {
-        v.muted = false;
-        var withSound = v.play();
-        if (withSound && withSound.catch) {
-          withSound.catch(function () {
-            v.muted = true;
-            var silent = v.play();
-            if (silent && silent.catch) silent.catch(give);
-          });
-        }
-      };
-      go();
+      // Ask for sound; on refusal mute and play anyway, so the visual always
+      // runs even where autoplay policy will not allow audio.
+      v.muted = false;
+      var withSound = v.play();
+      if (withSound && withSound.catch) {
+        withSound.catch(function () {
+          v.muted = true;
+          var silent = v.play();
+          if (silent && silent.catch) silent.catch(give);
+        });
+      }
 
       // Some browsers pause a media element when it is moved between bodies.
       var resume = function () { if (!settled && v.paused && !v.ended) v.play().catch(function () {}); };
       document.addEventListener('turbo:render', resume);
       v.addEventListener('ended', function () { document.removeEventListener('turbo:render', resume); });
     });
+  }
+
+  function accepted() { return playClip('accepted', 'Challenge accepted'); }
+
+  // level/title/emoji survive only for the reduced-motion line — the clip
+  // itself says everything else.
+  function levelUp(level, title) {
+    var line = 'Level up' + (level ? ' \u2014 level ' + level : '') + (title ? ', ' + title : '');
+    return playClip('levelUp', line);
   }
 
   /* ---------- 2. CHALLENGE COMPLETE — fireworks ---------- */
@@ -306,90 +312,6 @@
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r * p.life, 0, 6.283);
         ctx.fill();
-      }
-
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-    });
-  }
-
-
-  /* ---------- 3. LEVEL UP — arrows climbing ---------- */
-
-  function levelUp(level, title, emoji) {
-    var line = level ? ('LEVEL ' + level + (title ? ' \u00b7 ' + title : '')) : (title || '');
-    var html =
-      '<div class="nb-fx-card nb-fx-card--level">' +
-        '<span class="nb-fx-chevs" aria-hidden="true">' +
-          '<b class="nb-fx-chev"></b><b class="nb-fx-chev"></b><b class="nb-fx-chev"></b>' +
-        '</span>' +
-        '<strong class="nb-fx-title nb-fx-levelup">LEVEL UP</strong>' +
-        '<em class="nb-fx-sub">' + (emoji ? emoji + ' ' : '') + line + '</em>' +
-      '</div>';
-
-    var arrows = null, last = 0;
-    var TTL = 3000;
-    var COL = ['#6ee7b7', '#34d399', '#10b981', '#fbbf24', '#ffffff'];
-
-    stage(html, 'level', TTL, function (cv, t, now) {
-      var ctx = cv.ctx, w = cv.w, h = cv.h;
-
-      if (!arrows) {
-        arrows = [];
-        var n = budget(w, 46);
-        for (var i = 0; i < n; i++) {
-          // Depth: a big slow chevron reads as far away, a small fast one as
-          // close. Mixing the two is what stops it looking like wallpaper.
-          var far = Math.random() < 0.45;
-          arrows.push({
-            x: rand(w * 0.02, w * 0.98),
-            y: rand(0, h * 1.6),
-            size: far ? rand(26, 54) : rand(11, 24),
-            speed: far ? rand(1.1, 2.2) : rand(2.6, 5.2),
-            lw: far ? rand(3, 5.5) : rand(2, 3.4),
-            alpha: far ? rand(0.1, 0.24) : rand(0.4, 0.9),
-            col: pick(COL),
-            wob: Math.random() * Math.PI * 2
-          });
-        }
-        last = now;
-      }
-      var dt = Math.min(48, now - last) / 16.67;
-      last = now;
-
-      ctx.clearRect(0, 0, w, h);
-
-      // Fade the whole field in, hold, then out with the card.
-      var fade = t < 260 ? t / 260 : Math.max(0, 1 - (t - 2100) / 900);
-
-      // A shaft of light up the middle: the direction of travel, stated once.
-      var shaft = ctx.createLinearGradient(0, h, 0, 0);
-      shaft.addColorStop(0, 'rgba(16,185,129,' + (0.22 * fade) + ')');
-      shaft.addColorStop(0.55, 'rgba(52,211,153,' + (0.08 * fade) + ')');
-      shaft.addColorStop(1, 'rgba(110,231,183,0)');
-      ctx.fillStyle = shaft;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      for (var j = 0; j < arrows.length; j++) {
-        var a = arrows[j];
-        a.y -= a.speed * dt * 2.2;
-        a.wob += 0.035 * dt;
-        var x = a.x + Math.sin(a.wob) * 5;
-        if (a.y < -a.size * 2) { a.y = h + rand(20, 200); a.x = rand(w * 0.02, w * 0.98); }
-
-        ctx.globalAlpha = a.alpha * fade;
-        ctx.strokeStyle = a.col;
-        ctx.lineWidth = a.lw;
-        // A chevron: up and over. Pointing where the founder is going.
-        ctx.beginPath();
-        ctx.moveTo(x - a.size * 0.5, a.y + a.size * 0.42);
-        ctx.lineTo(x, a.y - a.size * 0.42);
-        ctx.lineTo(x + a.size * 0.5, a.y + a.size * 0.42);
-        ctx.stroke();
       }
 
       ctx.globalAlpha = 1;
@@ -606,5 +528,5 @@
     });
   }
 
-  window.nbFX = { accepted: accepted, warmAccepted: warmAccepted, completed: completed, levelUp: levelUp, mastered: mastered };
+  window.nbFX = { accepted: accepted, completed: completed, levelUp: levelUp, mastered: mastered, warmClip: warmClip };
 })();

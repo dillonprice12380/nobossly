@@ -218,6 +218,11 @@
     if (!chk) return;
     const el = chk.closest('.task');
     if (!el || !el.dataset.id) return;
+    // Completing a task is the only thing that can tip someone into a new
+    // level, so start buffering the clip here rather than on every page view —
+    // levelling is rare and the file is not small. Once per session; the
+    // browser cache covers any later toggles.
+    if (window.nbFX) window.nbFX.warmClip('levelUp');
     const rect = chk.getBoundingClientRect();
     try {
       const r = await fetch('/dashboard/task/' + el.dataset.id + '/toggle', { method: 'POST' });
@@ -514,7 +519,7 @@
     // Only where an Accept button actually exists — no reason to pull a video
     // down on pages that can never play it.
     if (window.nbFX && document.querySelector('form[action*="/accept"]')) {
-      window.nbFX.warmAccepted();
+      window.nbFX.warmClip('accepted');
     }
   };
   document.addEventListener('turbo:load', onPage);
