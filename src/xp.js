@@ -160,9 +160,13 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
     // The level's own title and emoji ride along so the celebration can name
     // the rung the founder just reached rather than only its number.
     const reached = (levels || []).find(l => l.level === level) || {};
+    // isMax drives the once-ever "mastered NoBossly" celebration, read from the
+    // ladder rather than hard-coded to 10 so adding a rung doesn't strand it.
+    const topLevel = (levels || []).reduce((m, l) => Math.max(m, l.level), 1);
     return {
       newTotal, level, leveledUp: level > current,
-      title: reached.title || '', emoji: reached.emoji || ''
+      title: reached.title || '', emoji: reached.emoji || '',
+      isMax: level >= topLevel
     };
   } catch (e) {
     console.error('awardXP', e.message);

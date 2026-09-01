@@ -69,7 +69,20 @@ router.get('/', async (req, res, next) => {
 // Admins upload or replace them at /admin/sounds. Cached in memory for 60s so
 // a re-upload takes effect without a restart; browsers hold them for 5m.
 // Bare /challenges/sound stays the accept clip for older cached client JS.
-const SOUND_KEYS = { accept: 'quest-accept', complete: 'challenge-complete', levelup: 'level-up' };
+const SOUND_KEYS = {
+  accept: 'quest-accept', complete: 'challenge-complete',
+  levelup: 'level-up', mastered: 'nobossly-mastered'
+};
+
+// Some clips ship with the code so they work the moment it deploys, with no
+// admin upload step. A site_assets row always wins, so uploading a replacement
+// at /admin/sounds still overrides the bundled default.
+const path = require('path');
+const fs = require('fs');
+const BUNDLED = {
+  'nobossly-mastered': path.join(__dirname, '..', '..', 'public', 'audio', 'youre-the-boss-now.mp3')
+};
+
 const soundCache = {};
 router.get('/sound/:name?', async (req, res) => {
   try {
@@ -78,8 +91,13 @@ router.get('/sound/:name?', async (req, res) => {
     let hit = soundCache[key];
     if (!hit || Date.now() - hit.at > 60000) {
       const { data } = await req.sb.from('site_assets').select('mime, data_b64').eq('key', key).maybeSingle();
-      if (!data) return res.status(404).end();
-      hit = soundCache[key] = { at: Date.now(), mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
+      if (data) {
+        hit = soundCache[key] = { at: Date.now(), mime: data.mime || 'audio/mpeg', buf: Buffer.from(data.data_b64, 'base64') };
+      } else if (BUNDLED[key] && fs.existsSync(BUNDLED[key])) {
+        hit = soundCache[key] = { at: Date.now(), mime: 'audio/mpeg', buf: fs.readFileSync(BUNDLED[key]) };
+      } else {
+        return res.status(404).end();
+      }
     }
     res.set('Content-Type', hit.mime);
     res.set('Cache-Control', 'public, max-age=300');

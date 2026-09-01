@@ -9,7 +9,8 @@ const express = require('express');
 const SLOTS = [
   { name: 'accept', key: 'quest-accept', label: 'Quest accepted', hint: 'Plays when a member accepts a challenge.' },
   { name: 'complete', key: 'challenge-complete', label: 'Challenge complete', hint: 'Plays when a member completes a challenge.' },
-  { name: 'levelup', key: 'level-up', label: 'Level up', hint: 'Plays when a member reaches a new founder level.' }
+  { name: 'levelup', key: 'level-up', label: 'Level up', hint: 'Plays when a member reaches a new founder level.' },
+  { name: 'mastered', key: 'nobossly-mastered', label: 'Mastered NoBossly', hint: 'Plays once ever, when a member reaches the final level. Ships with a default track \u2014 upload here to replace it.' }
 ];
 
 router.get('/', async (req, res, next) => {

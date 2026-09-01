@@ -130,7 +130,8 @@
    sets a background never generates a box, so the dim never appears. */
 .nb-fx-fire::before,
 .nb-fx-win::before,
-.nb-fx-level::before {
+.nb-fx-level::before,
+.nb-fx-summit::before {
   content: ""; position: absolute; inset: 0;
   animation: nb-fx-in .3s ease-out;
 }
@@ -318,4 +319,80 @@
   /* The chevrons still point up; they just stop travelling. */
   .nb-fx-chev { animation: none; opacity: .9; transform: rotate(-45deg); }
   .nb-fx-levelup { animation: none; background-position: 0 0; }
+}
+
+/* ---------- Mastered NoBossly: the summit ----------
+   The canvas paints the whole scene, so the backdrop here is only a faint
+   vignette to seat the type — anything heavier would fight the sunrise. */
+
+.nb-fx-summit::before { background: radial-gradient(ellipse at 50% 34%, rgba(0,0,0,0) 38%, rgba(2, 8, 14, .55) 100%); }
+
+/* No panel. A card border around a sunrise would ruin it; the words sit in
+   the scene, held together by their own shadow. */
+.nb-fx-card--summit {
+  background: none; border: 0; box-shadow: none;
+  margin-top: clamp(2rem, 12vh, 8rem);
+  animation: nb-fx-summit-in 11s ease-out forwards;
+}
+@keyframes nb-fx-summit-in {
+  0%, 18%  { opacity: 0; transform: translateY(18px); }
+  30%      { opacity: 1; transform: translateY(0); }
+  90%      { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 0; transform: translateY(-14px); }
+}
+
+.nb-fx-didit {
+  display: block;
+  background: linear-gradient(180deg, #fffdf3 6%, #fde68a 46%, #f2ae1c 96%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 30px rgba(180, 108, 12, .85)) drop-shadow(0 2px 3px rgba(60, 30, 0, .6));
+  /* Two short words plus punctuation — safe on one line everywhere. */
+  font-size: clamp(2rem, 11vw, 5rem);
+  letter-spacing: -.035em;
+  white-space: nowrap;
+  opacity: 0;
+  animation: nb-fx-didit 11s cubic-bezier(.2, 1.2, .3, 1) forwards;
+}
+@keyframes nb-fx-didit {
+  0%, 20%  { opacity: 0; transform: scale(.82) translateY(16px); }
+  27%      { opacity: 1; transform: scale(1.05) translateY(0); }
+  32%      { transform: scale(1); }
+  90%      { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+.nb-fx-boss {
+  display: block;
+  margin-top: clamp(.5rem, 2vw, 1rem);
+  color: #fff6dc;
+  text-shadow: 0 2px 20px rgba(180, 108, 12, .95), 0 1px 2px rgba(40, 20, 0, .8);
+  font-weight: 700;
+  letter-spacing: clamp(.06em, .8vw, .18em);
+  text-transform: uppercase;
+  font-size: clamp(.78rem, 3.4vw, 1.5rem);
+  white-space: nowrap;
+  opacity: 0;
+  animation: nb-fx-boss 11s ease-out forwards;
+}
+@keyframes nb-fx-boss {
+  0%, 31%  { opacity: 0; transform: translateY(10px); letter-spacing: .02em; }
+  42%      { opacity: 1; transform: translateY(0); }
+  90%      { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+/* Short landscape windows: the scene needs the vertical room more than the
+   type does, so pull the block back toward the horizon. */
+@media (max-height: 500px) {
+  .nb-fx-card--summit { margin-top: clamp(1rem, 6vh, 3rem); }
+  .nb-fx-didit { font-size: clamp(1.6rem, 9vh, 3rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No canvas is created at all (fx.js checks), so the words carry it alone. */
+  .nb-fx-card--summit { animation: nb-fx-in .25s ease-out forwards; opacity: 1; transform: none; margin-top: 0; }
+  .nb-fx-didit, .nb-fx-boss { animation: none; opacity: 1; transform: none; }
+  .nb-fx-didit { filter: none; color: #f2ae1c; -webkit-text-fill-color: currentColor; }
+  .nb-fx-boss { color: #14291f; text-shadow: none; }
+  .nb-fx-summit::before { background: rgba(255, 251, 235, .96); }
 }
