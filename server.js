@@ -113,13 +113,6 @@ app.use('/upload', requireAuth, require('./src/routes/uploads'));
 app.get('/profile', requireAuth, (req, res) => res.redirect('/members/' + req.profile.username));
 app.use('/admin/sounds', requireAdmin, require('./src/routes/admin_sounds')); // game soundbite uploads — before /admin so its own routes win
 app.use('/admin', requireAdmin, require('./src/routes/admin'));
-app.use('/', require('./src/routes/publiccms'));
-
-app.get('/', (req, res) => {
-  if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
-});
-
 // The Compass is the product's best asset and was invisible to anyone who
 // hadn't already finished the questionnaire. This is one worked example,
 // public and indexable, so a visitor can judge it before signing up.
@@ -129,6 +122,13 @@ app.get('/sample-compass', (req, res) => {
     compass: require('./src/sample_compass'),
     metaDescription: 'See exactly what a NoBossly Founder Compass gives you: your founder archetype, your real strengths and constraints, the territories where you hold an edge, a 5-point fit test and an honest avoid list — worked through for one founder, start to finish.'
   });
+});
+
+app.use('/', require('./src/routes/publiccms'));
+
+app.get('/', (req, res) => {
+  if (res.locals.user) return res.redirect('/dashboard');
+  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
 });
 
 app.get('/robots.txt', (req, res) => {
