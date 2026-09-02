@@ -21,6 +21,24 @@ async function computeMetrics(sb, userId, profile, kinds) {
   // the answers the Compass needs, and this trophy gates leaving Level 1.
   if (want('questionnaire')) jobs.push(n(sb.from('questionnaire_responses').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('completed', true)).then(v => m.questionnaire = v));
   if (want('blueprints')) jobs.push(n(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.blueprints = v));
+  // The Level 1 refinement loop. idea_fit is the best score reached on ANY of
+  // the founder's ideas, so revising into a worse score never takes back a
+  // trophy already earned, and a threshold can only ever be crossed once.
+  if (want('idea_fit')) jobs.push(
+    sb.from('generated_ideas').select('best_fit_passed').eq('user_id', userId).then(({ data }) =>
+      m.idea_fit = (data || []).reduce((best, r) => Math.max(best, r.best_fit_passed || 0), 0), () => { m.idea_fit = 0; })
+  );
+  if (want('ideas_cut')) jobs.push(n(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', userId).not('cut_at', 'is', null)).then(v => m.ideas_cut = v));
+  // Signals are counted per idea, not summed across them: the quest is three
+  // pieces of evidence for ONE idea, and one signal each on three ideas is not
+  // the same thing.
+  if (want('signals')) jobs.push(
+    sb.from('idea_signals').select('idea_id').eq('user_id', userId).then(({ data }) => {
+      const per = {};
+      (data || []).forEach(r => { per[r.idea_id] = (per[r.idea_id] || 0) + 1; });
+      m.signals = Object.keys(per).reduce((best, k) => Math.max(best, per[k]), 0);
+    }, () => { m.signals = 0; })
+  );
   if (want('tasks')) jobs.push(n(sb.from('sprint_tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'done')).then(v => m.tasks = v));
   if (want('checkins')) jobs.push(n(sb.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.checkins = v));
   if (want('followers')) jobs.push(n(sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId)).then(v => m.followers = v));

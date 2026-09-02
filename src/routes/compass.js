@@ -3,6 +3,7 @@ const ai = require('../ai');
 const cai = require('../compass_ai');
 const qsvc = require('../questionnaires');
 const { awardXP } = require('../xp');
+const { sweepMilestones } = require('../milestones_engine');
 
 const LABELS = {
   existing: 'Reading your business and the market around it, then drawing your Compass\u2026',
@@ -93,6 +94,12 @@ router.post('/generate', async (req, res) => {
 
 const s = (v, n) => (v == null ? '' : String(v)).trim().slice(0, n || 400);
 
+async function compassData(req) {
+  const { data } = await req.sb.from('founder_compasses').select('data')
+    .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return data && data.data;
+}
+
 function cleanCompetitors(raw) {
   if (!Array.isArray(raw)) return null;
   const out = raw.slice(0, 3).map(c => {
@@ -104,8 +111,24 @@ function cleanCompetitors(raw) {
   return out.length ? out : null;
 }
 
-async function runAdvisor(req, idea, compassData, q, draft) {
-  const adv = await cai.adviseIdea(req.accessToken, q, compassData, draft);
+// Scores the advisor's verdict against the founder's own fit test.
+//
+// The model is asked for exactly 5 results, but a model is not a schema: it can
+// return four, or six, or none. Reading `total` off the array it actually
+// returned rather than assuming 5 keeps the denominator honest — showing "3/5"
+// when only four criteria came back would be a score the advisor never gave.
+function scoreFit(fitResults) {
+  if (!Array.isArray(fitResults) || !fitResults.length) return { passed: null, total: null };
+  return { passed: fitResults.filter(f => f && f.pass).length, total: fitResults.length };
+}
+
+async function runAdvisor(req, idea, compass, q, draft, plan) {
+  const adv = await cai.adviseIdea(req.accessToken, q, compass, draft);
+  const fitResults = Array.isArray(adv.fit_results)
+    ? adv.fit_results.slice(0, 5).map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) }))
+    : null;
+  const fit = scoreFit(fitResults);
+  const version = (idea.revision_count || 0) + 1;
   const patch = {
     name: s(adv.name, 140) || idea.name,
     tagline: s(adv.tagline, 200) || idea.tagline,
@@ -122,14 +145,34 @@ async function runAdvisor(req, idea, compassData, q, draft) {
     startup_cost_standard: s(adv.startup_cost_standard, 60), startup_cost_full: s(adv.startup_cost_full, 60),
     legal_nuances: s(adv.legal_nuances, 600), first_steps: s(adv.first_steps, 2000),
     advisor: {
-      fit_results: Array.isArray(adv.fit_results) ? adv.fit_results.slice(0, 5).map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) })) : null,
+      fit_results: fitResults,
       sharper_version: s(adv.sharper_version, 800),
       considerations: Array.isArray(adv.considerations) ? adv.considerations.slice(0, 5).map(c => s(c, 300)).filter(Boolean) : null,
       advised_at: new Date().toISOString()
     },
+    fit_passed: fit.passed,
+    fit_total: fit.total,
+    // The high-water mark, never lowered: a founder who revises into a worse
+    // score has not un-earned the trophy they already have.
+    best_fit_passed: Math.max(idea.best_fit_passed || 0, fit.passed || 0),
+    revision_count: version,
     updated_at: new Date().toISOString()
   };
   await req.sb.from('generated_ideas').update(patch).eq('id', idea.id).eq('user_id', req.user.id);
+
+  // History is the whole point of the loop: 2/5 -> 4/5 -> 5/5 across three
+  // passes is the progress the founder is meant to see. Losing a version row
+  // must never fail the advisory itself, which has already been saved above.
+  await req.sb.from('idea_versions').insert({
+    idea_id: idea.id, user_id: req.user.id, version_no: version,
+    draft: draft || null, advisor: patch.advisor,
+    fit_passed: fit.passed, fit_total: fit.total,
+    success_likelihood: patch.success_likelihood
+  }).then(() => {}, e => console.error('idea version', e && e.message));
+
+  // Crossing a fit threshold is a trophy, so sweep straight away rather than
+  // leaving the founder to find it on a later page.
+  try { await sweepMilestones(req.sb, req.user.id, req.profile, plan === 'paid'); } catch (_) {}
 }
 
 // The founder drafts THEIR idea; the advisor stress-tests it against their
@@ -149,12 +192,12 @@ router.post('/draft', async (req, res, next) => {
       user_id: req.user.id, questionnaire_id: q.id, source: 'user',
       name: draft.name, tagline: draft.tagline, category: 'Your idea',
       profile_summary: draft.description, why_you: '',
-      status: 'active', position: (count || 0)
+      draft, status: 'active', position: (count || 0)
     }).select('*').maybeSingle();
     if (error || !idea) throw (error || new Error('could not save your idea'));
     await awardXP(req.sb, req.user.id, req.profile, 15, 'Drafted your own idea: ' + draft.name, 'generated_ideas', idea.id);
     try {
-      await runAdvisor(req, idea, compass && compass.data, q, draft);
+      await runAdvisor(req, idea, compass && compass.data, q, draft, res.locals.plan);
       return res.redirect('/ideas/' + idea.id);
     } catch (err) {
       console.error('advisor', err && err.message);
@@ -163,22 +206,59 @@ router.post('/draft', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Re-run the advisor on a user-authored idea (e.g. after the first pass failed
-// or after they rethink the draft).
-router.post('/draft/:id/advise', async (req, res, next) => {
+// Revise the idea and re-run the advisor — the Level 1 loop. The founder edits
+// their own words, the advisor re-scores against their fit test, and the version
+// row runAdvisor writes is what makes the improvement visible (2/5 -> 4/5 -> 5/5)
+// rather than a single number that quietly changes.
+//
+// Body fields are optional: a bare submit re-runs the advisor on the stored
+// draft, which is what you want after a failed advisory.
+router.post('/draft/:id/revise', async (req, res, next) => {
   try {
     const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
-    if (!idea) return res.redirect('/compass');
-    const q = await qsvc.latestCompleted(req.sb, req.user.id);
-    const { data: compass } = await req.sb.from('founder_compasses').select('*')
-      .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    const draft = { name: idea.name, tagline: idea.tagline, description: idea.profile_summary, problem: '', customer: '', monetization: '' };
+    if (!idea) return res.redirect('/ideas');
+    if (idea.cut_at) return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('This idea was cut. Draft a new one from your Compass.'));
+    const b = req.body || {};
+    const prev = idea.draft || {};
+    const has = k => Object.prototype.hasOwnProperty.call(b, k);
+    const draft = {
+      name: (has('name') ? s(b.name, 140) : '') || prev.name || idea.name,
+      tagline: has('tagline') ? s(b.tagline, 200) : (prev.tagline || idea.tagline || ''),
+      description: has('description') ? s(b.description, 2000) : (prev.description || idea.profile_summary || ''),
+      problem: has('problem') ? s(b.problem, 1000) : (prev.problem || ''),
+      customer: has('customer') ? s(b.customer, 500) : (prev.customer || ''),
+      monetization: has('monetization') ? s(b.monetization, 500) : (prev.monetization || '')
+    };
+    if (!draft.name) return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your idea needs a name.'));
+    // Saved before the advisory runs, so a failed advisory never costs the
+    // founder the edit they just made.
+    await req.sb.from('generated_ideas').update({ draft, updated_at: new Date().toISOString() }).eq('id', idea.id).eq('user_id', req.user.id);
     try {
-      await runAdvisor(req, idea, compass && compass.data, q || {}, draft);
+      await runAdvisor(req, idea, await compassData(req), await qsvc.latestCompleted(req.sb, req.user.id) || {}, draft, res.locals.plan);
       return res.redirect('/ideas/' + idea.id);
     } catch (err) {
-      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('The advisor could not run: ' + err.message));
+      console.error('advisor revise', err && err.message);
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your revision is saved, but the advisor could not run: ' + err.message));
     }
+  } catch (e) { next(e); }
+});
+
+// Cutting an idea that did not hold up. This is a real move, not a failure
+// state: the trophy is worth as much as a refinement threshold, because
+// dropping a weak idea on the evidence is the harder call and the one every
+// other platform trains people out of making.
+router.post('/draft/:id/cut', async (req, res, next) => {
+  try {
+    const reason = s((req.body || {}).cut_reason, 600);
+    if (!reason) return res.redirect('/ideas/' + req.params.id + '?msg=' + encodeURIComponent('Say what you learned before cutting it \u2014 that is the part worth keeping.'));
+    const { data: idea } = await req.sb.from('generated_ideas').select('id, name, cut_at').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+    if (!idea) return res.redirect('/ideas');
+    if (idea.cut_at) return res.redirect('/ideas/' + idea.id);
+    await req.sb.from('generated_ideas').update({
+      status: 'dropped', cut_at: new Date().toISOString(), cut_reason: reason, updated_at: new Date().toISOString()
+    }).eq('id', idea.id).eq('user_id', req.user.id);
+    try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) {}
+    return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Cut, and the reason kept. That judgement is worth more than a polished idea nobody wants.'));
   } catch (e) { next(e); }
 });
 

@@ -40,6 +40,10 @@ function fill(msg, state) {
     .replace(/\{sprint_days_left\}/g, String(state.sprint_days_left != null ? state.sprint_days_left : ''))
     .replace(/\{open_tasks\}/g, String(state.open_tasks || 0))
     .replace(/\{overdue_tasks\}/g, String(state.overdue_tasks || 0))
+    .replace(/\{fit_passed\}/g, String(state.fit_passed || 0))
+    .replace(/\{fit_total\}/g, String(state.fit_total || 5))
+    .replace(/\{fit_gap\}/g, String(Math.max(0, (state.fit_total || 5) - (state.fit_passed || 0))))
+    .replace(/\{signals_count\}/g, String(state.signals_count || 0))
     .replace(/\{challenge_due_days\}/g, String(state.challenge_due_days != null && state.challenge_due_days < 999 ? state.challenge_due_days : ''));
 }
 
@@ -50,7 +54,7 @@ async function computeState(sb, user, profile, pre = {}) {
   const today = dstr(now);
   const head = q => q.then(r => r.count || 0, () => 0);
 
-  const [compassN, blueprintN, ideasN, openN, overdueN, completionsN, winsN, forumN, milestonesN, pendingVerifN, xpToday, qrun] = await Promise.all([
+  const [compassN, blueprintN, ideasN, openN, overdueN, completionsN, winsN, forumN, milestonesN, pendingVerifN, xpToday, qrun, ideaRows, signalRows] = await Promise.all([
     head(sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     pre.ideasCount != null ? Promise.resolve(pre.ideasCount)
@@ -64,7 +68,12 @@ async function computeState(sb, user, profile, pre = {}) {
     head(sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'pending')),
     sb.from('xp_events').select('reason').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z').limit(50).then(r => r.data || [], () => []),
     sb.from('questionnaire_responses').select('founder_path').eq('user_id', user.id).eq('completed', true)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null),
+    // The Level 1 refinement loop: how far the best idea got against the
+    // founder's own fit test, and how much evidence it carries.
+    sb.from('generated_ideas').select('fit_passed, fit_total, best_fit_passed, cut_at').eq('user_id', user.id)
+      .then(r => r.data || [], () => []),
+    sb.from('idea_signals').select('idea_id, source').eq('user_id', user.id).then(r => r.data || [], () => [])
   ]);
 
   const reasons = xpToday.map(e => String(e.reason || ''));
@@ -86,6 +95,26 @@ async function computeState(sb, user, profile, pre = {}) {
     // whether it is still outstanding — it is the first thing to nudge.
     has_questionnaire: !!qrun,
     has_compass: compassN > 0,
+    // Live ideas only — a cut idea should not keep nagging the founder to
+    // revise it, and its score should not stand in for the one they moved on to.
+    ...(function () {
+      const live = ideaRows.filter(r => !r.cut_at);
+      const best = live.reduce((b, r) => Math.max(b, r.best_fit_passed || 0), 0);
+      const scoredRow = live.find(r => r.fit_total);
+      const perIdea = {};
+      signalRows.forEach(r => { perIdea[r.idea_id] = (perIdea[r.idea_id] || 0) + 1; });
+      const mine = {};
+      signalRows.filter(r => r.source === 'founder').forEach(r => { mine[r.idea_id] = (mine[r.idea_id] || 0) + 1; });
+      return {
+        live_ideas: live.length,
+        idea_scored: live.some(r => r.fit_total),
+        fit_passed: best,
+        fit_total: scoredRow ? scoredRow.fit_total : 5,
+        fit_complete: !!(scoredRow && best >= scoredRow.fit_total),
+        signals_count: Object.keys(perIdea).reduce((b, k) => Math.max(b, perIdea[k]), 0),
+        own_signals: Object.keys(mine).reduce((b, k) => Math.max(b, mine[k]), 0)
+      };
+    }()),
     has_blueprint: blueprintN > 0,
     ideas_count: ideasN,
     has_sprint: !!sprint,

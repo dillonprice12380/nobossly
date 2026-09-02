@@ -1,49 +1,228 @@
 <%- include('partials/head') %>
+<%
+  // The Level 1 loop lives on this page: the fit test is the scoreboard, the
+  // version history is the proof of improvement, and the revise form is the move.
+  var adv = idea.advisor || {};
+  var fitResults = Array.isArray(adv.fit_results) ? adv.fit_results : [];
+  var passed = idea.fit_passed, total = idea.fit_total;
+  // Never invent a denominator: if the advisor returned four criteria, the score
+  // is out of four. Falling back to the array length keeps older rows honest.
+  if (total == null && fitResults.length) { total = fitResults.length; passed = fitResults.filter(function (f) { return f.pass; }).length; }
+  var scored = total != null && total > 0;
+  var pct = scored ? Math.round(100 * passed / total) : 0;
+  var d = idea.draft || {};
+  var cut = !!idea.cut_at;
+  var vers = (typeof versions !== 'undefined' && versions) ? versions : [];
+  var sigs = (typeof signals !== 'undefined' && signals) ? signals : [];
+  var mine = (typeof founderSignals !== 'undefined') ? founderSignals : 0;
+  var sigDone = sigs.length >= 3 && mine >= 1;
+%>
 <a class="muted" href="/ideas">← All ideas</a>
 <div class="page-head">
-  <div><span class="tag"><%= idea.category %></span><h1><%= idea.name %></h1><p class="lead"><%= idea.tagline %></p></div>
+  <div>
+    <% if (idea.category) { %><span class="tag"><%= idea.category %></span><% } %>
+    <h1><%= idea.name %></h1>
+    <p class="lead"><%= idea.tagline %></p>
+  </div>
 </div>
-<% if (msg) { %><p class="muted">⚠️ <%= msg %></p><% } %>
-<div class="scores">
-  <span class="chip">🎯 <%= idea.success_likelihood %>% success likelihood</span>
-  <span class="chip">📈 demand <%= idea.demand_score %>/10</span>
-  <span class="chip">❤️ passion fit <%= idea.passion_score %>/10</span>
-  <span class="chip">⏱ revenue in <%= idea.time_to_revenue %></span>
-</div>
-<div class="cta-row">
-  <% if (blueprintId) { %><a class="btn btn-primary btn-lg" href="/blueprint/<%= blueprintId %>">📐 View launch blueprint</a>
-  <% } else { %><a class="btn btn-primary btn-lg" href="/blueprint/start/<%= idea.id %>">📐 Build my launch blueprint</a><% } %>
-  <form method="post" action="/ideas/<%= idea.id %>/favorite" class="inline"><button class="btn btn-ghost"><%= idea.is_favorited ? '⭐ Favorited' : '☆ Favorite' %></button></form>
-</div>
-<% const ev = idea.demand_evidence; %>
-<div class="card" style="margin:16px 0">
-  <h3>📡 Real demand signals</h3>
-  <% if (ev && ev.signals && ev.signals.length) { %>
-    <ul style="list-style:none;padding:0;margin:0 0 12px">
-      <% ev.signals.forEach(function(s){ %>
-        <li style="margin:0 0 10px">
-          <span class="chip"><%= s.strength === 'strong' ? '🟢' : s.strength === 'moderate' ? '🟡' : '⚪️' %> <%= s.strength %></span>
-          <%= s.claim %> <span class="muted">— <%= s.source %></span>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (cut) { %>
+  <div class="card" style="border-color:var(--muted)">
+    <h2>✂️ You cut this idea</h2>
+    <p class="muted small">Cut on <%= new Date(idea.cut_at).toLocaleDateString() %>. Knowing when to stop is the skill this trains.</p>
+    <p><strong>What you learned:</strong> <%= idea.cut_reason %></p>
+    <a class="btn btn-primary" style="margin-top:.6rem;display:inline-block" href="/compass">Draft your next idea →</a>
+  </div>
+<% } %>
+
+<%# ---------- The scoreboard ---------- %>
+<div class="card fit-card">
+  <div class="page-head" style="margin:0 0 .4rem">
+    <div>
+      <h2 style="margin:0">🎯 Your fit test</h2>
+      <p class="muted small" style="margin:.15rem 0 0">Five criteria your own Compass wrote, from your own answers. Passing all of them clears Level 1.</p>
+    </div>
+    <% if (scored) { %><span class="chip fit-chip <%= passed >= total ? 'chip-success' : '' %>"><%= passed %>/<%= total %> passing</span><% } %>
+  </div>
+
+  <% if (!scored) { %>
+    <p class="muted">The advisor hasn't scored this idea yet. Run it below and you'll get a pass or fail on each of your five criteria, with the reason.</p>
+  <% } else { %>
+    <div class="progress" style="margin:.5rem 0 .9rem"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+    <ul class="fit-list">
+      <% fitResults.forEach(function (f) { %>
+        <li class="fit-row <%= f.pass ? 'is-pass' : 'is-fail' %>">
+          <span class="fit-mark" aria-hidden="true"><%= f.pass ? '✓' : '✕' %></span>
+          <div>
+            <strong><%= f.criterion %></strong>
+            <span class="sr-only"><%= f.pass ? ' — passing' : ' — not yet passing' %></span>
+            <% if (f.note) { %><p class="muted small" style="margin:.15rem 0 0"><%= f.note %></p><% } %>
+          </div>
         </li>
       <% }) %>
     </ul>
-    <p><strong>The read:</strong> <%= ev.verdict %></p>
-    <p class="muted" style="font-size:.85em">Signals gathered from live web search<%= idea.evidence_at ? ' on ' + new Date(idea.evidence_at).toLocaleDateString() : '' %>.</p>
-    <form method="post" action="/ideas/<%= idea.id %>/evidence" class="inline" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Searching live sources… (~20s)'">
-      <button class="btn btn-ghost">↻ Refresh signals</button>
-    </form>
-  <% } else if (plan === 'paid') { %>
-    <p class="muted">Search live sources — real community discussions, trend data, and market stats — for evidence people actually want this. Every signal comes with a named source.</p>
-    <form method="post" action="/ideas/<%= idea.id %>/evidence" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Searching live sources… (~20s)'">
-      <button class="btn btn-primary">🔎 Verify demand with live signals</button>
-    </form>
-  <% } else { %>
-    <p class="muted">See live demand evidence for this idea — real community discussions, trend data, and market stats, each with a named source. Available on the paid plan.</p>
-    <a class="btn btn-primary" href="/pricing?upgrade=1">Unlock live demand signals</a>
+    <% if (passed >= total) { %>
+      <p class="fit-done">🎉 Every criterion passes. This idea holds up against your own test.</p>
+    <% } %>
+  <% } %>
+
+  <% if (adv.sharper_version) { %>
+    <div class="fit-aside">
+      <h3 class="small">🔪 A sharper version</h3>
+      <p class="small" style="margin:.2rem 0 0"><%= adv.sharper_version %></p>
+      <p class="muted small" style="margin:.3rem 0 0">Offered, not imposed — it's your idea.</p>
+    </div>
+  <% } %>
+
+  <% if (adv.considerations && adv.considerations.length) { %>
+    <div class="fit-aside">
+      <h3 class="small">❓ Answer these before you commit</h3>
+      <ul class="small" style="margin:.3rem 0 0;padding-left:1.1rem">
+        <% adv.considerations.forEach(function (c) { %><li style="margin:.2rem 0"><%= c %></li><% }) %>
+      </ul>
+    </div>
   <% } %>
 </div>
 
-<% const comps = idea.competitors; %>
+<%# ---------- The trajectory ---------- %>
+<% if (vers.length > 1) { %>
+  <div class="card">
+    <h2>📈 How it's moved</h2>
+    <p class="muted small">Each pass of the advisor, oldest first.</p>
+    <ol class="ver-list">
+      <% vers.forEach(function (v) { %>
+        <li class="ver-row">
+          <span class="ver-no">v<%= v.version_no %></span>
+          <span class="chip"><%= v.fit_passed == null ? '—' : v.fit_passed + '/' + (v.fit_total || '?') %> fit</span>
+          <% if (v.success_likelihood) { %><span class="chip">🎯 <%= v.success_likelihood %>%</span><% } %>
+          <span class="muted small"><%= new Date(v.created_at).toLocaleDateString() %></span>
+        </li>
+      <% }) %>
+    </ol>
+  </div>
+<% } %>
+
+<%# ---------- The move ---------- %>
+<% if (!cut) { %>
+<div class="card">
+  <h2>✍️ Revise it</h2>
+  <p class="muted small">Change what the advisor pushed back on, then re-run. Your score moves with the idea — that's the whole of Level 1.</p>
+  <form method="post" action="/compass/draft/<%= idea.id %>/revise" data-turbo="false"
+        onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Your advisor is re-reading it… (about a minute)';">
+    <label class="small">Idea name *<input name="name" maxlength="140" required value="<%= d.name || idea.name || '' %>"></label>
+    <label class="small">One-liner<input name="tagline" maxlength="200" value="<%= d.tagline || idea.tagline || '' %>"></label>
+    <label class="small">Describe it<textarea name="description" rows="3" maxlength="2000"><%= d.description || idea.profile_summary || '' %></textarea></label>
+    <label class="small">Problem it solves<input name="problem" maxlength="1000" value="<%= d.problem || '' %>"></label>
+    <label class="small">First customer you'd target<input name="customer" maxlength="500" value="<%= d.customer || '' %>"></label>
+    <label class="small">How it makes money<input name="monetization" maxlength="500" value="<%= d.monetization || '' %>"></label>
+    <div class="cta-row"><button type="submit" class="btn btn-primary">Re-run the advisor</button></div>
+  </form>
+</div>
+<% } %>
+
+<%# ---------- Evidence ---------- %>
+<div class="card">
+  <div class="page-head" style="margin:0 0 .4rem">
+    <div>
+      <h2 style="margin:0">📡 Real demand signals</h2>
+      <p class="muted small" style="margin:.15rem 0 0">Three signals clear this quest, and at least one has to be yours. Anyone can search; going and finding it is the part that teaches you something.</p>
+    </div>
+    <span class="chip <%= sigDone ? 'chip-success' : '' %>"><%= sigs.length %>/3 · <%= mine %> yours</span>
+  </div>
+
+  <% if (sigs.length) { %>
+    <ul class="sig-list">
+      <% sigs.forEach(function (sg) { %>
+        <li class="sig-row">
+          <span class="chip"><%= sg.strength === 'strong' ? '🟢' : sg.strength === 'weak' ? '⚪️' : '🟡' %> <%= sg.strength %></span>
+          <span class="chip"><%= sg.source === 'founder' ? '🧍 you' : '🤖 search' %></span>
+          <div style="flex:1;min-width:12rem">
+            <%= sg.claim %>
+            <%# rel/target on an external link the founder pasted: never hand a
+                third-party page a window.opener handle to this session. %>
+            <% if (sg.url) { %><br><a class="muted small" href="<%= sg.url %>" target="_blank" rel="noopener noreferrer nofollow"><%= sg.url.slice(0, 60) %></a><% } %>
+          </div>
+          <% if (sg.source === 'founder' && !cut) { %>
+            <form method="post" action="/ideas/<%= idea.id %>/signals/<%= sg.id %>/delete" class="inline">
+              <button class="btn btn-ghost btn-sm" aria-label="Remove this signal">✕</button>
+            </form>
+          <% } %>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+
+  <% if (!cut) { %>
+    <details style="margin-top:.7rem">
+      <summary class="btn btn-primary btn-sm" style="display:inline-block">+ Add a signal you found</summary>
+      <form method="post" action="/ideas/<%= idea.id %>/signals" style="margin-top:.6rem">
+        <label class="small">What does it show? *<input name="claim" maxlength="500" required placeholder="e.g. 40 plumbers in this forum thread complaining about exactly this"></label>
+        <label class="small">Link (optional)<input name="url" type="url" maxlength="500" placeholder="https://"></label>
+        <label class="small">How strong is it?
+          <select name="strength">
+            <option value="strong">Strong — someone is already paying for this</option>
+            <option value="moderate" selected>Moderate — people are complaining about it</option>
+            <option value="weak">Weak — a hunch with something behind it</option>
+          </select>
+        </label>
+        <button class="btn btn-primary btn-sm">Add signal</button>
+      </form>
+    </details>
+
+    <div style="margin-top:.7rem;border-top:1px solid var(--border);padding-top:.7rem">
+      <% if (idea.demand_evidence && idea.demand_evidence.verdict) { %>
+        <p class="small"><strong>The search read:</strong> <%= idea.demand_evidence.verdict %></p>
+      <% } %>
+      <% if (plan === 'paid') { %>
+        <form method="post" action="/ideas/<%= idea.id %>/evidence" class="inline" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Searching live sources… (~20s)'">
+          <button class="btn btn-ghost btn-sm"><%= (idea.demand_evidence ? '↻ Refresh' : '🔎 Search') %> live sources</button>
+        </form>
+      <% } else { %>
+        <p class="muted small">Live web search for demand signals is a paid feature — adding your own stays free, and it's the half that counts.</p>
+        <a class="btn btn-ghost btn-sm" href="/pricing?upgrade=1">See plans</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<%# ---------- Where next ---------- %>
+<% if (!cut) { %>
+<div class="cta-row">
+  <% if (blueprintId) { %><a class="btn btn-primary btn-lg" href="/blueprint/<%= blueprintId %>">📐 View launch blueprint</a>
+  <% } else if (scored && passed >= total) { %><a class="btn btn-primary btn-lg" href="/blueprint/start/<%= idea.id %>">📐 Build my launch blueprint</a>
+  <% } else { %><a class="btn btn-ghost btn-lg" href="/blueprint/start/<%= idea.id %>">📐 Build a blueprint anyway</a><% } %>
+  <form method="post" action="/ideas/<%= idea.id %>/favorite" class="inline"><button class="btn btn-ghost"><%= idea.is_favorited ? '⭐ Favorited' : '☆ Favorite' %></button></form>
+</div>
+<% if (scored && passed < total) { %>
+  <p class="muted small">The blueprint is a big piece of work. It's worth more once the idea passes its own fit test — but it's your call, not a lock.</p>
+<% } %>
+<% } %>
+
+<%# ---------- The honest exit ---------- %>
+<% if (!cut && scored) { %>
+  <details class="card cut-card">
+    <summary><strong>✂️ This one isn't working</strong> <span class="muted small">— cutting it early is worth XP</span></summary>
+    <p class="muted small" style="margin:.5rem 0">Most platforms would push you to keep polishing. If the fit test and the evidence both say no, the better move is to drop it and take what you learned into the next one. That judgement is the skill.</p>
+    <form method="post" action="/compass/draft/<%= idea.id %>/cut">
+      <label class="small">What did you learn? *<textarea name="cut_reason" rows="2" maxlength="600" required placeholder="e.g. Real demand, but every buyer already has an in-house person doing it"></textarea></label>
+      <button class="btn btn-ghost btn-sm">Cut this idea</button>
+    </form>
+  </details>
+<% } %>
+
+<%# ---------- The advisor's longer read ---------- %>
+<% if (scored || idea.market_analysis) { %>
+<div class="scores" style="margin-top:1.2rem">
+  <% if (idea.success_likelihood) { %><span class="chip">🎯 <%= idea.success_likelihood %>% success likelihood</span><% } %>
+  <% if (idea.demand_score) { %><span class="chip">📈 demand <%= idea.demand_score %>/10</span><% } %>
+  <% if (idea.passion_score) { %><span class="chip">❤️ passion fit <%= idea.passion_score %>/10</span><% } %>
+  <% if (idea.time_to_revenue) { %><span class="chip">⏱ revenue in <%= idea.time_to_revenue %></span><% } %>
+</div>
+<% } %>
+
+<% var comps = idea.competitors; %>
+<% if (comps && comps.length || idea.competitor_landscape) { %>
 <div class="card" style="margin:16px 0">
   <h3>⚔️ Top competitors &amp; how you stack up</h3>
   <% if (idea.competitor_landscape) { %><p class="muted"><%= idea.competitor_landscape %></p><% } %>
@@ -59,21 +238,43 @@
         </div>
       <% }) %>
     </div>
-  <% } else { %>
-    <p class="muted small">No head-to-head competitor breakdown for this idea yet. Re-run the advisor from your Compass to add one.</p>
   <% } %>
 </div>
+<% } %>
 
 <div class="grid-2">
-  <div class="card"><h3>Why this fits you</h3><p><%= idea.why_you %></p><p class="muted"><%= idea.profile_summary %></p></div>
-  <div class="card"><h3>Market analysis</h3><p><%= idea.market_analysis %></p></div>
+  <% if (idea.why_you || idea.profile_summary) { %><div class="card"><h3>Why this fits you</h3><p><%= idea.why_you %></p><p class="muted"><%= idea.profile_summary %></p></div><% } %>
+  <% if (idea.market_analysis) { %><div class="card"><h3>Market analysis</h3><p><%= idea.market_analysis %></p></div><% } %>
+  <% if (idea.startup_cost_lean) { %>
   <div class="card"><h3>Startup costs</h3>
     <p>Lean: <strong><%= idea.startup_cost_lean %></strong><br>Standard: <strong><%= idea.startup_cost_standard %></strong><br>Full build: <strong><%= idea.startup_cost_full %></strong></p>
-    <h4>Legal notes</h4><p class="muted"><%= idea.legal_nuances %></p></div>
-  <div class="card span-2"><h3>First steps</h3><p class="pre"><%= idea.first_steps %></p></div>
+    <% if (idea.legal_nuances) { %><h4>Legal notes</h4><p class="muted"><%= idea.legal_nuances %></p><% } %></div>
+  <% } %>
+  <% if (idea.first_steps) { %><div class="card span-2"><h3>First steps</h3><p class="pre"><%= idea.first_steps %></p></div><% } %>
 </div>
 
 <style>
+  .fit-card{border-color:var(--accent)}
+  .fit-chip{font-weight:600}
+  .fit-list{list-style:none;padding:0;margin:0}
+  .fit-row{display:flex;gap:.6rem;align-items:flex-start;padding:.55rem 0;border-top:1px solid var(--border)}
+  .fit-row:first-child{border-top:0}
+  .fit-mark{flex:none;width:1.4rem;height:1.4rem;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700;color:#fff}
+  .is-pass .fit-mark{background:var(--accent,#10b981)}
+  .is-fail .fit-mark{background:#b45309}
+  .is-fail strong{color:var(--text)}
+  .fit-done{margin:.7rem 0 0;font-weight:600;color:var(--accent,#10b981)}
+  .fit-aside{border-top:1px solid var(--border);margin-top:.8rem;padding-top:.7rem}
+  .ver-list{list-style:none;padding:0;margin:.5rem 0 0}
+  .ver-row{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;padding:.4rem 0;border-top:1px solid var(--border)}
+  .ver-row:first-child{border-top:0}
+  .ver-no{font-weight:700;min-width:2.2rem}
+  .sig-list{list-style:none;padding:0;margin:.5rem 0 0}
+  .sig-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;padding:.5rem 0;border-top:1px solid var(--border)}
+  .sig-row:first-child{border-top:0}
+  .cut-card{margin-top:1rem}
+  .cut-card summary{cursor:pointer}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   .comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.75rem;margin-top:.75rem}
   .comp-card{border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;background:var(--card-2,rgba(16,185,129,.04))}
   .comp-head{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.35rem}

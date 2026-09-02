@@ -90,7 +90,7 @@
 
 <div class="card" style="margin-top:1rem">
   <h2>✍️ Draft YOUR idea</h2>
-  <p class="muted small">You choose the direction — in your own words. Your advisor will stress-test it against your fit test and the live market, show you where it holds and where it strains, and offer a sharper wedge. Then it's your call. Takes about a minute.</p>
+  <p class="muted small">You choose the direction — in your own words. Your advisor stress-tests it against your own 5-point fit test and the live market, then scores it: pass or fail on each criterion, with the reason. Revise, re-run, watch the score move. Getting to 5/5 is Level 1. Takes about a minute per pass.</p>
   <form method="post" action="/compass/draft" data-turbo="false" onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Your advisor is thinking… (about a minute)';">
     <label class="small">Idea name *<input name="name" maxlength="140" required placeholder="e.g. Route-Ready Bookkeeping"></label>
     <label class="small">One-liner<input name="tagline" maxlength="200" placeholder="What it does, in one sentence"></label>
@@ -99,7 +99,7 @@
     <label class="small">First customer you'd target<input name="customer" maxlength="500"></label>
     <label class="small">How it makes money<input name="monetization" maxlength="500"></label>
     <div class="cta-row"><button type="submit" class="btn btn-primary">Run it past your advisor</button>
-    <a class="btn btn-ghost" href="/ideas">See your saved ideas</a></div>
+    <a class="btn btn-ghost" href="/ideas">See my ideas</a></div>
   </form>
 </div>
 <%- include('partials/foot') %>

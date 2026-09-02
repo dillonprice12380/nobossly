@@ -1,7 +1,7 @@
 {"levels":[
 {"level": 1, "title": "Ideator", "emoji": "🌱", "xp_required": 0, "requirements": null},
-{"level": 2, "title": "Explorer", "emoji": "🔍", "xp_required": 100, "requirements": {"quests": [{"type": "milestone", "title": "Compass Questions Answered"}, {"type": "milestone", "title": "Blueprint Built"}, {"type": "challenge", "title": "Validate your idea"}, {"type": "challenge", "title": "Get 3 Feedback Sessions"}]}},
-{"level": 3, "title": "Builder", "emoji": "🔨", "xp_required": 300, "requirements": {"quests": [{"type": "challenge", "title": "Ship Something"}, {"type": "milestone", "title": "Sprint 1 Completed"}]}},
+{"level": 2, "title": "Explorer", "emoji": "🔍", "xp_required": 100, "requirements": {"quests": [{"type": "milestone", "title": "Compass Questions Answered"}, {"type": "milestone", "title": "Passes Your Own Test"}, {"type": "milestone", "title": "Three Real Signals"}, {"type": "challenge", "title": "Get 3 Feedback Sessions"}, {"type": "challenge", "title": "Validate your idea"}]}},
+{"level": 3, "title": "Builder", "emoji": "🔨", "xp_required": 300, "requirements": {"quests": [{"type": "milestone", "title": "Blueprint Built"}, {"type": "challenge", "title": "Ship Something"}, {"type": "milestone", "title": "Sprint 1 Completed"}]}},
 {"level": 4, "title": "Hustler", "emoji": "⚡", "xp_required": 600, "requirements": {"quests": [{"type": "challenge", "title": "5 Customer Conversations"}, {"type": "challenge", "title": "Do 25 outreach touches"}]}},
 {"level": 5, "title": "Operator", "emoji": "⚙️", "xp_required": 1000, "requirements": {"quests": [{"type": "challenge", "title": "Make your first sale"}, {"type": "milestone", "title": "Registered my business"}]}},
 {"level": 6, "title": "Founder", "emoji": "🚀", "xp_required": 1500, "requirements": {"quests": [{"type": "challenge", "title": "Earn Your First $100"}, {"type": "milestone", "title": "Opened a business bank account"}, {"type": "challenge", "title": "Collect 5 testimonials"}]}},
@@ -63,4 +63,9 @@
 {"title": "10 Challenges Completed", "xp_reward": 60, "auto_kind": "challenges", "is_claimable": false},
 {"title": "5 Sprints Completed", "xp_reward": 75, "auto_kind": "sprints_done", "is_claimable": false},
 {"title": "3-Day Streak", "xp_reward": 40, "auto_kind": "streak", "is_claimable": false},
-{"title": "Compass Questions Answered", "xp_reward": 40, "auto_kind": "questionnaire", "is_claimable": false}]}
+{"title": "Compass Questions Answered", "xp_reward": 40, "auto_kind": "questionnaire", "is_claimable": false},
+{"title": "Idea Holds Up", "xp_reward": 20, "auto_kind": "idea_fit", "is_claimable": false},
+{"title": "Sharpened", "xp_reward": 30, "auto_kind": "idea_fit", "is_claimable": false},
+{"title": "Passes Your Own Test", "xp_reward": 50, "auto_kind": "idea_fit", "is_claimable": false},
+{"title": "Cut It Early", "xp_reward": 40, "auto_kind": "ideas_cut", "is_claimable": false},
+{"title": "Three Real Signals", "xp_reward": 30, "auto_kind": "signals", "is_claimable": false}]}
