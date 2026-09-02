@@ -52,11 +52,16 @@ module.exports = {
       }
     ],
     fit_test: [
-      { criterion: 'Can it be delivered in evenings, asynchronously?', why: 'You have 10 hours a week and a day job with fixed daytime clinic hours.' },
-      { criterion: 'Does it start for under $800?', why: 'That is your entire launch budget and you named no runway behind it.' },
-      { criterion: 'Does it reach $2k/month without hourly delivery?', why: 'At 10 hours a week, hourly work mathematically cannot get you there.' },
-      { criterion: 'Can it sell without you appearing on camera?', why: 'You named video as a deal breaker, so distribution has to route around it.' },
-      { criterion: 'Does your clinical credibility actually matter to the buyer?', why: 'It is your single largest advantage — an idea that wastes it is starting from zero.' }
+      { criterion: 'Can it be delivered in evenings, asynchronously?', why: 'You have 10 hours a week and a day job with fixed daytime clinic hours.',
+        check: 'boolean', metric: null, op: null, value: null },
+      { criterion: 'Does it start for under $800?', why: 'That is your entire launch budget and you named no runway behind it.',
+        check: 'numeric', metric: 'startup_cost', op: 'lte', value: 800 },
+      { criterion: 'Is it earning inside 10 weeks?', why: 'You have no runway, so an idea that pays nothing for six months is one you will abandon.',
+        check: 'numeric', metric: 'time_to_revenue', op: 'lte', value: 10 },
+      { criterion: 'Can it sell without you appearing on camera?', why: 'You named video as a deal breaker, so distribution has to route around it.',
+        check: 'boolean', metric: null, op: null, value: null },
+      { criterion: 'Does your clinical credibility actually matter to the buyer?', why: 'It is your single largest advantage — an idea that wastes it is starting from zero.',
+        check: 'judgment', metric: null, op: null, value: null }
     ],
     avoid_list: [
       { territory: 'A dental-themed e-commerce or product line', reason: 'Inventory eats your $800 immediately and your credibility does nothing for you against Amazon pricing.' },

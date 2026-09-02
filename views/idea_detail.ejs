@@ -10,6 +10,9 @@
   if (total == null && fitResults.length) { total = fitResults.length; passed = fitResults.filter(function (f) { return f.pass; }).length; }
   var scored = total != null && total > 0;
   var pct = scored ? Math.round(100 * passed / total) : 0;
+  // How much of the score is arithmetic rather than the advisor's opinion.
+  // Shown so "5/5" is never mistaken for certainty.
+  var verifiedCount = fitResults.filter(function (f) { return f.verified; }).length;
   var d = idea.draft || {};
   var cut = !!idea.cut_at;
   var vers = (typeof versions !== 'undefined' && versions) ? versions : [];
@@ -49,21 +52,33 @@
   <% if (!scored) { %>
     <p class="muted">The advisor hasn't scored this idea yet. Run it below and you'll get a pass or fail on each of your five criteria, with the reason.</p>
   <% } else { %>
-    <div class="progress" style="margin:.5rem 0 .9rem"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+    <div class="progress" style="margin:.5rem 0 .55rem"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+    <% if (verifiedCount) { %>
+      <p class="muted small" style="margin:0 0 .8rem"><%= verifiedCount %> checked against your own numbers, <%= total - verifiedCount %> the advisor's judgement.</p>
+    <% } else { %>
+      <p class="muted small" style="margin:0 0 .8rem">All five are the advisor's judgement — a read, not a verdict. Your own demand signals below are the harder evidence.</p>
+    <% } %>
     <ul class="fit-list">
       <% fitResults.forEach(function (f) { %>
         <li class="fit-row <%= f.pass ? 'is-pass' : 'is-fail' %>">
           <span class="fit-mark" aria-hidden="true"><%= f.pass ? '✓' : '✕' %></span>
           <div>
             <strong><%= f.criterion %></strong>
-            <span class="sr-only"><%= f.pass ? ' — passing' : ' — not yet passing' %></span>
+            <span class="sr-only"><%= f.pass ? ' — passing' : ' — not yet passing' %><%= f.verified ? ', checked against your numbers' : ', advisor judgement' %></span>
+            <%# A criterion settled by arithmetic and one settled by opinion must
+                not look the same. The basis says which, and on what. %>
+            <% if (f.verified) { %>
+              <span class="fit-tag is-verified" title="<%= f.basis || '' %>">checked<% if (f.basis) { %> · <%= f.basis %><% } %></span>
+            <% } else { %>
+              <span class="fit-tag">advisor judgement</span>
+            <% } %>
             <% if (f.note) { %><p class="muted small" style="margin:.15rem 0 0"><%= f.note %></p><% } %>
           </div>
         </li>
       <% }) %>
     </ul>
     <% if (passed >= total) { %>
-      <p class="fit-done">🎉 Every criterion passes. This idea holds up against your own test.</p>
+      <p class="fit-done">🎉 Every criterion passes. This idea holds up against your own test<%= verifiedCount < total ? ' — as far as the advisor can judge it.' : '.' %></p>
     <% } %>
   <% } %>
 
@@ -264,6 +279,9 @@
   .is-fail .fit-mark{background:#b45309}
   .is-fail strong{color:var(--text)}
   .fit-done{margin:.7rem 0 0;font-weight:600;color:var(--accent,#10b981)}
+  .fit-tag{display:inline-block;margin-left:.4rem;font-size:.68rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.02em;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:.05rem .4rem;vertical-align:middle}
+  .fit-tag.is-verified{color:var(--accent,#10b981);border-color:var(--accent,#10b981)}
   .fit-aside{border-top:1px solid var(--border);margin-top:.8rem;padding-top:.7rem}
   .ver-list{list-style:none;padding:0;margin:.5rem 0 0}
   .ver-row{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;padding:.4rem 0;border-top:1px solid var(--border)}

@@ -4,6 +4,7 @@ const cai = require('../compass_ai');
 const qsvc = require('../questionnaires');
 const { awardXP } = require('../xp');
 const { sweepMilestones } = require('../milestones_engine');
+const fitLib = require('../fit');
 
 const LABELS = {
   existing: 'Reading your business and the market around it, then drawing your Compass\u2026',
@@ -111,23 +112,17 @@ function cleanCompetitors(raw) {
   return out.length ? out : null;
 }
 
-// Scores the advisor's verdict against the founder's own fit test.
-//
-// The model is asked for exactly 5 results, but a model is not a schema: it can
-// return four, or six, or none. Reading `total` off the array it actually
-// returned rather than assuming 5 keeps the denominator honest — showing "3/5"
-// when only four criteria came back would be a score the advisor never gave.
-function scoreFit(fitResults) {
-  if (!Array.isArray(fitResults) || !fitResults.length) return { passed: null, total: null };
-  return { passed: fitResults.filter(f => f && f.pass).length, total: fitResults.length };
-}
-
 async function runAdvisor(req, idea, compass, q, draft, plan) {
-  const adv = await cai.adviseIdea(req.accessToken, q, compass, draft);
-  const fitResults = Array.isArray(adv.fit_results)
-    ? adv.fit_results.slice(0, 5).map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) }))
+  // The criteria pinned to this idea when it was drafted, never the Compass's
+  // current ones: redrawing the Compass must not move the goalposts under an
+  // idea already being scored.
+  const pinned = Array.isArray(idea.fit_test) && idea.fit_test.length
+    ? idea.fit_test
+    : fitLib.pinFitTest(compass && compass.fit_test);
+  const adv = await cai.adviseIdea(req.accessToken, q, compass, draft, pinned);
+  const modelResults = Array.isArray(adv.fit_results)
+    ? adv.fit_results.map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) }))
     : null;
-  const fit = scoreFit(fitResults);
   const version = (idea.revision_count || 0) + 1;
   const patch = {
     name: s(adv.name, 140) || idea.name,
@@ -145,19 +140,28 @@ async function runAdvisor(req, idea, compass, q, draft, plan) {
     startup_cost_standard: s(adv.startup_cost_standard, 60), startup_cost_full: s(adv.startup_cost_full, 60),
     legal_nuances: s(adv.legal_nuances, 600), first_steps: s(adv.first_steps, 2000),
     advisor: {
-      fit_results: fitResults,
+      fit_results: null,   // filled in below, once the estimates it grades against exist
       sharper_version: s(adv.sharper_version, 800),
       considerations: Array.isArray(adv.considerations) ? adv.considerations.slice(0, 5).map(c => s(c, 300)).filter(Boolean) : null,
       advised_at: new Date().toISOString()
     },
-    fit_passed: fit.passed,
-    fit_total: fit.total,
-    // The high-water mark, never lowered: a founder who revises into a worse
-    // score has not un-earned the trophy they already have.
-    best_fit_passed: Math.max(idea.best_fit_passed || 0, fit.passed || 0),
     revision_count: version,
     updated_at: new Date().toISOString()
   };
+
+  // Grade only now: the numeric criteria are checked against the advisor's own
+  // cost and timing estimates, which are the fields just written above. Doing
+  // this in code rather than taking the model's word is what stops the score
+  // drifting between runs of an unchanged idea.
+  const fit = fitLib.gradeFitTest(pinned, modelResults, patch);
+  patch.advisor.fit_results = fit.results;
+  patch.fit_test = pinned || null;
+  patch.fit_passed = fit.passed;
+  patch.fit_total = fit.total;
+  patch.fit_verified = fit.verified;
+  // The high-water mark, never lowered: a founder who revises into a worse
+  // score has not un-earned the trophy they already have.
+  patch.best_fit_passed = Math.max(idea.best_fit_passed || 0, fit.passed || 0);
   await req.sb.from('generated_ideas').update(patch).eq('id', idea.id).eq('user_id', req.user.id);
 
   // History is the whole point of the loop: 2/5 -> 4/5 -> 5/5 across three
@@ -192,7 +196,8 @@ router.post('/draft', async (req, res, next) => {
       user_id: req.user.id, questionnaire_id: q.id, source: 'user',
       name: draft.name, tagline: draft.tagline, category: 'Your idea',
       profile_summary: draft.description, why_you: '',
-      draft, status: 'active', position: (count || 0)
+      draft, fit_test: fitLib.pinFitTest(compass && compass.data && compass.data.fit_test),
+      status: 'active', position: (count || 0)
     }).select('*').maybeSingle();
     if (error || !idea) throw (error || new Error('could not save your idea'));
     await awardXP(req.sb, req.user.id, req.profile, 15, 'Drafted your own idea: ' + draft.name, 'generated_ideas', idea.id);
