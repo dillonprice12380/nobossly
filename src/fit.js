@@ -195,7 +195,8 @@ function pinFitTest(fitTest) {
   const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
   return fitTest.slice(0, 5).map(c => {
     const criterion = str(c && c.criterion, 200);
-    const out = { criterion, why: str(c && c.why, 300), check: 'judgment', metric: null, op: null, value: null };
+    const out = { criterion, why: str(c && c.why, 300), check: 'judgment', metric: null, op: null, value: null,
+                  source: c && c.source === 'library' ? 'library' : 'ai', slug: (c && c.slug) || null };
     if (!c) return out;
     const value = typeof c.value === 'number' ? c.value : parseFloat(c.value);
     if (c.check === 'numeric' && METRICS[c.metric] && OPS[c.op] && Number.isFinite(value)) {

@@ -5,6 +5,7 @@ const qsvc = require('../questionnaires');
 const { awardXP } = require('../xp');
 const { sweepMilestones } = require('../milestones_engine');
 const fitLib = require('../fit');
+const lib = require('../fit_library');
 
 const LABELS = {
   existing: 'Reading your business and the market around it, then drawing your Compass\u2026',
@@ -64,8 +65,25 @@ async function runCompassGeneration(req, q, jobId) {
       catch (err) { console.error('compass market scan', err && err.message); }
     }
     await report('generate', path === 'exploring' ? FLOORS.generateNoScan : FLOORS.generate);
-    const data = await cai.generateCompass(req.accessToken, q, scan);
+    // The fit test comes from the curated library first, matched to this
+    // founder's own answers, and the model is asked only for whatever gap is
+    // left. Library criteria arrive already typed, so they can be graded by
+    // arithmetic rather than opinion.
+    const facts = lib.founderFacts(q);
+    let fromLibrary = [];
+    try {
+      const { data: rows } = await sb.from('fit_criteria_library').select('*').eq('is_active', true);
+      fromLibrary = lib.selectFromLibrary(rows, facts);
+    } catch (err) {
+      // A library that cannot be read is a degraded test, not a failed Compass:
+      // the model still writes all five, exactly as it used to.
+      console.error('fit library', err && err.message);
+    }
+    const data = await cai.generateCompass(req.accessToken, q, scan, fromLibrary);
     await report('save', FLOORS.save);
+    // The library's criteria are authoritative — whatever the model returned for
+    // those slots is discarded, and only its gap-fillers are kept.
+    data.fit_test = lib.mergeFitTest(fromLibrary, data && data.fit_test, facts);
     const { error } = await sb.from('founder_compasses').insert({
       user_id: req.user.id, questionnaire_id: q.id, founder_path: path, data
     });

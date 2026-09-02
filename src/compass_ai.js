@@ -80,11 +80,25 @@ const PATH_TASKS = {
   existing: `This founder already runs the business described in the profile. Draw a diagnostic Compass. Archetype and loadout as normal, informed by how they actually operate. For territories, lay out 3-4 STRATEGIC DIRECTIONS for this business — the first should be their current path sharpened (repositioned, repriced or narrowed to break the bottleneck they described), the others adjacent moves that reuse their customers, skills or channels. For each, honest temperature and tradeoffs. Judge the business fairly: analyze every segment it serves, weigh the non-revenue traction metric they gave, never invent kill criteria or revenue deadlines. Lay out the paths — the founder picks. No verdicts, no 'you should'.`
 };
 
-async function generateCompass(token, q, scan) {
+async function generateCompass(token, q, scan, fromLibrary) {
   const path = (q && (q.founder_path === 'existing' || q.founder_path === 'idea')) ? q.founder_path : 'exploring';
   const system = "You are NoBossly's founder strategist. You never prescribe which business a founder should start — you sharpen their judgement so they can choose for themselves. Everything you write is grounded in their actual answers and any market scan provided. You are candid: naming a real constraint or a mismatch respectfully serves the founder better than encouragement. You speak to the founder in second person.";
   const scanBlock = scan ? '\n\nLIVE MARKET SCAN (web search run moments ago — treat as the current state of the market; where it names what the business actually is and its segments, trust that over any assumption):\n' + JSON.stringify(scan) : '';
-  const prompt = 'Founder profile (their questionnaire answers, verbatim keys):\n' + compactProfile(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC;
+  // Most of the fit test comes from a curated library, matched to this
+  // founder's answers. The model is asked only for whatever the library could
+  // not cover — and is told what already exists so it does not restate it in
+  // different words.
+  const covered = Array.isArray(fromLibrary) ? fromLibrary : [];
+  const gap = Math.max(0, 5 - covered.length);
+  const fitBlock = covered.length
+    ? '\n\nTHE FIT TEST IS MOSTLY WRITTEN ALREADY. These ' + covered.length + ' criteria are set and will be used verbatim:\n'
+      + covered.map((c, i) => (i + 1) + '. ' + c.criterion).join('\n')
+      + (gap
+          ? '\n\nReturn EXACTLY ' + gap + ' further criterion' + (gap === 1 ? '' : 'a') + ' in fit_test — only the missing '
+            + gap + '. Do not restate, rephrase or overlap with the ones above; cover something they do not, drawn from this founder\'s answers. Set check to "judgment" and metric, op and value to null.'
+          : '\n\nReturn an EMPTY array for fit_test. The test is already complete.')
+    : '';
+  const prompt = 'Founder profile (their questionnaire answers, verbatim keys):\n' + compactProfile(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC + fitBlock;
   return askJSON(token, system, prompt, 5000);
 }
 
