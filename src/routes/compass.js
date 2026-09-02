@@ -159,9 +159,13 @@ async function runAdvisor(req, idea, compass, q, draft, plan) {
   patch.fit_passed = fit.passed;
   patch.fit_total = fit.total;
   patch.fit_verified = fit.verified;
-  // The high-water mark, never lowered: a founder who revises into a worse
-  // score has not un-earned the trophy they already have.
+  patch.fit_applicable = fit.applicable;
+  patch.fit_pct = fit.pct;
+  // The high-water marks, never lowered: a founder who revises into a worse
+  // score has not un-earned the trophy they already have. best_fit_pct is what
+  // the ladder reads, because it does not care how long the test is.
   patch.best_fit_passed = Math.max(idea.best_fit_passed || 0, fit.passed || 0);
+  patch.best_fit_pct = Math.max(idea.best_fit_pct || 0, fit.pct || 0);
   await req.sb.from('generated_ideas').update(patch).eq('id', idea.id).eq('user_id', req.user.id);
 
   // History is the whole point of the loop: 2/5 -> 4/5 -> 5/5 across three

@@ -180,5 +180,60 @@ console.log('\nA re-run of an unchanged idea cannot move the checked half:');
   eq('a swung judgement moves the score by one', runA.passed - runC.passed, 1);
 }
 
+console.log('\nA criterion that does not apply is set aside, not failed:');
+{
+  const five = pinFitTest([1, 2, 3, 4, 5].map(i => ({ criterion: 'c' + i, check: 'judgment' })));
+  const withNA = gradeFitTest(five, [{ pass: true }, { pass: true }, { pass: true }, { pass: true }, { applicable: false, note: 'nobody delivers it' }], {});
+  eq('the denominator drops to the applicable four', withNA.total, 4);
+  eq('and the idea reads as complete', withNA.pct, 100);
+  ok('the set-aside criterion is still listed, marked inapplicable',
+     withNA.results.length === 5 && withNA.results[4].applicable === false);
+
+  // Forcing it to FAIL instead is the trap: the score can never reach 100 and
+  // the founder is stuck at Level 1 for good.
+  const forcedFail = gradeFitTest(five, [{ pass: true }, { pass: true }, { pass: true }, { pass: true }, { pass: false }], {});
+  ok('forcing a fail would have capped it below 100 forever', forcedFail.pct < 100, String(forcedFail.pct));
+}
+
+console.log('\nApplicability cannot dissolve the test:');
+{
+  const five = pinFitTest([1, 2, 3, 4, 5].map(i => ({ criterion: 'c' + i, check: 'judgment' })));
+  const allNA = gradeFitTest(five, five.map(() => ({ applicable: false })), {});
+  eq('at least three criteria always stay in play', allNA.total, 3);
+  ok('and a dissolved test does not score 100 on nothing', allNA.pct === 0, String(allNA.pct));
+
+  const threeNA = gradeFitTest(five, [{ pass: true }, { pass: true }, { applicable: false }, { applicable: false }, { applicable: false }], {});
+  eq('a third N/A is put back in play', threeNA.total, 3);
+
+  // A criterion settled by a real number is always applicable — the model
+  // cannot declare away the half of the score it does not control.
+  const numeric = pinFitTest([
+    { criterion: 'Under $800?', check: 'numeric', metric: 'startup_cost', op: 'lte', value: 800 },
+    { criterion: 'b', check: 'judgment' }, { criterion: 'c', check: 'judgment' }, { criterion: 'd', check: 'judgment' }]);
+  const tryNA = gradeFitTest(numeric, [{ applicable: false, pass: false }, { pass: true }, { pass: true }, { pass: true }], { startup_cost_lean: '$400' });
+  ok('a checkable criterion cannot be marked inapplicable',
+     tryNA.results[0].applicable === true && tryNA.results[0].pass === true, tryNA.results[0].basis);
+}
+
+console.log('\nCompletion is a percentage, so a short test does not soft-lock the ladder:');
+{
+  // The bug: trophies counted passes against a fixed target of 5, but the
+  // denominator follows the Compass. A perfect four-criterion test could never
+  // earn the trophy that gates Level 2.
+  const lengths = [3, 4, 5];
+  for (const n of lengths) {
+    const t = pinFitTest(Array.from({ length: n }, (_, i) => ({ criterion: 'c' + i, check: 'judgment' })));
+    const perfect = gradeFitTest(t, Array.from({ length: n }, () => ({ pass: true })), {});
+    ok(`a perfect ${n}-criterion test reaches 100%`, perfect.pct === 100, `${perfect.passed}/${perfect.total} = ${perfect.pct}%`);
+  }
+  // And the lower rungs still mean something at each length.
+  const five = pinFitTest([1, 2, 3, 4, 5].map(i => ({ criterion: 'c' + i, check: 'judgment' })));
+  const threeOfFive = gradeFitTest(five, [{ pass: true }, { pass: true }, { pass: true }, { pass: false }, { pass: false }], {});
+  eq('3 of 5 is 60% — clears the first rung, not the second', threeOfFive.pct, 60);
+  const four = pinFitTest([1, 2, 3, 4].map(i => ({ criterion: 'c' + i, check: 'judgment' })));
+  const threeOfFour = gradeFitTest(four, [{ pass: true }, { pass: true }, { pass: true }, { pass: false }], {});
+  eq('3 of 4 is 75% — also the first rung', threeOfFour.pct, 75);
+}
+
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nFit grading holds. All checks pass.');
 process.exit(fail ? 1 : 0);

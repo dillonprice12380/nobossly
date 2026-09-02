@@ -172,7 +172,7 @@ console.log('\nThe page reports the advisor\'s real score:');
 
   const done = render({ idea: { advisor: { fit_results: crits(5, 5) }, fit_passed: 5, fit_total: 5 } });
   ok('all passing -> the completion line and the blueprint CTA',
-     done.includes('Every criterion passes') && done.includes('Build my launch blueprint'));
+     done.includes('Every criterion that applies passes') && done.includes('Build my launch blueprint'));
 
   // A cut idea is read-only: no revise form, no second cut form.
   const cutPage = render({ idea: { advisor: { fit_results: crits(5, 1) }, fit_passed: 1, fit_total: 5,

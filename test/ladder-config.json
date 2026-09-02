@@ -64,8 +64,8 @@
 {"title": "5 Sprints Completed", "xp_reward": 75, "auto_kind": "sprints_done", "is_claimable": false},
 {"title": "3-Day Streak", "xp_reward": 40, "auto_kind": "streak", "is_claimable": false},
 {"title": "Compass Questions Answered", "xp_reward": 40, "auto_kind": "questionnaire", "is_claimable": false},
-{"title": "Idea Holds Up", "xp_reward": 20, "auto_kind": "idea_fit", "is_claimable": false},
-{"title": "Sharpened", "xp_reward": 30, "auto_kind": "idea_fit", "is_claimable": false},
-{"title": "Passes Your Own Test", "xp_reward": 50, "auto_kind": "idea_fit", "is_claimable": false},
+{"title": "Idea Holds Up", "xp_reward": 20, "auto_kind": "idea_fit_pct", "is_claimable": false},
+{"title": "Sharpened", "xp_reward": 30, "auto_kind": "idea_fit_pct", "is_claimable": false},
+{"title": "Passes Your Own Test", "xp_reward": 50, "auto_kind": "idea_fit_pct", "is_claimable": false},
 {"title": "Cut It Early", "xp_reward": 40, "auto_kind": "ideas_cut", "is_claimable": false},
 {"title": "Three Real Signals", "xp_reward": 30, "auto_kind": "signals", "is_claimable": false}]}

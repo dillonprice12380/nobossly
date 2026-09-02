@@ -79,13 +79,29 @@ const OPS = {
 
 const fmt = (n, unit) => (Math.round(n * 100) / 100) + unit;
 
-// Grades ONE criterion. Returns { pass, verified, basis }.
+// At least this many criteria must stay in play. Without a floor, marking
+// criteria "not applicable" could dissolve the test entirely and hand out a
+// 100% on nothing.
+const MIN_APPLICABLE = 3;
+
+// Grades ONE criterion. Returns { pass, verified, basis, applicable }.
 //
 // `modelPass` is what the advisor said. It is used only where the criterion
 // cannot be checked — a verifiable criterion ignores the model entirely, which
 // is the point: that is the half of the score that stops moving on a re-run.
-function gradeCriterion(criterion, idea, modelPass) {
+//
+// `modelApplicable` is the advisor saying the criterion does not bear on this
+// idea at all ("can it be delivered in evenings?" against a product that is not
+// delivered by anyone). Such a criterion is excluded from the score rather than
+// forced into a pass, which would inflate it, or a fail, which would make the
+// test permanently unpassable.
+//
+// A criterion that can be CHECKED is always applicable: if there is a real
+// number to compare, the question is a real one. That also stops the model
+// declaring away the half of the score it does not control.
+function gradeCriterion(criterion, idea, modelPass, modelApplicable) {
   const c = criterion || {};
+  const applicable = modelApplicable !== false;
   if (c.check === 'numeric') {
     const metric = METRICS[c.metric];
     const op = OPS[c.op];
@@ -96,48 +112,77 @@ function gradeCriterion(criterion, idea, modelPass) {
         return {
           pass: op(actual, threshold),
           verified: true,
+          applicable: true,
           basis: fmt(actual, metric.unit) + ' vs ' + c.op + ' ' + fmt(threshold, metric.unit)
         };
       }
       // A criterion that says it is checkable but has nothing to check against
       // falls back to the model rather than defaulting to a pass. Silently
       // passing an unverifiable criterion is how a score becomes a lie.
-      return { pass: !!modelPass, verified: false, basis: 'no estimate to check against' };
+      return { pass: !!modelPass, verified: false, applicable, basis: 'no estimate to check against' };
     }
-    return { pass: !!modelPass, verified: false, basis: 'incomplete criterion' };
+    return { pass: !!modelPass, verified: false, applicable, basis: 'incomplete criterion' };
   }
-  return { pass: !!modelPass, verified: false, basis: 'advisor judgement' };
+  return { pass: !!modelPass, verified: false, applicable, basis: 'advisor judgement' };
 }
 
 // Grades the whole test. `fitTest` is the pinned criteria; `modelResults` is
 // what the advisor returned, matched by position.
 //
-// The denominator is the number of criteria actually pinned — never a hard 5.
-// Showing "3/5" when the Compass only ever wrote four is a score nobody gave.
+// The denominator is the number of APPLICABLE criteria — never a hard 5, and
+// never one the advisor did not actually give. Two things follow:
+//
+//   - A Compass that writes four criteria scores out of four. Completion is a
+//     percentage, so the ladder does not soft-lock on founders whose test is
+//     not exactly five long.
+//   - A criterion the idea genuinely does not touch drops out of the score
+//     instead of being forced into a verdict. Forcing a pass inflates the
+//     score; forcing a fail makes the test permanently unpassable, which
+//     would strand the founder at Level 1 for good.
 function gradeFitTest(fitTest, modelResults, idea) {
   const pinned = Array.isArray(fitTest) ? fitTest : null;
   const model = Array.isArray(modelResults) ? modelResults : [];
   // With nothing pinned there is no test to grade against, so fall back to the
   // advisor's own results — this is what older ideas have.
   const source = pinned && pinned.length ? pinned : model.map(r => ({ criterion: r && r.criterion, check: 'judgment' }));
-  if (!source.length) return { results: null, passed: null, total: null, verified: 0 };
+  if (!source.length) return { results: null, passed: null, total: null, verified: 0, applicable: 0, pct: null };
 
-  const results = source.map((c, i) => {
+  let results = source.map((c, i) => {
     const mr = model[i] || {};
-    const g = gradeCriterion(c, idea, mr.pass);
+    const g = gradeCriterion(c, idea, mr.pass, mr.applicable);
     return {
       criterion: String((c && c.criterion) || mr.criterion || '').slice(0, 200),
       pass: g.pass,
       verified: g.verified,
+      applicable: g.applicable,
       basis: g.basis,
       note: String(mr.note || '').slice(0, 300)
     };
   });
+
+  // The floor. Beyond the allowance, extra "not applicable" verdicts are put
+  // back in play — otherwise an advisor could excuse the whole test and hand
+  // out a 100% for nothing.
+  const allowedNA = Math.max(0, results.length - MIN_APPLICABLE);
+  let na = 0;
+  results = results.map(r => {
+    if (r.applicable) return r;
+    if (na < allowedNA) { na++; return r; }
+    return { ...r, applicable: true, basis: r.basis + ' (kept in play: too few criteria left)' };
+  });
+
+  const live = results.filter(r => r.applicable);
+  const passed = live.filter(r => r.pass).length;
+  const total = live.length;
   return {
     results,
-    passed: results.filter(r => r.pass).length,
-    total: results.length,
-    verified: results.filter(r => r.verified).length
+    passed,
+    total,
+    verified: live.filter(r => r.verified).length,
+    applicable: total,
+    // Completion as a percentage, so the trophies work whatever the test's
+    // length. This is what the ladder reads.
+    pct: total ? Math.round(100 * passed / total) : null
   };
 }
 
@@ -162,4 +207,4 @@ function pinFitTest(fitTest) {
   }).filter(c => c.criterion);
 }
 
-module.exports = { parseMoney, parseWeeks, gradeCriterion, gradeFitTest, pinFitTest, METRICS };
+module.exports = { parseMoney, parseWeeks, gradeCriterion, gradeFitTest, pinFitTest, METRICS, MIN_APPLICABLE };

@@ -21,12 +21,14 @@ async function computeMetrics(sb, userId, profile, kinds) {
   // the answers the Compass needs, and this trophy gates leaving Level 1.
   if (want('questionnaire')) jobs.push(n(sb.from('questionnaire_responses').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('completed', true)).then(v => m.questionnaire = v));
   if (want('blueprints')) jobs.push(n(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.blueprints = v));
-  // The Level 1 refinement loop. idea_fit is the best score reached on ANY of
-  // the founder's ideas, so revising into a worse score never takes back a
-  // trophy already earned, and a threshold can only ever be crossed once.
-  if (want('idea_fit')) jobs.push(
-    sb.from('generated_ideas').select('best_fit_passed').eq('user_id', userId).then(({ data }) =>
-      m.idea_fit = (data || []).reduce((best, r) => Math.max(best, r.best_fit_passed || 0), 0), () => { m.idea_fit = 0; })
+  // The Level 1 refinement loop. A PERCENTAGE, not a count: the fit test is
+  // whatever length the Compass wrote, and counting passes against a fixed
+  // target of five soft-locked anyone whose test was shorter. It is the best
+  // reached on ANY of the founder's ideas, so revising into a worse score never
+  // takes back a trophy, and a threshold can only be crossed once.
+  if (want('idea_fit_pct')) jobs.push(
+    sb.from('generated_ideas').select('best_fit_pct').eq('user_id', userId).then(({ data }) =>
+      m.idea_fit_pct = (data || []).reduce((best, r) => Math.max(best, r.best_fit_pct || 0), 0), () => { m.idea_fit_pct = 0; })
   );
   if (want('ideas_cut')) jobs.push(n(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', userId).not('cut_at', 'is', null)).then(v => m.ideas_cut = v));
   // Signals are counted per idea, not summed across them: the quest is three

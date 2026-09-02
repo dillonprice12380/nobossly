@@ -71,7 +71,7 @@ async function computeState(sb, user, profile, pre = {}) {
       .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null),
     // The Level 1 refinement loop: how far the best idea got against the
     // founder's own fit test, and how much evidence it carries.
-    sb.from('generated_ideas').select('fit_passed, fit_total, best_fit_passed, cut_at').eq('user_id', user.id)
+    sb.from('generated_ideas').select('fit_passed, fit_total, best_fit_passed, best_fit_pct, cut_at').eq('user_id', user.id)
       .then(r => r.data || [], () => []),
     sb.from('idea_signals').select('idea_id, source').eq('user_id', user.id).then(r => r.data || [], () => [])
   ]);
@@ -100,6 +100,7 @@ async function computeState(sb, user, profile, pre = {}) {
     ...(function () {
       const live = ideaRows.filter(r => !r.cut_at);
       const best = live.reduce((b, r) => Math.max(b, r.best_fit_passed || 0), 0);
+      const bestPct = live.reduce((b, r) => Math.max(b, r.best_fit_pct || 0), 0);
       const scoredRow = live.find(r => r.fit_total);
       const perIdea = {};
       signalRows.forEach(r => { perIdea[r.idea_id] = (perIdea[r.idea_id] || 0) + 1; });
@@ -110,7 +111,9 @@ async function computeState(sb, user, profile, pre = {}) {
         idea_scored: live.some(r => r.fit_total),
         fit_passed: best,
         fit_total: scoredRow ? scoredRow.fit_total : 5,
-        fit_complete: !!(scoredRow && best >= scoredRow.fit_total),
+        // Completion is 100% of the APPLICABLE criteria, whatever the test's length.
+        fit_complete: bestPct >= 100,
+        fit_pct: bestPct,
         signals_count: Object.keys(perIdea).reduce((b, k) => Math.max(b, perIdea[k]), 0),
         own_signals: Object.keys(mine).reduce((b, k) => Math.max(b, mine[k]), 0)
       };
