@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const qs = require('../questionnaires');
+const { sweepMilestones } = require('../milestones_engine');
 
 const csvToArr = v => (v || '').split(',').map(s => s.trim()).filter(Boolean);
 const arrField = v => Array.isArray(v) ? v : (v ? [v] : []);
@@ -244,6 +245,13 @@ router.post('/', async (req, res, next) => {
     const q = await qs.byId(req.sb, req.user.id, runId);
     await req.sb.from('questionnaire_responses').update({ completed: true, readiness_score: readinessScore(q) }).eq('id', q.id);
     await req.sb.from('profiles').update({ onboarding_completed: true, display_name: q.founder_name || undefined }).eq('id', req.user.id);
+
+    // Answering the questionnaire is the Level 1 quest, so award its trophy now
+    // rather than leaving the founder to discover it on a later page visit.
+    // Failing to sweep must never cost them the answers they just gave — the
+    // engine is self-healing and will catch it on the next dashboard or
+    // milestones visit.
+    try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) {}
 
     // Depth steps are opt-in and run AFTER the Compass exists. Finishing the
     // last one redraws the Compass against the fuller profile; stopping partway

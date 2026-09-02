@@ -8,15 +8,21 @@ const { forLevel } = require('../unlocks');
 router.get('/', async (req, res, next) => {
   try {
     const p = req.profile || {};
-    if (!p.onboarding_completed) return res.redirect('/questionnaire');
+    // The questionnaire used to stand between signup and the dashboard, and it
+    // is where the old onboarding lost everyone. It is a Level 1 quest now: the
+    // founder can look around first, but cannot leave Level 1 without it, and
+    // the card at the top of the dashboard keeps asking until they do.
+    const needsQuestionnaire = !p.onboarding_completed;
 
-    const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }, { data: customAcc }] = await Promise.all([
+    const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }, { data: customAcc }, compassCount] = await Promise.all([
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       req.sb.from('generated_ideas').select('id,name,tagline,status,is_favorited,success_likelihood').eq('user_id', req.user.id).order('position'),
       req.sb.from('founder_levels').select('*').order('xp_required'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
-      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date')
+      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
+      req.sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id)
     ]);
+    const hasCompass = (compassCount.count || 0) > 0;
     let pinned = [];
     if (acc && acc.length) {
       const { data: chs } = await req.sb.from('challenges').select('id, title, emoji, xp_reward, requires_proof').in('id', acc.map(a => a.challenge_id));
@@ -97,7 +103,8 @@ router.get('/', async (req, res, next) => {
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
-      levelInfo: { current: cur, next }, ladder, aiReady: ai.hasKey(), pinned, analytics, coach
+      levelInfo: { current: cur, next }, ladder, aiReady: ai.hasKey(), pinned, analytics, coach,
+      needsQuestionnaire, hasCompass
     });
   } catch (e) { next(e); }
 });

@@ -9,7 +9,10 @@
   var _p = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
   var APP_NAV = [
     { href: '/dashboard',      label: 'Home',       short: 'Home',   icon: 'i-suitcase',  match: ['/dashboard'] },
-    { href: '/ideas',          label: 'Ideas',      short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
+    // The Compass is where the product starts, and it had no tab at all — it was
+    // reachable only from a tile buried below the fold on the dashboard.
+    { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire'] },
+    { href: '/ideas',          label: 'My ideas',   short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
     { href: '/challenges',     label: 'Challenges', short: 'Goals',  icon: 'i-challenge', match: ['/challenges'] },
     { href: '/milestones',     label: 'Milestones', short: 'Wins',   icon: 'i-milestone', match: ['/milestones'] },

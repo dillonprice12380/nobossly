@@ -49,7 +49,10 @@ router.post('/signup', async (req, res) => {
   if (data.user) mailer.send('welcome', email, username, { userId: data.user.id }).catch(() => {});
   if (data.session) {
     setSessionCookies(res, data.session);
-    return res.redirect('/questionnaire');
+    // Straight into the product. The questionnaire used to stand between signup
+    // and everything else, which is where the old onboarding lost people; it is
+    // now the Level 1 quest, prompted on the dashboard instead of enforced here.
+    return res.redirect('/dashboard');
   }
   res.redirect('/login?m=' + encodeURIComponent('Check your email to confirm your account, then log in.'));
 });
@@ -253,7 +256,7 @@ router.post('/choose-username', async (req, res) => {
     .update({ username, display_name: displayName || username, needs_username: false })
     .eq('id', req.user.id);
   if (error) return rerender('Could not save that username: ' + error.message);
-  res.redirect('/questionnaire');
+  res.redirect('/dashboard');
 });
 
 module.exports = router;

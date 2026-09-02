@@ -1,20 +1,34 @@
 <%- include('partials/head') %>
+<%# The AI idea generator is retired. Everything on this page is an idea the
+    founder drafted themselves through the Compass advisor, so the page's job is
+    to hold those drafts and point back at the Compass to make another. %>
 <div class="page-head">
-  <h1><svg class="icon icon-lg"><use href="#i-idea"/></svg> Your business ideas</h1>
+  <div>
+    <h1><svg class="icon icon-lg"><use href="#i-idea"/></svg> Your ideas</h1>
+    <p class="muted">Drafted by you, stress-tested by your Compass advisor.</p>
+  </div>
   <% if (hasQuestionnaire) { %>
-    <div class="cta-row" style="margin:0">
-      <a class="btn btn-primary" href="/questionnaire/new">📝 Answer a new questionnaire</a>
-      <a class="btn btn-ghost" href="/ideas/generate">✨ Generate from my last answers</a>
-    </div>
-  <% } else { %><a class="btn btn-primary" href="/questionnaire">Complete your questionnaire first</a><% } %>
+    <a class="btn btn-primary" href="/compass">✍️ Draft another idea</a>
+  <% } else { %>
+    <a class="btn btn-primary" href="/questionnaire">Answer your seven questions first</a>
+  <% } %>
 </div>
-<% if (hasQuestionnaire) { %>
-  <p class="muted small">A new questionnaire starts fresh — pick a different path, or answer as things stand today. Your earlier answers and the ideas they produced stay put.</p>
-<% } %>
-<% if (!aiReady) { %><p class="notice">AI key not configured on the server yet — idea generation is disabled until ANTHROPIC_API_KEY is set.</p><% } %>
+
+<% if (!aiReady) { %><p class="notice">AI key not configured on the server yet — the advisor is disabled until ANTHROPIC_API_KEY is set.</p><% } %>
+
 <% if (!ideas.length) { %>
-  <div class="card center"><p>No ideas yet. Complete the questionnaire and let the AI work its magic.</p></div>
+  <div class="card center">
+    <h2>No ideas yet</h2>
+    <% if (hasQuestionnaire) { %>
+      <p>Draft your idea in your own words on your Compass page. The advisor stress-tests it against your own fit test and the live market, shows you where it holds and where it strains, and offers a sharper wedge.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">Go to my Compass</a>
+    <% } else { %>
+      <p>It starts with your Founder Compass. Answer seven questions, get your archetype and the territories where you hold an edge, then draft your idea against it.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/questionnaire">Answer them now</a>
+    <% } %>
+  </div>
 <% } %>
+
 <% (typeof groups !== 'undefined' ? groups : [{ ideas: ideas }]).forEach(g => { %>
   <% if (typeof showRunHeadings !== 'undefined' && showRunHeadings) { %>
     <h2 class="small muted" style="margin:1.4rem 0 .5rem">
@@ -27,17 +41,29 @@
     <% g.ideas.forEach(i => { %>
       <a class="card idea-card" href="/ideas/<%= i.id %>">
         <div class="idea-top">
-          <span class="tag"><%= i.category %></span>
+          <% if (i.category) { %><span class="tag"><%= i.category %></span><% } %>
           <% if (i.is_favorited) { %><span>⭐</span><% } %>
         </div>
         <h3><%= i.name %></h3>
         <p class="muted"><%= i.tagline %></p>
-        <div class="scores">
-          <span class="chip">🎯 <%= i.success_likelihood %>% success</span>
-          <span class="chip">📈 demand <%= i.demand_score %>/10</span>
-          <span class="chip">❤️ passion <%= i.passion_score %>/10</span>
-        </div>
-        <p class="muted small">⏱ Revenue in <%= i.time_to_revenue %> · 💰 from <%= i.startup_cost_lean %></p>
+        <%# A draft carries no scores until the advisor has run on it, so showing
+            "0% success · demand 0/10" would be a verdict the advisor never gave. %>
+        <% if (i.success_likelihood) { %>
+          <div class="scores">
+            <span class="chip">🎯 <%= i.success_likelihood %>% success</span>
+            <% if (i.demand_score) { %><span class="chip">📈 demand <%= i.demand_score %>/10</span><% } %>
+            <% if (i.passion_score) { %><span class="chip">❤️ passion <%= i.passion_score %>/10</span><% } %>
+          </div>
+        <% } else { %>
+          <span class="chip">Advisor hasn't run yet</span>
+        <% } %>
+        <% if (i.time_to_revenue || i.startup_cost_lean) { %>
+          <p class="muted small">
+            <% if (i.time_to_revenue) { %>⏱ Revenue in <%= i.time_to_revenue %><% } %>
+            <% if (i.time_to_revenue && i.startup_cost_lean) { %> · <% } %>
+            <% if (i.startup_cost_lean) { %>💰 from <%= i.startup_cost_lean %><% } %>
+          </p>
+        <% } %>
       </a>
     <% }) %>
   </div>

@@ -82,6 +82,9 @@ async function computeState(sb, user, profile, pre = {}) {
     verified_level: profile.verified_level || 1,
     verification_pending: pendingVerifN > 0,
     founder_path: (qrun && qrun.founder_path) || 'exploring',
+    // The questionnaire is the Level 1 quest now, so the Coach needs to know
+    // whether it is still outstanding — it is the first thing to nudge.
+    has_questionnaire: !!qrun,
     has_compass: compassN > 0,
     has_blueprint: blueprintN > 0,
     ideas_count: ideasN,
@@ -104,7 +107,6 @@ async function computeState(sb, user, profile, pre = {}) {
     streak_broken: !!(lastCheckin && daysBetween(lastCheckin, now) >= 2 && (profile.streak_days || 0) > 0),
     days_inactive: daysBetween(lastActive, now),
     days_since_signup: profile.created_at ? daysBetween(new Date(profile.created_at).getTime(), now) : 0,
-    generations_used: profile.generations_used || 0,
     task_done_today: reasons.some(r => r.startsWith('Completed task')),
     challenge_accepted_today: reasons.some(r => r.startsWith('Accepted challenge')),
     challenge_completed_today: reasons.some(r => r.startsWith('Completed challenge')),

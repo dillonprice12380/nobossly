@@ -329,115 +329,7 @@ Include 3-5 competitors. Keep every field short. If the evidence is thin or mixe
   return askJSON(token, system, prompt, 2000, { webSearch: true, maxSearches: path === 'existing' ? 5 : 4 });
 }
 
-// --- idea generation ---------------------------------------------------------
-
-const IDEA_JSON_SPEC = `Return a JSON array (no wrapper object) where each element has these string fields unless noted:
-name, tagline, category, profile_summary (2-3 sentences on why this fits their situation), why_you (why THIS founder specifically), market_analysis (3-4 sentences), competitor_landscape (2-3 sentence overview of the competitive space), competitors (see below), success_likelihood (integer 0-100), demand_score (integer 1-10), passion_score (integer 1-10), time_to_revenue (e.g. "2-4 weeks"), startup_cost_lean (e.g. "$0-100"), startup_cost_standard, startup_cost_full, legal_nuances (1-2 sentences), first_steps (3-5 concrete first steps as a single string with numbered lines).
-
-"competitors" is an array of exactly 3 objects, each with these string fields:
-  name: a real, specific competitor or close substitute this founder would actually be up against — name a real company, product, or service where possible, not a generic category;
-  what_they_do: one sentence on their offering and who they serve;
-  strength: one sentence on their main advantage (what they do well);
-  weakness: one sentence on a real gap, blind spot, or underserved segment;
-  your_edge: one sentence on how THIS founder can realistically win against or differentiate from them, grounded in their specific skills, angle, or target niche.
-Be honest and specific. If the space is crowded, reflect that with strong competitors; if it's wide open, name the closest substitutes people use today. Never invent fake company names — if unsure of a specific name, describe the competitor type precisely instead.
-success_likelihood is a genuine probability, not a motivational number. A weak option should score low.`;
-
-const EXISTING_JUDGEMENT = `How to judge this business fairly:
-- Analyze every segment it actually serves, not just the most recognizable one. If the market scan lists several segments, your market_analysis and competitors must reflect all of them. Writing the business off because the most obvious segment is crowded, while ignoring the segments that are not, is a failure of analysis.
-- If it is a marketplace, network, or two-sided business, weigh the leading indicator the founder is actually moving — supply, audience, or demand growth — rather than early revenue. Chicken-and-egg sequencing means one side is deliberately built before money arrives; pre-revenue during that phase is the expected path, not evidence of failure. Where the founder gave a non-revenue metric with a trend, cite the actual numbers and reason about the rate of change.
-- Do not invent kill criteria or arbitrary revenue deadlines. If you propose a decision gate, tie it to the metric the founder is genuinely growing, give a horizon realistic for this type of business, and say what result would justify continuing. Never recommend shutting a business down on a short revenue window while its non-revenue traction is compounding.
-- Be honest about real problems, and be equally honest about real progress. Candour cuts both ways: overstating the odds is a failure, and so is dismissing a business you have not correctly identified.`;
-
-// The four options are produced by two calls of two, run in parallel. One call
-// writing all four ran past the edge function's 150s wall clock limit (which is
-// a hard ceiling on worker lifetime — streaming and keepalives do not extend it).
-// Two halves finish in roughly 50-70s each, and running them together means the
-// founder waits less than before rather than more.
-const BRIEFS = {
-  existing: [
-    `This founder already runs the business described above. Ground your read in the live market scan where one is given.
-
-Return exactly 2 strategic paths, in this order:
-1. Their current business, analyzed honestly. Use their business name for "name". "success_likelihood" is your genuine probability that continuing on this exact path reaches their 12-month goal. Open "profile_summary" with a one-word verdict — "Double down", "Optimize", or "Pivot" — then the reasoning behind it.
-2. A sharpened version of the same business: same customers or same capability, but repositioned, repriced, or narrowed specifically to break the bottleneck they described.
-
-"first_steps" must start from where they actually are, not from zero — reference their real revenue, customers, pricing, and channels wherever they gave them. Weigh their stated openness to changing direction, but do not let it soften the verdict: if the honest read is that the current path is capped, say so plainly in option 1.
-
-${EXISTING_JUDGEMENT}`,
-
-    `This founder already runs the business described above. Ground your read in the live market scan where one is given.
-
-Another analyst is separately covering their current business as-is and a sharpened version of it, so do NOT return either of those. Return exactly 2 alternative directions, in this order:
-1. An adjacent pivot that reuses their existing customers, skills, channels, or assets in a market with stronger demand.
-2. A clean-break option worth weighing if the current path turns out to be capped.
-
-"first_steps" must start from what they already have — their customers, skills, channels, and revenue — rather than from zero. Be honest about switching costs: if leaving their current market would waste a real advantage they hold, say so.
-
-${EXISTING_JUDGEMENT}`
-  ],
-  idea: [
-    `This founder has the idea described above but has not built a business around it yet. Ground your read in the live market scan where one is given.
-
-Return exactly 2 options, in this order:
-1. Their idea, stacked against what the market actually wants right now. Keep the concept recognizable, but correct it where the evidence points somewhere else. "market_analysis" must state plainly where their idea lines up with real demand and where it doesn't. "success_likelihood" is your honest read on the idea as they described it.
-2. The same idea narrowed to the wedge where their background gives them a genuine edge — smaller, sharper, faster to win.
-
-"why_you" must tie back to their specific background, credentials, and unfair advantage. Engage with the competitors they already named where relevant, and test their claimed differentiator rather than repeating it. If the idea is chasing a shrinking, crowded, or thin market, say so in option 1 instead of softening it.`,
-
-    `This founder has the idea described above but has not built a business around it yet. Ground your read in the live market scan where one is given.
-
-Another analyst is separately covering their idea as stated and a narrowed version of it, so do NOT return either of those. Return exactly 2 adjacent options, in this order:
-1. A higher-demand play in the same space that their skills, credentials, and customer access already support.
-2. A different angle on the same underlying customer problem.
-
-Both must be clearly distinct from the founder's idea as they described it. "why_you" must tie back to their specific background, credentials, and unfair advantage.`
-  ],
-  exploring: [
-    `Generate exactly 2 tailored business ideas for this founder, chosen for the fastest realistic path to a first paying customer using skills and assets they already have. Honor their competition appetite. Respect their deal breakers and the industries they want to avoid — do not propose anything that violates either. Both must fit inside their available hours and budget.`,
-
-    `Generate exactly 2 tailored business ideas for this founder. Another analyst is separately covering the fastest-to-revenue options built on their existing skills, so aim elsewhere: favor ideas with more leverage or a larger ceiling — productized, audience-based, or recurring-revenue models — that their background still supports. Honor their competition appetite, respect their deal breakers and the industries they want to avoid, and keep both within their available hours and budget. The two must use different business models from each other.`
-  ]
-};
-
-// The model occasionally wraps the array in an object; accept the common shapes.
-function toIdeaArray(v) {
-  if (Array.isArray(v)) return v;
-  if (v && Array.isArray(v.ideas)) return v.ideas;
-  if (v && Array.isArray(v.options)) return v.options;
-  if (v && Array.isArray(v.paths)) return v.paths;
-  if (v && typeof v === 'object' && v.name) return [v];
-  return [];
-}
-
-async function generateIdeas(token, q, opts = {}) {
-  const path = pathOf(q);
-  const system = 'You are NoBossly, an expert startup advisor who matches founders with viable, realistic business paths tailored to their skills, constraints, and personality. You are candid — a founder is better served by an honest read on their odds than by encouragement.';
-  const scan = opts.scan
-    ? '\n\nLIVE MARKET SCAN (web search run moments ago, including a read of the founder\'s own website where they gave one — treat this as the current state of the market and ground your market_analysis, competitors, demand_score and success_likelihood in it). Where it contains a "business" field, that is the verified description of what this company actually does: use it, and do not substitute your own assumption based on the company name. Where it contains "segments", the business serves all of them:\n'
-      + JSON.stringify(opts.scan)
-    : '';
-  const profile = profileSummaryText(q);
-
-  const halves = await Promise.allSettled(BRIEFS[path].map(brief =>
-    askJSON(token, system, `${profile}${scan}
-
-${brief}
-
-${IDEA_JSON_SPEC}`, 4500)
-  ));
-
-  const ideas = [];
-  const errors = [];
-  halves.forEach(h => {
-    if (h.status === 'fulfilled') ideas.push(...toIdeaArray(h.value));
-    else errors.push((h.reason && h.reason.message) || String(h.reason));
-  });
-  // Half a set beats an error page: only fail if both halves came back empty.
-  if (!ideas.length) throw new Error(errors[0] || 'the AI returned no usable ideas. Please try again.');
-  if (errors.length) console.error('idea generation partial failure:', errors.join(' | '));
-  return ideas;
-}
+// --- demand evidence ---------------------------------------------------------
 
 // Live demand evidence for a generated idea. Uses server-side web search via the
 // ai-proxy edge function (web_search flag) to find named, real-world signals.
@@ -548,4 +440,4 @@ Call out over-budget categories, unspent room, and lean-startup suggestions. Be 
   return askJSON(token, system, prompt, 2000);
 }
 
-module.exports = { generateIdeas, marketScan, demandEvidence, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey, pathOf };
+module.exports = { marketScan, demandEvidence, generateBlueprint, generateSprintTasks, generateMilestones, generateChallenges, generateBudget, budgetInsights, hasKey, pathOf };

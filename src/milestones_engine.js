@@ -17,6 +17,9 @@ async function computeMetrics(sb, userId, profile, kinds) {
   const want = k => kinds.has(k);
   const jobs = [];
   if (want('ideas')) jobs.push(n(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.ideas = v));
+  // Only completed runs count: a half-answered questionnaire has not produced
+  // the answers the Compass needs, and this trophy gates leaving Level 1.
+  if (want('questionnaire')) jobs.push(n(sb.from('questionnaire_responses').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('completed', true)).then(v => m.questionnaire = v));
   if (want('blueprints')) jobs.push(n(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.blueprints = v));
   if (want('tasks')) jobs.push(n(sb.from('sprint_tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'done')).then(v => m.tasks = v));
   if (want('checkins')) jobs.push(n(sb.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.checkins = v));

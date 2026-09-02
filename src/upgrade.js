@@ -33,13 +33,7 @@ const FEATURES = {
   extra_blueprint: {
     title: 'More than one blueprint',
     blurb: 'The free plan builds one full launch blueprint. Paid lifts the cap so you can blueprint every idea worth taking seriously and compare them side by side.',
-    gets: ['Unlimited launch blueprints', 'Unlimited AI idea generations', 'Week-1 actions dispersed straight to your task board'],
-    back: { href: '/ideas', label: 'Back to my ideas' }
-  },
-  extra_generation: {
-    title: 'More idea generations',
-    blurb: 'The free plan includes one AI idea generation. Paid removes the cap, so you can re-run it as your Compass sharpens and your thinking moves.',
-    gets: ['Unlimited idea generations', 'Live demand evidence on your top idea', 'Unlimited launch blueprints'],
+    gets: ['Unlimited launch blueprints', 'Live demand evidence on any idea', 'Week-1 actions dispersed straight to your task board'],
     back: { href: '/ideas', label: 'Back to my ideas' }
   },
   demand_evidence: {
