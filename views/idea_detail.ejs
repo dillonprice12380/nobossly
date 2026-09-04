@@ -212,6 +212,29 @@
   <% } %>
 </div>
 
+<%# ---------- Ask the community ---------- %>
+<% if (!cut) { %>
+<div class="card">
+  <h2>💬 Ask three people</h2>
+  <p class="muted small">“Get 3 Feedback Sessions” is a Level 1 quest with two routes: talk to three people off-site and log it on your challenge board, or post this idea for peer review here. Reviewers answer a rubric and say what they would change.</p>
+  <details>
+    <summary class="btn btn-primary btn-sm" style="display:inline-block">Post it for peer review</summary>
+    <form method="post" action="/reviews/new" style="margin-top:.7rem">
+      <input type="hidden" name="review_type" value="idea">
+      <label class="small">Name<input name="title" maxlength="140" required value="<%= idea.name %>"></label>
+      <label class="small">What should they look at?
+        <%# Prefilled from the draft, but editable: the most useful thing a
+            founder can add here is the one part they are unsure about. %>
+        <textarea name="description" rows="6" maxlength="4000" required><%= (idea.tagline ? idea.tagline + '\n\n' : '') + (d.description || idea.profile_summary || '') + (d.problem ? '\n\nProblem it solves: ' + d.problem : '') + (d.customer ? '\nFirst customer: ' + d.customer : '') + (d.monetization ? '\nHow it makes money: ' + d.monetization : '') %></textarea>
+      </label>
+      <p class="muted small" style="margin:-.3rem 0 .6rem">Add the thing you are least sure about — that is what you want reviewers aiming at.</p>
+      <button class="btn btn-primary">Post for review</button>
+      <a class="btn btn-ghost" href="/reviews">See the queue</a>
+    </form>
+  </details>
+</div>
+<% } %>
+
 <%# ---------- Where next ---------- %>
 <% if (!cut) { %>
 <div class="cta-row">

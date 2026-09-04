@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node test/ladder.js && node test/level1-loop.js && node test/fit.js && node test/fit-library.js"
+    "test": "node test/ladder.js && node test/level1-loop.js && node test/fit.js && node test/fit-library.js && node test/peer-review.js"
   },
   "engines": {
     "node": ">=20"

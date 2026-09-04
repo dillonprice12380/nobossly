@@ -99,6 +99,7 @@ app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));
 app.use('/community', require('./src/routes/community'));
+app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
 app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review
 app.use('/milestones', requireAuth, require('./src/routes/milestones'));
 app.use('/collaborations', requireAuth, require('./src/routes/collaborations'));

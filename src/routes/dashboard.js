@@ -4,6 +4,7 @@ const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
+const { claimFeedbackGate } = require('./reviews');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -13,6 +14,11 @@ router.get('/', async (req, res, next) => {
     // founder can look around first, but cannot leave Level 1 without it, and
     // the card at the top of the dashboard keeps asking until they do.
     const needsQuestionnaire = !p.onboarding_completed;
+
+    // Three peers may have reviewed this founder's work while they were away.
+    // The completion has to be written by their own client under RLS, so it is
+    // claimed on the pages they actually land on rather than by the reviewer.
+    try { await claimFeedbackGate(req); } catch (_) { /* self-heals on /reviews */ }
 
     const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }, { data: customAcc }, compassCount] = await Promise.all([
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),

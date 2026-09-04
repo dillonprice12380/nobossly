@@ -1,0 +1,123 @@
+<%- include('partials/head') %>
+<div class="page-head">
+  <div>
+    <h1><svg class="icon icon-lg"><use href="#i-community"/></svg> Peer review</h1>
+    <p class="muted">Review someone else's work, get yours reviewed. Three reviews received clears “Get 3 Feedback Sessions” — the same quest you can also clear by talking to three people off-site.</p>
+  </div>
+  <span class="chip <%= received >= needed ? 'chip-success' : '' %>"><%= received %>/<%= needed %> received</span>
+</div>
+
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (typeof claimed !== 'undefined' && claimed) { %>
+  <p class="notice">🎯 Quest complete: <strong><%= claimed.title %></strong> — +<%= claimed.xp_reward %> XP. Three peers reviewed your work.</p>
+<% } %>
+
+<%# The queue first. A review queue with nothing in it teaches nobody anything,
+    so the ask-for-review form sits below the work that already needs doing. %>
+<div class="card">
+  <div class="page-head" style="margin:0 0 .5rem">
+    <div>
+      <h2 style="margin:0">Waiting for a reviewer</h2>
+      <p class="muted small" style="margin:.15rem 0 0">Oldest first. Each review you give is +60 XP, and clears “Give a Peer Review”.</p>
+    </div>
+  </div>
+
+  <% if (!open.length) { %>
+    <p class="muted">Nothing in the queue right now. Post your own below and it will be the first thing here.</p>
+  <% } else { %>
+    <ul class="rev-list">
+      <% open.forEach(function (r) { %>
+        <li class="rev-row">
+          <div style="flex:1;min-width:12rem">
+            <a href="/reviews/<%= r.id %>"><strong><%= r.title %></strong></a>
+            <p class="muted small" style="margin:.15rem 0 0">
+              <%= r.who %> · <%= r.review_type.replace('_', ' ') %> ·
+              <%= r.reviews %> review<%= r.reviews === 1 ? '' : 's' %> so far
+            </p>
+          </div>
+          <% if (r.reviewedByMe) { %>
+            <span class="chip">✓ you reviewed this</span>
+          <% } else { %>
+            <a class="btn btn-primary btn-sm" href="/reviews/<%= r.id %>">Review it</a>
+          <% } %>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+
+<div class="grid" style="margin-top:1rem">
+
+  <div class="card">
+    <h2>Ask for a review</h2>
+    <p class="muted small">Give reviewers enough to work with. A one-line idea gets one-line feedback.</p>
+    <form method="post" action="/reviews/new">
+      <label class="small">What is it called? *<input name="title" maxlength="140" required placeholder="e.g. Route-Ready Bookkeeping"></label>
+      <label class="small">What should they look at? *
+        <textarea name="description" rows="5" maxlength="4000" required
+                  placeholder="What it is, who it is for, how it makes money — and the one thing you are unsure about."></textarea>
+      </label>
+      <label class="small">Link (optional)<input name="url_or_content" type="url" maxlength="500" placeholder="https://"></label>
+      <label class="small">What kind of review?
+        <select name="review_type">
+          <option value="idea">My idea</option>
+          <option value="blueprint">My launch blueprint</option>
+          <option value="landing_page">A landing page</option>
+          <option value="pitch_deck">A pitch deck</option>
+          <option value="copy">Copy or messaging</option>
+          <option value="pricing">Pricing</option>
+          <option value="general">Something else</option>
+        </select>
+      </label>
+      <button class="btn btn-primary">Post it for review</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Your requests</h2>
+    <% if (!mine.length) { %>
+      <p class="muted">You have not asked for a review yet.</p>
+    <% } else { %>
+      <ul class="rev-list">
+        <% mine.forEach(function (r) { %>
+          <li class="rev-row">
+            <div style="flex:1;min-width:10rem">
+              <a href="/reviews/<%= r.id %>"><strong><%= r.title %></strong></a>
+              <p class="muted small" style="margin:.15rem 0 0"><%= r.reviews %> review<%= r.reviews === 1 ? '' : 's' %> · <%= r.status.replace('_', ' ') %></p>
+            </div>
+            <% if (r.status !== 'withdrawn' && r.reviews === 0) { %>
+              <form method="post" action="/reviews/<%= r.id %>/withdraw" class="inline">
+                <button class="btn btn-ghost btn-sm">Withdraw</button>
+              </form>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+
+    <% if (given.length) { %>
+      <div style="border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem">
+        <h3 class="small">Reviews you have given</h3>
+        <ul class="rev-list">
+          <% given.forEach(function (r) { %>
+            <li class="rev-row">
+              <a class="small" href="/reviews/<%= r.request_id %>"><%= r.title %></a>
+              <span class="muted small"><%= new Date(r.created_at).toLocaleDateString() %></span>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+  </div>
+
+</div>
+
+<style>
+  .rev-list { list-style: none; padding: 0; margin: .5rem 0 0; }
+  .rev-row {
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+    padding: .65rem 0; border-top: 1px solid var(--border);
+  }
+  .rev-row:first-child { border-top: 0; }
+</style>
+<%- include('partials/foot') %>

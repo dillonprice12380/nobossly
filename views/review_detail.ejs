@@ -1,0 +1,112 @@
+<%- include('partials/head') %>
+<a class="muted" href="/reviews">← Peer review</a>
+
+<div class="page-head">
+  <div>
+    <span class="tag"><%= request.review_type.replace('_', ' ') %></span>
+    <h1><%= request.title %></h1>
+    <p class="muted"><%= isMine ? 'Your request' : 'Posted by ' + (names[request.submitter_id] || 'a founder') %> · <%= reviews.length %> review<%= reviews.length === 1 ? '' : 's' %></p>
+  </div>
+</div>
+
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<div class="card">
+  <h2>What they want looked at</h2>
+  <p class="pre"><%= request.description %></p>
+  <%# rel/target: an external link a member pasted must never get a
+      window.opener handle to this session. %>
+  <% if (request.url_or_content) { %>
+    <p><a href="<%= request.url_or_content %>" target="_blank" rel="noopener noreferrer nofollow"><%= request.url_or_content %></a></p>
+  <% } %>
+</div>
+
+<% if (canReview && !alreadyReviewed) { %>
+  <div class="card">
+    <h2>Your review</h2>
+    <p class="muted small">Be the reviewer you would want. Say what you would change and why — that is worth more than a score.</p>
+    <form method="post" action="/reviews/<%= request.id %>/review">
+      <% rubric.forEach(function (r) { %>
+        <label class="small"><%= r.label %>
+          <select name="rubric_<%= r.key %>" required>
+            <option value="">—</option>
+            <option value="1">1 · not at all</option>
+            <option value="2">2</option>
+            <option value="3">3 · partly</option>
+            <option value="4">4</option>
+            <option value="5">5 · clearly yes</option>
+          </select>
+        </label>
+      <% }) %>
+
+      <label class="small">What would you change, and why? *
+        <textarea name="feedback" rows="6" minlength="<%= minFeedback %>" maxlength="4000" required
+                  placeholder="The specific thing you would change, and the reason. At least <%= minFeedback %> characters."></textarea>
+      </label>
+      <p class="muted small" style="margin:-.3rem 0 .6rem">Minimum <%= minFeedback %> characters — short reviews help nobody, so they are refused.</p>
+
+      <label class="small">Overall
+        <select name="rating" required>
+          <option value="">—</option>
+          <option value="1">1 · would not pursue this</option>
+          <option value="2">2 · needs a rethink</option>
+          <option value="3">3 · promising, with work</option>
+          <option value="4">4 · strong</option>
+          <option value="5">5 · I would back this</option>
+        </select>
+      </label>
+      <button class="btn btn-primary">Post review (+60 XP)</button>
+    </form>
+  </div>
+<% } else if (alreadyReviewed) { %>
+  <p class="notice">You have already reviewed this one. Your review is below.</p>
+<% } else if (isMine) { %>
+  <p class="muted small">You cannot review your own request — that is enforced by the database, not just this page.</p>
+<% } %>
+
+<h2 style="margin:1.3rem 0 .5rem">Reviews</h2>
+<% if (!reviews.length) { %>
+  <div class="card center"><p class="muted">No reviews yet.<%= isMine ? ' Yours is in the queue — reviewers see the oldest requests first.' : '' %></p></div>
+<% } %>
+
+<% reviews.forEach(function (r) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .4rem">
+      <div>
+        <strong><%= names[r.reviewer_id] || 'A founder' %></strong>
+        <span class="muted small"> · <%= new Date(r.created_at).toLocaleDateString() %></span>
+      </div>
+      <% if (r.rating) { %><span class="chip">★ <%= r.rating %>/5</span><% } %>
+    </div>
+
+    <% if (r.rubric_scores) { %>
+      <div class="rubric">
+        <% rubric.forEach(function (q) { %>
+          <% var v = r.rubric_scores[q.key]; if (v) { %>
+            <div class="rubric-row">
+              <span class="rubric-label"><%= q.label %></span>
+              <span class="rubric-bar" aria-hidden="true"><span style="width:<%= v * 20 %>%"></span></span>
+              <span class="rubric-num"><%= v %></span>
+            </div>
+          <% } %>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <p class="pre" style="margin-top:.7rem"><%= r.feedback %></p>
+  </div>
+<% }) %>
+
+<style>
+  .rubric { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
+  .rubric-row { display: grid; grid-template-columns: 1fr 6rem 1.4rem; align-items: center; gap: .6rem; font-size: .86rem; }
+  .rubric-label { color: var(--muted); }
+  .rubric-bar { height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
+  .rubric-bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .rubric-num { font-weight: 600; text-align: right; }
+  @media (max-width: 34rem) {
+    .rubric-row { grid-template-columns: 1fr 3.5rem 1.2rem; }
+    .rubric-label { font-size: .8rem; }
+  }
+</style>
+<%- include('partials/foot') %>
