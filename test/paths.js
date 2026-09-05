@@ -20,9 +20,9 @@ const eq = (name, got, want) => ok(name, got === want, `got ${JSON.stringify(got
 
 const TYPES = ['text', 'textarea', 'select', 'checks', 'csv', 'url'];
 
-console.log('\nEight paths, each answerable:');
-eq('eight of them', paths.PATHS.length, 8);
-ok('slugs are unique', new Set(paths.SLUGS).size === 8, paths.SLUGS.join(', '));
+console.log('\nNine paths, each answerable:');
+eq('nine of them', paths.PATHS.length, 9);
+ok('slugs are unique', new Set(paths.SLUGS).size === 9, paths.SLUGS.join(', '));
 for (const p of paths.PATHS) {
   const all = paths.coreQuestions(p.slug).concat(paths.depthQuestions(p.slug));
   const names = all.map(q => q.name);
@@ -34,6 +34,20 @@ for (const p of paths.PATHS) {
   ok(`  ${p.slug}: every select and checks has options`,
      all.filter(q => q.type === 'select' || q.type === 'checks').every(q => Array.isArray(q.options) && q.options.length));
   ok(`  ${p.slug}: has a label, emoji and blurb`, !!(p.label && p.emoji && p.blurb));
+}
+
+console.log('\nMaking a product and running a shop ask different things:');
+{
+  const pp = paths.coreQuestions('physical_product').concat(paths.depthQuestions('physical_product')).map(q => q.name);
+  const os = paths.coreQuestions('online_store').concat(paths.depthQuestions('online_store')).map(q => q.name);
+  const shared = pp.filter(n => os.includes(n));
+  const universal = paths.UNIVERSAL_CORE.concat(paths.UNIVERSAL_DEPTH).map(q => q.name).concat(['stage', 'product']);
+  const overlap = shared.filter(n => !universal.includes(n));
+  ok('they share only the universal questions', overlap.length === 0, overlap.join(', ') || 'no unexpected overlap');
+  ok('only the maker is asked about tooling and minimum orders',
+     pp.includes('tooling_cost') && pp.includes('moq') && !os.includes('tooling_cost'));
+  ok('only the shop is asked about fulfilment and channel',
+     os.includes('fulfilment') && os.includes('channel') && !pp.includes('fulfilment'));
 }
 
 console.log('\nEvery path asks the universal constraints, because the fit test needs them:');

@@ -1,4 +1,4 @@
-// The eight paths a founder can take, and the questions each one asks.
+// The nine paths a founder can take, and the questions each one asks.
 //
 // Onboarding used to branch on STAGE — already in business, have an idea, still
 // exploring — and then ask everyone the same generic questions. A content
@@ -9,7 +9,7 @@
 // inferred, which makes it the most trustworthy signal in the product: the fit
 // criteria, the Compass, and the tailored challenges all key off it.
 //
-// Questions are DATA, not markup. Eight hand-written form branches would drift
+// Questions are DATA, not markup. Nine hand-written form branches would drift
 // apart within a month; one renderer over these definitions cannot.
 //
 // Each question is:
@@ -217,7 +217,7 @@ const PATHS = [
     slug: 'online_store',
     label: 'Online store',
     emoji: '📦',
-    blurb: 'You sell products online — physical goods, or digital ones like templates and courses.',
+    blurb: 'You run the shop — sourcing, curating or reselling products rather than inventing them.',
     core: [
       stageQuestion('Where are you with it?', [
         'Just an idea', 'Product chosen, nothing listed', 'Listed, no sales yet',
@@ -240,6 +240,42 @@ const PATHS = [
         options: ['Yes, to the penny', 'Roughly', 'No'] },
       { name: 'brand_or_commodity', label: 'Is it a brand or a commodity?', type: 'textarea',
         placeholder: 'If someone can buy the same thing cheaper elsewhere, what makes them buy yours?' }
+    ]
+  },
+
+  {
+    slug: 'physical_product',
+    label: 'Physical product',
+    emoji: '🔧',
+    blurb: 'You make the thing itself — designing, prototyping and manufacturing something that did not exist.',
+    core: [
+      stageQuestion('Where are you with it?', [
+        'Just an idea', 'Sketches or a concept', 'Prototype made',
+        'Samples from a manufacturer', 'Selling it', 'In shops or retailers'
+      ]),
+      { name: 'product', label: 'What is the product?', type: 'text', required: true,
+        placeholder: 'what it is and what it does, in one line' },
+      { name: 'made_how', label: 'How it would be made', type: 'select', required: true,
+        options: ['I make each one by hand', 'A small workshop or maker space', 'A contract manufacturer locally',
+                  'A contract manufacturer overseas', '3D printed or print-on-demand', 'Not sure yet'] },
+      { name: 'unit_cost_known', label: 'Do you know what one unit costs to make?', type: 'select', required: true,
+        options: ['Yes, to the penny', 'Roughly', 'No'],
+        hint: 'This is the number the whole business rests on. Everything else is downstream of it.' },
+      { name: 'sell_where', label: 'Where it would sell', type: 'checks',
+        options: ['Direct to people online', 'Wholesale to independent shops', 'Retail chains',
+                  'Markets and fairs', 'Amazon or Etsy', 'Licensing it to a company'] }
+    ],
+    depth: [
+      { name: 'moq', label: 'Smallest run a manufacturer would accept', type: 'select',
+        options: ['Under 50', '50–250', '250–1,000', '1,000+', 'Have not asked yet'] },
+      { name: 'tooling_cost', label: 'Up-front tooling or mould cost', type: 'select',
+        options: ['None needed', 'Under $1,000', '$1,000–10,000', '$10,000+', 'Not quoted yet'] },
+      { name: 'certification', label: 'Testing or certification it needs', type: 'checks',
+        options: ['None', 'CE / UKCA', 'FDA or food safety', 'Electrical safety',
+                  "Children's toy safety", 'Cosmetics regulations', 'Not sure'] },
+      { name: 'ip_position', label: 'Protection you have or want', type: 'checks',
+        options: ['Patent filed', 'Patent considered', 'Design registration', 'Trademark',
+                  'None — being first is the plan'] }
     ]
   },
 

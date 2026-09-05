@@ -66,7 +66,7 @@ const PROFILES = {
 };
 
 console.log('\nLibrary snapshot:');
-eq('39 active criteria', ROWS.length, 39);
+eq('42 active criteria', ROWS.length, 42);
 ok('fingerprint (compare against the query in this file\'s header)', true, fingerprint);
 ok('every row has a category, so the diversity rule can work', ROWS.every(r => !!r.category));
 ok('every numeric row can resolve a threshold',
@@ -206,9 +206,9 @@ console.log('\nAnd the result grades the way fit.js expects:');
 console.log('\nPath-tagged criteria only reach their own path:');
 {
   const tagged = ROWS.filter(r => r.paths && r.paths.length);
-  ok('the library carries path-specific criteria', tagged.length >= 13, String(tagged.length));
+  ok('the library carries path-specific criteria', tagged.length >= 16, String(tagged.length));
 
-  for (const slug of ['creator', 'brick_mortar', 'software', 'online_store']) {
+  for (const slug of ['creator', 'brick_mortar', 'software', 'online_store', 'physical_product']) {
     const facts = lib.founderFacts({ founder_path: slug, launch_budget: '$500-2,000',
       hours_per_week: '10-20', runway: '3-6 months', income_year1: 'Replace full salary' });
     const chosen = lib.selectFromLibrary(ROWS, facts);

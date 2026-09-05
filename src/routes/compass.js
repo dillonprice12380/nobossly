@@ -16,6 +16,7 @@ const LABELS = {
   local_service: 'Reading your trade and your area against local demand\u2026',
   brick_mortar: 'Reading your concept against your rent ceiling and the market\u2026',
   online_store: 'Reading your product against margin, channel and competition\u2026',
+  physical_product: 'Reading your product against what it costs to make and what it can sell for\u2026',
   software: 'Reading your problem against what people already use for it\u2026',
   exploring: 'Reading your profile and drawing your Founder Compass\u2026'
 };
