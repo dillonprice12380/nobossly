@@ -153,5 +153,33 @@ console.log('\nReadiness reflects how much of the path was answered:');
   ok('a completed core scores well under 100 — depth is still unanswered', some > 30 && some < 90, String(some));
 }
 
+console.log('\nEvery marketed path can carry a landing page:');
+{
+  ok('eight paths are marketed', paths.MARKETED.length === 8, String(paths.MARKETED.length));
+  ok('physical product is live in the app but off the public site',
+     paths.isPath('physical_product') && !paths.MARKETED.some(p => p.slug === 'physical_product'));
+
+  for (const p of paths.MARKETED) {
+    const mk = p.marketing;
+    ok(`  ${p.slug}: has a headline, subhead and three pains`,
+       !!(mk && mk.headline && mk.subhead && Array.isArray(mk.pains) && mk.pains.length === 3),
+       mk ? (mk.pains || []).length + ' pains' : 'MISSING');
+    // Generic marketing copy is worse than none — it is the thing that makes a
+    // path page feel like a template. A headline that never names the path's
+    // own vocabulary is the tell.
+    ok(`  ${p.slug}: the truth line says something specific`,
+       !!(mk && mk.truth && mk.truth.length > 60), mk && mk.truth ? mk.truth.length + ' chars' : 'MISSING');
+    // The landing page shows the path's own questions; a path whose questions
+    // are all universal would render an empty section.
+    const own = paths.ownQuestions(p.slug);
+    ok(`  ${p.slug}: has questions of its own to show`, own.length >= 4, String(own.length));
+  }
+
+  // Two paths must not share a headline — that would mean the copy was written
+  // once and pasted.
+  const heads = paths.MARKETED.map(p => p.marketing.headline);
+  ok('no two paths share a headline', new Set(heads).size === heads.length);
+}
+
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nPaths hold. All checks pass.');
 process.exit(fail ? 1 : 0);

@@ -88,6 +88,17 @@ router.get('/', async (req, res, next) => {
   try {
     let run = await qs.latest(req.sb, req.user.id);
     if (!run) run = await qs.startNew(req.sb, req.user.id);
+
+    // A path landing page can send someone straight here with their path
+    // already chosen (/questionnaire?path=creator). It only pre-selects — the
+    // founder still confirms on step 1, and it never overwrites a path they
+    // have already started answering for.
+    const wanted = req.query.path;
+    if (paths.isPath(wanted) && !run.founder_path) {
+      await req.sb.from('questionnaire_responses').update({ founder_path: wanted }).eq('id', run.id);
+      run = { ...run, founder_path: wanted };
+    }
+
     let step = parseInt(req.query.step, 10);
     if (!Number.isFinite(step) || step < 1) step = run.founder_path ? 2 : 1;
     // Never let a step past this path's own length render an empty form.

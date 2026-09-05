@@ -125,11 +125,12 @@ app.get('/sample-compass', (req, res) => {
   });
 });
 
+app.use('/paths', require('./src/routes/paths_public')); // public path landing pages — before the CMS catch-all
 app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
+  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -153,6 +154,11 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/blog', pri: '0.8' },
       { loc: base + '/pricing', pri: '0.8' },
       { loc: base + '/sample-compass', pri: '0.9' },
+      // The path landing pages are the main organic entry points — someone
+      // searching "how to start a bookkeeping business" should land on the
+      // local service page, not the generic homepage.
+      { loc: base + '/paths', pri: '0.9' },
+      ...require('./src/paths').MARKETED.map(p => ({ loc: base + '/paths/' + p.slug, pri: '0.9' })),
       { loc: base + '/guides', pri: '0.8' },
       { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },

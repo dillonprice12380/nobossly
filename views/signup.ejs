@@ -25,6 +25,14 @@
   </div>
   <div class="divider">or use email</div>
   <form method="post" action="/signup">
+  <%# A landing page can send someone here already knowing what they build. The
+      hidden field carries it through the POST so an error on this form does not
+      lose it, and the questionnaire still owns the actual choice. %>
+  <% if (typeof path !== 'undefined' && path) { %>
+    <input type="hidden" name="path" value="<%= path %>">
+    <p class="chip" style="margin:0 0 .8rem;display:inline-block">Starting as <%= pathDef ? pathDef.emoji + ' ' + pathDef.label : path %> · <a href="/paths">change</a></p>
+  <% } %>
+
     <label>Email<input type="email" name="email" required></label>
     <label>Community username <span class="muted small">(your name or a made-up handle — shown to other members)</span>
       <input name="username" pattern="[A-Za-z0-9_]{3,24}" title="3-24 letters, numbers or underscores" required></label>

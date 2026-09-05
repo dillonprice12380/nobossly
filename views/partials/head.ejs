@@ -97,13 +97,14 @@
         </button>
         <div class="avatar-dropdown" id="avatar-dropdown">
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
-          <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
+      <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
           <% if (typeof plan !== 'undefined' && plan === 'free') { %><a href="/pricing"><svg class="icon"><use href="#i-upgrade"/></svg> Upgrade</a><% } %>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
       </div>
     <% } else { %>
+      <a href="/paths">Paths</a>
       <a href="/community">Community</a>
       <a href="/how-it-works">How it works</a>
       <div class="nav-dropdown" data-dd>

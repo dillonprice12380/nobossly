@@ -1,0 +1,165 @@
+<%- include('partials/head') %>
+<%
+  var mk = def.marketing;
+  var start = '/signup?path=' + def.slug;
+%>
+
+<section class="pl-hero">
+  <div class="reveal reveal-left">
+    <a class="chip" href="/paths">← All paths</a>
+    <h1 style="margin:.7rem 0 0"><%= def.emoji %> <%= mk.headline %></h1>
+    <p class="lead" style="margin-left:0"><%= mk.subhead %></p>
+    <div class="cta-row" style="justify-content:flex-start">
+      <a class="btn btn-primary btn-lg" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
+      <a class="btn btn-ghost btn-lg" href="/sample-compass">See a real Compass first</a>
+    </div>
+    <p class="muted small" style="margin-top:.7rem">Free. Seven questions. No card.</p>
+  </div>
+</section>
+
+<%# The reader's own situation, said back to them. Three lines, no hedging. %>
+<section class="card reveal reveal-up">
+  <h2>Sound familiar?</h2>
+  <ul class="pain-list">
+    <% mk.pains.forEach(function (t) { %><li><%= t %></li><% }) %>
+  </ul>
+  <p class="pl-truth"><%= mk.truth %></p>
+</section>
+
+<%# The questions this path actually asks. Pulled from the same definition the
+    product renders, so the page cannot promise a form that does not exist. %>
+<section class="reveal reveal-up">
+  <h2>Questions written for <%= def.label.toLowerCase() %>s, not for startups in general</h2>
+  <p class="muted">Most tools ask everyone the same thing. These are the ones your path asks — alongside the six everyone answers about hours, money, runway and deal breakers.</p>
+  <div class="q-grid">
+    <% questions.forEach(function (q) { %>
+      <div class="q-card">
+        <strong><%= q.label %></strong>
+        <% if (q.options && q.options.length) { %>
+          <span class="muted small"><%= q.options.slice(0, 4).join(' · ') %><%= q.options.length > 4 ? ' · …' : '' %></span>
+        <% } else if (q.placeholder) { %>
+          <span class="muted small"><%= q.placeholder %></span>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</section>
+
+<%# The real fit test, live from the library. %>
+<% if (criteria.length) { %>
+<section class="reveal reveal-up">
+  <h2>🎯 The fit test you would be held to</h2>
+  <p class="muted">Five criteria drawn from your own answers. Your idea has to pass them before Level 1 is done — and some are checked by arithmetic against your own numbers, not by opinion.</p>
+  <ul class="crit-list">
+    <% criteria.forEach(function (c) { %>
+      <li class="crit-row">
+        <span class="crit-mark" aria-hidden="true">✓</span>
+        <div>
+          <strong><%= c.criterion %></strong>
+          <% if (c.why) { %><p class="muted small" style="margin:.15rem 0 0"><%= c.why %></p><% } %>
+        </div>
+        <% if ((c.paths || []).indexOf(def.slug) >= 0) { %>
+          <span class="crit-tag"><%= def.label %> only</span>
+        <% } %>
+      </li>
+    <% }) %>
+  </ul>
+  <p class="muted small">Yours are written from your answers, so the thresholds are your budget and your runway — not these numbers.</p>
+</section>
+<% } %>
+
+<%# The real electives, live from the pool. %>
+<% if (challenges.length) { %>
+<section class="reveal reveal-up">
+  <h2>⚔️ Quests built for this path</h2>
+  <p class="muted">Alongside the ten shared rungs every founder climbs. More are written for you by the advisor as it learns your answers.</p>
+  <div class="grid">
+    <% challenges.forEach(function (c) { %>
+      <div class="card ch-card">
+        <div class="ch-top"><span class="ch-emoji"><%= c.emoji %></span><span class="chip">+<%= c.xp_reward %> XP · <%= c.suggested_days %> days</span></div>
+        <h3><%= c.title %></h3>
+        <p class="muted small"><%= c.description %></p>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<%# The shared spine — same for every path, and worth saying so. %>
+<section class="card reveal reveal-up">
+  <h2>🎮 Then the same ladder as everyone else</h2>
+  <p class="muted">Ten levels. XP alone can never buy a rung — every one gates on something real. The path changes the questions and the quests; it does not change what counts as progress.</p>
+  <div class="rung-row">
+    <span class="rung-pill">🌱 Ideator</span>
+    <span class="rung-pill">🔍 Explorer</span>
+    <span class="rung-pill">🔨 Builder</span>
+    <span class="rung-pill">⚡ Hustler</span>
+    <span class="rung-pill is-key">⚙️ Operator — first sale</span>
+    <span class="rung-pill">🚀 Founder</span>
+    <span class="rung-pill">🛠️ Maker</span>
+    <span class="rung-pill">🎯 Launcher</span>
+    <span class="rung-pill">💎 Operator Pro</span>
+    <span class="rung-pill">👑 Legend</span>
+  </div>
+  <a class="btn btn-ghost" style="margin-top:1rem;display:inline-block" href="/how-it-works">How the whole thing works →</a>
+</section>
+
+<section class="cta-band reveal reveal-up">
+  <h2>Start as a <%= def.label.toLowerCase() %>.</h2>
+  <p class="muted">Seven questions, about two minutes, and your Compass is drawn from them. You can change path later by answering again.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>">Draw my Founder Compass →</a>
+</section>
+
+<section class="reveal reveal-up">
+  <h3 class="small muted">Building something else?</h3>
+  <div class="other-paths">
+    <% others.forEach(function (p) { %>
+      <a class="chip" href="/paths/<%= p.slug %>"><%= p.emoji %> <%= p.label %></a>
+    <% }) %>
+  </div>
+</section>
+
+<style>
+  .pl-hero { padding: clamp(1.5rem, 5vw, 3rem) 0 .5rem; max-width: 46rem; }
+  .pl-hero h1 { font-size: clamp(1.8rem, 4.6vw, 2.9rem); line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; }
+  .pain-list { list-style: none; padding: 0; margin: .6rem 0 0; display: flex; flex-direction: column; gap: .55rem; }
+  .pain-list li { padding-left: 1.5rem; position: relative; }
+  .pain-list li::before { content: "—"; position: absolute; left: 0; color: var(--muted); }
+  .pl-truth {
+    margin: 1rem 0 0; padding: .85rem 1rem; border-left: 3px solid var(--accent);
+    background: rgba(16,185,129,.08); border-radius: 0 10px 10px 0; font-weight: 500;
+  }
+  .q-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .7rem; margin-top: .9rem; }
+  .q-card {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: .85rem 1rem; display: flex; flex-direction: column; gap: .25rem;
+  }
+  .crit-list { list-style: none; padding: 0; margin: .9rem 0 .6rem; }
+  .crit-row {
+    display: flex; gap: .7rem; align-items: flex-start; flex-wrap: wrap;
+    padding: .7rem 0; border-top: 1px solid var(--border);
+  }
+  .crit-row:first-child { border-top: 0; }
+  .crit-mark {
+    flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: #fff; font-size: .78rem; font-weight: 700;
+  }
+  .crit-row > div { flex: 1; min-width: 12rem; }
+  .crit-tag {
+    font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: .1rem .45rem;
+    align-self: center;
+  }
+  .ch-card { display: flex; flex-direction: column; gap: .3rem; }
+  .ch-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .ch-emoji { font-size: 1.5rem; }
+  .ch-card h3 { margin: 0; font-size: 1.02rem; }
+  .rung-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+  .rung-pill {
+    font-size: .82rem; padding: .3rem .6rem; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+  }
+  .rung-pill.is-key { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .other-paths { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .5rem; }
+</style>
+<%- include('partials/foot') %>

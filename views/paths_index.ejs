@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+
+<section class="pi-hero">
+  <h1>What are you building?</h1>
+  <p class="lead" style="margin-left:0">A plumber and a podcaster do not need the same advice, so NoBossly does not give them the same questions. Pick your path and everything downstream changes with it — the questions you answer, the fit test your idea is held to, and the quests you get.</p>
+  <p class="muted">The ten-level ladder stays the same for everyone. A first sale is a first sale.</p>
+</section>
+
+<div class="paths-grid">
+  <% paths.forEach(function (p) { %>
+    <a class="path-tile" href="/paths/<%= p.slug %>">
+      <span class="pt-emoji"><%= p.emoji %></span>
+      <strong><%= p.label %></strong>
+      <span class="muted small"><%= p.blurb %></span>
+      <span class="pt-go">See this path →</span>
+    </a>
+  <% }) %>
+</div>
+
+<section class="cta-band" style="margin-top:1.6rem">
+  <h2>Not sure which one?</h2>
+  <p class="muted">Take the “still figuring it out” path. Seven questions and your Compass names the territories where you actually hold an edge — then you choose.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup?path=exploring">Start there →</a>
+</section>
+
+<style>
+  .pi-hero { max-width: 44rem; padding: clamp(1.2rem, 4vw, 2.5rem) 0 1.4rem; }
+  .pi-hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; text-wrap: balance; }
+  .paths-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .9rem; }
+  .path-tile {
+    display: flex; flex-direction: column; gap: .3rem;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.1rem 1.2rem; text-decoration: none; color: var(--text);
+  }
+  .path-tile:hover { border-color: var(--accent); }
+  .pt-emoji { font-size: 1.7rem; line-height: 1; }
+  .path-tile strong { font-size: 1.08rem; }
+  .pt-go { margin-top: auto; padding-top: .5rem; color: var(--accent); font-size: .88rem; font-weight: 600; }
+</style>
+<%- include('partials/foot') %>

@@ -17,6 +17,40 @@
   </div>
 </div>
 
+<%# Guarded: the homepage is the last page that should 500 because a route
+    forgot a local. Missing paths means the section is skipped, not a blank page. %>
+<% if (typeof paths !== 'undefined' && paths && paths.length) { %>
+<section class="reveal reveal-up" id="paths">
+  <div class="page-head">
+    <div>
+      <h2>Pick your path first</h2>
+      <p class="muted">A plumber and a podcaster do not need the same advice, so they do not get the same questions. Your path changes what you are asked, the fit test your idea is held to, and the quests you get.</p>
+    </div>
+    <a class="btn btn-ghost" href="/paths">Compare all paths →</a>
+  </div>
+  <div class="home-paths">
+    <% paths.forEach(function (p) { %>
+      <a class="home-path" href="/paths/<%= p.slug %>">
+        <span class="hp-emoji"><%= p.emoji %></span>
+        <strong><%= p.label %></strong>
+      </a>
+    <% }) %>
+  </div>
+  <p class="muted small" style="margin-top:.7rem">The ten-level ladder is the same for everyone. A first sale is a first sale.</p>
+</section>
+<% } %>
+
+<style>
+  .home-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; margin-top: 1rem; }
+  .home-path {
+    display: flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: .8rem .9rem;
+  }
+  .home-path:hover { border-color: var(--accent); }
+  .hp-emoji { font-size: 1.35rem; line-height: 1; flex: none; }
+  .home-path strong { font-size: .95rem; line-height: 1.2; }
+</style>
+
 <section class="stats-band reveal reveal-up">
   <div class="card stat">
     <div class="stat-circle" data-pct="55">

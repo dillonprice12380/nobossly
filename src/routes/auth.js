@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies } = require('../middleware/auth');
 const mailer = require('../mailer');
+const pathsLib = require('../paths');
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
 const cookieDomainOpts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
 function callbackBase(req) {
@@ -26,25 +27,33 @@ router.post('/login', async (req, res) => {
   res.redirect('/dashboard');
 });
 
+const keepPath = req => pathsLib.isPath((req.body && req.body.path) || (req.query && req.query.path))
+  ? ((req.body && req.body.path) || req.query.path) : null;
+const pathDefOf = req => { const p = keepPath(req); return p ? pathsLib.get(p) : null; };
+
 router.get('/signup', (req, res) => {
   if (req.user) return res.redirect('/dashboard');
-  res.render('signup', { title: 'Sign up', error: null });
+  // A path landing page links here with ?path=creator. Carried through the form
+  // so the founder is not asked to choose again on the other side of signup.
+  const path = pathsLib.isPath(req.query.path) ? req.query.path : null;
+  res.render('signup', { title: 'Sign up', error: null, path, pathDef: path ? pathsLib.get(path) : null });
 });
 
 router.post('/signup', async (req, res) => {
   const { email, password } = req.body;
+  const chosenPath = keepPath(req);
   if (!password || password.length < 8) {
-    return res.render('signup', { title: 'Sign up', error: 'Password must be at least 8 characters.' });
+    return res.render('signup', { title: 'Sign up', error: 'Password must be at least 8 characters.', path: keepPath(req), pathDef: pathDefOf(req) });
   }
   const username = String(req.body.username || '').trim().toLowerCase();
   if (!/^[a-z0-9_]{3,24}$/.test(username)) {
-    return res.render('signup', { title: 'Sign up', error: 'Community username must be 3-24 characters: letters, numbers, underscores.' });
+    return res.render('signup', { title: 'Sign up', error: 'Community username must be 3-24 characters: letters, numbers, underscores.', path: keepPath(req), pathDef: pathDefOf(req) });
   }
   const sb = anonClient();
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
-  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.' });
+  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.', path: keepPath(req), pathDef: pathDefOf(req) });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
-  if (error) return res.render('signup', { title: 'Sign up', error: error.message });
+  if (error) return res.render('signup', { title: 'Sign up', error: error.message, path: keepPath(req), pathDef: pathDefOf(req) });
   // Fire-and-forget: a mail failure must never block a signup.
   if (data.user) mailer.send('welcome', email, username, { userId: data.user.id }).catch(() => {});
   if (data.session) {
@@ -52,7 +61,9 @@ router.post('/signup', async (req, res) => {
     // Straight into the product. The questionnaire used to stand between signup
     // and everything else, which is where the old onboarding lost people; it is
     // now the Level 1 quest, prompted on the dashboard instead of enforced here.
-    return res.redirect('/dashboard');
+    // Straight into their own questions when a landing page sent them; the
+    // questionnaire still owns the choice, this only pre-selects it.
+    return res.redirect(chosenPath ? '/questionnaire?path=' + chosenPath : '/dashboard');
   }
   res.redirect('/login?m=' + encodeURIComponent('Check your email to confirm your account, then log in.'));
 });

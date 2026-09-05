@@ -72,6 +72,16 @@ const PATHS = [
     label: 'Content creator',
     emoji: '🎬',
     blurb: 'You build an audience first — video, writing, podcasting, streaming — and money follows attention.',
+    marketing: {
+      headline: 'You are not short of ideas. You are short of a plan that survives week three.',
+      subhead: 'NoBossly gives creators a fit test built from your own hours, your own budget and your own deal breakers — then a ladder where the levels are real: first paid collaboration, first hundred subscribers, first $1k month.',
+      pains: [
+        'You have posted before and stopped, and you are not sure why it did not stick.',
+        'Everyone says "be consistent" without asking how many hours you actually have.',
+        'The advice is written for people who already have an audience.'
+      ],
+      truth: 'An audience is a slow asset. If your runway is three months, the plan has to earn before the audience is big — and your fit test will say so out loud.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Not started — no audience yet', 'Posting occasionally', 'Posting consistently, no income',
@@ -100,6 +110,16 @@ const PATHS = [
     label: 'Freelancer',
     emoji: '💻',
     blurb: 'You sell a skill and do the work yourself — design, writing, development, editing, admin.',
+    marketing: {
+      headline: 'Freelancing is a business. Most freelancing advice treats it like a hobby with invoices.',
+      subhead: 'NoBossly holds your rate against your hours and your income goal, and tells you plainly when the arithmetic does not work — then gives you the quests that fix it.',
+      pains: [
+        'You are busy and still not earning what you set out to earn.',
+        'Every month starts from zero because the work is all one-off.',
+        'You have never raised your rate because you do not know what happens if you do.'
+      ],
+      truth: 'Hours times rate is a hard ceiling. We do that multiplication in front of you before you spend another year finding out.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Not started', 'A few one-off jobs', 'Some regular clients', 'Fully booked', 'Turning work away'
@@ -127,6 +147,16 @@ const PATHS = [
     label: 'Coach or consultant',
     emoji: '🧠',
     blurb: 'You sell judgement rather than hours — advising, coaching, or fixing a problem others cannot.',
+    marketing: {
+      headline: 'You already know things people pay for. The hard part is charging for the outcome.',
+      subhead: 'NoBossly turns your expertise into an offer with a named result and a price that follows it — then tests that offer against your own constraints before you take it to market.',
+      pains: [
+        'You give away the good advice on the call and get paid for the paperwork.',
+        'You price by the hour because naming a number for the result feels like nerve.',
+        'You have results you could point to and nothing written down.'
+      ],
+      truth: 'An offer described as sessions and calls gets priced like sessions and calls. Your fit test asks whether you can name the outcome — because that one question decides your rate.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Not started', 'Advised a few people informally', 'Been paid for it once or twice',
@@ -157,6 +187,16 @@ const PATHS = [
     label: 'Local service',
     emoji: '🚚',
     blurb: 'You go to the customer — trades, cleaning, landscaping, mobile grooming, repairs.',
+    marketing: {
+      headline: 'The work is local. Almost none of the advice is.',
+      subhead: 'NoBossly builds your fit test around the things that actually decide a local trade: your travel radius, your licensing, your kit, and whether there is enough of the work near you.',
+      pains: [
+        'You can do the work. Finding the work is the part nobody teaches.',
+        'You are quoting blind because you do not know your win rate.',
+        'Half the day goes on driving you do not get paid for.'
+      ],
+      truth: 'Drive time is unpaid. A job type that only comes up twice a month within range cannot fill a week, and your fit test will ask that before you buy the van.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Not started', 'A few jobs for people I know', 'Regular work coming in',
@@ -186,6 +226,16 @@ const PATHS = [
     label: 'Brick and mortar',
     emoji: '🏪',
     blurb: 'A place people come to — a shop, café, salon, studio, gym or bar.',
+    marketing: {
+      headline: 'The lease is the point of no return. Everything useful happens before you sign it.',
+      subhead: 'NoBossly puts the numbers in front of you first — your break-even day, your rent ceiling at half the takings you hope for — and gives you ways to test the concept before you commit to five years.',
+      pains: [
+        'The landlord\'s footfall figure is the only footfall figure you have.',
+        'You have a fit-out budget and no break-even number.',
+        'Everyone is encouraging and nobody has done the arithmetic with you.'
+      ],
+      truth: 'Rent is due whether anyone walks in or not. A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday — so we ask about half capacity, not best case.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Just an idea', 'Looking at premises', 'Signed or about to sign a lease',
@@ -218,6 +268,16 @@ const PATHS = [
     label: 'Online store',
     emoji: '📦',
     blurb: 'You run the shop — sourcing, curating or reselling products rather than inventing them.',
+    marketing: {
+      headline: 'Selling is easy. Selling at a margin that survives advertising is the business.',
+      subhead: 'NoBossly makes you cost a unit properly — product, shipping, packaging, fees, returns — and then asks the question that decides everything: is there anything left to find a buyer with?',
+      pains: [
+        'Orders are coming in and the bank account is not growing.',
+        'You are one of ten identical listings and price is the only lever left.',
+        'You do not know your real margin, only your rough one.'
+      ],
+      truth: 'This is how online stores die: a product that sells fine and still loses money once ads are counted. Your fit test asks about it on day one, not in month nine.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Just an idea', 'Product chosen, nothing listed', 'Listed, no sales yet',
@@ -245,6 +305,10 @@ const PATHS = [
 
   {
     slug: 'physical_product',
+    // Left off the public site on request. The path still works end to end for
+    // anyone who picks it in the app; it simply has no landing page and does
+    // not appear in the marketing path list.
+    marketing: false,
     label: 'Physical product',
     emoji: '🔧',
     blurb: 'You make the thing itself — designing, prototyping and manufacturing something that did not exist.',
@@ -284,6 +348,16 @@ const PATHS = [
     label: 'Software or app',
     emoji: '⌨️',
     blurb: 'You build a product people use — a web app, mobile app, tool or plugin.',
+    marketing: {
+      headline: 'Building it was never the hard part.',
+      subhead: 'NoBossly keeps the scope inside what you can actually build — your hands, no-code, or a budget — and weighs distribution as hard as the build, because that is what ends most software.',
+      pains: [
+        'The feature list keeps growing and the launch keeps moving.',
+        'You could build it. You have no idea how anyone would find it.',
+        'You are not sure whether people use something else already, or nothing at all.'
+      ],
+      truth: '"Nothing" is usually wrong and always worth checking — a spreadsheet counts. Software with no distribution plan is a hobby with a deployment pipeline.'
+    },
     core: [
       stageQuestion('Where are you with it?', [
         'Just an idea', 'Designing it', 'Building it', 'Live with no users', 'Live with users', 'Paying customers'
@@ -314,6 +388,16 @@ const PATHS = [
     label: 'Still figuring it out',
     emoji: '🧭',
     blurb: 'You know you want to build something, but not what yet. Start here and the Compass narrows it down.',
+    marketing: {
+      headline: 'Not knowing what to build is a starting point, not a disqualification.',
+      subhead: 'Answer seven questions and NoBossly draws your Founder Compass — your archetype, your real constraints, and the territories where you actually hold an edge. It never picks for you.',
+      pains: [
+        'You want to build something and every list of ideas feels written for someone else.',
+        'You have skills and no obvious way to turn them into a business.',
+        'You are worried about picking wrong and losing a year to it.'
+      ],
+      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly — which is what a fit test built from your own constraints does.'
+    },
     core: [
       stageQuestion('How set are you on doing something?', [
         'Just curious', 'Serious, but no idea yet', 'Weighing up a few options', 'Ready to commit once I pick'
@@ -341,6 +425,10 @@ const BY_SLUG = {};
 PATHS.forEach(p => { BY_SLUG[p.slug] = p; });
 
 const SLUGS = PATHS.map(p => p.slug);
+
+// Paths with a public landing page. A path can be live in the product without
+// being marketed — see physical_product.
+const MARKETED = PATHS.filter(p => p.marketing);
 const isPath = slug => Object.prototype.hasOwnProperty.call(BY_SLUG, slug);
 const get = slug => BY_SLUG[slug] || null;
 
@@ -350,6 +438,18 @@ const get = slug => BY_SLUG[slug] || null;
 function coreQuestions(slug) {
   const p = get(slug);
   return p ? UNIVERSAL_CORE.concat(p.core) : UNIVERSAL_CORE.slice();
+}
+
+// The questions that belong to THIS path, as opposed to the six everyone
+// answers. Not the same as "questions without a column": the exploring path's
+// own questions (skills, the problem you keep noticing) legitimately write to
+// existing columns, and filtering on that would have left its landing page
+// showing a single card.
+function ownQuestions(slug) {
+  const p = get(slug);
+  if (!p) return [];
+  const universal = new Set(UNIVERSAL_CORE.map(q => q.name));
+  return p.core.filter(q => !universal.has(q.name));
 }
 
 function depthQuestions(slug) {
@@ -410,9 +510,9 @@ function stageOf(q) {
 const hasSubject = q => !!(q && q.founder_path && q.founder_path !== 'exploring');
 
 module.exports = {
-  PATHS, SLUGS, BY_SLUG, isPath, get, describe, stageOf, hasSubject,
+  PATHS, SLUGS, MARKETED, BY_SLUG, isPath, get, describe, stageOf, hasSubject,
   UNIVERSAL_CORE, UNIVERSAL_DEPTH,
-  coreQuestions, depthQuestions, depthSteps, totalSteps,
+  coreQuestions, ownQuestions, depthQuestions, depthSteps, totalSteps,
   REQUIRED_STEPS: 2,
   HOURS, BUDGET, RUNWAY, INCOME, WORK_STATUS
 };
