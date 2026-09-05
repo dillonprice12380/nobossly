@@ -1,0 +1,139 @@
+// Tests for the public marketing views.
+//
+// A 200 with a full body is not proof a page is visible: /paths/creator shipped
+// 49KB of correct HTML that rendered as a blank screen, because every section
+// carried `.reveal` — a class the stylesheet sets to opacity:0 and only
+// home.js ever clears, and home.js is loaded by the homepage alone.
+//
+// So this file checks two different things:
+//   1. no view can use a class the CSS hides at rest without loading the
+//      script that reveals it (derived from the CSS, not hardcoded), and
+//   2. the landing pages actually render their copy, questions, criteria and
+//      quests — with and without the live DB rows, since those come from
+//      Supabase and the page has to hold up when the query returns nothing.
+//
+//   node test/views.js
+
+const fs = require('fs');
+const path = require('path');
+const ejs = require('ejs');
+const paths = require('../src/paths');
+
+const ROOT = path.join(__dirname, '..');
+const VIEWS = path.join(ROOT, 'views');
+
+let fail = 0;
+const ok = (name, cond, detail) => {
+  if (!cond) fail++;
+  console.log(`  ${cond ? '✓' : '✗'} ${name}${detail !== undefined ? '  — ' + detail : ''}`);
+};
+
+// ---------------------------------------------------------------------------
+// 1. Nothing may be hidden by CSS unless something un-hides it.
+
+console.log('\nHidden-at-rest classes are always paired with their script:');
+
+const css = fs.readFileSync(path.join(ROOT, 'public/css/style.css'), 'utf8');
+
+// Class names in a rule that hides the element outright while JS is running.
+// Written as `.js .foo { … opacity: 0 … }` — the `.js` prefix is what makes it
+// invisible only in the browser, which is exactly the case a status-code check
+// cannot see.
+const hiddenClasses = new Set();
+for (const m of css.matchAll(/\.js\s+\.([a-z0-9_-]+)\s*\{([^}]*)\}/gi)) {
+  if (/opacity\s*:\s*0\s*(;|$)/.test(m[2])) hiddenClasses.add(m[1]);
+}
+ok('found the hidden-at-rest classes in the CSS', hiddenClasses.size > 0,
+   [...hiddenClasses].join(', ') || 'none — has the reveal CSS moved?');
+
+// The one script that clears them. If a second one ever does, add it here.
+const REVEALERS = ['/js/home.js'];
+
+const viewFiles = fs.readdirSync(VIEWS).filter(f => f.endsWith('.ejs'));
+for (const file of viewFiles) {
+  const src = fs.readFileSync(path.join(VIEWS, file), 'utf8');
+  const used = [...hiddenClasses].filter(c =>
+    new RegExp(`class="[^"]*\\b${c}\\b[^"]*"`).test(src));
+  if (!used.length) continue;
+  const loads = REVEALERS.some(s => src.includes(s));
+  ok(`${file} uses ${used.join('/')} and loads its reveal script`, loads,
+     loads ? 'ok' : `nothing in ${file} adds .in — the page renders invisible`);
+}
+
+// ---------------------------------------------------------------------------
+// 2. The landing pages render their content.
+
+console.log('\nPath landing pages render:');
+
+const base = {
+  title: 'T', user: null, profile: null, plan: 'free', currentPath: '/paths',
+  canonicalUrl: 'https://nobossly.com/paths', unreadCount: 0, unreadMsgs: 0,
+  metaDescription: '', bodyTheme: 'theme-light', settings: {}, pendingDeletion: null,
+  reactivated: false
+};
+
+const render = (file, data) =>
+  ejs.render(fs.readFileSync(path.join(VIEWS, file), 'utf8'),
+             { ...base, ...data }, { filename: path.join(VIEWS, file) });
+
+// Stand-ins for the two tables the route reads live. Both queries are wrapped
+// in .catch(() => []) in the route, so the empty case is a real production
+// state, not a hypothetical.
+const CRITERIA = [{ slug: 'evenings_only', criterion: 'Deliverable in under 10 hours a week',
+  why: 'You have 10 hours.', check_kind: 'verified', paths: ['creator'], priority: 90 }];
+const CHALLENGES = [{ title: 'Post three times this week', description: 'Same hook, three angles.',
+  emoji: '🎥', xp_reward: 120, suggested_days: 7, paths: ['creator'] }];
+
+const index = render('paths_index.ejs', { paths: paths.MARKETED });
+ok('/paths lists every marketed path',
+   paths.MARKETED.every(p => index.includes('/paths/' + p.slug)),
+   `${paths.MARKETED.length} paths`);
+ok('/paths hides the unmarketed ones',
+   paths.PATHS.filter(p => !p.marketing).every(p => !index.includes('/paths/' + p.slug)),
+   paths.PATHS.filter(p => !p.marketing).map(p => p.slug).join(', ') || 'none');
+
+for (const def of paths.MARKETED) {
+  const questions = paths.ownQuestions(def.slug);
+  for (const [label, criteria, challenges] of
+       [['with DB rows', CRITERIA, CHALLENGES], ['with an empty DB', [], []]]) {
+    let html = '';
+    try {
+      html = render('path_landing.ejs', {
+        title: def.label, metaDescription: def.marketing.subhead,
+        canonicalUrl: 'https://nobossly.com/paths/' + def.slug,
+        def, questions, criteria, challenges,
+        others: paths.MARKETED.filter(p => p.slug !== def.slug)
+      });
+    } catch (e) {
+      ok(`${def.slug} ${label}: renders`, false, e.message);
+      continue;
+    }
+
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&#34;').replace(/'/g, '&#39;');
+
+    const missing = [];
+    if (!html.includes(esc(def.marketing.headline))) missing.push('headline');
+    if (!html.includes(esc(def.marketing.truth))) missing.push('truth');
+    for (const p of def.marketing.pains) if (!html.includes(esc(p))) missing.push('a pain line');
+    if (!html.includes('/signup?path=' + def.slug)) missing.push('the signup CTA');
+    for (const q of questions) if (!html.includes(esc(q.label))) missing.push('question: ' + q.name);
+    if (challenges.length && !html.includes(esc(challenges[0].title))) missing.push('the quest');
+    if (criteria.length && !html.includes(esc(criteria[0].criterion))) missing.push('the criterion');
+    ok(`${def.slug} ${label}: every block is in the HTML`, !missing.length,
+       missing.join(', ') || `${questions.length} questions`);
+
+    // The bug this file exists for: content present in the HTML but painted
+    // at opacity 0 forever.
+    const hidden = [...hiddenClasses].filter(c =>
+      new RegExp(`class="[^"]*\\b${c}\\b[^"]*"`).test(html));
+    ok(`${def.slug} ${label}: nothing is hidden at rest`, !hidden.length,
+       hidden.join(', ') || 'visible');
+
+    ok(`${def.slug} ${label}: shows at least one question`, questions.length > 0,
+       `${questions.length}`);
+  }
+}
+
+console.log(fail ? `\n${fail} failing\n` : '\nAll good\n');
+process.exit(fail ? 1 : 0);
