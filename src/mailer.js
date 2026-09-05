@@ -49,11 +49,11 @@ const p = t => `<p style="margin:0 0 13px;font-size:15px;line-height:1.62;color:
 
 const TEMPLATES = {
   welcome: name => ({
-    subject: 'Your Founder Compass is seven questions away',
+    subject: 'Your way out is seven questions away',
     html: shell(
       `Welcome, ${esc(name)}.`,
-      p('You have an account. The next thing that happens is your <strong>Founder Compass</strong> &mdash; your archetype, the strengths you actually have, the territories where you hold a real edge, and an honest list of what to avoid.')
-      + p('It takes seven questions. About two minutes. You can go deeper later if you want a sharper read, but you do not have to.'),
+      p('You have an account. The next thing that happens is your <strong>Compass</strong> &mdash; your archetype, the strengths you actually have, the hours and runway you genuinely have outside your job, and an honest list of what to avoid.')
+      + p('It takes seven questions. About two minutes, tonight, after work. You can go deeper later if you want a sharper read, but you do not have to.'),
       'Draw my Compass', SITE + '/questionnaire')
   }),
 
@@ -70,7 +70,7 @@ const TEMPLATES = {
     subject: 'Your Compass is still waiting',
     html: shell(
       `Still here when you are, ${esc(name)}.`,
-      p('Your Founder Compass, your ideas and your board are exactly where you left them.')
+      p('Your Compass, your ideas and your board are exactly where you left them.')
       + p('The fastest way back in is a single daily check-in &mdash; it takes a minute, keeps your streak alive, and puts the next concrete step in front of you.'),
       'Open my dashboard', SITE + '/dashboard')
   })
@@ -87,7 +87,7 @@ async function send(type, to, name, opts = {}) {
   const sb = opts.sb || admin();
   const tpl = TEMPLATES[type];
   if (!tpl) return false;
-  const { subject, html } = tpl(name || 'founder');
+  const { subject, html } = tpl(name || 'there');
 
   if (!enabled()) {
     console.log('[mailer] RESEND_API_KEY unset — skipping "' + type + '" to ' + to);

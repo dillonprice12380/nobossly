@@ -68,7 +68,7 @@
       <% fitResults.forEach(function (f) { %>
         <%# A criterion with no bearing on this idea is set aside, not failed.
             Failing it would cap the score below 100% for good and strand the
-            founder at Level 1; passing it would inflate the score. %>
+            member at Level 1; passing it would inflate the score. %>
         <li class="fit-row <%= f.applicable === false ? 'is-na' : (f.pass ? 'is-pass' : 'is-fail') %>">
           <span class="fit-mark" aria-hidden="true"><%= f.applicable === false ? '–' : (f.pass ? '✓' : '✕') %></span>
           <div>
@@ -165,7 +165,7 @@
           <span class="chip"><%= sg.source === 'founder' ? '🧍 you' : '🤖 search' %></span>
           <div style="flex:1;min-width:12rem">
             <%= sg.claim %>
-            <%# rel/target on an external link the founder pasted: never hand a
+            <%# rel/target on an external link the member pasted: never hand a
                 third-party page a window.opener handle to this session. %>
             <% if (sg.url) { %><br><a class="muted small" href="<%= sg.url %>" target="_blank" rel="noopener noreferrer nofollow"><%= sg.url.slice(0, 60) %></a><% } %>
           </div>
@@ -224,7 +224,7 @@
       <label class="small">Name<input name="title" maxlength="140" required value="<%= idea.name %>"></label>
       <label class="small">What should they look at?
         <%# Prefilled from the draft, but editable: the most useful thing a
-            founder can add here is the one part they are unsure about. %>
+            member can add here is the one part they are unsure about. %>
         <textarea name="description" rows="6" maxlength="4000" required><%= (idea.tagline ? idea.tagline + '\n\n' : '') + (d.description || idea.profile_summary || '') + (d.problem ? '\n\nProblem it solves: ' + d.problem : '') + (d.customer ? '\nFirst customer: ' + d.customer : '') + (d.monetization ? '\nHow it makes money: ' + d.monetization : '') %></textarea>
       </label>
       <p class="muted small" style="margin:-.3rem 0 .6rem">Add the thing you are least sure about — that is what you want reviewers aiming at.</p>

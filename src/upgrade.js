@@ -1,5 +1,5 @@
 // Every paid gate used to be a bare `res.redirect('/pricing?upgrade=1')`. The
-// founder lost their place and got a price list instead of an answer to the
+// member lost their place and got a price list instead of an answer to the
 // question they actually asked, which was "what is behind this button?".
 //
 // gate() renders that answer in place: what the feature does, what it would
@@ -56,18 +56,18 @@ const FEATURES = {
   },
   collaborations: {
     title: 'Collaboration projects',
-    blurb: 'Post a project, recruit other founders on the platform, and run it with a shared board.',
+    blurb: 'Post a project, recruit other members on the platform, and run it with a shared board.',
     gets: ['Post collaboration projects', 'Review and accept collaborators', 'Browsing collaborations stays free'],
     back: { href: '/collaborations', label: 'Back to collaborations' }
   }
 };
 
 // Renders the in-place explanation. `key` picks the copy; anything unknown falls
-// back to a generic panel rather than throwing on a page the founder is reading.
+// back to a generic panel rather than throwing on a page someone is reading.
 function gate(res, key, backHref) {
   const f = FEATURES[key] || {
     title: 'A paid feature',
-    blurb: 'This one is part of the Founder plan.',
+    blurb: 'This one is part of the Escape plan.',
     gets: ['Everything in the free plan, uncapped'],
     back: { href: '/dashboard', label: 'Back to dashboard' }
   };
@@ -80,7 +80,7 @@ function gate(res, key, backHref) {
 function gateJson(res, key) {
   const f = FEATURES[key] || {};
   return res.json({
-    error: (f.title ? f.title + ' is part of the Founder plan. ' : '') + (f.blurb || ''),
+    error: (f.title ? f.title + ' is part of the Escape plan. ' : '') + (f.blurb || ''),
     redirect: '/pricing?upgrade=1'
   });
 }

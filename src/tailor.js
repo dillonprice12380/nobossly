@@ -1,12 +1,12 @@
 // Business classification + elective challenge matching.
 //
-// Every founder gets classified once against the business_taxonomy table
+// Every member gets classified once against the business_taxonomy table
 // (type, industry, customer segment, value prop) using their blueprint, their
 // chosen idea, or their questionnaire — whichever is the richest thing they
 // have. Electives are then matched from the tailored_challenges pool by tag
-// overlap and level band. When the pool runs thin for a founder's profile,
+// overlap and level band. When the pool runs thin for a member's profile,
 // the AI writes new electives INTO the pool (source='ai'), so every
-// generation deepens the database for the next similar founder.
+// generation deepens the database for the next similar member.
 const paths = require('./paths');
 
 const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1/ai-proxy';
@@ -40,7 +40,7 @@ async function taxonomy(sb) {
   return byKind;
 }
 
-// The richest description of what this founder is building, in priority order:
+// The richest description of what this member is building, in priority order:
 // active blueprint > favorited/first idea > questionnaire business fields.
 async function businessBrief(sb, userId) {
   const { data: bp } = await sb.from('blueprints').select('business_name, tagline, positioning, icp_archetype, icp_description, revenue_type, updated_at').eq('user_id', userId).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();

@@ -16,10 +16,10 @@
       <div><strong>@<%= u.username || r.user_id %></strong> <span class="chip">Level <%= r.level %></span> <span class="chip"><%= r.evidence_kind || 'no evidence yet' %></span>
       <p class="muted small" style="margin:.2rem 0 0">Game level <%= u.current_level || '?' %> · verified <%= u.verified_level || 1 %> · requested <%= new Date(r.created_at).toLocaleDateString() %></p></div>
     </div>
-    <% if (r.evidence_note) { %><p style="margin:.3rem 0"><%= r.evidence_note %></p><% } else { %><p class="muted small">The founder hasn't submitted evidence yet.</p><% } %>
+    <% if (r.evidence_note) { %><p style="margin:.3rem 0"><%= r.evidence_note %></p><% } else { %><p class="muted small">They have not submitted evidence yet.</p><% } %>
     <% if (r.evidence_url) { %><p class="small"><a href="<%= r.evidence_url %>" target="_blank" rel="noopener">Open evidence link</a> <span class="muted small">(admin-only; cleared on decision)</span></p><% } %>
     <form method="post" action="/admin/verifications/<%= r.id %>" class="cta-row" style="align-items:center">
-      <input name="reviewer_note" maxlength="300" placeholder="Optional note to the founder" style="flex:1;min-width:12rem">
+      <input name="reviewer_note" maxlength="300" placeholder="Optional note to the member" style="flex:1;min-width:12rem">
       <button class="btn btn-primary btn-sm" name="action" value="approve">Approve</button>
       <button class="btn btn-ghost btn-sm" name="action" value="reject">Reject</button>
     </form>

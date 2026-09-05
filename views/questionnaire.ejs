@@ -45,13 +45,13 @@
 <div class="page-head">
   <div>
     <% if (step === 1) { %>
-      <h1>What are you building?</h1>
-      <p class="muted">Pick the closest one. The questions after this are written for that path, so the more honest the pick, the more useful everything downstream.</p>
+      <h1>What is your way out?</h1>
+      <p class="muted">Pick the closest one — you can change it later by answering again. The questions after this are written for that path, so the more honest the pick, the more useful everything downstream.</p>
     <% } else { %>
       <h1><%= pathDef ? pathDef.emoji + ' ' + pathDef.label : 'Your questions' %></h1>
       <p class="muted step-line">
         <% if (!deepening) { %>
-          Step 2 of 2 — this is everything your Compass needs. About two minutes.
+          Step 2 of 2 — this is everything your Compass needs, including the hours and runway you actually have. About two minutes.
         <% } else { %>
           Sharpening — step <%= step - requiredSteps %> of <%= totalSteps - requiredSteps %>. Stop whenever you like; you keep what you have.
         <% } %>

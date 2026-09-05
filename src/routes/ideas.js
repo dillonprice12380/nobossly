@@ -7,7 +7,7 @@ const { sweepMilestones } = require('../milestones_engine');
 
 // This page used to be the AI idea generator: answer a questionnaire, receive
 // six business ideas, pick one. That is retired. The beginning of NoBossly is
-// the Founder Compass, and the only ideas that land here now are ones the
+// the Compass, and the only ideas that land here now are ones the
 // founder drafted themselves and ran past the Compass advisor (/compass/draft).
 //
 // The route survives because those drafts need somewhere to live, be reviewed

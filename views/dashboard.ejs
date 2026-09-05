@@ -1,6 +1,6 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1>Hey <%= profile.display_name || 'founder' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
+  <div><h1>Hey <%= profile.display_name || 'there' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
   <p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
   <% if (typeof ladder !== 'undefined' && ladder) { %>
     <% if (ladder.xpNeeded > 0) { %> · <%= ladder.xpNeeded %> XP to <%= ladder.next.title %>
@@ -19,7 +19,7 @@
   <div class="card" style="border-color:var(--accent);display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div style="flex:1;min-width:16rem">
       <h2 style="margin:0 0 .2rem">🧭 Start here: answer seven questions</h2>
-      <p class="muted small" style="margin:0">They are what your Founder Compass is drawn from — your archetype, your real constraints, and the territories where you actually hold an edge. Answering them is your Level 1 quest, so Level 2 stays locked until you do. About two minutes.</p>
+      <p class="muted small" style="margin:0">They are what your Compass is drawn from — your archetype, the hours you actually have after work, and the territories where you hold an edge. Answering them is your Level 1 quest, so Level 2 stays locked until you do. About two minutes.</p>
     </div>
     <a class="btn btn-primary" style="flex:none" href="/questionnaire">Answer them →</a>
   </div>
@@ -123,7 +123,7 @@
   </div>
 <% } %>
 
-<%# The Coach: rule-matched tips for exactly where this founder is right now. %>
+<%# The Coach: rule-matched tips for exactly where this member is right now. %>
 <% if (typeof coach !== 'undefined' && coach && coach.length) { %>
   <div class="card coach-card" style="border-left:3px solid var(--accent)">
     <h2>🎙️ Coach</h2>
@@ -139,7 +139,7 @@
 <div class="card">
   <h2><svg class="icon icon-lg"><use href="#i-suitcase"/></svg> Workspace</h2>
   <div class="workspace-grid">
-    <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Start here — your founder map</span></a>
+    <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Start here — your map out</span></a>
     <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>My ideas</strong><span class="muted small">Drafts &amp; advisor verdicts</span></a>
     <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
     <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins</span></a>
@@ -170,7 +170,7 @@
 <% } else { %>
   <div class="card center">
     <h2>No active sprint</h2>
-    <%# Three different states, three different next moves. Sending a founder with
+    <%# Three different states, three different next moves. Sending someone with
         no Compass to a list of ideas they do not have was the old dead end. %>
     <% if (ideas.length) { %>
       <p>Build your idea's blueprint, then launch your first 7-day sprint.</p>
@@ -179,8 +179,8 @@
       <p>Your Compass is drawn. Now draft your idea in your own words and run it past your advisor — it stress-tests the idea against your own fit test before you spend a week on it.</p>
       <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">✍️ Draft my idea</a>
     <% } else { %>
-      <p>It starts with your Founder Compass — your archetype, your real constraints, and the territories where you hold an edge. Everything after it is built on what it tells you.</p>
-      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">🧭 Draw my Founder Compass</a>
+      <p>It starts with your Compass — your archetype, your real constraints, and the territories where you hold an edge. Everything after it is built on what it tells you.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">🧭 Draw my Compass</a>
     <% } %>
   </div>
 <% } %>

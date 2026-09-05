@@ -18,7 +18,7 @@ const LABELS = {
   online_store: 'Reading your product against margin, channel and competition\u2026',
   physical_product: 'Reading your product against what it costs to make and what it can sell for\u2026',
   software: 'Reading your problem against what people already use for it\u2026',
-  exploring: 'Reading your profile and drawing your Founder Compass\u2026'
+  exploring: 'Reading your profile and drawing your Compass\u2026'
 };
 
 const STEPS = path => !pathsLib.isPath(path) || path === 'exploring' ? [
@@ -44,7 +44,7 @@ router.get('/', async (req, res, next) => {
     // `motivation` is only ever asked in the final depth step, so its absence is
     // an exact test for "this founder has only answered the core seven".
     const canDeepen = !!q && !q.motivation;
-    res.render('compass', { title: 'Your Founder Compass', compass, canDeepen, msg: req.query.msg || null });
+    res.render('compass', { title: 'Your Compass', compass, canDeepen, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
 
@@ -96,7 +96,7 @@ async function runCompassGeneration(req, q, jobId) {
       user_id: req.user.id, questionnaire_id: q.id, founder_path: path, data
     });
     if (error) throw error;
-    await awardXP(sb, req.user.id, req.profile, 25, 'Founder Compass drawn', 'founder_compasses', null);
+    await awardXP(sb, req.user.id, req.profile, 25, 'Compass drawn', 'founder_compasses', null);
     await patchJob({ status: 'done', progress: 100, stage: 'done', redirect: '/compass' });
   } catch (e) {
     console.error('compass generation', e);

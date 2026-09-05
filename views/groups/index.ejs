@@ -1,20 +1,20 @@
 <%- include('../partials/head') %>
 <div class="page-head">
   <div><h1><svg class="icon icon-lg"><use href="#i-team"/></svg> Groups</h1>
-  <p class="muted">Founder-led groups around niches, industries, and goals.</p></div>
+  <p class="muted">Member-led groups around niches, industries, and goals.</p></div>
   <a class="btn btn-ghost" href="/community">← Community</a>
 </div>
 <% if (canCreate) { %>
   <div class="card">
     <h3>Create a group</h3>
     <form method="post" action="/groups">
-      <label>Name<input name="name" maxlength="80" required placeholder="e.g. SaaS Founders"></label>
+      <label>Name<input name="name" maxlength="80" required placeholder="e.g. Leaving retail"></label>
       <label>Description<textarea name="description" rows="2" maxlength="600" placeholder="What is this group about?"></textarea></label>
       <button class="btn btn-primary">Create group</button>
     </form>
   </div>
 <% } else { %>
-  <p class="notice">Creating groups is a <strong>Founder plan</strong> feature. <a href="/pricing">Upgrade to start your own group</a> — joining groups is free for everyone.</p>
+  <p class="notice">Creating groups is an <strong>Escape plan</strong> feature. <a href="/pricing">Upgrade to start your own group</a> — joining groups is free for everyone.</p>
 <% } %>
 <% if (!groups.length) { %>
   <div class="card center"><p class="muted">No groups yet. <%= canCreate ? 'Start the first one!' : 'Check back soon.' %></p></div>

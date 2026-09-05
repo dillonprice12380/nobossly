@@ -1,4 +1,4 @@
-// The nine paths a founder can take, and the questions each one asks.
+// The nine paths out of a day job, and the questions each one asks.
 //
 // Onboarding used to branch on STAGE — already in business, have an idea, still
 // exploring — and then ask everyone the same generic questions. A content
@@ -74,13 +74,13 @@ const PATHS = [
     blurb: 'You build an audience first — video, writing, podcasting, streaming — and money follows attention.',
     marketing: {
       headline: 'You are not short of ideas. You are short of a plan that survives week three.',
-      subhead: 'NoBossly gives creators a fit test built from your own hours, your own budget and your own deal breakers — then a ladder where the levels are real: first paid collaboration, first hundred subscribers, first $1k month.',
+      subhead: 'NoBossly gives creators a fit test built from the hours you actually have after work, your own budget and your own deal breakers — then a ladder where the levels are real: first paid collaboration, first hundred subscribers, first $1k month, the day the channel out-earns the job.',
       pains: [
         'You have posted before and stopped, and you are not sure why it did not stick.',
-        'Everyone says "be consistent" without asking how many hours you actually have.',
+        'Everyone says "be consistent" without asking what time you get home.',
         'The advice is written for people who already have an audience.'
       ],
-      truth: 'An audience is a slow asset. If your runway is three months, the plan has to earn before the audience is big — and your fit test will say so out loud.'
+      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. If your runway is three months, the plan has to earn before the audience is big — and your fit test will say so out loud.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -112,13 +112,13 @@ const PATHS = [
     blurb: 'You sell a skill and do the work yourself — design, writing, development, editing, admin.',
     marketing: {
       headline: 'Freelancing is a business. Most freelancing advice treats it like a hobby with invoices.',
-      subhead: 'NoBossly holds your rate against your hours and your income goal, and tells you plainly when the arithmetic does not work — then gives you the quests that fix it.',
+      subhead: 'NoBossly holds your rate against the hours you have outside your job and the income that would actually replace it, tells you plainly when the arithmetic does not work — then gives you the quests that fix it.',
       pains: [
-        'You are busy and still not earning what you set out to earn.',
+        'You are busy in the evenings and still nowhere near replacing the salary.',
         'Every month starts from zero because the work is all one-off.',
         'You have never raised your rate because you do not know what happens if you do.'
       ],
-      truth: 'Hours times rate is a hard ceiling. We do that multiplication in front of you before you spend another year finding out.'
+      truth: 'Hours times rate is a hard ceiling, and while you have a job those hours are few. We do that multiplication in front of you — including what the number has to be before handing in your notice is arithmetic rather than nerve.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -149,11 +149,11 @@ const PATHS = [
     blurb: 'You sell judgement rather than hours — advising, coaching, or fixing a problem others cannot.',
     marketing: {
       headline: 'You already know things people pay for. The hard part is charging for the outcome.',
-      subhead: 'NoBossly turns your expertise into an offer with a named result and a price that follows it — then tests that offer against your own constraints before you take it to market.',
+      subhead: 'The job that is wearing you out is also where your expertise came from. NoBossly turns it into an offer with a named result and a price that follows it — then tests that offer against the evenings you actually have.',
       pains: [
         'You give away the good advice on the call and get paid for the paperwork.',
         'You price by the hour because naming a number for the result feels like nerve.',
-        'You have results you could point to and nothing written down.'
+        'You have a decade of results at work and nothing written down that is yours.'
       ],
       truth: 'An offer described as sessions and calls gets priced like sessions and calls. Your fit test asks whether you can name the outcome — because that one question decides your rate.'
     },
@@ -189,9 +189,9 @@ const PATHS = [
     blurb: 'You go to the customer — trades, cleaning, landscaping, mobile grooming, repairs.',
     marketing: {
       headline: 'The work is local. Almost none of the advice is.',
-      subhead: 'NoBossly builds your fit test around the things that actually decide a local trade: your travel radius, your licensing, your kit, and whether there is enough of the work near you.',
+      subhead: 'NoBossly builds your fit test around the things that actually decide a local trade: your travel radius, your licensing, your kit, whether there is enough of the work near you — and whether enough of it happens outside your working hours to start before you quit.',
       pains: [
-        'You can do the work. Finding the work is the part nobody teaches.',
+        'You can do the work. Finding it — around a shift pattern — is the part nobody teaches.',
         'You are quoting blind because you do not know your win rate.',
         'Half the day goes on driving you do not get paid for.'
       ],
@@ -228,10 +228,10 @@ const PATHS = [
     blurb: 'A place people come to — a shop, café, salon, studio, gym or bar.',
     marketing: {
       headline: 'The lease is the point of no return. Everything useful happens before you sign it.',
-      subhead: 'NoBossly puts the numbers in front of you first — your break-even day, your rent ceiling at half the takings you hope for — and gives you ways to test the concept before you commit to five years.',
+      subhead: 'This is the one path that usually asks you to quit first, so NoBossly puts the numbers in front of you before you sign anything — your break-even day, your rent ceiling at half the takings you hope for — and gives you ways to test the concept while you are still being paid.',
       pains: [
         'The landlord\'s footfall figure is the only footfall figure you have.',
-        'You have a fit-out budget and no break-even number.',
+        'You have a fit-out budget, no break-even number, and a salary you would be giving up.',
         'Everyone is encouraging and nobody has done the arithmetic with you.'
       ],
       truth: 'Rent is due whether anyone walks in or not. A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday — so we ask about half capacity, not best case.'
@@ -270,9 +270,9 @@ const PATHS = [
     blurb: 'You run the shop — sourcing, curating or reselling products rather than inventing them.',
     marketing: {
       headline: 'Selling is easy. Selling at a margin that survives advertising is the business.',
-      subhead: 'NoBossly makes you cost a unit properly — product, shipping, packaging, fees, returns — and then asks the question that decides everything: is there anything left to find a buyer with?',
+      subhead: 'NoBossly makes you cost a unit properly — product, shipping, packaging, fees, returns — and then asks the two questions that decide everything: is there anything left to find a buyer with, and can it be packed and posted in the hours you have?',
       pains: [
-        'Orders are coming in and the bank account is not growing.',
+        'Orders are coming in, the bank account is not growing, and you still need the job.',
         'You are one of ten identical listings and price is the only lever left.',
         'You do not know your real margin, only your rough one.'
       ],
@@ -350,9 +350,9 @@ const PATHS = [
     blurb: 'You build a product people use — a web app, mobile app, tool or plugin.',
     marketing: {
       headline: 'Building it was never the hard part.',
-      subhead: 'NoBossly keeps the scope inside what you can actually build — your hands, no-code, or a budget — and weighs distribution as hard as the build, because that is what ends most software.',
+      subhead: 'NoBossly keeps the scope inside what you can actually build in evenings — your hands, no-code, or a budget — and weighs distribution as hard as the build, because that is what ends most software long before the day job does.',
       pains: [
-        'The feature list keeps growing and the launch keeps moving.',
+        'The feature list keeps growing, the launch keeps moving, and Monday keeps arriving.',
         'You could build it. You have no idea how anyone would find it.',
         'You are not sure whether people use something else already, or nothing at all.'
       ],
@@ -389,14 +389,14 @@ const PATHS = [
     emoji: '🧭',
     blurb: 'You know you want to build something, but not what yet. Start here and the Compass narrows it down.',
     marketing: {
-      headline: 'Not knowing what to build is a starting point, not a disqualification.',
-      subhead: 'Answer seven questions and NoBossly draws your Founder Compass — your archetype, your real constraints, and the territories where you actually hold an edge. It never picks for you.',
+      headline: 'Knowing you want out is enough to start. You do not need the idea yet.',
+      subhead: 'Answer seven questions and NoBossly draws your Compass — your archetype, the hours and runway you genuinely have, and the territories where you actually hold an edge. It never picks for you.',
       pains: [
-        'You want to build something and every list of ideas feels written for someone else.',
-        'You have skills and no obvious way to turn them into a business.',
-        'You are worried about picking wrong and losing a year to it.'
+        'You want out of your job and every list of business ideas feels written for someone else.',
+        'You have skills your employer profits from and no obvious way to sell them yourself.',
+        'You are worried about picking wrong and losing a year of evenings to it.'
       ],
-      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly — which is what a fit test built from your own constraints does.'
+      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly, because the scarce thing is not inspiration — it is the evenings between now and getting out.'
     },
     core: [
       stageQuestion('How set are you on doing something?', [

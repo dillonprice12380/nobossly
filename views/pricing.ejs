@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <div class="page-head center" style="justify-content:center;text-align:center;display:block">
-  <h1>Simple pricing. Be your own boss.</h1>
-  <p class="lead">Start free with the Founder Compass — your archetype, your constraints, your territories. Upgrade when you're ready to go all-in.</p>
+  <h1>Simple pricing. Cheaper than another year of this.</h1>
+  <p class="lead">Start free with your Compass — your archetype, the hours your job leaves you, your territories. Upgrade when you want the blueprint and the sprints that get you out faster.</p>
 </div>
 <% if (typeof upgrade !== 'undefined' && upgrade) { %><p class="notice">That feature is part of the paid plan — pick an option below to unlock it.</p><% } %>
 <% if (msg) { %><p class="error"><%= msg %></p><% } %>
@@ -16,7 +16,7 @@
   <% tiers.forEach(t => { %>
     <div class="card price-card <%= t.key === 'year' ? 'price-featured' : '' %>">
       <% if (t.key === 'year') { %><span class="chip chip-success">Best value</span><% } %>
-      <% if (t.key === 'lifetime') { %><span class="chip">Founding member</span><% } %>
+      <% if (t.key === 'lifetime') { %><span class="chip">Early member</span><% } %>
       <h3><%= t.name %></h3>
       <p class="price">$<%= (t.price_cents / 100).toFixed(t.price_cents % 100 ? 2 : 0) %><span class="muted small"> <%= t.interval_label %></span></p>
       <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
@@ -24,11 +24,11 @@
       <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Start free, then upgrade</a>
       <% } else if (plan === 'paid') { %><span class="chip chip-success">You have full access</span>
       <% } else { %>
-        <form method="post" action="/billing/checkout/<%= t.key %>"><button class="btn btn-primary btn-block">Choose <%= t.name.replace('Founder ','') %></button></form>
+        <form method="post" action="/billing/checkout/<%= t.key %>"><button class="btn btn-primary btn-block">Choose <%= t.name.replace(/^\S+\s+/, '') %></button></form>
       <% } %>
     </div>
   <% }) %>
 </div>
-<p class="muted small center">Lifetime is founding-member pricing — it rises as NoBossly grows, and early members keep everything forever. No per-report fees, no idea-by-idea charges.</p>
+<p class="muted small center">Lifetime is early-member pricing — it rises as NoBossly grows, and early members keep everything forever. No per-report fees, no idea-by-idea charges.</p>
 <p class="muted small center">Subscriptions are handled securely by Stripe. Cancel anytime from Account settings — you keep access until the end of your billing period.</p>
 <%- include('partials/foot') %>

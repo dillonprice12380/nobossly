@@ -16,7 +16,7 @@
 <div class="page-head">
   <div>
     <p class="chip" style="margin:0 0 .5rem">Example Compass — not a real member</p>
-    <h1>🧭 What your Founder Compass looks like</h1>
+    <h1>🧭 What your Compass looks like</h1>
     <p class="muted">This one was drawn for <strong><%= compass.founder.name %></strong>: <%= compass.founder.summary %> Yours is drawn from your answers, in about two minutes.</p>
   </div>
   <a class="btn btn-primary" href="/signup">Draw mine free →</a>
@@ -57,7 +57,7 @@
 <div class="grid" style="margin-top:1rem">
   <div class="card">
     <h2>✅ The 5-point fit test</h2>
-    <p class="muted small">Any idea — theirs or anyone's — has to pass these. They come from the founder's own answers.</p>
+    <p class="muted small">Any idea — theirs or anyone's — has to pass these. They come from their own answers about hours, money and runway.</p>
     <ol style="padding-left:1.2rem;margin:.5rem 0 0">
       <% fit.forEach(function (f) { %><li style="margin:.4rem 0"><strong><%= f.criterion %></strong><br><span class="muted small"><%= f.why %></span></li><% }) %>
     </ol>
@@ -77,6 +77,6 @@
 <section class="cta-band" style="margin-top:1.4rem">
   <h2>Yours takes seven questions.</h2>
   <p class="muted">No card, no idea required. Answer seven questions and your own Compass is drawn — your archetype, your real constraints, and the territories where you actually hold an edge.</p>
-  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup">Draw my Founder Compass →</a>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup">Draw my Compass →</a>
 </section>
 <%- include('partials/foot') %>

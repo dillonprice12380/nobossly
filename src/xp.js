@@ -38,7 +38,7 @@ async function bumpStreak(sb, userId, profile) {
   }
 }
 
-// ---------- The Founder's Ladder ----------
+// ---------- The Ladder ----------
 // Levels gate on real accomplishments (see founder_levels.requirements).
 // current_level is the game score; verified_level is what real-world unlocks
 // check. Levels 1-7 self-verify on the honor-plus-witnesses system; reaching

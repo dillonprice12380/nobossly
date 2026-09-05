@@ -135,5 +135,85 @@ for (const def of paths.MARKETED) {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// 3. The positioning holds.
+//
+// The site is about getting out of a job, not about being a founder. That is a
+// copy decision, and copy drifts back: one new section written in the old voice
+// and the pages disagree with each other again. So this reads the RENDERED text
+// of the public pages, not the source, and holds it to two rules.
+
+console.log('\nThe pages still say what the site is about:');
+
+const freeFeatures = require('../src/routes/billing');   // side-effect-free require
+const TIERS = [{ key: 'month', name: 'Escape Monthly', tagline: 'Full access, billed monthly',
+                 price_cents: 1200, interval_label: 'per month' }];
+
+const marketing = {
+  'home.ejs': { paths: paths.MARKETED },
+  'how_it_works.ejs': {},
+  'paths_index.ejs': { paths: paths.MARKETED },
+  'pricing.ejs': { tiers: TIERS, freeFeatures: ['Your Compass — archetype, territories & fit test'],
+                   paidFeatures: ['Everything in Free'], plan: null, upgrade: null, msg: null }
+};
+for (const def of paths.MARKETED) {
+  marketing['path_landing.ejs:' + def.slug] = {
+    def, questions: paths.ownQuestions(def.slug), criteria: [], challenges: [],
+    others: paths.MARKETED.filter(p => p.slug !== def.slug)
+  };
+}
+
+// Visible text only: strip tags, scripts and styles, then decode the few
+// entities the copy actually uses. A word inside a class name is not copy.
+function visibleText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&mdash;/g, '—').replace(/&rsquo;/g, '’').replace(/&amp;/g, '&')
+    .replace(/&#\d+;/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+// "Founder" survives in exactly one place a reader can see: the title of level
+// six, which members earn and keep. Everything else was retired.
+const FOUNDER_OK = /🚀 Founder\b/g;
+
+// The vocabulary of the repositioning. A public page that manages to say none of
+// this has drifted back to being about founders in general.
+const JOB_WORDS = /\b(9 to 5|day job|your job|a job|the job|jobs|boss|paycheck|payslip|salary|employer|after work|evenings|notice|full-time|quit)\b/i;
+
+for (const [name, data] of Object.entries(marketing)) {
+  const file = name.split(':')[0];
+  let html;
+  try {
+    html = render(file, { title: 'T', metaDescription: '', canonicalUrl: 'https://nobossly.com/', ...data });
+  } catch (e) { ok(`${name}: renders`, false, e.message); continue; }
+  const text = visibleText(html);
+
+  const founders = (text.replace(FOUNDER_OK, ' ').match(/founder/gi) || []);
+  ok(`${name}: no retired founder framing`, founders.length === 0,
+     founders.length ? founders.length + ' left' : 'clean');
+
+  ok(`${name}: says what the reader is getting out of`, JOB_WORDS.test(text),
+     (text.match(JOB_WORDS) || ['—'])[0]);
+}
+
+// The two names that were retired outright, checked across the source so a
+// server-rendered string or an email template cannot bring them back either.
+console.log('\nRetired names stay retired:');
+const RETIRED = ['Founder Compass', "Founder's Ladder", 'Founder’s Ladder', 'Founder&rsquo;s Ladder'];
+const sourceFiles = []
+  .concat(fs.readdirSync(VIEWS).filter(f => f.endsWith('.ejs')).map(f => path.join(VIEWS, f)))
+  .concat(['src', 'src/routes'].flatMap(d => fs.readdirSync(path.join(ROOT, d))
+    .filter(f => f.endsWith('.js')).map(f => path.join(ROOT, d, f))));
+for (const term of RETIRED) {
+  const hits = sourceFiles.filter(p => fs.readFileSync(p, 'utf8').includes(term))
+    .map(p => path.relative(ROOT, p));
+  ok(`"${term}" appears nowhere`, hits.length === 0, hits.join(', ') || 'clean');
+}
+
+
 console.log(fail ? `\n${fail} failing\n` : '\nAll good\n');
 process.exit(fail ? 1 : 0);

@@ -11,7 +11,7 @@
         <p class="muted"><%= c.description %></p>
         <% if ((c.skills_needed || []).length) { %><p class="small">Needs: <% c.skills_needed.forEach(s => { %><span class="chip"><%= s %></span> <% }) %></p><% } %>
         <% if (c.offering) { %><p class="small muted">Offering: <%= c.offering %></p><% } %>
-        <p class="small muted">by <%= (pmap[c.requester_id] || {}).display_name || 'founder' %></p>
+        <p class="small muted">by <%= (pmap[c.requester_id] || {}).display_name || 'a member' %></p>
       </div>
     <% }) %>
     <% if (!collabs.length) { %><div class="card center muted">No open requests yet.</div><% } %>
@@ -37,7 +37,7 @@
         <p class="muted"><%= b.description %></p>
         <% if (b.what_testing) { %><p class="small">Testing: <%= b.what_testing %></p><% } %>
         <% if (b.ideal_tester) { %><p class="small muted">Ideal tester: <%= b.ideal_tester %></p><% } %>
-        <p class="small muted"><%= b.tester_count || 0 %>/<%= b.max_testers %> testers · by <%= (pmap[b.owner_id] || {}).display_name || 'founder' %></p>
+        <p class="small muted"><%= b.tester_count || 0 %>/<%= b.max_testers %> testers · by <%= (pmap[b.owner_id] || {}).display_name || 'a member' %></p>
         <% if (enrolled.has(b.id)) { %><span class="chip chip-success">✅ Enrolled</span>
         <% } else if (user && b.owner_id !== user.id) { %>
           <form method="post" action="/community/beta/<%= b.id %>/join"><button class="btn btn-primary btn-sm">Join as tester (+15 XP)</button></form>

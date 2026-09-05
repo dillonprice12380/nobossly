@@ -14,14 +14,14 @@
   };
 %>
 <div class="page-head">
-  <div><h1>🧭 Your Founder Compass</h1>
+  <div><h1>🧭 Your Compass</h1>
   <p class="muted">Your map, your call — the Compass sharpens your judgement, you choose the direction.</p></div>
   <a class="btn btn-ghost" href="/compass/generate">Redraw Compass</a>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
 <%# Onboarding asks seven questions. The rest of the questionnaire is offered
-    here instead, where the founder can see what a sharper Compass would sharpen. %>
+    here instead, where you can see what a sharper Compass would sharpen. %>
 <% if (typeof canDeepen !== 'undefined' && canDeepen) { %>
   <div class="card" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div style="flex:1;min-width:16rem">

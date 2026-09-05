@@ -33,7 +33,7 @@
     <% posts.forEach(p => { %>
       <div class="card reply">
         <p class="muted small">
-          <strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= (pmap[p.user_id] || {}).display_name || 'founder' %></a></strong>
+          <strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= (pmap[p.user_id] || {}).display_name || 'a member' %></a></strong>
           · lvl <%= (pmap[p.user_id] || {}).current_level || 1 %> · <%= new Date(p.created_at).toLocaleString() %>
           <% if (p.user_id === user.id || isOwner || (profile && profile.is_admin)) { %><% } %>
         </p>
@@ -45,7 +45,7 @@
     <div class="card">
       <h3>Members</h3>
       <% members.forEach(m => { %>
-        <p class="small"><a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= (pmap[m.user_id] || {}).display_name || 'founder' %></a><%= m.role === 'owner' ? ' · 👑 owner' : '' %></p>
+        <p class="small"><a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= (pmap[m.user_id] || {}).display_name || 'a member' %></a><%= m.role === 'owner' ? ' · 👑 owner' : '' %></p>
       <% }) %>
     </div>
   </aside>

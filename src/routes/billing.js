@@ -48,11 +48,11 @@ async function applySub(userId, { tier, status, customer, subId, periodEnd, life
 }
 
 const FREE_FEATURES = [
-  'Founder Compass — archetype, territories & fit test',
+  'Your Compass — archetype, territories & fit test',
   'Draft your own idea + advisor stress-test',
   'Community forum & the Wins wall',
   'Cohort challenges, streaks & XP',
-  'The Founder\u2019s Ladder — climb all 10 levels',
+  'The Ladder — all 10 levels, from first customer to full-time',
   'Up to 8 open tasks (manual)'
 ];
 const PAID_FEATURES = [

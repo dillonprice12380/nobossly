@@ -60,7 +60,7 @@ const val = v => {
   return String(v).trim();
 };
 
-// The founder's declared business path. This used to be the STAGE split
+// The member's declared business path. This used to be the STAGE split
 // (existing / idea / exploring); stage is now one question inside each path,
 // and this is the kind of business.
 function pathOf(q) {
@@ -68,7 +68,7 @@ function pathOf(q) {
   return paths.isPath(p) ? p : 'exploring';
 }
 
-// Everything the founder answered on their own path, rendered for the model.
+// Everything the member answered on their own path, rendered for the model.
 // The three hand-written blocks this replaces only knew the old stage split, so
 // a creator's follower count or a brick-and-mortar rent ceiling had nowhere to
 // go — they were collected and then dropped before the AI ever saw them.
@@ -199,29 +199,29 @@ ${site.text}
     : (running && val(q.biz_url)
       ? `
 
-The founder gave the website ${val(q.biz_url)} but it could not be read automatically. Try to find it via search before drawing any conclusion about what they do.`
+They gave the website ${val(q.biz_url)} but it could not be read automatically. Try to find it via search before drawing any conclusion about what they do.`
       : '');
 
   const misread = val(q.biz_misconceptions)
     ? `
-WHAT PEOPLE GET WRONG ABOUT IT, in the founder's words: ${val(q.biz_misconceptions)}
+WHAT PEOPLE GET WRONG ABOUT IT, in their words: ${val(q.biz_misconceptions)}
 Do not repeat that mistake.`
     : '';
 
   const subject = running
-    ? `An existing business the founder actually runs.
+    ? `An existing business they actually run.
 Business name: ${val(q.biz_name)}
 Website: ${val(q.biz_url) || 'not given'}
-What the founder says it sells: ${val(q.biz_description)}
-Everything the founder says they offer: ${val(q.biz_offerings) || 'not itemized'}${misread}
+What they say it sells: ${val(q.biz_description)}
+Everything they say they offer: ${val(q.biz_offerings) || 'not itemized'}${misread}
 Model: ${val(q.biz_model)} | Serves: ${val(q.target_customer)} | Based in: ${val(q.location)}
 Monthly revenue: ${val(q.biz_revenue_monthly) || 'unstated'} | Trend: ${val(q.biz_trend) || 'unstated'}
 Leading non-revenue metric: ${val(q.biz_traction_metric) || 'not given'}
-Where the founder says they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}${siteBlock}`
+Where they say they're stuck: ${val(q.biz_whats_stuck) || 'unstated'}${siteBlock}`
     : `A business idea: ${val(q.idea_description)}
 Problem it solves: ${val(q.idea_problem)} | First customer: ${val(q.idea_customer)}
 How it would make money: ${val(q.idea_monetization)} | Based in: ${val(q.location)}
-Competitors the founder already named: ${val(q.idea_known_competitors) || 'none named'}`;
+Competitors they already named: ${val(q.idea_known_competitors) || 'none named'}`;
 
   const system = 'You are NoBossly\'s market analyst. You use web search to establish the current state of a market. Every claim must come from something you actually found in search results or in material you were given — never invent statistics, company names, or sources. You never infer what a company does from its name; you check. Thin evidence stated plainly is worth more than confident filler.';
 
@@ -229,7 +229,7 @@ Competitors the founder already named: ${val(q.idea_known_competitors) || 'none 
 
 Do not guess the business model from the company name, and do not collapse the business into the nearest well-known category. A name that resembles a familiar category usually is not that category, and assessing the wrong market makes the entire analysis worthless.
 
-Enumerate EVERY distinct offering, audience, and segment the site and the founder describe — every job type, worker situation, location arrangement, and customer side. A business serving several segments is not the same business as one serving only the most obvious segment, and judging it on the obvious one alone is the single most common way this analysis goes wrong. If the founder lists offerings you cannot verify on the site, still include them and note they are unverified rather than dropping them.
+Enumerate EVERY distinct offering, audience, and segment the site and their answers describe — every job type, worker situation, location arrangement, and customer side. A business serving several segments is not the same business as one serving only the most obvious segment, and judging it on the obvious one alone is the single most common way this analysis goes wrong. If they list offerings you cannot verify on the site, still include them and note they are unverified rather than dropping them.
 
 Then assess the market the business is genuinely in, across all of its segments.`;
 
@@ -265,7 +265,7 @@ Include 3-5 competitors. Keep every field short. If the evidence is thin or mixe
 // Live demand evidence for a generated idea. Uses server-side web search via the
 // ai-proxy edge function (web_search flag) to find named, real-world signals.
 async function demandEvidence(token, idea) {
-  const system = 'You are NoBossly\'s market research analyst. You use web search to find real, current demand evidence for business ideas. Every signal must come from something you actually found in search results — never invent statistics, sources, or discussions. Honest, evidence-grounded reads build founder trust; thin evidence stated plainly is more valuable than inflated claims.';
+  const system = 'You are NoBossly\'s market research analyst. You use web search to find real, current demand evidence for business ideas. Every signal must come from something you actually found in search results — never invent statistics, sources, or discussions. Honest, evidence-grounded reads build trust; thin evidence stated plainly is more valuable than inflated claims.';
   const prompt = `Business idea: ${idea.name} — ${idea.tagline || ''}
 Category: ${idea.category || ''}
 Market context: ${idea.market_analysis || ''}
@@ -299,10 +299,10 @@ projection_month3 (string like "$500 MRR"), projection_month6 (string), projecti
 differentiators (array of strings), roadmap_summary (3-4 sentences),
 gtm_strategy (3-4 sentences), gtm_first_customer (how to land customer #1), gtm_channels (array of {channel, why, effort}), gtm_week1_actions (array of 5-7 strings).
 
-If the founder is already trading, build from their current traction rather than from zero, and follow these rules:
+If they are already trading, build from their current traction rather than from zero, and follow these rules:
 - Serve every segment the business actually has. If the profile lists several offerings, audiences, or job types, the positioning, ideal customer and pricing must account for all of them rather than only the most obvious one.
 - If it is a marketplace or two-sided business, respect the sequencing: name which side is being built first and why, and do not price or plan as though both sides are already liquid.
-- Ground projections in the founder's real current numbers, including any non-revenue metric they gave and its trend. State the assumption behind each projection so it can be checked. Do not present a projection as a target the founder must hit to justify continuing.
+- Ground projections in their real current numbers, including any non-revenue metric they gave and its trend. State the assumption behind each projection so it can be checked. Do not present a projection as a target they must hit to justify continuing.
 - Keep every field under 200 characters where it will be displayed as a label or chip: revenue_type, icp_archetype, pricing tier names and prices. Put the reasoning in the prose fields, not in the short ones.`;
   return askJSON(token, system, prompt, 6000);
 }
@@ -333,7 +333,7 @@ Projections: 3mo ${bp.projection_month3 || '?'}, 6mo ${bp.projection_month6 || '
 }
 
 async function generateMilestones(token, bp) {
-  const system = 'You are NoBossly, a startup coach who turns a founder\'s launch blueprint into meaningful, personalized milestones that mark real progress.';
+  const system = 'You are NoBossly, a coach who turns a launch blueprint into meaningful, personalized milestones that mark real progress for someone building their way out of a job.';
   const prompt = `${blueprintContext(bp)}
 
 Create 7 milestones tailored to THIS specific business that mark concrete moments of progress (not generic). Return a JSON array where each element has:
@@ -343,7 +343,7 @@ Order them roughly from earliest to latest in the journey.`;
 }
 
 async function generateChallenges(token, bp) {
-  const system = 'You are NoBossly, a startup execution coach who designs time-boxed challenges that push a founder toward their launch.';
+  const system = 'You are NoBossly, an execution coach who designs time-boxed challenges someone can finish in evenings and a weekend, pushing them toward their launch.';
   const prompt = `${blueprintContext(bp)}
 
 Create 6 time-boxed challenges tailored to THIS specific business that build momentum toward launch and first revenue. Return a JSON array where each element has:
@@ -352,18 +352,18 @@ title (short, action-oriented, specific to this business), description (1-2 sent
 }
 
 async function generateBudget(token, bp) {
-  const system = 'You are NoBossly, a pragmatic startup finance coach who builds lean, realistic monthly operating budgets for early-stage founders.';
+  const system = 'You are NoBossly, a pragmatic finance coach who builds lean, realistic monthly operating budgets for people starting out, usually alongside a paying job.';
   const prompt = `${blueprintContext(bp)}
 
 Propose a lean MONTHLY startup operating budget for this specific business. Return a JSON array of 6-8 elements, each with:
-category (short label, e.g. "Software & tools", "Marketing & ads", "Contractors"), monthly_limit (integer US dollars, realistic for an early-stage solo founder), rationale (1 short sentence on why this matters for THIS business).
+category (short label, e.g. "Software & tools", "Marketing & ads", "Contractors"), monthly_limit (integer US dollars, realistic for one person starting out alongside a job), rationale (1 short sentence on why this matters for THIS business).
 Keep the total lean and grounded in the business model above.`;
   return askJSON(token, system, prompt, 2500);
 }
 
 async function budgetInsights(token, summary) {
-  const system = 'You are NoBossly, a startup finance coach. You give concise, practical, encouraging insights on a founder\'s spending vs. their budget.';
-  const prompt = `Here is the founder's current month budget and spending (USD):
+  const system = 'You are NoBossly, a finance coach. You give concise, practical, encouraging insights on their spending vs. their budget.';
+  const prompt = `Here is their current month budget and spending (USD):
 ${JSON.stringify(summary)}
 
 Return a JSON object: { "summary": "2-3 sentence read on how they're doing", "tips": ["3-5 specific, actionable tips based on the numbers"] }.

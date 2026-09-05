@@ -284,7 +284,7 @@ router.get('/locations', async (req, res, next) => {
 
 // Help center
 router.get('/help', (req, res) => {
-  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 the Founder Compass, sprints, plans, billing, and your account.' });
+  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 your Compass, sprints, plans, billing, and your account.' });
 });
 
 // How it works

@@ -1,9 +1,9 @@
-// A worked example of a Founder Compass, shown to signed-out visitors.
+// A worked example of a Compass, shown to signed-out visitors.
 //
 // The Compass is the best thing the product makes and it used to be invisible
-// until a founder had answered the whole questionnaire — so nobody chose to
+// until a member had answered the whole questionnaire — so nobody chose to
 // start on the strength of it, because nobody could see it. This is one
-// illustrative Compass for an invented founder, clearly labelled as an example
+// illustrative Compass for an invented member, clearly labelled as an example
 // wherever it renders. It is static copy, never a real member's data.
 
 module.exports = {
@@ -16,7 +16,7 @@ module.exports = {
     archetype: {
       name: 'The Trusted Insider',
       emoji: '🛡️',
-      tagline: 'You already have the credibility other founders spend three years trying to buy.',
+      tagline: 'You already have the credibility other people spend three years trying to buy.',
       description: 'You win by selling into a room you are already standing in — people who know your work, in an industry whose language you speak natively. Your typical failure is the opposite one: you underprice your access because it feels ordinary to you, and you wait for permission that is never coming.'
     },
     loadout: {

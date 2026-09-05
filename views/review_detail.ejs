@@ -5,7 +5,7 @@
   <div>
     <span class="tag"><%= request.review_type.replace('_', ' ') %></span>
     <h1><%= request.title %></h1>
-    <p class="muted"><%= isMine ? 'Your request' : 'Posted by ' + (names[request.submitter_id] || 'a founder') %> · <%= reviews.length %> review<%= reviews.length === 1 ? '' : 's' %></p>
+    <p class="muted"><%= isMine ? 'Your request' : 'Posted by ' + (names[request.submitter_id] || 'a member') %> · <%= reviews.length %> review<%= reviews.length === 1 ? '' : 's' %></p>
   </div>
 </div>
 
@@ -73,7 +73,7 @@
   <div class="card">
     <div class="page-head" style="margin:0 0 .4rem">
       <div>
-        <strong><%= names[r.reviewer_id] || 'A founder' %></strong>
+        <strong><%= names[r.reviewer_id] || 'A member' %></strong>
         <span class="muted small"> · <%= new Date(r.created_at).toLocaleDateString() %></span>
       </div>
       <% if (r.rating) { %><span class="chip">★ <%= r.rating %>/5</span><% } %>

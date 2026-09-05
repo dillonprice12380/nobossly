@@ -96,7 +96,7 @@
 
 <div class="card">
   <h2>🧭 Core challenges</h2>
-  <p class="muted small">The path every founder walks — filtered to your level. New challenges unlock as you climb; active ones are pinned at the top of the page.</p>
+  <p class="muted small">The path everyone walks on the way out — filtered to your level. New challenges unlock as you climb; active ones are pinned at the top of the page.</p>
   <div class="grid">
     <% challenges.filter(c => !(accMap[c.id] && accMap[c.id].status === 'active')).forEach(c => { const a = accMap[c.id]; %>
       <div class="card">
@@ -130,7 +130,7 @@
 <div class="card">
   <h2>🎯 Electives for your business</h2>
   <% if (unclassified) { %>
-    <p class="muted">Electives are challenges matched to your exact kind of business — its type, industry, customers, and what it promises them. Draw your Founder Compass and pick an idea, and this section fills itself in.</p>
+    <p class="muted">Electives are challenges matched to your exact kind of business — its type, industry, customers, and what it promises them. Draw your Compass and pick an idea, and this section fills itself in.</p>
     <a class="btn btn-primary btn-sm" href="/compass">Draw your Compass</a>
   <% } else if (!electives.length) { %>
     <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up<%= paid ? ' and as the AI writes more for your profile' : '' %>.</p>

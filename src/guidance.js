@@ -1,5 +1,5 @@
 // The Coach: a rule-based guidance engine. Computes a real-time snapshot of
-// where the founder is in their journey (Compass, sprint, streak, tasks,
+// where the member is in their journey (Compass, sprint, streak, tasks,
 // challenges, rung, recency) and matches it against guidance_rules in the
 // database. Deliberately ZERO AI calls — every tip is deterministic, instant,
 // and free. Rules live in SQL so the library can grow without a deploy.
@@ -32,7 +32,7 @@ function matches(cond, state) {
 
 function fill(msg, state) {
   return String(msg || '')
-    .replace(/\{name\}/g, state.name || 'founder')
+    .replace(/\{name\}/g, state.name || 'there')
     .replace(/\{streak\}/g, String(state.streak_days || 0))
     .replace(/\{longest_streak\}/g, String(state.longest_streak || 0))
     .replace(/\{level\}/g, String(state.level || 1))
@@ -85,7 +85,7 @@ async function computeState(sb, user, profile, pre = {}) {
   const lastActive = profile.last_active_at ? new Date(profile.last_active_at).getTime() : (profile.created_at ? new Date(profile.created_at).getTime() : now);
 
   return {
-    name: (profile.display_name || profile.username || 'founder').split(' ')[0],
+    name: (profile.display_name || profile.username || 'there').split(' ')[0],
     plan: pre.plan || 'free',
     level: profile.current_level || 1,
     verified_level: profile.verified_level || 1,
@@ -96,7 +96,7 @@ async function computeState(sb, user, profile, pre = {}) {
     // whether it is still outstanding — it is the first thing to nudge.
     has_questionnaire: !!qrun,
     has_compass: compassN > 0,
-    // Live ideas only — a cut idea should not keep nagging the founder to
+    // Live ideas only — a cut idea should not keep nagging the member to
     // revise it, and its score should not stand in for the one they moved on to.
     ...(function () {
       const live = ideaRows.filter(r => !r.cut_at);

@@ -13,7 +13,7 @@
       <a class="btn btn-primary btn-lg" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
       <a class="btn btn-ghost btn-lg" href="/sample-compass">See a real Compass first</a>
     </div>
-    <p class="muted small" style="margin-top:.7rem">Free. Seven questions. No card.</p>
+    <p class="muted small" style="margin-top:.7rem">Free. Seven questions. No card. Keep your job while you do it.</p>
   </div>
 </section>
 
@@ -29,8 +29,8 @@
 <%# The questions this path actually asks. Pulled from the same definition the
     product renders, so the page cannot promise a form that does not exist. %>
 <section>
-  <h2>Questions written for <%= def.label.toLowerCase() %>s, not for startups in general</h2>
-  <p class="muted">Most tools ask everyone the same thing. These are the ones your path asks — alongside the six everyone answers about hours, money, runway and deal breakers.</p>
+  <h2>Questions written for <%= def.label.toLowerCase() %>s, not for businesses in general</h2>
+  <p class="muted">Most tools ask everyone the same thing. These are the ones your path asks — alongside the six everyone answers: the hours left after work, the money you can risk, how long you could last without a paycheck, and what you will not do.</p>
   <div class="q-grid">
     <% questions.forEach(function (q) { %>
       <div class="q-card">
@@ -49,7 +49,7 @@
 <% if (criteria.length) { %>
 <section>
   <h2>🎯 The fit test you would be held to</h2>
-  <p class="muted">Five criteria drawn from your own answers. Your idea has to pass them before Level 1 is done — and some are checked by arithmetic against your own numbers, not by opinion.</p>
+  <p class="muted">Five criteria drawn from your own answers — your hours, your runway, your deal breakers. Your idea has to pass them before Level 1 is done, and some are checked by arithmetic against your own numbers rather than by opinion.</p>
   <ul class="crit-list">
     <% criteria.forEach(function (c) { %>
       <li class="crit-row">
@@ -72,7 +72,7 @@
 <% if (challenges.length) { %>
 <section>
   <h2>⚔️ Quests built for this path</h2>
-  <p class="muted">Alongside the ten shared rungs every founder climbs. More are written for you by the advisor as it learns your answers.</p>
+  <p class="muted">Alongside the ten shared rungs everyone climbs. More are written for you by the advisor as it learns your answers.</p>
   <div class="grid">
     <% challenges.forEach(function (c) { %>
       <div class="card ch-card">
@@ -87,18 +87,18 @@
 
 <%# The shared spine — same for every path, and worth saying so. %>
 <section class="card">
-  <h2>🎮 Then the same ladder as everyone else</h2>
-  <p class="muted">Ten levels. XP alone can never buy a rung — every one gates on something real. The path changes the questions and the quests; it does not change what counts as progress.</p>
+  <h2>🎮 Then the same ladder out as everyone else</h2>
+  <p class="muted">Ten levels between a job you want to leave and the month you can afford to leave it. XP alone can never buy a rung — every one gates on something real. The path changes the questions and the quests; it does not change what counts as progress.</p>
   <div class="rung-row">
     <span class="rung-pill">🌱 Ideator</span>
     <span class="rung-pill">🔍 Explorer</span>
     <span class="rung-pill">🔨 Builder</span>
     <span class="rung-pill">⚡ Hustler</span>
-    <span class="rung-pill is-key">⚙️ Operator — first sale</span>
+    <span class="rung-pill is-key">⚙️ Operator — first non-salary dollar</span>
     <span class="rung-pill">🚀 Founder</span>
     <span class="rung-pill">🛠️ Maker</span>
     <span class="rung-pill">🎯 Launcher</span>
-    <span class="rung-pill">💎 Operator Pro</span>
+    <span class="rung-pill is-key">💎 Operator Pro — full-time</span>
     <span class="rung-pill">👑 Legend</span>
   </div>
   <a class="btn btn-ghost" style="margin-top:1rem;display:inline-block" href="/how-it-works">How the whole thing works →</a>
@@ -106,8 +106,8 @@
 
 <section class="cta-band">
   <h2>Start as a <%= def.label.toLowerCase() %>.</h2>
-  <p class="muted">Seven questions, about two minutes, and your Compass is drawn from them. You can change path later by answering again.</p>
-  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>">Draw my Founder Compass →</a>
+  <p class="muted">Seven questions, about two minutes, and your Compass is drawn from them. Tonight, after work. You can change path later by answering again.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>">Draw my Compass →</a>
 </section>
 
 <section>

@@ -9,7 +9,7 @@
     <tr>
       <td><strong><%= u.display_name || u.username %></strong><br><span class="muted small">@<%= u.username %><%= u.is_admin ? ' · 🛡 admin' : '' %></span></td>
       <td>lvl <%= u.current_level %> · <%= u.xp_total %> XP</td>
-      <td><% const tn = {month:'Founder Monthly',quarter:'Founder Quarterly',year:'Founder Annual',lifetime:'Founder Lifetime'}; %><%= u.is_lifetime ? 'Founder Lifetime' : (tn[u.subscription_tier] || 'Free') %><% if (u.subscription_status === 'active' && !u.is_lifetime && u.subscription_tier) { %> <span class="chip chip-success">active</span><% } %></td>
+      <td><% const tn = {month:'Escape Monthly',quarter:'Escape Quarterly',year:'Escape Annual',lifetime:'Escape Lifetime'}; %><%= u.is_lifetime ? 'Escape Lifetime' : (tn[u.subscription_tier] || 'Free') %><% if (u.subscription_status === 'active' && !u.is_lifetime && u.subscription_tier) { %> <span class="chip chip-success">active</span><% } %></td>
       <td><%= u.account_status || 'active' %></td>
       <td><%= new Date(u.created_at).toLocaleDateString() %></td>
       <td class="actions">
@@ -19,10 +19,10 @@
           <input type="hidden" name="action" value="grant_plan">
           <select name="tier" class="sm-select">
             <option value="free">Free</option>
-            <option value="month">Founder Monthly</option>
-            <option value="quarter">Founder Quarterly</option>
-            <option value="year">Founder Annual</option>
-            <option value="lifetime">Founder Lifetime</option>
+            <option value="month">Escape Monthly</option>
+            <option value="quarter">Escape Quarterly</option>
+            <option value="year">Escape Annual</option>
+            <option value="lifetime">Escape Lifetime</option>
           </select>
           <button class="btn btn-ghost btn-sm">Grant plan</button>
         </form>
