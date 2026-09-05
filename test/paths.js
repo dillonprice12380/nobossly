@@ -181,5 +181,91 @@ console.log('\nEvery marketed path can carry a landing page:');
   ok('no two paths share a headline', new Set(heads).size === heads.length);
 }
 
+
+// ---------------------------------------------------------------------------
+// The creator audience bar.
+//
+// "How big is your audience" was one question in one unit, which gave a blogger
+// with 40,000 visits a month the same read as an influencer with 40,000
+// followers. They are not the same business and the money does not arrive at
+// the same size, so the path now asks which kind of creator this is and then
+// asks for the right number.
+
+console.log('\nCreators are measured in the right unit:');
+
+const SOCIAL = 'Social media creator or influencer';
+const PUBLISHER = 'Publisher or blogger';
+const creatorQs = paths.coreQuestions('creator');
+const byName = Object.fromEntries(creatorQs.map(q => [q.name, q]));
+
+ok('the path asks what kind of creator they are', !!byName.creator_type,
+   (byName.creator_type ? byName.creator_type.options.length + ' kinds' : 'MISSING'));
+ok('every kind maps to a metric and a target',
+   paths.CREATOR_TYPES.every(t => paths.CREATOR_AUDIENCE[t].metric && paths.CREATOR_AUDIENCE[t].target > 0),
+   paths.CREATOR_TYPES.length + ' kinds');
+ok('the two question sets are mutually exclusive',
+   !paths.SOCIAL_CREATOR_TYPES.some(t => paths.PUBLISHER_CREATOR_TYPES.includes(t)),
+   paths.SOCIAL_CREATOR_TYPES.length + ' social, ' + paths.PUBLISHER_CREATOR_TYPES.length + ' publisher');
+
+// Only one audience question is ever asked, and it is the right one.
+for (const [kind, asked, hidden] of [[SOCIAL, 'audience_size', 'monthly_traffic'],
+                                     [PUBLISHER, 'monthly_traffic', 'audience_size']]) {
+  const visible = creatorQs.filter(q => paths.showIfSatisfied(q, { creator_type: kind })).map(q => q.name);
+  ok(`${kind}: asked for ${asked}`, visible.includes(asked), visible.join(', '));
+  ok(`${kind}: not asked for ${hidden}`, !visible.includes(hidden), 'correctly hidden');
+}
+
+// No conditional question is HTML-required — a hidden required field blocks the
+// form with a validation message nobody can see.
+ok('no conditional question is required',
+   paths.PATHS.every(p => paths.coreQuestions(p.slug).concat(paths.depthQuestions(p.slug))
+     .every(q => !(q.showIf && q.required))),
+   'checked every path');
+
+console.log('\nThe bar is the right number, read honestly:');
+
+const creatorRun = (type, band) => ({
+  founder_path: 'creator',
+  path_answers: { creator_type: type, [type === PUBLISHER ? 'monthly_traffic' : 'audience_size']: band }
+});
+
+eq('an influencer is measured in followers',
+   paths.creatorAudience(creatorRun(SOCIAL, '1,000–10,000')).metric, 'followers');
+eq('...against 10,000', paths.creatorAudience(creatorRun(SOCIAL, '1,000–10,000')).target, 10000);
+eq('a publisher is measured in monthly visitors',
+   paths.creatorAudience(creatorRun(PUBLISHER, '10,000–50,000')).metric, 'monthly visitors');
+eq('...against 50,000', paths.creatorAudience(creatorRun(PUBLISHER, '10,000–50,000')).target, 50000);
+
+// The FLOOR of the band, not the top. Someone in "1,000-10,000" has at least
+// 1,000 — crediting them with 10,000 would tell a creator with 1,200 followers
+// that they had cleared a bar they are nowhere near.
+eq('a band reads as its floor, not its ceiling',
+   paths.creatorAudience(creatorRun(SOCIAL, '1,000–10,000')).now, 1000);
+eq('...so 1,200 followers has not cleared 10,000',
+   paths.creatorAudience(creatorRun(SOCIAL, '1,000–10,000')).met, false);
+eq('...and the band that starts at the bar clears it',
+   paths.creatorAudience(creatorRun(SOCIAL, '10,000–50,000')).met, true);
+
+// The whole point of splitting the units: the same raw number means different
+// things to the two kinds.
+eq('40k-ish traffic has NOT cleared the publisher bar',
+   paths.creatorAudience(creatorRun(PUBLISHER, '10,000–50,000')).met, false);
+eq('40k-ish followers HAS cleared the influencer bar',
+   paths.creatorAudience(creatorRun(SOCIAL, '10,000–50,000')).met, true);
+
+// Unknown is not the same as short.
+eq('an unanswered audience is unknown, not behind',
+   paths.creatorAudience(creatorRun(SOCIAL, undefined)).met, null);
+eq('nobody off the creator path has an audience bar',
+   paths.creatorAudience({ founder_path: 'freelancer', path_answers: {} }), null);
+
+// Switching kind must not leave the previous kind's number behind, or the
+// Compass reads a follower count back to a blogger.
+const stale = partition(creatorQs, { creator_type: PUBLISHER, monthly_traffic: '50,000–250,000' },
+                        { creator_type: SOCIAL, audience_size: '10,000–50,000' });
+ok('switching to publisher clears the stale follower count',
+   stale.pathAnswers.audience_size === undefined, JSON.stringify(stale.pathAnswers.audience_size));
+eq('...and keeps the new traffic figure', stale.pathAnswers.monthly_traffic, '50,000–250,000');
+
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nPaths hold. All checks pass.');
 process.exit(fail ? 1 : 0);

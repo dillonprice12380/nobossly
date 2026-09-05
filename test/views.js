@@ -215,5 +215,40 @@ for (const term of RETIRED) {
 }
 
 
+
+// ---------------------------------------------------------------------------
+// 4. Attributes built inside a template tag are not double-escaped.
+//
+// `<%= %>` escapes what it prints, so a string that already contains escaped
+// quotes comes out as placeholder=&#34;… — which is not an attribute at all.
+// Every placeholder on the questionnaire was invisible this way, silently,
+// because the markup stays valid enough to render. Nothing throws; the hint
+// text simply never appears.
+
+console.log('\nAttributes survive the template:');
+
+const qHtml = render('questionnaire.ejs', {
+  paths: paths.PATHS, path: 'creator', pathDef: paths.get('creator'),
+  step: 2, totalSteps: paths.totalSteps('creator'), requiredSteps: 2, deepening: false,
+  questions: paths.coreQuestions('creator'), q: {}, pathAnswers: {}, run: 1,
+  canCancel: false, msg: null, profile: { username: 'x' }
+});
+
+const mangled = (qHtml.match(/\b[a-z-]+=&(#34|quot|amp);/g) || []);
+ok('no attribute was escaped twice', mangled.length === 0,
+   mangled.slice(0, 3).join(', ') || 'clean');
+ok('placeholders actually render as placeholders',
+   /placeholder="the narrower the better/.test(qHtml),
+   (qHtml.match(/placeholder="[^"]{0,40}/) || ['NONE'])[0]);
+
+// The conditional-question payload has to survive as parseable JSON, or the
+// browser silently shows every question at once.
+const conds = [...qHtml.matchAll(/data-show-if="([^"]*)"/g)].map(m => m[1]);
+ok('every showIf condition is present', conds.length === 2, conds.length + ' found');
+ok('...and each parses after HTML decoding', conds.every(c => {
+  try { return !!JSON.parse(c.replace(/&quot;/g, '"').replace(/&amp;/g, '&')); }
+  catch (e) { return false; }
+}), conds.length ? 'parsed' : 'none');
+
 console.log(fail ? `\n${fail} failing\n` : '\nAll good\n');
 process.exit(fail ? 1 : 0);

@@ -1,44 +1,751 @@
 [
-{"slug": "zero_budget", "criterion": "Can it start with no money at all — only your time?", "why": "You put your launch budget at zero, so anything with a bill attached is out before it begins.", "check_kind": "numeric", "metric": "startup_cost", "op": "lte", "value_from": null, "value": 0, "applies_when": {"zero_budget": true}, "category": "budget", "priority": 96, "is_active": true, "paths": []},
-{"slug": "budget_ceiling", "criterion": "Does it start for under {budget}?", "why": "That is everything you said you can put in, and you named no runway behind it.", "check_kind": "numeric", "metric": "startup_cost", "op": "lte", "value_from": "launch_budget_usd", "value": null, "applies_when": {"no_runway": true, "has_budget": true, "zero_budget": false}, "category": "budget", "priority": 95, "is_active": true, "paths": []},
-{"slug": "revenue_deadline_urgent", "criterion": "Is it earning inside {weeks}?", "why": "You said you need income now. An idea that pays nothing for six months is one you will be forced to abandon.", "check_kind": "numeric", "metric": "time_to_revenue", "op": "lte", "value_from": "revenue_deadline_weeks", "value": null, "applies_when": {"no_runway": true}, "category": "timing", "priority": 94, "is_active": true, "paths": []},
-{"slug": "no_camera", "criterion": "Can it sell without you appearing on camera?", "why": "You named video as a deal breaker, so distribution has to route around it entirely.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"avoids_camera": true}, "category": "deal_breaker", "priority": 93, "is_active": true, "paths": []},
-{"slug": "no_cold_outreach", "criterion": "Can it find customers without cold calling or cold email?", "why": "You ruled cold outreach out, so demand has to come to you or come through someone else.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"avoids_cold_outreach": true}, "category": "deal_breaker", "priority": 93, "is_active": true, "paths": []},
-{"slug": "no_inventory", "criterion": "Does it work without holding stock or shipping anything?", "why": "You named inventory as a deal breaker, and it is also the fastest way to spend a launch budget.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"avoids_inventory": true}, "category": "deal_breaker", "priority": 93, "is_active": true, "paths": []},
-{"slug": "not_hourly", "criterion": "Does it make money without you selling hours?", "why": "At the hours you have, hourly delivery mathematically cannot reach the income you named.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"income_goal": {"in": ["full_salary", "big"]}, "hours_per_week": {"lte": 20}}, "category": "leverage", "priority": 92, "is_active": true, "paths": []},
-{"slug": "builds_on_existing", "criterion": "Does it build on the business you already run, rather than starting a second one?", "why": "You already have customers and a reputation — an unrelated idea means paying that entry cost twice.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"is_running": true}, "category": "fit_to_path", "priority": 91, "is_active": true, "paths": []},
-{"slug": "fits_the_hours", "criterion": "Can it be run in {hours} a week, without a fixed daytime schedule?", "why": "You have a job with hours of its own, so anything needing you available in business hours cannot work.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"employed": true, "hours_per_week": {"lte": 20}}, "category": "time", "priority": 90, "is_active": true, "paths": []},
-{"slug": "thin_hours", "criterion": "Can it move forward in {hours} a week, in short sessions?", "why": "At the hours you have, anything needing long unbroken blocks will stall and stay stalled.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"hours_per_week": {"lte": 10}}, "category": "time", "priority": 88, "is_active": true, "paths": []},
-{"slug": "uses_credentials", "criterion": "Does your qualification actually matter to the person buying?", "why": "It is your single largest advantage — an idea that wastes it starts you from zero against everyone else.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"has_credentials": true}, "category": "advantage", "priority": 85, "is_active": true, "paths": []},
-{"slug": "uses_customer_access", "criterion": "Does it reach people you can already get to?", "why": "You already have a way in with a specific group, and that access is worth more than any marketing budget you could buy.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"has_customer_access": true}, "category": "advantage", "priority": 84, "is_active": true, "paths": []},
-{"slug": "serves_current_customers", "criterion": "Could you sell it to someone who has already bought from you?", "why": "The people who already trust you are the cheapest customers you will ever have, and the fastest proof you are right.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"is_running": true}, "category": "validation", "priority": 82, "is_active": true, "paths": []},
-{"slug": "budget_ceiling_soft", "criterion": "Does it start for under {budget}?", "why": "That is the money you said you can put toward this in the next 90 days.", "check_kind": "numeric", "metric": "startup_cost", "op": "lte", "value_from": "launch_budget_usd", "value": null, "applies_when": {"has_budget": true, "zero_budget": false}, "category": "budget", "priority": 80, "is_active": true, "paths": []},
-{"slug": "low_tech_build", "criterion": "Can you build and run it without writing code or hiring someone who can?", "why": "You rated your technical comfort low, so anything needing a developer puts your launch behind someone else's calendar.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"tech_level": {"lte": 2}}, "category": "capability", "priority": 76, "is_active": true, "paths": []},
-{"slug": "sells_without_selling", "criterion": "Can it sell without you doing the persuading face to face?", "why": "You rated selling as uncomfortable, and an idea that lives or dies on your pitch is fighting you from the start.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"sales_comfort": {"lte": 2}}, "category": "capability", "priority": 74, "is_active": true, "paths": []},
-{"slug": "reversible_bet", "criterion": "If it fails in three months, do you walk away without real damage?", "why": "You put your risk tolerance at the careful end, so the size of the downside matters more to you than the size of the upside.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"risk_tolerance": "low — steady and safe"}, "category": "risk", "priority": 72, "is_active": true, "paths": []},
-{"slug": "revenue_deadline", "criterion": "Is it earning inside {weeks}?", "why": "That is the runway you gave yourself, and an idea that outlasts it stops being a choice.", "check_kind": "numeric", "metric": "time_to_revenue", "op": "lte", "value_from": "revenue_deadline_weeks", "value": null, "applies_when": {"revenue_deadline_weeks": {"gte": 1}}, "category": "timing", "priority": 70, "is_active": true, "paths": []},
-{"slug": "scales_past_you", "criterion": "Can it grow without you doing every unit of the work?", "why": "You said you want to replace your salary — that needs something that keeps earning when you stop.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"income_goal": {"in": ["full_salary", "big"]}}, "category": "leverage", "priority": 66, "is_active": true, "paths": []},
-{"slug": "uses_industry", "criterion": "Does it use what you know from your field, rather than starting cold?", "why": "Your industry knowledge is the thing a competitor cannot copy quickly — an idea outside it throws that away.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {"has_industry": true, "has_credentials": false}, "category": "advantage", "priority": 60, "is_active": true, "paths": []},
-{"slug": "one_specific_buyer", "criterion": "Can you name one specific person who would pay for this?", "why": "Not a market or a segment — one nameable person. If you cannot, the idea is still an abstraction.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "validation", "priority": 40, "is_active": true, "paths": []},
-{"slug": "already_paying", "criterion": "Are people already paying to solve this some other way?", "why": "An existing budget, however badly spent, is the difference between demand and a good argument.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "demand", "priority": 38, "is_active": true, "paths": []},
-{"slug": "would_you_still", "criterion": "Would you still want to be doing this in a year?", "why": "You named what you are running toward. An idea that works but that you resent is a slower kind of failure.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "motivation", "priority": 30, "is_active": true, "paths": []},
-{"slug": "one_sentence", "criterion": "Can you say what it is, and who it is for, in one sentence?", "why": "An idea that needs three paragraphs to explain needs three paragraphs to sell, and nobody reads those.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "clarity", "priority": 36, "is_active": true, "paths": []},
-{"slug": "start_this_month", "criterion": "Could you make the first real move on it this month, with what you have now?", "why": "Not the whole thing — the first move. An idea that needs something you do not yet have is a plan to start later.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "momentum", "priority": 34, "is_active": true, "paths": []},
-{"slug": "survives_no", "criterion": "If the first ten people say no, do you still have a way forward?", "why": "Most first attempts get turned down. An idea with exactly one route to a customer is one no away from over.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "resilience", "priority": 32, "is_active": true, "paths": []},
-{"slug": "creator_sustainable_cadence", "criterion": "Could you post this every week for a year without dreading it?", "why": "Audiences are built by showing up long after it stops being novel, and your hours are already spoken for.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "sustainability", "priority": 87, "is_active": true, "paths": ["creator"]},
-{"slug": "creator_not_just_ads", "criterion": "Does it earn before you have a large audience?", "why": "Ad revenue needs scale you do not have yet. Something you sell directly can pay long before that.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "leverage", "priority": 86, "is_active": true, "paths": ["creator"]},
-{"slug": "freelancer_rate_math", "criterion": "At your hours, does the rate actually reach your income goal?", "why": "Hours times rate is a hard ceiling. If the arithmetic does not clear your number, the plan is wrong, not your effort.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "leverage", "priority": 89, "is_active": true, "paths": ["freelancer", "consultant"]},
-{"slug": "freelancer_repeatable", "criterion": "Is it work the same client needs again next month?", "why": "One-off projects mean starting the search from zero every time. Repeat work is what turns freelancing into a business.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "retention", "priority": 83, "is_active": true, "paths": ["freelancer", "consultant"]},
-{"slug": "consultant_named_outcome", "criterion": "Can you name the outcome, not just the process?", "why": "Buyers pay for a result. An offer described as sessions and calls gets priced like sessions and calls.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "positioning", "priority": 87, "is_active": true, "paths": ["consultant"]},
-{"slug": "local_within_radius", "criterion": "Is there enough of this work inside your travel radius?", "why": "Drive time is unpaid. A job type that only appears twice a month within range cannot fill a week.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "demand", "priority": 88, "is_active": true, "paths": ["local_service"]},
-{"slug": "local_licensed", "criterion": "Can you legally do this work from day one?", "why": "Licensing and insurance are not paperwork you catch up on later — they decide whether you can take the first job at all.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "compliance", "priority": 91, "is_active": true, "paths": ["local_service", "brick_mortar"]},
-{"slug": "bm_rent_survivable", "criterion": "Could you cover the rent for six months at half the takings you hope for?", "why": "Rent is due whether anyone walks in or not, and first-year takings are almost always below the plan.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "risk", "priority": 92, "is_active": true, "paths": ["brick_mortar"]},
-{"slug": "bm_not_full_capacity", "criterion": "Does it work at half capacity?", "why": "A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "unit_economics", "priority": 87, "is_active": true, "paths": ["brick_mortar"]},
-{"slug": "store_margin_covers_acquisition", "criterion": "Does the margin per unit cover what it costs to find the buyer?", "why": "This is the way online stores die: a product that sells fine and still loses money once ads are counted.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "unit_economics", "priority": 90, "is_active": true, "paths": ["online_store"]},
-{"slug": "store_not_undercuttable", "criterion": "If someone finds it cheaper elsewhere, is there a reason to buy yours?", "why": "On a marketplace the buyer sees ten identical listings. Without a reason, the only lever left is price.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "positioning", "priority": 85, "is_active": true, "paths": ["online_store"]},
-{"slug": "software_buildable_by_you", "criterion": "Can you get a first working version out with what you can build today?", "why": "Software that waits on hiring a developer waits on money you do not have yet.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "capability", "priority": 90, "is_active": true, "paths": ["software"]},
-{"slug": "software_distribution", "criterion": "Do you know how the first hundred users would find it?", "why": "Building is the part you control. Distribution is the part that ends most software before it starts.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "distribution", "priority": 88, "is_active": true, "paths": ["software"]},
-{"slug": "pp_margin_stack", "criterion": "Does it sell for at least three times what it costs to make?", "why": "A wholesaler and a retailer both take a cut before the customer pays. A product that only doubles its cost has nothing left to give them, so it can only ever be sold direct.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "unit_economics", "priority": 93, "is_active": true, "paths": ["physical_product"]},
-{"slug": "pp_proof_before_tooling", "criterion": "Can you prove people will buy it before you pay for tooling or a minimum order?", "why": "Tooling and first runs are the point of no return — the money is gone whether it sells or not. Anything you can learn before that is bought cheaply.", "check_kind": "boolean", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "risk", "priority": 92, "is_active": true, "paths": ["physical_product"]},
-{"slug": "pp_first_run_affordable", "criterion": "Could you pay for the smallest run a manufacturer will accept?", "why": "Minimum order quantities decide whether this is a business you can start or one you can only plan.", "check_kind": "judgment", "metric": null, "op": null, "value_from": null, "value": null, "applies_when": {}, "category": "capital", "priority": 89, "is_active": true, "paths": ["physical_product"]}
+ {
+  "slug": "already_paying",
+  "criterion": "Are people already paying to solve this some other way?",
+  "why": "An existing budget, however badly spent, is the difference between demand and a good argument.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "demand",
+  "priority": 38,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "bm_not_full_capacity",
+  "criterion": "Does it work at half capacity?",
+  "why": "A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "unit_economics",
+  "priority": 87,
+  "is_active": true,
+  "paths": [
+   "brick_mortar"
+  ]
+ },
+ {
+  "slug": "bm_rent_survivable",
+  "criterion": "Could you cover the rent for six months at half the takings you hope for?",
+  "why": "Rent is due whether anyone walks in or not, and first-year takings are almost always below the plan.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "risk",
+  "priority": 92,
+  "is_active": true,
+  "paths": [
+   "brick_mortar"
+  ]
+ },
+ {
+  "slug": "budget_ceiling",
+  "criterion": "Does it start for under {budget}?",
+  "why": "That is everything you said you can put in, and you named no runway behind it.",
+  "check_kind": "numeric",
+  "metric": "startup_cost",
+  "op": "lte",
+  "value_from": "launch_budget_usd",
+  "value": null,
+  "applies_when": {
+   "no_runway": true,
+   "has_budget": true,
+   "zero_budget": false
+  },
+  "category": "budget",
+  "priority": 95,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "budget_ceiling_soft",
+  "criterion": "Does it start for under {budget}?",
+  "why": "That is the money you said you can put toward this in the next 90 days.",
+  "check_kind": "numeric",
+  "metric": "startup_cost",
+  "op": "lte",
+  "value_from": "launch_budget_usd",
+  "value": null,
+  "applies_when": {
+   "has_budget": true,
+   "zero_budget": false
+  },
+  "category": "budget",
+  "priority": 80,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "builds_on_existing",
+  "criterion": "Does it build on the business you already run, rather than starting a second one?",
+  "why": "You already have customers and a reputation — an unrelated idea means paying that entry cost twice.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "is_running": true
+  },
+  "category": "fit_to_path",
+  "priority": 91,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "consultant_named_outcome",
+  "criterion": "Can you name the outcome, not just the process?",
+  "why": "Buyers pay for a result. An offer described as sessions and calls gets priced like sessions and calls.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "positioning",
+  "priority": 87,
+  "is_active": true,
+  "paths": [
+   "consultant"
+  ]
+ },
+ {
+  "slug": "creator_not_just_ads",
+  "criterion": "Does it earn before you reach {audience_target} {audience_metric}?",
+  "why": "The money that comes from audience size alone — sponsorship, ads, affiliate — does not really begin until around {audience_target} {audience_metric}, and you have {audience_now}. Anything that pays nothing before then is a plan for a later year, not for your runway.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "leverage",
+  "priority": 92,
+  "is_active": true,
+  "paths": [
+   "creator"
+  ]
+ },
+ {
+  "slug": "creator_route_to_audience",
+  "criterion": "Is there a believable route from {audience_now} to {audience_target} {audience_metric} at a rhythm you can hold?",
+  "why": "Audience is the asset this path is built on, and \"post more\" is not a route. A specific format, a place people already gather, and a cadence you can keep for a year is.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "distribution",
+  "priority": 88,
+  "paths": [
+   "creator"
+  ]
+ },
+ {
+  "slug": "creator_sustainable_cadence",
+  "criterion": "Could you post this every week for a year without dreading it?",
+  "why": "Audiences are built by showing up long after it stops being novel, and your hours are already spoken for.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "sustainability",
+  "priority": 87,
+  "is_active": true,
+  "paths": [
+   "creator"
+  ]
+ },
+ {
+  "slug": "fits_the_hours",
+  "criterion": "Can it be run in {hours} a week, without a fixed daytime schedule?",
+  "why": "You have a job with hours of its own, so anything needing you available in business hours cannot work.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "employed": true,
+   "hours_per_week": {
+    "lte": 20
+   }
+  },
+  "category": "time",
+  "priority": 90,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "freelancer_rate_math",
+  "criterion": "At your hours, does the rate actually reach your income goal?",
+  "why": "Hours times rate is a hard ceiling. If the arithmetic does not clear your number, the plan is wrong, not your effort.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "leverage",
+  "priority": 89,
+  "is_active": true,
+  "paths": [
+   "freelancer",
+   "consultant"
+  ]
+ },
+ {
+  "slug": "freelancer_repeatable",
+  "criterion": "Is it work the same client needs again next month?",
+  "why": "One-off projects mean starting the search from zero every time. Repeat work is what turns freelancing into a business.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "retention",
+  "priority": 83,
+  "is_active": true,
+  "paths": [
+   "freelancer",
+   "consultant"
+  ]
+ },
+ {
+  "slug": "local_licensed",
+  "criterion": "Can you legally do this work from day one?",
+  "why": "Licensing and insurance are not paperwork you catch up on later — they decide whether you can take the first job at all.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "compliance",
+  "priority": 91,
+  "is_active": true,
+  "paths": [
+   "local_service",
+   "brick_mortar"
+  ]
+ },
+ {
+  "slug": "local_within_radius",
+  "criterion": "Is there enough of this work inside your travel radius?",
+  "why": "Drive time is unpaid. A job type that only appears twice a month within range cannot fill a week.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "demand",
+  "priority": 88,
+  "is_active": true,
+  "paths": [
+   "local_service"
+  ]
+ },
+ {
+  "slug": "low_tech_build",
+  "criterion": "Can you build and run it without writing code or hiring someone who can?",
+  "why": "You rated your technical comfort low, so anything needing a developer puts your launch behind someone else's calendar.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "tech_level": {
+    "lte": 2
+   }
+  },
+  "category": "capability",
+  "priority": 76,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "no_camera",
+  "criterion": "Can it sell without you appearing on camera?",
+  "why": "You named video as a deal breaker, so distribution has to route around it entirely.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "avoids_camera": true
+  },
+  "category": "deal_breaker",
+  "priority": 93,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "no_cold_outreach",
+  "criterion": "Can it find customers without cold calling or cold email?",
+  "why": "You ruled cold outreach out, so demand has to come to you or come through someone else.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "avoids_cold_outreach": true
+  },
+  "category": "deal_breaker",
+  "priority": 93,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "no_inventory",
+  "criterion": "Does it work without holding stock or shipping anything?",
+  "why": "You named inventory as a deal breaker, and it is also the fastest way to spend a launch budget.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "avoids_inventory": true
+  },
+  "category": "deal_breaker",
+  "priority": 93,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "not_hourly",
+  "criterion": "Does it make money without you selling hours?",
+  "why": "At the hours you have, hourly delivery mathematically cannot reach the income you named.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "income_goal": {
+    "in": [
+     "full_salary",
+     "big"
+    ]
+   },
+   "hours_per_week": {
+    "lte": 20
+   }
+  },
+  "category": "leverage",
+  "priority": 92,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "one_sentence",
+  "criterion": "Can you say what it is, and who it is for, in one sentence?",
+  "why": "An idea that needs three paragraphs to explain needs three paragraphs to sell, and nobody reads those.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "clarity",
+  "priority": 36,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "one_specific_buyer",
+  "criterion": "Can you name one specific person who would pay for this?",
+  "why": "Not a market or a segment — one nameable person. If you cannot, the idea is still an abstraction.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "validation",
+  "priority": 40,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "pp_first_run_affordable",
+  "criterion": "Could you pay for the smallest run a manufacturer will accept?",
+  "why": "Minimum order quantities decide whether this is a business you can start or one you can only plan.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "capital",
+  "priority": 89,
+  "is_active": true,
+  "paths": [
+   "physical_product"
+  ]
+ },
+ {
+  "slug": "pp_margin_stack",
+  "criterion": "Does it sell for at least three times what it costs to make?",
+  "why": "A wholesaler and a retailer both take a cut before the customer pays. A product that only doubles its cost has nothing left to give them, so it can only ever be sold direct.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "unit_economics",
+  "priority": 93,
+  "is_active": true,
+  "paths": [
+   "physical_product"
+  ]
+ },
+ {
+  "slug": "pp_proof_before_tooling",
+  "criterion": "Can you prove people will buy it before you pay for tooling or a minimum order?",
+  "why": "Tooling and first runs are the point of no return — the money is gone whether it sells or not. Anything you can learn before that is bought cheaply.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "risk",
+  "priority": 92,
+  "is_active": true,
+  "paths": [
+   "physical_product"
+  ]
+ },
+ {
+  "slug": "revenue_deadline",
+  "criterion": "Is it earning inside {weeks}?",
+  "why": "That is the runway you gave yourself, and an idea that outlasts it stops being a choice.",
+  "check_kind": "numeric",
+  "metric": "time_to_revenue",
+  "op": "lte",
+  "value_from": "revenue_deadline_weeks",
+  "value": null,
+  "applies_when": {
+   "revenue_deadline_weeks": {
+    "gte": 1
+   }
+  },
+  "category": "timing",
+  "priority": 70,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "revenue_deadline_urgent",
+  "criterion": "Is it earning inside {weeks}?",
+  "why": "You said you need income now. An idea that pays nothing for six months is one you will be forced to abandon.",
+  "check_kind": "numeric",
+  "metric": "time_to_revenue",
+  "op": "lte",
+  "value_from": "revenue_deadline_weeks",
+  "value": null,
+  "applies_when": {
+   "no_runway": true
+  },
+  "category": "timing",
+  "priority": 94,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "reversible_bet",
+  "criterion": "If it fails in three months, do you walk away without real damage?",
+  "why": "You put your risk tolerance at the careful end, so the size of the downside matters more to you than the size of the upside.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "risk_tolerance": "low — steady and safe"
+  },
+  "category": "risk",
+  "priority": 72,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "scales_past_you",
+  "criterion": "Can it grow without you doing every unit of the work?",
+  "why": "You said you want to replace your salary — that needs something that keeps earning when you stop.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "income_goal": {
+    "in": [
+     "full_salary",
+     "big"
+    ]
+   }
+  },
+  "category": "leverage",
+  "priority": 66,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "sells_without_selling",
+  "criterion": "Can it sell without you doing the persuading face to face?",
+  "why": "You rated selling as uncomfortable, and an idea that lives or dies on your pitch is fighting you from the start.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "sales_comfort": {
+    "lte": 2
+   }
+  },
+  "category": "capability",
+  "priority": 74,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "serves_current_customers",
+  "criterion": "Could you sell it to someone who has already bought from you?",
+  "why": "The people who already trust you are the cheapest customers you will ever have, and the fastest proof you are right.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "is_running": true
+  },
+  "category": "validation",
+  "priority": 82,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "software_buildable_by_you",
+  "criterion": "Can you get a first working version out with what you can build today?",
+  "why": "Software that waits on hiring a developer waits on money you do not have yet.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "capability",
+  "priority": 90,
+  "is_active": true,
+  "paths": [
+   "software"
+  ]
+ },
+ {
+  "slug": "software_distribution",
+  "criterion": "Do you know how the first hundred users would find it?",
+  "why": "Building is the part you control. Distribution is the part that ends most software before it starts.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "distribution",
+  "priority": 88,
+  "is_active": true,
+  "paths": [
+   "software"
+  ]
+ },
+ {
+  "slug": "start_this_month",
+  "criterion": "Could you make the first real move on it this month, with what you have now?",
+  "why": "Not the whole thing — the first move. An idea that needs something you do not yet have is a plan to start later.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "momentum",
+  "priority": 34,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "store_margin_covers_acquisition",
+  "criterion": "Does the margin per unit cover what it costs to find the buyer?",
+  "why": "This is the way online stores die: a product that sells fine and still loses money once ads are counted.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "unit_economics",
+  "priority": 90,
+  "is_active": true,
+  "paths": [
+   "online_store"
+  ]
+ },
+ {
+  "slug": "store_not_undercuttable",
+  "criterion": "If someone finds it cheaper elsewhere, is there a reason to buy yours?",
+  "why": "On a marketplace the buyer sees ten identical listings. Without a reason, the only lever left is price.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "positioning",
+  "priority": 85,
+  "is_active": true,
+  "paths": [
+   "online_store"
+  ]
+ },
+ {
+  "slug": "survives_no",
+  "criterion": "If the first ten people say no, do you still have a way forward?",
+  "why": "Most first attempts get turned down. An idea with exactly one route to a customer is one no away from over.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "resilience",
+  "priority": 32,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "thin_hours",
+  "criterion": "Can it move forward in {hours} a week, in short sessions?",
+  "why": "At the hours you have, anything needing long unbroken blocks will stall and stay stalled.",
+  "check_kind": "boolean",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "hours_per_week": {
+    "lte": 10
+   }
+  },
+  "category": "time",
+  "priority": 88,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "uses_credentials",
+  "criterion": "Does your qualification actually matter to the person buying?",
+  "why": "It is your single largest advantage — an idea that wastes it starts you from zero against everyone else.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "has_credentials": true
+  },
+  "category": "advantage",
+  "priority": 85,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "uses_customer_access",
+  "criterion": "Does it reach people you can already get to?",
+  "why": "You already have a way in with a specific group, and that access is worth more than any marketing budget you could buy.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "has_customer_access": true
+  },
+  "category": "advantage",
+  "priority": 84,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "uses_industry",
+  "criterion": "Does it use what you know from your field, rather than starting cold?",
+  "why": "Your industry knowledge is the thing a competitor cannot copy quickly — an idea outside it throws that away.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "has_industry": true,
+   "has_credentials": false
+  },
+  "category": "advantage",
+  "priority": 60,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "would_you_still",
+  "criterion": "Would you still want to be doing this in a year?",
+  "why": "You named what you are running toward. An idea that works but that you resent is a slower kind of failure.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "motivation",
+  "priority": 30,
+  "is_active": true,
+  "paths": []
+ },
+ {
+  "slug": "zero_budget",
+  "criterion": "Can it start with no money at all — only your time?",
+  "why": "You put your launch budget at zero, so anything with a bill attached is out before it begins.",
+  "check_kind": "numeric",
+  "metric": "startup_cost",
+  "op": "lte",
+  "value_from": null,
+  "value": 0,
+  "applies_when": {
+   "zero_budget": true
+  },
+  "category": "budget",
+  "priority": 96,
+  "is_active": true,
+  "paths": []
+ }
 ]

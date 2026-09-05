@@ -83,15 +83,20 @@
     <% } else { %>
       <% questions.forEach(function (qq) { %>
         <% var val = current(qq); %>
-        <label class="small">
-          <%= qq.label %><%= qq.required ? ' *' : '' %>
+        <%# A conditional question renders in full and is hidden by script, so a
+            reader with no JavaScript is asked one extra question rather than
+            being shown a form with a hole in it. Nothing conditional is ever
+            HTML-required, because a hidden required field blocks submission
+            with a validation message the reader cannot see. %>
+        <label class="small"<% if (qq.showIf) { %> data-show-if="<%- esc(JSON.stringify(qq.showIf)) %>"<% } %>>
+          <%= qq.label %><%= (qq.required && !qq.showIf) ? ' *' : '' %>
 
           <% if (qq.type === 'textarea') { %>
-            <textarea name="<%= qq.name %>" rows="3" maxlength="2000" <%= qq.required ? 'required' : '' %>
-              <%= qq.placeholder ? 'placeholder="' + esc(qq.placeholder) + '"' : '' %>><%= asText(val) %></textarea>
+            <textarea name="<%= qq.name %>" rows="3" maxlength="2000" <%= (qq.required && !qq.showIf) ? 'required' : '' %>
+              <%- qq.placeholder ? 'placeholder="' + esc(qq.placeholder) + '"' : '' %>><%= asText(val) %></textarea>
 
           <% } else if (qq.type === 'select') { %>
-            <select name="<%= qq.name %>" <%= qq.required ? 'required' : '' %>>
+            <select name="<%= qq.name %>" <%= (qq.required && !qq.showIf) ? 'required' : '' %>>
               <option value="">—</option>
               <% qq.options.forEach(function (o) { %>
                 <option value="<%= esc(o) %>" <%= String(val) === String(o) ? 'selected' : '' %>><%= o %></option>
@@ -112,8 +117,8 @@
             <%# text, csv and url all render as one line; csv joins the array back
                 for editing and is split again on save. %>
             <input type="<%= qq.type === 'url' ? 'url' : 'text' %>" name="<%= qq.name %>"
-              maxlength="500" value="<%= esc(asText(val)) %>" <%= qq.required ? 'required' : '' %>
-              <%= qq.placeholder ? 'placeholder="' + esc(qq.placeholder) + '"' : '' %>>
+              maxlength="500" value="<%= esc(asText(val)) %>" <%= (qq.required && !qq.showIf) ? 'required' : '' %>
+              <%- qq.placeholder ? 'placeholder="' + esc(qq.placeholder) + '"' : '' %>>
           <% } %>
 
           <% if (qq.hint) { %><span class="muted small field-hint"><%= qq.hint %></span><% } %>
@@ -134,4 +139,53 @@
 <% if (step === requiredSteps) { %>
   <p class="muted small" style="margin-top:.8rem">Nothing here is permanent. Answering again — from your Compass — starts a fresh run, and you can pick a different path then.</p>
 <% } %>
+<script>
+// Conditional questions. A question carrying data-show-if is only asked when
+// another answer on this page has one of the listed values — a creator is asked
+// for a follower count or a monthly visitor count, never both.
+//
+// The server checks the same condition on save, so this is presentation only:
+// it can be blocked or broken and no wrong answer gets stored.
+(function () {
+  var form = document.querySelector('form[action="/questionnaire"]');
+  if (!form) return;
+  var conditional = [].slice.call(form.querySelectorAll('[data-show-if]'));
+  if (!conditional.length) return;
+
+  var parsed = conditional.map(function (el) {
+    try { return { el: el, cond: JSON.parse(el.getAttribute('data-show-if')) }; }
+    catch (e) { return null; }
+  }).filter(Boolean);
+
+  function valueOf(name) {
+    var f = form.elements[name];
+    if (!f) return '';
+    // A checkbox group comes back as a collection; conditions are on selects.
+    return (f.value === undefined && f.length) ? (f[0] || {}).value || '' : (f.value || '');
+  }
+
+  function sync() {
+    parsed.forEach(function (item) {
+      var show = Object.keys(item.cond).every(function (name) {
+        var allowed = item.cond[name];
+        if (!Array.isArray(allowed)) allowed = [allowed];
+        var v = valueOf(name);
+        return allowed.some(function (a) { return String(a) === String(v); });
+      });
+      item.el.hidden = !show;
+      // Clear what is no longer being asked, so a switch of creator type cannot
+      // submit the previous kind's number alongside the new one.
+      if (!show) {
+        [].slice.call(item.el.querySelectorAll('select, input, textarea')).forEach(function (c) {
+          if (c.type === 'checkbox' || c.type === 'radio') c.checked = false;
+          else c.value = '';
+        });
+      }
+    });
+  }
+
+  form.addEventListener('change', sync);
+  sync();
+})();
+</script>
 <%- include('partials/foot') %>

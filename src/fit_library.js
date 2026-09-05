@@ -1,4 +1,4 @@
-// Building a founder's fit test from a curated library, not from scratch.
+// Building a member's fit test from a curated library, not from scratch.
 //
 // The five criteria used to be invented by the model on every Compass draw:
 // two founders with identical answers could get different tests, and nobody
@@ -59,6 +59,9 @@ const NO_RUNWAY_DEADLINE_WEEKS = 8;
 
 function founderFacts(q) {
   const Q = q || {};
+  // Audience scale, for the one path where it is the whole game. Null for
+  // everything else, so a plumber never matches a criterion about followers.
+  const audience = pathsLib.creatorAudience(Q);
   const budget = BUDGET_USD[norm(Q.launch_budget)];
   const hours = HOURS_MAX[norm(Q.hours_per_week)];
   const runwayWeeks = RUNWAY_WEEKS[norm(Q.runway)];
@@ -103,7 +106,18 @@ function founderFacts(q) {
     tech_level: Number.isFinite(Q.tech_level) ? Q.tech_level : null,
     sales_comfort: Number.isFinite(Q.sales_comfort) ? Q.sales_comfort : null,
     marketing_comfort: Number.isFinite(Q.marketing_comfort) ? Q.marketing_comfort : null,
-    employed: /employed|student|parent|caregiver/.test(norm(Q.work_status))
+    employed: /employed|student|parent|caregiver/.test(norm(Q.work_status)),
+
+    // A creator is measured in followers or in monthly visitors depending on
+    // which kind they are, and the two become money at very different sizes.
+    // audience_target_met is deliberately null rather than false when the
+    // number is unknown: not having answered is not the same as being short.
+    creator_kind: audience ? audience.kind : null,
+    creator_type: audience ? audience.type : null,
+    audience_metric: audience ? audience.metric : null,
+    audience_target: audience ? audience.target : null,
+    audience_now: audience ? audience.now : null,
+    audience_target_met: audience ? audience.met : null
   };
 }
 
@@ -139,8 +153,13 @@ function matches(cond, facts) {
 // "Does it start for under {budget}?" becomes the founder's actual ceiling.
 const money = n => '$' + Number(n).toLocaleString('en-US');
 
+const count = n => Number(n).toLocaleString('en-US');
+
 function bind(text, facts) {
   return String(text == null ? '' : text)
+    .replace(/\{audience_target\}/g, facts.audience_target == null ? 'the size that gets noticed' : count(facts.audience_target))
+    .replace(/\{audience_metric\}/g, facts.audience_metric || 'followers')
+    .replace(/\{audience_now\}/g, facts.audience_now == null ? 'what you have now' : count(facts.audience_now))
     .replace(/\{budget\}/g, facts.launch_budget_usd == null ? 'your budget' : money(facts.launch_budget_usd))
     .replace(/\{hours\}/g, facts.hours_per_week == null ? 'the hours you have' : facts.hours_per_week + ' hours')
     .replace(/\{weeks\}/g, facts.revenue_deadline_weeks == null ? 'your runway' : facts.revenue_deadline_weeks + ' weeks')
@@ -153,7 +172,8 @@ function bind(text, facts) {
 const VALUE_FROM = {
   launch_budget_usd: f => f.launch_budget_usd,
   revenue_deadline_weeks: f => f.revenue_deadline_weeks,
-  hours_per_week: f => f.hours_per_week
+  hours_per_week: f => f.hours_per_week,
+  audience_target: f => f.audience_target
 };
 
 // Turns one library row into a pinned criterion, or null if it cannot be made

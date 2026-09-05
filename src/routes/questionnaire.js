@@ -45,6 +45,15 @@ function partition(questions, body, existingPathAnswers) {
   const cols = {};
   const pathAnswers = { ...(existingPathAnswers || {}) };
   for (const q of questions) {
+    // A question whose showIf is not satisfied was not asked. Clearing it rather
+    // than skipping it matters on a re-run: a creator who answered as an
+    // influencer and came back as a blogger would otherwise keep a follower
+    // count that no longer describes them, and it would still be read back to
+    // them by the Compass.
+    if (!paths.showIfSatisfied(q, body)) {
+      if (!q.col) delete pathAnswers[q.name];
+      continue;
+    }
     const val = readAnswer(q, body);
     if (!answered(val) && q.type !== 'checks' && q.type !== 'csv') continue;
     if (q.col) cols[q.col] = val;
@@ -56,10 +65,18 @@ function partition(questions, body, existingPathAnswers) {
 // Readiness: how much of this path's own question set the founder has filled
 // in. Used to tell them what a deeper Compass would be drawn from.
 function readinessScore(path, run) {
-  const all = paths.coreQuestions(path).concat(paths.depthQuestions(path));
-  if (!all.length) return 0;
   const pa = run.path_answers || {};
-  const done = all.filter(q => answered(q.col ? run[q.col] : pa[q.name])).length;
+  // Answers keyed by question name, which is what showIf refers to. A question
+  // that was never asked must not count against readiness — a blogger is not 8%
+  // less ready for having no follower count.
+  const byName = {};
+  for (const q of paths.coreQuestions(path).concat(paths.depthQuestions(path))) {
+    byName[q.name] = q.col ? run[q.col] : pa[q.name];
+  }
+  const all = paths.coreQuestions(path).concat(paths.depthQuestions(path))
+    .filter(q => paths.showIfSatisfied(q, byName));
+  if (!all.length) return 0;
+  const done = all.filter(q => answered(byName[q.name])).length;
   return Math.round(100 * done / all.length);
 }
 

@@ -62,11 +62,27 @@ const PROFILES = {
   blank: {
     label: 'answered almost nothing',
     q: { founder_path: 'exploring' }
+  },
+  influencer: {
+    label: 'social creator, 1k-10k followers, $500, 5-10h, 1-3mo runway',
+    q: { founder_path: 'creator', work_status: 'Employed full-time', launch_budget: 'Under $500',
+         hours_per_week: '5-10', runway: '1-3 months', income_year1: 'Replace part of salary',
+         deal_breakers: [], credentials: '', industry_field: '', tech_level: 3, sales_comfort: 3,
+         path_answers: { stage: 'Posting occasionally', creator_type: 'Social media creator or influencer',
+                         audience_size: '1,000\u201310,000' } }
+  },
+  blogger: {
+    label: 'publisher, 10k-50k monthly visits, same constraints',
+    q: { founder_path: 'creator', work_status: 'Employed full-time', launch_budget: 'Under $500',
+         hours_per_week: '5-10', runway: '1-3 months', income_year1: 'Replace part of salary',
+         deal_breakers: [], credentials: '', industry_field: '', tech_level: 3, sales_comfort: 3,
+         path_answers: { stage: 'Posting occasionally', creator_type: 'Publisher or blogger',
+                         monthly_traffic: '10,000\u201350,000' } }
   }
 };
 
 console.log('\nLibrary snapshot:');
-eq('42 active criteria', ROWS.length, 42);
+eq('43 active criteria', ROWS.length, 43);
 ok('fingerprint (compare against the query in this file\'s header)', true, fingerprint);
 ok('every row has a category, so the diversity rule can work', ROWS.every(r => !!r.category));
 ok('every numeric row can resolve a threshold',
@@ -231,6 +247,58 @@ console.log('\nPath-tagged criteria only reach their own path:');
     launch_budget: '$2,000-10,000', hours_per_week: '20-40', runway: '3-6 months' })).map(c => c.slug);
   ok('and a creator is not', !cr.includes('bm_rent_survivable'), cr.join(', '));
 }
+
+
+// ---------------------------------------------------------------------------
+// The creator audience bar, bound per member.
+//
+// One library row serves both kinds of creator: the wording carries
+// {audience_target} and {audience_metric}, and binding fills in 10,000
+// followers or 50,000 monthly visitors from the member's own answers. Getting
+// this wrong is worse than saying nothing — quoting a follower bar at a
+// publisher is confidently wrong advice.
+
+console.log('\nThe audience bar binds to the right unit:');
+
+const audienceRow = ROWS.find(r => r.slug === 'creator_not_just_ads');
+ok('the row is written with placeholders, not a hardcoded number',
+   /\{audience_target\}/.test(audienceRow.criterion) && /\{audience_metric\}/.test(audienceRow.criterion),
+   audienceRow.criterion);
+
+const influencerFacts = lib.founderFacts(PROFILES.influencer.q);
+const bloggerFacts = lib.founderFacts(PROFILES.blogger.q);
+
+eq('influencer facts carry the follower bar', influencerFacts.audience_target, 10000);
+eq('publisher facts carry the traffic bar', bloggerFacts.audience_target, 50000);
+
+const boundInfluencer = lib.toCriterion(audienceRow, influencerFacts).criterion;
+const boundBlogger = lib.toCriterion(audienceRow, bloggerFacts).criterion;
+ok('the influencer reads 10,000 followers', /10,000 followers/.test(boundInfluencer), boundInfluencer);
+ok('the publisher reads 50,000 monthly visitors', /50,000 monthly visitors/.test(boundBlogger), boundBlogger);
+ok('neither is quoted the other one\'s bar',
+   !/50,000|visitors/.test(boundInfluencer) && !/10,000 followers/.test(boundBlogger), 'kept apart');
+
+// The "why" reads their current size back to them, and has to survive not
+// knowing it rather than printing "null".
+const whyBlank = lib.toCriterion(audienceRow, lib.founderFacts({
+  founder_path: 'creator', path_answers: { creator_type: 'Publisher or blogger' }
+})).why;
+ok('an unknown audience never renders as null or undefined',
+   !/null|undefined|NaN/.test(whyBlank), whyBlank.slice(0, 90) + '…');
+
+// And the bar has to actually reach the test, not just exist in the library.
+for (const key of ['influencer', 'blogger']) {
+  const chosen = lib.selectFromLibrary(ROWS, lib.founderFacts(PROFILES[key].q));
+  const slugs = chosen.map(c => c.slug);
+  ok(`${key}: the audience bar is in their five`, slugs.includes('creator_not_just_ads'), slugs.join(', '));
+}
+
+// Nobody off the creator path is ever asked about followers.
+const plumberFacts = lib.founderFacts(PROFILES.owner.q);
+eq('a local service has no audience target', plumberFacts.audience_target, null);
+ok('...and cannot be given the creator criterion',
+   !lib.selectFromLibrary(ROWS, plumberFacts).some(c => String(c.slug).startsWith('creator_')),
+   'clean');
 
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nFit library holds. All checks pass.');
 process.exit(fail ? 1 : 0);

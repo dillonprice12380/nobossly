@@ -66,6 +66,86 @@ const stageQuestion = (label, options) => ({
   name: 'stage', label, type: 'select', options, required: true
 });
 
+// ---------- conditional questions ----------
+//
+// A question can carry `showIf: { other_question: [values] }` and is then only
+// asked when that other question holds one of those values. The form renders it
+// hidden and the browser reveals it; the server checks the same condition again
+// on save, because a hidden field is a suggestion and a POST body is not.
+function showIfSatisfied(question, answers) {
+  const cond = question && question.showIf;
+  if (!cond) return true;
+  return Object.entries(cond).every(([name, allowed]) => {
+    const v = answers ? answers[name] : undefined;
+    return (Array.isArray(allowed) ? allowed : [allowed]).some(a => String(a) === String(v == null ? '' : v));
+  });
+}
+
+// ---------- the creator audience bar ----------
+//
+// "How big is your audience" is two different questions. A social creator is
+// measured in people who follow them, and sponsorship offers start arriving at
+// roughly ten thousand. A publisher is measured in visits, and ad or affiliate
+// revenue does not amount to anything until roughly fifty thousand a month.
+// Asking one question in one unit gave a blogger with 40,000 readers a month
+// the same read as an influencer with 40,000 followers, which is wrong in both
+// directions.
+//
+// These are rules of thumb, not physics, and the Compass says so. But a creator
+// planning without any number at all is planning in a vacuum, and "grow the
+// audience" is not a plan you can tell you are winning.
+const CREATOR_AUDIENCE = {
+  'Social media creator or influencer': { kind: 'social', metric: 'followers', target: 10000 },
+  'Video or podcast creator': { kind: 'social', metric: 'subscribers', target: 10000 },
+  'Newsletter writer': { kind: 'social', metric: 'subscribers', target: 10000 },
+  'Publisher or blogger': { kind: 'publisher', metric: 'monthly visitors', target: 50000 },
+  // Undecided defaults to the follower bar: it is the lower of the two, so it
+  // never tells someone they are further from a target than they really are.
+  'Not sure yet': { kind: 'social', metric: 'followers', target: 10000 }
+};
+const CREATOR_TYPES = Object.keys(CREATOR_AUDIENCE);
+const SOCIAL_CREATOR_TYPES = CREATOR_TYPES.filter(t => CREATOR_AUDIENCE[t].kind === 'social');
+const PUBLISHER_CREATOR_TYPES = CREATOR_TYPES.filter(t => CREATOR_AUDIENCE[t].kind === 'publisher');
+
+// The FLOOR of the band, deliberately — the opposite of the money buckets,
+// which take the top. A budget of "$500-2,000" means they can spend up to
+// $2,000, so the ceiling is the honest constraint. An audience of
+// "1,000-10,000" means they definitely have at least 1,000, and crediting them
+// with 10,000 would tell someone with 1,200 followers that they had cleared a
+// bar they are nowhere near.
+const AUDIENCE_FLOOR = {
+  'none yet': 0,
+  'under 1,000': 0,
+  '1,000-10,000': 1000,
+  '10,000-50,000': 10000,
+  '50,000-250,000': 50000,
+  '250,000+': 250000
+};
+
+const dashes = v => String(v == null ? '' : v).replace(/[\u2013\u2014]/g, '-').trim();
+
+// What this creator's audience is measured in, how big it is, and the size at
+// which it starts being worth money. Null for every path that is not a creator
+// — nothing else on the site is built on audience scale.
+function creatorAudience(q) {
+  if (!q || q.founder_path !== 'creator') return null;
+  const pa = q.path_answers || {};
+  const type = String(pa.creator_type || '').trim();
+  const spec = CREATOR_AUDIENCE[type] || CREATOR_AUDIENCE['Not sure yet'];
+  const band = spec.kind === 'publisher' ? pa.monthly_traffic : pa.audience_size;
+  const now = AUDIENCE_FLOOR[dashes(band).toLowerCase()];
+  return {
+    type: type || null,
+    kind: spec.kind,
+    metric: spec.metric,
+    target: spec.target,
+    now: now == null ? null : now,
+    // Unknown is not the same as short: a creator who skipped the question has
+    // not been told they are behind.
+    met: now == null ? null : now >= spec.target
+  };
+}
+
 const PATHS = [
   {
     slug: 'creator',
@@ -74,25 +154,37 @@ const PATHS = [
     blurb: 'You build an audience first — video, writing, podcasting, streaming — and money follows attention.',
     marketing: {
       headline: 'You are not short of ideas. You are short of a plan that survives week three.',
-      subhead: 'NoBossly gives creators a fit test built from the hours you actually have after work, your own budget and your own deal breakers — then a ladder where the levels are real: first paid collaboration, first hundred subscribers, first $1k month, the day the channel out-earns the job.',
+      subhead: 'NoBossly asks what kind of creator you are and then measures you in the right unit — followers if you are on social, monthly visitors if you publish — against the sizes where each actually starts paying: around 10,000 followers, around 50,000 visits a month. Then a ladder where the levels are real: first paid collaboration, first $1k month, the day the channel out-earns the job.',
       pains: [
         'You have posted before and stopped, and you are not sure why it did not stick.',
         'Everyone says "be consistent" without asking what time you get home.',
-        'The advice is written for people who already have an audience.'
+        'The advice is written for people who already have an audience — and it measures a blogger and an influencer with the same ruler.'
       ],
-      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. If your runway is three months, the plan has to earn before the audience is big — and your fit test will say so out loud.'
+      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. Sponsorship money starts around 10,000 followers; ad and affiliate money starts around 50,000 visits a month. If your runway is three months, the plan has to earn well before either — and your fit test will say so out loud.'
     },
     core: [
       stageQuestion('Where are you with it?', [
         'Not started — no audience yet', 'Posting occasionally', 'Posting consistently, no income',
         'Earning something', 'This is my main income'
       ]),
+      { name: 'creator_type', label: 'What kind of creator?', type: 'select', required: true,
+        options: CREATOR_TYPES,
+        hint: 'This decides which number your plan is measured in — an audience you follow, or traffic you receive.' },
       { name: 'platform', label: 'Main platform', type: 'select', required: true,
         options: ['YouTube', 'TikTok', 'Instagram', 'X / Twitter', 'LinkedIn', 'Twitch', 'Newsletter', 'Podcast', 'Blog', 'Undecided'] },
       { name: 'niche', label: 'What is it about?', type: 'text', required: true,
         placeholder: 'the narrower the better — "budget van builds", not "lifestyle"' },
-      { name: 'audience_size', label: 'Audience you have now', type: 'select', required: true,
-        options: ['None yet', 'Under 1,000', '1,000–10,000', '10,000–100,000', '100,000+'] },
+      // A follower count and a monthly visitor count are not the same number and
+      // do not become money at the same scale, so the question asked depends on
+      // which kind of creator this is. showIf hides the one that does not apply.
+      { name: 'audience_size', label: 'Followers or subscribers you have now', type: 'select',
+        showIf: { creator_type: SOCIAL_CREATOR_TYPES },
+        options: ['None yet', 'Under 1,000', '1,000–10,000', '10,000–50,000', '50,000–250,000', '250,000+'],
+        hint: 'Sponsorship offers realistically start arriving around 10,000.' },
+      { name: 'monthly_traffic', label: 'Monthly visitors you get now', type: 'select',
+        showIf: { creator_type: PUBLISHER_CREATOR_TYPES },
+        options: ['Under 1,000', '1,000–10,000', '10,000–50,000', '50,000–250,000', '250,000+'],
+        hint: 'Ad and affiliate revenue realistically starts mattering around 50,000 a month.' },
       { name: 'monetization', label: 'How you think it makes money', type: 'checks',
         options: ['Sponsorships', 'Affiliate', 'My own product', 'Memberships', 'Platform ad revenue', 'Services off the back of it', 'Not sure yet'] }
     ],
@@ -514,5 +606,7 @@ module.exports = {
   UNIVERSAL_CORE, UNIVERSAL_DEPTH,
   coreQuestions, ownQuestions, depthQuestions, depthSteps, totalSteps,
   REQUIRED_STEPS: 2,
-  HOURS, BUDGET, RUNWAY, INCOME, WORK_STATUS
+  HOURS, BUDGET, RUNWAY, INCOME, WORK_STATUS,
+  CREATOR_AUDIENCE, CREATOR_TYPES, SOCIAL_CREATOR_TYPES, PUBLISHER_CREATOR_TYPES, creatorAudience,
+  showIfSatisfied
 };
