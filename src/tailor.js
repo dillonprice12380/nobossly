@@ -7,6 +7,8 @@
 // overlap and level band. When the pool runs thin for a founder's profile,
 // the AI writes new electives INTO the pool (source='ai'), so every
 // generation deepens the database for the next similar founder.
+const paths = require('./paths');
+
 const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1/ai-proxy';
 
 // Compact JSON-out call to the same ai-proxy edge function ai.js uses. Kept
@@ -104,7 +106,10 @@ const specificity = (c, p) => ['business_types', 'industries', 'customer_segment
 // when thin. AI top-up is paid-only (it costs money); pool matches are for
 // everyone.
 async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
-  if (!profile.biz_type) return { electives: [], unclassified: true };
+  // A declared path beats an AI classification of free text, so a founder with
+  // a path gets electives even before they have anything to classify.
+  const path = profile.path || null;
+  if (!profile.biz_type && !path) return { electives: [], unclassified: true };
 
   const { data: taken } = await sb.from('user_custom_challenges').select('tailored_id').eq('user_id', profile.id).not('tailored_id', 'is', null);
   const takenSet = new Set((taken || []).map(t => t.tailored_id));
@@ -112,12 +117,21 @@ async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
   const { data: pool } = await sb.from('tailored_challenges').select('*')
     .eq('is_active', true).lte('min_level', level).gte('max_level', level).limit(500);
 
+  // A challenge tagged with paths is only for those paths. An untagged one is
+  // general and still matched the old way, on classification tags.
+  const onPath = c => !c.paths || !c.paths.length || (path && c.paths.includes(path));
   let list = (pool || []).filter(c => !takenSet.has(c.id)
+    && onPath(c)
     && matches(c.business_types, profile.biz_type)
     && matches(c.industries, profile.biz_industry)
     && matches(c.customer_segments, profile.biz_segment)
     && matches(c.value_props, profile.biz_value_prop));
-  list.sort((a, b) => specificity(b, profile) - specificity(a, profile) || (a.xp_reward - b.xp_reward));
+  // Path-tagged first: written for exactly this kind of business, and chosen by
+  // the founder rather than guessed at.
+  const onPathScore = c => (c.paths && c.paths.length && path && c.paths.includes(path)) ? 1 : 0;
+  list.sort((a, b) => onPathScore(b) - onPathScore(a)
+    || specificity(b, profile) - specificity(a, profile)
+    || (a.xp_reward - b.xp_reward));
 
   if (list.length < 3 && paid && accessToken) {
     try {
@@ -130,9 +144,18 @@ async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
 
 async function generateIntoPool(sb, accessToken, profile, level, count) {
   const brief = await businessBrief(sb, profile.id);
+  const path = profile.path || null;
+  const pathDef = path ? paths.get(path) : null;
+  // The founder's own answers on their own path — a creator's platform and
+  // audience size, a shop's rent ceiling. This is what makes a generated
+  // challenge specific rather than generic startup advice.
+  const { data: run } = await sb.from('questionnaire_responses').select('*')
+    .eq('user_id', profile.id).eq('completed', true)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const answers = run ? paths.describe(run) : '';
   const items = await askJSON(accessToken,
     'You are NoBossly, a startup execution coach who designs time-boxed challenges that push founders toward real traction. Challenges are concrete, verifiable actions — never vague "work on your mindset" fluff.',
-    `${brief ? brief.text + '\n\n' : ''}Founder classification: business type "${profile.biz_type}", industry "${profile.biz_industry || 'unknown'}", customers "${profile.biz_segment || 'unknown'}", value prop "${profile.biz_value_prop || 'unknown'}". Founder level: ${level} of 10 (1 = just starting, 10 = scaled).\n\nWrite ${Math.max(2, Math.min(5, count))} time-boxed challenges for founders with exactly this kind of business at this level. Each must be specific to this TYPE of business (usable by other founders with the same classification, so no references to this founder's brand name), concrete, and completable within the suggested days. Return a JSON array where each element has: title (short, action-oriented), description (1-2 sentences on the challenge and why it matters), emoji (single emoji), suggested_days (one of 30, 60, 90), xp_reward (integer 50-150).`,
+    `${brief ? brief.text + '\n\n' : ''}${pathDef ? 'PATH: ' + pathDef.label + ' — ' + pathDef.blurb + '\n\n' : ''}${answers ? 'THE FOUNDER\'S OWN ANSWERS:\n' + answers + '\n\n' : ''}Founder classification: business type "${profile.biz_type || 'unclassified'}", industry "${profile.biz_industry || 'unknown'}", customers "${profile.biz_segment || 'unknown'}", value prop "${profile.biz_value_prop || 'unknown'}". Founder level: ${level} of 10 (1 = just starting, 10 = scaled).\n\nWrite ${Math.max(2, Math.min(5, count))} time-boxed challenges for a founder on this path at this level. Use their answers to make each one land: the platform they picked, the hours and money they actually have, the deal breakers they named. Never write a challenge that breaks one of their deal breakers. Each must be concrete and verifiable, completable within the suggested days, and phrased so another founder on the same path could also do it — so no references to this founder's brand name. Return a JSON array where each element has: title (short, action-oriented), description (1-2 sentences on the challenge and why it matters), emoji (single emoji), suggested_days (one of 30, 60, 90), xp_reward (integer 50-150).`,
     2000);
   if (!Array.isArray(items) || !items.length) return [];
   const rows = items.slice(0, 5).map(c => ({
@@ -146,6 +169,7 @@ async function generateIntoPool(sb, accessToken, profile, level, count) {
     industries: profile.biz_industry ? [profile.biz_industry] : [],
     customer_segments: profile.biz_segment ? [profile.biz_segment] : [],
     value_props: profile.biz_value_prop ? [profile.biz_value_prop] : [],
+    paths: path ? [path] : [],
     source: 'ai'
   }));
   const { data, error } = await sb.from('tailored_challenges').insert(rows).select();

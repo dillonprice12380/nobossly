@@ -47,6 +47,8 @@ const INCOME_GOAL = {
   'build something big': 'big'
 };
 
+const pathsLib = require('./paths');
+
 const norm = v => String(v == null ? '' : v).trim().toLowerCase();
 const arr = v => (Array.isArray(v) ? v : []).map(norm).filter(Boolean);
 
@@ -64,7 +66,14 @@ function founderFacts(q) {
   const dbText = dealBreakers.join(' ');
 
   return {
+    // The declared business path, and how far along they are with it. These
+    // used to be one field: founder_path held the stage. They are separate
+    // axes now, and criteria match on either.
+    path: norm(Q.founder_path) || 'exploring',
     founder_path: norm(Q.founder_path) || 'exploring',
+    stage: pathsLib.stageOf(Q),
+    is_running: ['running', 'earning'].includes(pathsLib.stageOf(Q)),
+    not_started: pathsLib.stageOf(Q) === 'idea',
     work_status: norm(Q.work_status),
     risk_tolerance: norm(Q.risk_tolerance),
     income_goal: INCOME_GOAL[norm(Q.income_year1)] || null,
@@ -188,8 +197,12 @@ const RESERVED_CATEGORIES = ['advantage'];
 const categoryOf = (rows, slug) => ((rows || []).find(r => r && r.slug === slug) || {}).category;
 
 function selectFromLibrary(rows, facts, target = TARGET) {
+  // A criterion tagged with paths applies only to those; an empty tag means it
+  // applies everywhere. "Can it be delivered without a fixed premises?" is a
+  // real question for a freelancer and a meaningless one for a shop.
+  const onPath = r => !r.paths || !r.paths.length || r.paths.includes(facts.path);
   const eligible = (rows || [])
-    .filter(r => r && r.is_active !== false && matches(r.applies_when, facts))
+    .filter(r => r && r.is_active !== false && onPath(r) && matches(r.applies_when, facts))
     .sort((a, b) => (b.priority || 0) - (a.priority || 0) || String(a.slug).localeCompare(String(b.slug)));
 
   const chosen = [];

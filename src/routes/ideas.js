@@ -13,11 +13,9 @@ const { sweepMilestones } = require('../milestones_engine');
 // The route survives because those drafts need somewhere to live, be reviewed
 // and be turned into a blueprint.
 
-const PATH_LABELS = {
-  existing: 'Already in business',
-  idea: 'Started from an idea',
-  exploring: 'Started from a blank page'
-};
+const pathsLib = require('../paths');
+const PATH_LABELS = {};
+pathsLib.PATHS.forEach(p => { PATH_LABELS[p.slug] = p.label; });
 
 router.get('/', async (req, res, next) => {
   try {

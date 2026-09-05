@@ -67,7 +67,7 @@ async function computeState(sb, user, profile, pre = {}) {
     head(sb.from('user_milestones').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'pending')),
     sb.from('xp_events').select('reason').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z').limit(50).then(r => r.data || [], () => []),
-    sb.from('questionnaire_responses').select('founder_path').eq('user_id', user.id).eq('completed', true)
+    sb.from('questionnaire_responses').select('founder_path, path_answers').eq('user_id', user.id).eq('completed', true)
       .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null),
     // The Level 1 refinement loop: how far the best idea got against the
     // founder's own fit test, and how much evidence it carries.
@@ -91,6 +91,7 @@ async function computeState(sb, user, profile, pre = {}) {
     verified_level: profile.verified_level || 1,
     verification_pending: pendingVerifN > 0,
     founder_path: (qrun && qrun.founder_path) || 'exploring',
+    path: (qrun && qrun.founder_path) || 'exploring',
     // The questionnaire is the Level 1 quest now, so the Coach needs to know
     // whether it is still outstanding — it is the first thing to nudge.
     has_questionnaire: !!qrun,

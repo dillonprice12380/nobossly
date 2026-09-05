@@ -4,6 +4,8 @@
 // stress-tests the idea the founder drafts THEMSELVES. The founder decides;
 // the AI advises. ai.js keeps the legacy prescriptive generator untouched.
 
+const paths = require('./paths');
+
 const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1/ai-proxy';
 
 async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
@@ -44,44 +46,32 @@ async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
 
 // Compact, lossless-enough founder profile: every answered question, keyed
 // plainly, skipped questions dropped so the model never reads absence as signal.
-const SKIP = new Set(['id', 'user_id', 'completed', 'created_at', 'updated_at', 'run_number', 'readiness_score', 'has_idea']);
+// The founder's answers, labelled and path-aware. This used to dump every
+// non-empty column as raw JSON, which meant the model saw keys like
+// "biz_whats_stuck" with no idea which path they belonged to — and, once
+// path-specific answers moved into path_answers, would have seen a nested blob
+// with no labels at all.
 function compactProfile(q) {
-  const out = {};
-  Object.keys(q || {}).forEach(k => {
-    if (SKIP.has(k)) return;
-    const v = q[k];
-    if (v == null) return;
-    if (Array.isArray(v)) { if (v.length) out[k] = v; return; }
-    const s = String(v).trim();
-    if (s) out[k] = Array.isArray(v) ? v : v;
-  });
-  return JSON.stringify(out);
+  return paths.describe(q);
 }
 
-const COMPASS_SPEC = `Return a JSON object with exactly these fields:
-{ "archetype": { "name": "a memorable two-or-three word founder class, e.g. 'The Craftsman', 'The Connector', 'The Systems Thinker' — derived from THIS profile, not generic", "emoji": "one emoji", "tagline": "one punchy sentence of identity, second person", "description": "2-3 sentences on how this founder type wins and where they typically struggle, grounded in their actual answers" },
-  "loadout": { "strengths": ["3-5 short phrases — skills and capabilities they actually listed"], "advantages": ["2-4 unfair advantages, credentials, assets or access they hold"], "constraints": ["2-4 binding constraints stated plainly — time, money, obligations, fears — the ones that will actually shape what they can build"], "honest_notes": ["1-3 candid observations they need to hear, respectfully — e.g. a mismatch between their income goal and their hours, or a fear that conflicts with their chosen path"] },
-  "territories": [ 3-4 objects: { "name": "an opportunity ZONE, not a specific business — e.g. 'productized services for local trades', not 'start a bookkeeping service for plumbers'", "temperature": "hot"|"warm"|"steady", "why_you": "2 sentences tying this zone to their specific loadout and constraints", "example_plays": ["2-4 short example plays INSIDE the zone, phrased as possibilities to explore, never as instructions"], "watch_out": "one sentence on the main trap in this territory for someone with their profile" } ],
-  "fit_test": [ exactly 5 objects: { "criterion": "a short personal pass/fail test distilled from THEIR answers — budget ceiling, weekly hours, deal breakers, fears, income need", "why": "one sentence on why this test matters for them specifically", "check": "numeric"|"boolean"|"judgment", "metric": "startup_cost"|"time_to_revenue"|null, "op": "lte"|"gte"|null, "value": number|null } ],
-  "avoid_list": [ 2-3 objects: { "territory": "something tempting for someone like them", "reason": "why it conflicts with their constraints or deal breakers — plain and kind" } ],
-  "toolkit": [ 4-6 objects: { "name": "a real, currently popular tool", "purpose": "what stage of their journey it serves, one short phrase", "cost": "free" | "freemium" | "paid" } ] }
-Every field grounded in the profile (and market scan where given). Never invent facts. Never prescribe: territories are zones to explore and the founder chooses. Honest beats encouraging.
-
-On fit_test "check": this says how each criterion gets DECIDED, because the ones that are really thresholds are checked by arithmetic rather than by opinion.
-- "numeric" is only for the two metrics named, and only where the criterion is a genuine threshold taken from their answers. A launch-budget ceiling ("Does it start for under $800?") is metric "startup_cost", op "lte", value 800. How soon they need money ("Is it earning inside 8 weeks?") is metric "time_to_revenue", op "lte", value 8 — ALWAYS expressed in weeks, so three months is 13.
-- "boolean" is a clean yes/no about the idea itself ("Can it sell without me on camera?"). "judgment" is a real call that needs reading ("Does my clinical credibility matter to this buyer?").
-- For "boolean" and "judgment", set metric, op and value to null.
-Aim for one or two numeric criteria where the profile genuinely supports a threshold, and never dress a judgement call up as a number — a fake threshold is worse than an honest opinion.
-Return only JSON. No comments, no trailing commas.`;
-
+// What the Compass is FOR on each path. The three tasks this replaces were
+// written for the old stage split, so a plumber and a SaaS founder were given
+// identical instructions. Every one of these still ends the same way: the
+// Compass sharpens the founder's judgement, it never picks for them.
 const PATH_TASKS = {
-  exploring: `This founder has no business idea yet. Draw their Compass so THEY can choose well: name their archetype, read their loadout back to them honestly, map 3-4 territories where their profile gives them a real edge, distill their 5-point fit test, and name what they should avoid. The Compass sharpens their judgement — it does not pick for them.`,
-  idea: `This founder has an idea (in the profile) but no business yet. Draw their Compass: archetype and loadout as normal. For territories, make the FIRST territory the zone their own idea lives in — read it honestly against the market scan (temperature, real demand, the trap) — and add 2-3 adjacent territories their loadout also supports, so they choose with open eyes rather than tunnel vision. The fit test must be built so they can score their own idea against it. Never tell them whether to proceed — give them the lens.`,
-  existing: `This founder already runs the business described in the profile. Draw a diagnostic Compass. Archetype and loadout as normal, informed by how they actually operate. For territories, lay out 3-4 STRATEGIC DIRECTIONS for this business — the first should be their current path sharpened (repositioned, repriced or narrowed to break the bottleneck they described), the others adjacent moves that reuse their customers, skills or channels. For each, honest temperature and tradeoffs. Judge the business fairly: analyze every segment it serves, weigh the non-revenue traction metric they gave, never invent kill criteria or revenue deadlines. Lay out the paths — the founder picks. No verdicts, no 'you should'.`
+  creator: `This founder builds an audience. Draw their Compass around what only they can make: name their archetype, read their loadout honestly, and map 3-4 CONTENT TERRITORIES — subject areas where their knowledge, access or taste gives them an unfair angle, not "post more". Weigh their real posting capacity against the platform they chose, and be candid where an audience size of zero means the first year is unpaid.`,
+  freelancer: `This founder sells a skill and does the work themselves. Map 3-4 POSITIONING TERRITORIES — the specific niches and buyer types where their skill commands a premium rather than competing on price. Be honest about the ceiling: hours are finite, and a rate that cannot reach their income goal at their available hours is the most useful thing you can show them.`,
+  consultant: `This founder sells judgement, not execution. Map 3-4 PROBLEM TERRITORIES — expensive, recurring problems their expertise actually solves, where the buyer has budget and authority. Weigh their proof honestly: advice without a track record or a credential sells slowly, and pricing follows the outcome, never the hours.`,
+  local_service: `This founder goes to the customer. Map 3-4 SERVICE TERRITORIES inside their travel radius — job types where demand is steady, competition is beatable, and their kit and licensing let them start. Ground everything in local reality: seasonality, drive time, and how people in their area actually find a tradesperson.`,
+  brick_mortar: `This founder is opening a place people come to. Map 3-4 CONCEPT TERRITORIES that fit their rent ceiling, fit-out budget and the licences they can realistically get. Be blunt about fixed costs: rent is due whether anyone walks in or not, and a concept that only works at full capacity is a concept that fails.`,
+  online_store: `This founder sells products online. Map 3-4 PRODUCT TERRITORIES where their sourcing route, margin and channel can actually compete. Be honest about the two ways this fails: a margin too thin to pay for customer acquisition, and a commodity anyone can undercut.`,
+  software: `This founder is building a product. Map 3-4 PROBLEM TERRITORIES narrow enough to build with what they can actually build — their own hands, no-code, or a budget. Weigh distribution as hard as the build: software that nobody can find is the most common way this path ends.`,
+  exploring: `This founder has no direction yet. Draw their Compass so THEY can choose well: name their archetype, read their loadout back honestly, map 3-4 territories where their profile gives a real edge, and name what they should avoid. The Compass sharpens their judgement — it does not pick for them.`
 };
 
 async function generateCompass(token, q, scan, fromLibrary) {
-  const path = (q && (q.founder_path === 'existing' || q.founder_path === 'idea')) ? q.founder_path : 'exploring';
+  const path = PATH_TASKS[q && q.founder_path] ? q.founder_path : 'exploring';
   const system = "You are NoBossly's founder strategist. You never prescribe which business a founder should start — you sharpen their judgement so they can choose for themselves. Everything you write is grounded in their actual answers and any market scan provided. You are candid: naming a real constraint or a mismatch respectfully serves the founder better than encouragement. You speak to the founder in second person.";
   const scanBlock = scan ? '\n\nLIVE MARKET SCAN (web search run moments ago — treat as the current state of the market; where it names what the business actually is and its segments, trust that over any assumption):\n' + JSON.stringify(scan) : '';
   // Most of the fit test comes from a curated library, matched to this

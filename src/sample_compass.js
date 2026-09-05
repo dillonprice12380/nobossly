@@ -7,7 +7,7 @@
 // wherever it renders. It is static copy, never a real member's data.
 
 module.exports = {
-  founder_path: 'exploring',
+  founder_path: 'consultant',
   founder: {
     name: 'Maya',
     summary: 'Dental hygienist, 12 years in practice. Ten hours a week, $800 to start, wants $2k a month on the side without leaving the job she likes.'

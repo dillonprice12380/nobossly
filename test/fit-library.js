@@ -42,14 +42,14 @@ const fingerprint = crypto.createHash('md5').update(
 const PROFILES = {
   hygienist: {
     label: 'employed, $500, 10-20h, no runway, no video, credentialed',
-    q: { founder_path: 'exploring', work_status: 'Employed full-time', launch_budget: 'Under $500',
+    q: { founder_path: 'consultant', work_status: 'Employed full-time', launch_budget: 'Under $500',
          hours_per_week: '10-20', runway: 'None — need income now', income_year1: 'Replace full salary',
          deal_breakers: ['video content', 'inventory'], credentials: 'RDH license',
          industry_field: 'dental', tech_level: 2, sales_comfort: 2 }
   },
   owner: {
     label: 'existing business, $2-10k, 20-40h, 6-12mo runway',
-    q: { founder_path: 'existing', work_status: 'Freelancing', launch_budget: '$2,000-10,000',
+    q: { founder_path: 'local_service', work_status: 'Freelancing', path_answers: { stage: 'Booked out' }, launch_budget: '$2,000-10,000',
          hours_per_week: '20-40', runway: '6-12 months', income_year1: 'Build something big',
          deal_breakers: [], credentials: '', industry_field: 'retail', tech_level: 4, sales_comfort: 4 }
   },
@@ -66,7 +66,7 @@ const PROFILES = {
 };
 
 console.log('\nLibrary snapshot:');
-eq('26 active criteria', ROWS.length, 26);
+eq('39 active criteria', ROWS.length, 39);
 ok('fingerprint (compare against the query in this file\'s header)', true, fingerprint);
 ok('every row has a category, so the diversity rule can work', ROWS.every(r => !!r.category));
 ok('every numeric row can resolve a threshold',
@@ -114,8 +114,16 @@ console.log('\nThe test actually reflects what the founder said:');
   const ownerSlugs = ownerChosen.map(c => c.slug);
   ok('an existing business gets the build-on-it criterion', ownerSlugs.includes('builds_on_existing'), ownerSlugs.join(', '));
   ok('and NOT the camera criterion they never asked for', !ownerSlugs.includes('no_camera'));
-  const ownerBudget = ownerChosen.find(c => c.metric === 'startup_cost');
-  ok('their ceiling is $10,000, not $500', ownerBudget && ownerBudget.value === 10000, ownerBudget && String(ownerBudget.value));
+  // Their budget criterion may not make the top five — path-specific criteria
+  // outrank a generic ceiling, which is the point of tagging them. What must
+  // hold is that when it IS used, it binds to their number and not someone
+  // else's, so this tests the binding directly.
+  const budgetRow = ROWS.find(r => r.slug === 'budget_ceiling_soft');
+  const ownerBound = lib.toCriterion(budgetRow, lib.founderFacts(PROFILES.owner.q));
+  ok('their ceiling binds to $10,000, not $500', ownerBound && ownerBound.value === 10000,
+     ownerBound && String(ownerBound.value));
+  ok('and the wording says $10,000', ownerBound && ownerBound.criterion.includes('$10,000'),
+     ownerBound && ownerBound.criterion);
 
   const brokeChosen = lib.selectFromLibrary(ROWS, lib.founderFacts(PROFILES.broke.q));
   const zero = brokeChosen.find(c => c.slug === 'zero_budget');
@@ -193,6 +201,35 @@ console.log('\nAnd the result grades the way fit.js expects:');
   });
   ok('and fail on the numbers despite the model passing them',
      dear.passed === dear.total - 2, `${dear.passed}/${dear.total}`);
+}
+
+console.log('\nPath-tagged criteria only reach their own path:');
+{
+  const tagged = ROWS.filter(r => r.paths && r.paths.length);
+  ok('the library carries path-specific criteria', tagged.length >= 13, String(tagged.length));
+
+  for (const slug of ['creator', 'brick_mortar', 'software', 'online_store']) {
+    const facts = lib.founderFacts({ founder_path: slug, launch_budget: '$500-2,000',
+      hours_per_week: '10-20', runway: '3-6 months', income_year1: 'Replace full salary' });
+    const chosen = lib.selectFromLibrary(ROWS, facts);
+    const slugs = chosen.map(c => c.slug);
+    // Nothing tagged for a DIFFERENT path may appear.
+    const foreign = chosen.filter(c => {
+      const row = ROWS.find(r => r.slug === c.slug);
+      return row && row.paths && row.paths.length && !row.paths.includes(slug);
+    });
+    ok(`  ${slug}: no criteria from another path`, foreign.length === 0, foreign.map(f => f.slug).join(', ') || 'clean');
+    ok(`  ${slug}: still gets a full test`, chosen.length === 5, String(chosen.length));
+  }
+
+  // The specific thing paths buy you: a brick-and-mortar founder is asked about
+  // rent, and a creator never is.
+  const bm = lib.selectFromLibrary(ROWS, lib.founderFacts({ founder_path: 'brick_mortar',
+    launch_budget: '$2,000-10,000', hours_per_week: '20-40', runway: '3-6 months' })).map(c => c.slug);
+  ok('a brick-and-mortar founder is asked about rent', bm.includes('bm_rent_survivable'), bm.join(', '));
+  const cr = lib.selectFromLibrary(ROWS, lib.founderFacts({ founder_path: 'creator',
+    launch_budget: '$2,000-10,000', hours_per_week: '20-40', runway: '3-6 months' })).map(c => c.slug);
+  ok('and a creator is not', !cr.includes('bm_rent_survivable'), cr.join(', '));
 }
 
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nFit library holds. All checks pass.');

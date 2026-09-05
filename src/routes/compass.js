@@ -6,19 +6,26 @@ const { awardXP } = require('../xp');
 const { sweepMilestones } = require('../milestones_engine');
 const fitLib = require('../fit');
 const lib = require('../fit_library');
+const pathsLib = require('../paths');
 
+// One line per path, shown while the Compass is being drawn.
 const LABELS = {
-  existing: 'Reading your business and the market around it, then drawing your Compass\u2026',
-  idea: 'Reading your idea against the live market, then drawing your Compass\u2026',
+  creator: 'Reading your niche against what is already working on that platform\u2026',
+  freelancer: 'Reading your skill against what that work sells for right now\u2026',
+  consultant: 'Reading your expertise against who is paying for that advice\u2026',
+  local_service: 'Reading your trade and your area against local demand\u2026',
+  brick_mortar: 'Reading your concept against your rent ceiling and the market\u2026',
+  online_store: 'Reading your product against margin, channel and competition\u2026',
+  software: 'Reading your problem against what people already use for it\u2026',
   exploring: 'Reading your profile and drawing your Founder Compass\u2026'
 };
 
-const STEPS = path => path === 'exploring' ? [
-  { id: 'queued', label: 'Reading your questionnaire answers' },
+const STEPS = path => !pathsLib.isPath(path) || path === 'exploring' ? [
+  { id: 'queued', label: 'Reading your answers' },
   { id: 'generate', label: 'Naming your archetype and mapping your territories' },
   { id: 'save', label: 'Writing your fit test, avoid list and toolkit' }
 ] : [
-  { id: 'queued', label: 'Reading your questionnaire answers' },
+  { id: 'queued', label: 'Reading your answers' },
   { id: 'scan', label: 'Searching the live market around you' },
   { id: 'generate', label: 'Naming your archetype and mapping your territories' },
   { id: 'save', label: 'Writing your fit test, avoid list and toolkit' }
@@ -45,7 +52,7 @@ router.get('/generate', async (req, res, next) => {
     const q = await qsvc.latestCompleted(req.sb, req.user.id);
     if (!q) return res.redirect('/questionnaire');
     const path = ai.pathOf(q);
-    res.render('generating', { title: 'Drawing your Compass', action: '/compass/generate', label: LABELS[path], steps: STEPS(path) });
+    res.render('generating', { title: 'Drawing your Compass', action: '/compass/generate', label: LABELS[path] || LABELS.exploring, steps: STEPS(path) });
   } catch (e) { next(e); }
 });
 
@@ -59,12 +66,12 @@ async function runCompassGeneration(req, q, jobId) {
   try {
     await report('queued', FLOORS.queued);
     let scan = null;
-    if (path !== 'exploring') {
+    if (pathsLib.hasSubject(q)) {
       await report('scan', FLOORS.scan);
       try { scan = await ai.marketScan(req.accessToken, q); }
       catch (err) { console.error('compass market scan', err && err.message); }
     }
-    await report('generate', path === 'exploring' ? FLOORS.generateNoScan : FLOORS.generate);
+    await report('generate', pathsLib.hasSubject(q) ? FLOORS.generate : FLOORS.generateNoScan);
     // The fit test comes from the curated library first, matched to this
     // founder's own answers, and the model is asked only for whatever gap is
     // left. Library criteria arrive already typed, so they can be graded by

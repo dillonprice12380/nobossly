@@ -1,5 +1,7 @@
 const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1/ai-proxy';
 
+const paths = require('./paths');
+
 function hasKey() { return !!process.env.SUPABASE_URL; }
 
 async function askJSON(token, system, prompt, maxTokens = 4096, opts = {}) {
@@ -58,94 +60,21 @@ const val = v => {
   return String(v).trim();
 };
 
-function lines(pairs) {
-  return pairs.map(([k, v]) => { const s = val(v); return s ? k + ': ' + s : null; }).filter(Boolean).join('\n');
-}
-
+// The founder's declared business path. This used to be the STAGE split
+// (existing / idea / exploring); stage is now one question inside each path,
+// and this is the kind of business.
 function pathOf(q) {
-  return (q && (q.founder_path === 'existing' || q.founder_path === 'idea')) ? q.founder_path : 'exploring';
+  const p = q && q.founder_path;
+  return paths.isPath(p) ? p : 'exploring';
 }
 
-function founderCore(q) {
-  return lines([
-    ['Name', q.founder_name], ['Age', q.age_range], ['Work status', q.work_status],
-    ['Industry background', q.industry_field], ['Location', q.location],
-    ['Skills', q.skills], ['Superpower', q.superpower], ['Credentials', q.credentials],
-    ['Unfair advantage', q.unfair_advantage], ['Assets already in hand', q.existing_assets],
-    ['Hours per week available', q.hours_per_week], ['Money available', q.launch_budget],
-    ['Financial runway', q.runway], ['Income goal', q.income_year1],
-    ['Risk tolerance', q.risk_tolerance], ['Hustle mode', q.hustle_mode],
-    ['Sales comfort (1-5)', q.sales_comfort], ['Marketing comfort (1-5)', q.marketing_comfort],
-    ['Deal breakers', q.deal_breakers], ['Core motivation', q.motivation]
-  ]);
-}
-
-function existingBlock(q) {
-  return 'CURRENT BUSINESS (this founder is already trading):\n' + lines([
-    ['Business name', q.biz_name], ['Website', q.biz_url], ['What it sells', q.biz_description],
-    ['Everything they offer (their own words)', q.biz_offerings],
-    ['What people wrongly assume about it', q.biz_misconceptions],
-    ['Leading non-revenue metric and trend', q.biz_traction_metric],
-    ['Stage', q.biz_stage], ['Time running', q.biz_age], ['Model', q.biz_model],
-    ['Serves', q.target_customer], ['Monthly revenue', q.biz_revenue_monthly],
-    ['Revenue trend', q.biz_trend], ['Profitability', q.biz_profitability],
-    ['Paying customers to date', q.biz_customer_count], ['Pricing', q.biz_pricing],
-    ['Acquisition channels in use', q.biz_channels], ['Best-performing channel', q.biz_best_channel],
-    ['What is working', q.biz_whats_working], ['Where they are stuck', q.biz_whats_stuck],
-    ['Self-identified growth blocker', q.biz_growth_blocker],
-    ['Openness to changing direction', q.biz_pivot_openness],
-    ['12-month goal for the business', q.biz_goal_12mo],
-    ['Competition appetite', q.competition_preference]
-  ]);
-}
-
-function ideaBlock(q) {
-  return 'THEIR IDEA (not yet a business):\n' + lines([
-    ['The idea', q.idea_description], ['Stage', q.idea_stage],
-    ['Problem it solves', q.idea_problem], ['First customer they would target', q.idea_customer],
-    ['How it would make money', q.idea_monetization], ['Why now', q.idea_why_now],
-    ['Validation done so far', q.idea_validation],
-    ['Competitors they already know of', q.idea_known_competitors],
-    ['Their claimed differentiator', q.idea_differentiator],
-    ['The assumption that would sink it if wrong', q.idea_biggest_unknown],
-    ['Existing access to those customers', q.customer_access],
-    ['Target customer preference', q.target_customer],
-    ['Competition appetite', q.competition_preference]
-  ]);
-}
-
-function exploringBlock(q) {
-  return 'NO IDEA YET — this founder is starting from a blank page.\n' + lines([
-    ['Hobbies', q.hobbies], ['Passionate about', q.passion_topic],
-    ['People ask their advice on', q.advice_topic],
-    ['A problem that frustrates them', q.problem_pain],
-    ['Energized by', q.energizing_work], ['Tech comfort (1-5)', q.tech_level],
-    ['AI stance', q.ai_stance], ['Work mode', q.work_mode], ['Team preference', q.team_preference],
-    ['Appetite for learning new skills', q.learning_appetite],
-    ['Preferred business models', q.biz_models],
-    ['Industries to avoid', q.avoid_industries],
-    ['Competition appetite', q.competition_preference],
-    ['Prior business attempts', q.prior_attempts],
-    ['Biggest obstacle they expect', q.biggest_obstacle],
-    ['Target customer preference', q.target_customer],
-    ['What success looks like in a year', q.success_definition],
-    ['Ideal day', q.ideal_day], ['Would regret not trying', q.regret], ['Biggest fear', q.biggest_fear]
-  ]);
-}
-
+// Everything the founder answered on their own path, rendered for the model.
+// The three hand-written blocks this replaces only knew the old stage split, so
+// a creator's follower count or a brick-and-mortar rent ceiling had nowhere to
+// go — they were collected and then dropped before the AI ever saw them.
 function profileSummaryText(q) {
-  const path = pathOf(q);
-  const block = path === 'existing' ? existingBlock(q) : path === 'idea' ? ideaBlock(q) : exploringBlock(q);
-  return 'Founder profile:\n' + founderCore(q) + '\n\n' + block;
+  return paths.describe(q);
 }
-
-// --- website reading ---------------------------------------------------------
-// A business name alone is a trap: "EnRoute Jobs" reads as a generic job board
-// unless you look at the actual site. We fetch it server-side rather than relying
-// on the model's search finding it, since a small or new site may not be indexed.
-
-// Block anything pointing back inside the network — the URL comes from a user.
-const BLOCKED_HOST = /^(localhost$|.*\.local$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0|\[?::1\]?$|172\.(1[6-9]|2\d|3[01])\.)/i;
 
 function htmlToText(html) {
   const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '';
@@ -255,9 +184,11 @@ async function fetchSite(rawUrl) {
 
 async function marketScan(token, q) {
   const path = pathOf(q);
-  if (path === 'exploring') return null;
+  // Nothing to search the market about until a direction is chosen.
+  if (!paths.hasSubject(q)) return null;
+  const running = paths.stageOf(q) === 'running' || paths.stageOf(q) === 'earning';
 
-  const site = path === 'existing' ? await fetchSite(q.biz_url) : null;
+  const site = running && q.biz_url ? await fetchSite(q.biz_url) : null;
   const siteBlock = site
     ? `
 
@@ -265,7 +196,7 @@ THEIR WEBSITE, ${site.pagesRead} page(s) fetched moments ago starting from ${sit
 """
 ${site.text}
 """`
-    : (path === 'existing' && val(q.biz_url)
+    : (running && val(q.biz_url)
       ? `
 
 The founder gave the website ${val(q.biz_url)} but it could not be read automatically. Try to find it via search before drawing any conclusion about what they do.`
@@ -277,7 +208,7 @@ WHAT PEOPLE GET WRONG ABOUT IT, in the founder's words: ${val(q.biz_misconceptio
 Do not repeat that mistake.`
     : '';
 
-  const subject = path === 'existing'
+  const subject = running
     ? `An existing business the founder actually runs.
 Business name: ${val(q.biz_name)}
 Website: ${val(q.biz_url) || 'not given'}
@@ -304,20 +235,20 @@ Then assess the market the business is genuinely in, across all of its segments.
 
   const ideaTask = 'Assess the current state of the market this idea would be entering.';
 
-  const businessField = path === 'existing'
+  const businessField = running
     ? '1-2 sentences on what this specific company actually does, per its own site and anything you found — its real niche, not the category its name suggests'
     : 'one sentence restating the idea in concrete terms';
-  const visibilityField = path === 'existing'
+  const visibilityField = running
     ? 'one sentence on how findable it is publicly — what you actually found, or plainly that you found little or nothing'
     : 'one sentence on how crowded the space already looks';
 
   const prompt = `${subject}
 
-${path === 'existing' ? existingTask : ideaTask}
+${running ? existingTask : ideaTask}
 
 Return a compact JSON object:
 { "business": "${businessField}",
-  "segments": [${path === 'existing' ? '"each distinct offering, audience, or job type this business actually serves — one short phrase each, covering all of them, not just the headline one"' : '"the one or two segments this idea would serve"'}],
+  "segments": [${running ? '"each distinct offering, audience, or job type this business actually serves — one short phrase each, covering all of them, not just the headline one"' : '"the one or two segments this idea would serve"'}],
   "visibility": "${visibilityField}",
   "demand": "2-3 sentences on real, current demand in that market — growing, flat, or shrinking, and on what evidence",
   "competitors": [ { "name": "a real, named company or product competing with what this business ACTUALLY does", "note": "one sentence on what they offer and where they are weak" } ],
@@ -326,7 +257,7 @@ Return a compact JSON object:
   "sources": ["the named sources you drew on"] }
 Include 3-5 competitors. Keep every field short. If the evidence is thin or mixed, say so plainly rather than filling the gap. Finding little public information about a small business is normal and is not by itself evidence that the business is failing.`;
 
-  return askJSON(token, system, prompt, 2000, { webSearch: true, maxSearches: path === 'existing' ? 5 : 4 });
+  return askJSON(token, system, prompt, 2000, { webSearch: true, maxSearches: running ? 5 : 4 });
 }
 
 // --- demand evidence ---------------------------------------------------------
