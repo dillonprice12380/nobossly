@@ -160,7 +160,8 @@ const PATHS = [
         'Everyone says "be consistent" without asking what time you get home.',
         'The advice is written for people who already have an audience — and it measures a blogger and an influencer with the same ruler.'
       ],
-      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. Sponsorship money starts around 10,000 followers; ad and affiliate money starts around 50,000 visits a month. If your runway is three months, the plan has to earn well before either — and your fit test will say so out loud.'
+      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. Sponsorship money starts around 10,000 followers; ad and affiliate money starts around 50,000 visits a month. If your runway is three months, the plan has to earn well before either — and your fit test will say so out loud.',
+      bar: 'Sponsorship money starts around 10,000 followers. Ad and affiliate money starts around 50,000 visits a month. Your fit test holds you to whichever one you are actually measured in.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -210,7 +211,8 @@ const PATHS = [
         'Every month starts from zero because the work is all one-off.',
         'You have never raised your rate because you do not know what happens if you do.'
       ],
-      truth: 'Hours times rate is a hard ceiling, and while you have a job those hours are few. We do that multiplication in front of you — including what the number has to be before handing in your notice is arithmetic rather than nerve.'
+      truth: 'Hours times rate is a hard ceiling, and while you have a job those hours are few. We do that multiplication in front of you — including what the number has to be before handing in your notice is arithmetic rather than nerve.',
+      bar: 'At ten hours a week, a $1,000 month is about $39 an hour — because only around six of those ten are billable. We do that multiplication with your hours, not a generic rate.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -247,7 +249,8 @@ const PATHS = [
         'You price by the hour because naming a number for the result feels like nerve.',
         'You have a decade of results at work and nothing written down that is yours.'
       ],
-      truth: 'An offer described as sessions and calls gets priced like sessions and calls. Your fit test asks whether you can name the outcome — because that one question decides your rate.'
+      truth: 'An offer described as sessions and calls gets priced like sessions and calls. Your fit test asks whether you can name the outcome — because that one question decides your rate.',
+      bar: 'At $2,000 an engagement, a $1,000 month is one client every month. At $250 it is four. Your fit test uses the price you said you could name without flinching.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -262,13 +265,17 @@ const PATHS = [
         placeholder: 'What is measurably different after working with you?',
         hint: 'Consultants who name an outcome charge for it. Ones who name a process charge by the hour.' },
       { name: 'proof', label: 'Proof you can do it', type: 'select', required: true,
-        options: ['A formal credential', 'Years doing the job', 'Results for clients', 'My own results', 'Nothing yet'] }
+        options: ['A formal credential', 'Years doing the job', 'Results for clients', 'My own results', 'Nothing yet'] },
+      // Moved out of depth: an engagement price is not a detail on this path, it
+      // is the number that decides whether the hours available can ever reach
+      // the goal. Asking it late meant the fit test could not do the division.
+      { name: 'ticket_comfort', label: 'Highest price you could say out loud without flinching', type: 'select', required: true,
+        options: ['Under $500', '$500–2,000', '$2,000–10,000', '$10,000+'],
+        hint: 'Per engagement, not per hour. This sets how many clients a month you would need.' }
     ],
     depth: [
       { name: 'delivery', label: 'How you would deliver it', type: 'checks',
         options: ['1:1 coaching', 'Group programme', 'Course', 'Done-with-you', 'Done-for-you', 'Retainer advisory'] },
-      { name: 'ticket_comfort', label: 'Highest price you could say out loud without flinching', type: 'select',
-        options: ['Under $500', '$500–2,000', '$2,000–10,000', '$10,000+'] },
       { name: 'case_studies', label: 'Results you could point to', type: 'textarea' },
       { name: 'referral_source', label: 'Who could send you clients', type: 'textarea' }
     ]
@@ -287,7 +294,8 @@ const PATHS = [
         'You are quoting blind because you do not know your win rate.',
         'Half the day goes on driving you do not get paid for.'
       ],
-      truth: 'Drive time is unpaid. A job type that only comes up twice a month within range cannot fill a week, and your fit test will ask that before you buy the van.'
+      truth: 'Drive time is unpaid. A job type that only comes up twice a month within range cannot fill a week, and your fit test will ask that before you buy the van.',
+      bar: 'At $250 a job, a $1,000 month is four jobs. At $100 it is ten — about three a week, every week. Your fit test uses your own average job, not a national one.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -300,7 +308,10 @@ const PATHS = [
       { name: 'qualified', label: 'Licensing and insurance', type: 'select', required: true,
         options: ['Fully licensed and insured', 'Licensed, not insured', 'Working on it', 'Not needed for this work', 'Not sure what I need'] },
       { name: 'equipment', label: 'Vehicle and kit', type: 'select', required: true,
-        options: ['Have everything', 'Have some of it', 'Have nothing yet', 'Would rent or borrow'] }
+        options: ['Have everything', 'Have some of it', 'Have nothing yet', 'Would rent or borrow'] },
+      { name: 'avg_job_value', label: 'What one typical job pays', type: 'select', required: true,
+        options: ['Under $100', '$100–250', '$250–500', '$500–1,500', '$1,500+'],
+        hint: 'Roughly. It decides how many jobs a month this has to find.' }
     ],
     depth: [
       { name: 'trade_skill', label: 'Can you do the work yourself?', type: 'select',
@@ -326,7 +337,8 @@ const PATHS = [
         'You have a fit-out budget, no break-even number, and a salary you would be giving up.',
         'Everyone is encouraging and nobody has done the arithmetic with you.'
       ],
-      truth: 'Rent is due whether anyone walks in or not. A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday — so we ask about half capacity, not best case.'
+      truth: 'Rent is due whether anyone walks in or not. A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday — so we ask about half capacity, not best case.',
+      bar: 'Rent should sit under 10% of takings. So $1,500 of rent is $15,000 a month through the till — every month, whatever the weather. Your fit test does that sum before you sign anything.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -368,7 +380,8 @@ const PATHS = [
         'You are one of ten identical listings and price is the only lever left.',
         'You do not know your real margin, only your rough one.'
       ],
-      truth: 'This is how online stores die: a product that sells fine and still loses money once ads are counted. Your fit test asks about it on day one, not in month nine.'
+      truth: 'This is how online stores die: a product that sells fine and still loses money once ads are counted. Your fit test asks about it on day one, not in month nine.',
+      bar: 'At a $40 order keeping 50%, a $1,000 month is 50 orders. At a sub-$20 order keeping under 30%, it is nearly 700. Your fit test costs it with your numbers, not a hopeful average.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -381,7 +394,13 @@ const PATHS = [
       { name: 'sourcing', label: 'Where the product comes from', type: 'select', required: true,
         options: ['I make it myself', 'Wholesale', 'Print on demand', 'Dropship', 'A manufacturer would make it', 'I would create the digital files'] },
       { name: 'channel', label: 'Where you would sell it', type: 'checks',
-        options: ['My own site', 'Etsy', 'Amazon', 'eBay', 'TikTok Shop', 'Instagram', 'Wholesale to shops', 'Markets and fairs'] }
+        options: ['My own site', 'Etsy', 'Amazon', 'eBay', 'TikTok Shop', 'Instagram', 'Wholesale to shops', 'Markets and fairs'] },
+      { name: 'avg_order_value', label: 'What a typical order would come to', type: 'select', required: true,
+        options: ['Under $20', '$20–40', '$40–100', '$100–250', '$250+'],
+        hint: 'Below about $40 there is rarely enough left to pay for advertising.' },
+      { name: 'gross_margin', label: 'What is left after the product and shipping cost', type: 'select', required: true,
+        options: ['Under 30%', '30–50%', '50–70%', '70%+', 'Not sure yet'],
+        hint: 'Your margin, before advertising. This is the number that decides everything else.' }
     ],
     depth: [
       { name: 'inventory_capital', label: 'Money you could tie up in stock', type: 'select',
@@ -448,7 +467,8 @@ const PATHS = [
         'You could build it. You have no idea how anyone would find it.',
         'You are not sure whether people use something else already, or nothing at all.'
       ],
-      truth: '"Nothing" is usually wrong and always worth checking — a spreadsheet counts. Software with no distribution plan is a hobby with a deployment pipeline.'
+      truth: '"Nothing" is usually wrong and always worth checking — a spreadsheet counts. Software with no distribution plan is a hobby with a deployment pipeline.',
+      bar: 'At $5 a month you need 200 paying customers for a $1,000 month. At $30 you need 34. At $500 you need two. Who you sell to changes the whole shape of the work, so your fit test asks first.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -461,7 +481,10 @@ const PATHS = [
       { name: 'platform_target', label: 'Where it runs', type: 'select', required: true,
         options: ['Web app', 'iOS', 'Android', 'Both mobile platforms', 'Browser extension', 'Desktop', 'API or integration'] },
       { name: 'who_pays', label: 'Who pays for it', type: 'select', required: true,
-        options: ['Consumers', 'Small businesses', 'Larger companies', 'Not sure yet'] }
+        options: ['Consumers', 'Small businesses', 'Larger companies', 'Not sure yet'] },
+      { name: 'expected_price', label: 'What one customer would pay a month', type: 'select', required: true,
+        options: ['Under $10', '$10–30', '$30–100', '$100–500', '$500+', 'A one-off price, not monthly', 'Not sure yet'],
+        hint: 'The gap between consumer and business pricing is the difference between needing 125 customers and needing 20.' }
     ],
     depth: [
       { name: 'pricing_shape', label: 'How it would charge', type: 'select',
@@ -488,7 +511,8 @@ const PATHS = [
         'You have skills your employer profits from and no obvious way to sell them yourself.',
         'You are worried about picking wrong and losing a year of evenings to it.'
       ],
-      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly, because the scarce thing is not inspiration — it is the evenings between now and getting out.'
+      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly, because the scarce thing is not inspiration — it is the evenings between now and getting out.',
+      bar: 'Every path here has one number it turns on — followers, jobs a week, paying customers, takings through the till. Choosing a path is choosing which number your life gets measured by.'
     },
     core: [
       stageQuestion('How set are you on doing something?', [

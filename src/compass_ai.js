@@ -59,6 +59,12 @@ function compactProfile(q) {
 // written for the old stage split, so a plumber and a SaaS builder were given
 // identical instructions. Every one of these still ends the same way: the
 // Compass sharpens the member's judgement, it never picks for them.
+const traction = require('./traction');
+
+// The same hours buckets fit_library reads, for the traction arithmetic. Kept
+// as the TOP of the bucket, matching how every other hours read works.
+const HOURS_MAX = { '<5': 5, '5-10': 10, '10-20': 20, '20-40': 40, '40+': 40 };
+
 const PATH_TASKS = {
   creator: `This person builds an audience. Draw their Compass around what only they can make: name their archetype, read their loadout honestly, and map 3-4 CONTENT TERRITORIES — subject areas where their knowledge, access or taste gives them an unfair angle, not "post more". Weigh their real posting capacity against the platform they chose, and be candid where an audience size of zero means the first year is unpaid.
 
@@ -72,6 +78,20 @@ Use the right unit for the kind of creator they are, and say the number out loud
   software: `This person is building a product. Map 3-4 PROBLEM TERRITORIES narrow enough to build with what they can actually build — their own hands, no-code, or a budget. Weigh distribution as hard as the build: software that nobody can find is the most common way this path ends.`,
   exploring: `This person has no direction yet. Draw their Compass so THEY can choose well: name their archetype, read their loadout back honestly, map 3-4 territories where their profile gives a real edge, and name what they should avoid. The Compass sharpens their judgement — it does not pick for them.`
 };
+
+// The one number this path is measured by, handed to the model as arithmetic
+// it does not have to attempt. Left out entirely when the answers it needs are
+// missing — a model asked to fill a gap will fill it, and a plausible invented
+// number is the worst thing this section could produce.
+function tractionBlock(q) {
+  const hours = HOURS_MAX[String((q && q.hours_per_week) || '').trim().toLowerCase()];
+  const tr = traction.tractionFor(q, { hours_per_week: hours });
+  if (!tr) return '';
+  return '\n\nTHEIR TRACTION BAR (already calculated — use these figures, do not derive your own):'
+    + '\nA $1,000 month for them is ' + tr.display + ' — ' + tr.detail + '.'
+    + '\nSay this number back to them plainly somewhere in the Compass, and weigh whether it is reachable '
+    + 'at the hours and runway they have. If it is not, say so; that is the most useful sentence on the page.';
+}
 
 async function generateCompass(token, q, scan, fromLibrary) {
   const path = PATH_TASKS[q && q.founder_path] ? q.founder_path : 'exploring';
@@ -91,7 +111,7 @@ async function generateCompass(token, q, scan, fromLibrary) {
             + gap + '. Do not restate, rephrase or overlap with the ones above; cover something they do not, drawn from this person\'s answers. Set check to "judgment" and metric, op and value to null.'
           : '\n\nReturn an EMPTY array for fit_test. The test is already complete.')
     : '';
-  const prompt = 'Their profile (questionnaire answers, verbatim keys):\n' + compactProfile(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC + fitBlock;
+  const prompt = 'Their profile (questionnaire answers, verbatim keys):\n' + compactProfile(q) + tractionBlock(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC + fitBlock;
   return askJSON(token, system, prompt, 5000);
 }
 

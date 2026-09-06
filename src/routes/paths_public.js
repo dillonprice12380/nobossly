@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const paths = require('../paths');
+const lib = require('../fit_library');
 
 // Public landing pages, one per path.
 //
@@ -18,6 +19,19 @@ const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
 // The criteria this path would be tested against. Path-tagged first — those are
 // the ones that make the page feel written for the reader — then the universal
 // ones that fill out a real five-point test.
+// Library wording carries placeholders — "{budget}", "{hours}", "{traction}" —
+// which are filled from a member's own answers when the criterion is pinned.
+// A visitor has no answers, so the page has to bind them to the generic phrase
+// instead. Printing the row unbound put a literal "{budget}" on the page.
+//
+// The one exception is the audience bar, which is a real constant rather than a
+// personal number: on the creator page it should read as the actual figure.
+function visitorFacts(slug) {
+  if (slug !== 'creator') return {};
+  const spec = paths.CREATOR_AUDIENCE[paths.SOCIAL_CREATOR_TYPES[0]];
+  return { audience_target: spec.target, audience_metric: spec.metric };
+}
+
 async function criteriaFor(sb, slug) {
   const { data } = await sb.from('fit_criteria_library')
     .select('slug, criterion, why, check_kind, paths, priority')
@@ -25,7 +39,22 @@ async function criteriaFor(sb, slug) {
   const rows = data || [];
   const tagged = rows.filter(r => (r.paths || []).includes(slug));
   const general = rows.filter(r => !r.paths || !r.paths.length);
-  return tagged.concat(general).slice(0, 5);
+  // Bind and drop the unusable BEFORE slicing, or dropping one leaves a page
+  // with four criteria where the copy promises five.
+  return bindForVisitor(tagged.concat(general), slug).slice(0, 5);
+}
+
+// Exported so the view tests can hold the real library rows to the same rule
+// the page does: nothing a visitor reads may still contain a placeholder.
+function bindForVisitor(rows, slug) {
+  const facts = visitorFacts(slug);
+  return (rows || [])
+    .map(r => ({ ...r, criterion: lib.bind(r.criterion, facts), why: lib.bind(r.why, facts) }))
+    // A criterion whose wording only makes sense with a member's own numbers —
+    // the money bar reads "the number this path turns on" to a stranger — is
+    // dropped rather than shown vague. The page states that bar in its own
+    // words instead, in the marketing block.
+    .filter(r => !/\{[a-z_]+\}/.test(r.criterion + r.why) && !/the number this path turns on/i.test(r.criterion));
 }
 
 async function challengesFor(sb, slug) {
@@ -73,3 +102,5 @@ router.get('/:slug', async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.bindForVisitor = bindForVisitor;
+module.exports.visitorFacts = visitorFacts;

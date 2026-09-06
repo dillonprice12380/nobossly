@@ -103,6 +103,23 @@
   "paths": []
  },
  {
+  "slug": "client_concentration",
+  "criterion": "Could you lose your biggest client and still cover your costs?",
+  "why": "One client over half your income is a job with worse rights and no notice period. It is the specific way this path quietly turns back into the thing you left.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "risk",
+  "priority": 86,
+  "paths": [
+   "freelancer",
+   "consultant"
+  ]
+ },
+ {
   "slug": "consultant_named_outcome",
   "criterion": "Can you name the outcome, not just the process?",
   "why": "Buyers pay for a result. An offer described as sessions and calls gets priced like sessions and calls.",
@@ -435,6 +452,38 @@
   "paths": [
    "physical_product"
   ]
+ },
+ {
+  "slug": "proof_before_lease",
+  "criterion": "Could you get 25 people to commit before you sign anything?",
+  "why": "A lease is years of rent that does not care whether anyone comes in. Twenty-five real people who said yes — a market stall, a pop-up, a pre-sale — costs almost nothing and is the only evidence available before the money is gone.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {},
+  "category": "validation",
+  "priority": 90,
+  "paths": [
+   "brick_mortar"
+  ]
+ },
+ {
+  "slug": "reaches_the_money_bar",
+  "criterion": "Can this reach a $1,000 month — {traction}?",
+  "why": "That is {traction_detail}. A $1k month is the Level 8 rung: the first month this reads as income rather than a hobby. An idea that cannot arithmetically get there is not a slower plan, it is a different one.",
+  "check_kind": "judgment",
+  "metric": null,
+  "op": null,
+  "value_from": null,
+  "value": null,
+  "applies_when": {
+   "has_traction_bar": true
+  },
+  "category": "traction",
+  "priority": 91,
+  "paths": []
  },
  {
   "slug": "revenue_deadline",

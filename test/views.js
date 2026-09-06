@@ -79,8 +79,19 @@ const render = (file, data) =>
 // Stand-ins for the two tables the route reads live. Both queries are wrapped
 // in .catch(() => []) in the route, so the empty case is a real production
 // state, not a hypothetical.
-const CRITERIA = [{ slug: 'evenings_only', criterion: 'Deliverable in under 10 hours a week',
-  why: 'You have 10 hours.', check_kind: 'verified', paths: ['creator'], priority: 90 }];
+const LIBRARY = require('./fit-library-snapshot.json');
+const { bindForVisitor } = require('../src/routes/paths_public');
+
+// The rows a visitor to /paths/<slug> would actually be shown, bound the same
+// way the route binds them. Using an invented row here is how the page shipped
+// printing a literal "{budget}" at readers: the sandbox could not reach the
+// database, so the criteria list was always empty when I looked at it.
+const criteriaForVisitor = slug => bindForVisitor(
+  LIBRARY.filter(r => (r.paths || []).includes(slug))
+    .concat(LIBRARY.filter(r => !r.paths || !r.paths.length))
+    .slice(0, 5), slug);
+
+const CRITERIA = criteriaForVisitor('creator');
 const CHALLENGES = [{ title: 'Post three times this week', description: 'Same hook, three angles.',
   emoji: '🎥', xp_reward: 120, suggested_days: 7, paths: ['creator'] }];
 
@@ -95,7 +106,7 @@ ok('/paths hides the unmarketed ones',
 for (const def of paths.MARKETED) {
   const questions = paths.ownQuestions(def.slug);
   for (const [label, criteria, challenges] of
-       [['with DB rows', CRITERIA, CHALLENGES], ['with an empty DB', [], []]]) {
+       [['with DB rows', criteriaForVisitor(def.slug), CHALLENGES], ['with an empty DB', [], []]]) {
     let html = '';
     try {
       html = render('path_landing.ejs', {
@@ -119,9 +130,18 @@ for (const def of paths.MARKETED) {
     if (!html.includes('/signup?path=' + def.slug)) missing.push('the signup CTA');
     for (const q of questions) if (!html.includes(esc(q.label))) missing.push('question: ' + q.name);
     if (challenges.length && !html.includes(esc(challenges[0].title))) missing.push('the quest');
+    if (!html.includes(esc(def.marketing.bar))) missing.push('the traction bar');
     if (criteria.length && !html.includes(esc(criteria[0].criterion))) missing.push('the criterion');
     ok(`${def.slug} ${label}: every block is in the HTML`, !missing.length,
        missing.join(', ') || `${questions.length} questions`);
+
+    // Nothing a visitor reads may still be a template. Library wording carries
+    // {budget}, {hours}, {traction} and the rest, filled from a member's own
+    // answers — a visitor has none, so the page binds them to the generic
+    // phrase instead of printing the braces.
+    const raw = (html.match(/\{[a-z_]+\}/g) || []);
+    ok(`${def.slug} ${label}: no unbound placeholder reaches the reader`, raw.length === 0,
+       raw.slice(0, 4).join(', ') || 'clean');
 
     // The bug this file exists for: content present in the HTML but painted
     // at opacity 0 forever.

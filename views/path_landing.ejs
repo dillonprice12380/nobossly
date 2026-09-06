@@ -45,6 +45,16 @@
   </div>
 </section>
 
+<%# The one number this path turns on. Stated plainly, before the criteria,
+    because it is the most concrete thing on the page. %>
+<% if (mk.bar) { %>
+<section class="card bar-card">
+  <h2>📐 The number this path turns on</h2>
+  <p class="pl-bar"><%= mk.bar %></p>
+  <p class="muted small" style="margin:.6rem 0 0">Rules of thumb, not laws — but a plan with no number in it is not a plan you can tell you are winning.</p>
+</section>
+<% } %>
+
 <%# The real fit test, live from the library. %>
 <% if (criteria.length) { %>
 <section>
@@ -129,6 +139,8 @@
     margin: 1rem 0 0; padding: .85rem 1rem; border-left: 3px solid var(--accent);
     background: rgba(16,185,129,.08); border-radius: 0 10px 10px 0; font-weight: 500;
   }
+  .bar-card { border-left: 3px solid var(--accent); }
+  .pl-bar { margin: .6rem 0 0; font-size: 1.05rem; line-height: 1.55; }
   .q-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .7rem; margin-top: .9rem; }
   .q-card {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;

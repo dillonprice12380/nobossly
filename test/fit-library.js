@@ -82,7 +82,7 @@ const PROFILES = {
 };
 
 console.log('\nLibrary snapshot:');
-eq('43 active criteria', ROWS.length, 43);
+eq('46 active criteria', ROWS.length, 46);
 ok('fingerprint (compare against the query in this file\'s header)', true, fingerprint);
 ok('every row has a category, so the diversity rule can work', ROWS.every(r => !!r.category));
 ok('every numeric row can resolve a threshold',

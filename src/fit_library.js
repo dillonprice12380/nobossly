@@ -48,6 +48,7 @@ const INCOME_GOAL = {
 };
 
 const pathsLib = require('./paths');
+const traction = require('./traction');
 
 const norm = v => String(v == null ? '' : v).trim().toLowerCase();
 const arr = v => (Array.isArray(v) ? v : []).map(norm).filter(Boolean);
@@ -63,6 +64,8 @@ function founderFacts(q) {
   // everything else, so a plumber never matches a criterion about followers.
   const audience = pathsLib.creatorAudience(Q);
   const budget = BUDGET_USD[norm(Q.launch_budget)];
+  const hoursForTraction = HOURS_MAX[norm(Q.hours_per_week)];
+  const tr = traction.tractionFor(Q, { hours_per_week: hoursForTraction });
   const hours = HOURS_MAX[norm(Q.hours_per_week)];
   const runwayWeeks = RUNWAY_WEEKS[norm(Q.runway)];
   const dealBreakers = arr(Q.deal_breakers);
@@ -112,6 +115,16 @@ function founderFacts(q) {
     // which kind they are, and the two become money at very different sizes.
     // audience_target_met is deliberately null rather than false when the
     // number is unknown: not having answered is not the same as being short.
+    // The one number this path is measured by, in that path's own unit.
+    // Null wherever the answers it needs are missing — a criterion written
+    // around a bar that could not be computed is DROPPED by toCriterion rather
+    // than shipped with a hole in it.
+    traction_unit: tr ? tr.unit : null,
+    traction_kind: tr ? tr.kind : null,
+    traction_target: tr ? tr.target : null,
+    has_traction_bar: !!tr,
+    __traction: tr,
+
     creator_kind: audience ? audience.kind : null,
     creator_type: audience ? audience.type : null,
     audience_metric: audience ? audience.metric : null,
@@ -156,7 +169,11 @@ const money = n => '$' + Number(n).toLocaleString('en-US');
 const count = n => Number(n).toLocaleString('en-US');
 
 function bind(text, facts) {
+  const tr = facts.__traction || null;
   return String(text == null ? '' : text)
+    .replace(/\{traction\}/g, tr ? tr.display : 'the number this path turns on')
+    .replace(/\{traction_detail\}/g, tr ? tr.detail : 'from the answers you gave')
+    .replace(/\{traction_unit\}/g, tr ? tr.unit : 'traction')
     .replace(/\{audience_target\}/g, facts.audience_target == null ? 'the size that gets noticed' : count(facts.audience_target))
     .replace(/\{audience_metric\}/g, facts.audience_metric || 'followers')
     .replace(/\{audience_now\}/g, facts.audience_now == null ? 'what you have now' : count(facts.audience_now))
