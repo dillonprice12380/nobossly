@@ -101,7 +101,7 @@ router.post('/claim/:id', async (req, res, next) => {
     if (error) return back('You have already logged \u201c' + def.title + '\u201d.');
 
     await awardXP(req.sb, req.user.id, req.profile, def.xp_reward || 50, 'Milestone: ' + def.title, 'predefined_milestones', def.id);
-    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A founder') + ' reached the milestone ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
+    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' reached the milestone ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
     back(def.emoji + ' ' + def.title + ' logged \u2014 +' + (def.xp_reward || 50) + ' XP. That is a real one.');
   } catch (e) { next(e); }
 });
@@ -142,7 +142,7 @@ router.post('/custom/:id/achieve', async (req, res, next) => {
         achieved: true, date_achieved: new Date().toISOString().slice(0, 10), achieved_at: new Date().toISOString()
       }).eq('id', m.id);
       await awardXP(req.sb, req.user.id, req.profile, m.xp_reward || 50, 'Goal: ' + m.title, 'user_custom_milestones', m.id);
-      await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A founder') + ' achieved the goal ' + (m.emoji || '\ud83c\udfc6') + ' \u201c' + m.title + '\u201d', 'user_custom_milestones', m.id);
+      await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' achieved the goal ' + (m.emoji || '\ud83c\udfc6') + ' \u201c' + m.title + '\u201d', 'user_custom_milestones', m.id);
     }
     res.redirect('/milestones');
   } catch (e) { next(e); }

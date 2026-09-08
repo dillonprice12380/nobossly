@@ -27,7 +27,7 @@ const GIVER_CHALLENGE = 'Give a Peer Review';
 const MIN_FEEDBACK = 120;
 
 const s = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
-const nameOf = req => (req.profile && (req.profile.display_name || req.profile.username)) || 'A founder';
+const nameOf = req => (req.profile && (req.profile.display_name || req.profile.username)) || 'A member';
 
 // The rubric a reviewer answers. Scores are stored as jsonb so the shape can
 // grow without a migration; the labels live here so the form and the rendered
@@ -68,7 +68,7 @@ async function namesFor(req, ids) {
   if (!want.length) return {};
   const { data } = await req.sb.from('profiles').select('id, username, display_name').in('id', want);
   const map = {};
-  (data || []).forEach(p => { map[p.id] = p.display_name || p.username || 'A founder'; });
+  (data || []).forEach(p => { map[p.id] = p.display_name || p.username || 'A member'; });
   return map;
 }
 
@@ -120,7 +120,7 @@ router.get('/', async (req, res, next) => {
 
     res.render('reviews', {
       title: 'Peer review',
-      open: openList.map(r => ({ ...r, reviews: counts[r.id] || 0, reviewedByMe: reviewed.has(r.id), who: names[r.submitter_id] || 'A founder' })),
+      open: openList.map(r => ({ ...r, reviews: counts[r.id] || 0, reviewedByMe: reviewed.has(r.id), who: names[r.submitter_id] || 'A member' })),
       mine: mineList.map(r => ({ ...r, reviews: counts[r.id] || 0 })),
       given: given || [],
       received, needed: SESSIONS_NEEDED,

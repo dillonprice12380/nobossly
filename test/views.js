@@ -196,9 +196,11 @@ function visibleText(html) {
     .replace(/\s+/g, ' ');
 }
 
-// "Founder" survives in exactly one place a reader can see: the title of level
-// six, which members earn and keep. Everything else was retired.
-const FOUNDER_OK = /🚀 Founder\b/g;
+// Nothing a reader can see says "founder" any more. Level six used to be the
+// one exemption — it is "Owner" now, because a content creator whose channel
+// pays is not a founder, and neither is a plumber. With the exemption gone the
+// rule is absolute, which is the version worth guarding.
+const FOUNDER_OK = /(?!)/g;   // matches nothing
 
 // The vocabulary of the repositioning. A public page that manages to say none of
 // this has drifted back to being about founders in general.

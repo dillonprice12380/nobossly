@@ -93,7 +93,7 @@ async function sweepMilestones(sb, userId, profile, paid) {
       nentity_type: 'predefined_milestones', nentity_id: def.id
     }).then(() => {}, () => {});
     if (paid) {
-      const who = profile.display_name || profile.username || 'A founder';
+      const who = profile.display_name || profile.username || 'A member';
       await notifySocial(sb, userId, who + ' unlocked the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id).then(() => {}, () => {});
       if (def.badge_id) {
         const { data: hasBadge } = await sb.from('user_badges').select('id').eq('user_id', userId).eq('badge_id', def.badge_id).maybeSingle();

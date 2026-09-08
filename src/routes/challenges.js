@@ -7,7 +7,7 @@ const { ensureClassified, getElectives } = require('../tailor');
 const { gate } = require('../upgrade');
 
 const isPaid = req => planOf(req.profile) === 'paid';
-const nameOf = req => (req.profile.display_name || req.profile.username || 'A founder');
+const nameOf = req => (req.profile.display_name || req.profile.username || 'A member');
 const cleanDuration = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
 
 router.get('/', async (req, res, next) => {

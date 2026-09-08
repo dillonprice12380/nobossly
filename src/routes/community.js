@@ -105,7 +105,7 @@ router.post('/c/:slug/thread', requireAuth, async (req, res, next) => {
     }).select().maybeSingle();
     if (error) throw error;
     await awardXP(req.sb, req.user.id, req.profile, 10, 'Started a forum thread', 'forum_threads', thread.id);
-    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A founder') + ' posted in the forum: "' + title.slice(0, 60) + '"', 'forum_threads', thread.id);
+    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' posted in the forum: "' + title.slice(0, 60) + '"', 'forum_threads', thread.id);
     res.redirect('/community/t/' + thread.id);
   } catch (e) { next(e); }
 });

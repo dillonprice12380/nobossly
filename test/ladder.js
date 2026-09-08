@@ -1,4 +1,4 @@
-// Regression test for the Founder's Ladder.
+// Regression test for the Ladder.
 //
 // The ladder was hard-capped at Level 4 for months: founder_levels.requirements
 // named seven milestones by title that no code path could award, so levels 5,

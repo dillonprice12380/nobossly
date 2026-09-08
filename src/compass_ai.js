@@ -126,7 +126,7 @@ async function adviseIdea(token, q, compassData, draft, fitTest) {
         ? '\n\nTHE FIT TEST TO GRADE, pinned to this idea when it was first drafted. Grade THESE criteria, in THIS order, and return exactly ' + fitTest.length + ' fit_results. Do not substitute, reorder, merge or add criteria.\n'
           + fitTest.map((c, i) => (i + 1) + '. ' + c.criterion + (c.why ? '  (' + c.why + ')' : '')).join('\n')
         : '')
-    + '\n\nTHE FOUNDER\'S OWN DRAFT IDEA:\nName: ' + (draft.name || '')
+    + '\n\nTHEIR OWN DRAFT IDEA:\nName: ' + (draft.name || '')
     + '\nOne-liner: ' + (draft.tagline || '')
     + '\nDescription: ' + (draft.description || '')
     + '\nProblem it solves: ' + (draft.problem || '')

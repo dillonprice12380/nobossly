@@ -58,7 +58,7 @@ router.post('/follow/:userId', requireAuth, async (req, res, next) => {
   try {
     if (req.params.userId !== req.user.id) {
       const { error } = await req.sb.from('follows').upsert({ follower_id: req.user.id, following_id: req.params.userId }, { onConflict: 'follower_id,following_id' });
-      if (!error) await notify(req, req.params.userId, (req.profile.display_name || req.profile.username || 'A founder') + ' started following you', 'profiles', req.user.id);
+      if (!error) await notify(req, req.params.userId, (req.profile.display_name || req.profile.username || 'A member') + ' started following you', 'profiles', req.user.id);
     }
     res.redirect(req.body.back || req.get('referer') || '/members');
   } catch (e) { next(e); }
@@ -79,7 +79,7 @@ router.post('/friends/request/:userId', requireAuth, async (req, res, next) => {
         .or(`and(requester_id.eq.${req.user.id},addressee_id.eq.${req.params.userId}),and(requester_id.eq.${req.params.userId},addressee_id.eq.${req.user.id})`).maybeSingle();
       if (!existing) {
         const { error } = await req.sb.from('friendships').insert({ requester_id: req.user.id, addressee_id: req.params.userId });
-        if (!error) await notify(req, req.params.userId, (req.profile.display_name || req.profile.username || 'A founder') + ' sent you a friend request', 'profiles', req.user.id);
+        if (!error) await notify(req, req.params.userId, (req.profile.display_name || req.profile.username || 'A member') + ' sent you a friend request', 'profiles', req.user.id);
       } else if (existing.status === 'declined' && existing.requester_id === req.user.id) {
         await req.sb.from('friendships').update({ status: 'pending', responded_at: null }).eq('id', existing.id);
       }
@@ -93,7 +93,7 @@ router.post('/friends/:id/accept', requireAuth, async (req, res, next) => {
     const { data: f } = await req.sb.from('friendships').select('*').eq('id', req.params.id).eq('addressee_id', req.user.id).maybeSingle();
     if (f) {
       await req.sb.from('friendships').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', f.id);
-      await notify(req, f.requester_id, (req.profile.display_name || req.profile.username || 'A founder') + ' accepted your friend request', 'profiles', req.user.id);
+      await notify(req, f.requester_id, (req.profile.display_name || req.profile.username || 'A member') + ' accepted your friend request', 'profiles', req.user.id);
     }
     res.redirect(req.body.back || req.get('referer') || '/members');
   } catch (e) { next(e); }
