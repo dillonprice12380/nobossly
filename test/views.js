@@ -240,6 +240,29 @@ for (const term of RETIRED) {
   ok(`"${term}" appears nowhere`, hits.length === 0, hits.join(', ') || 'clean');
 }
 
+// ---------------------------------------------------------------------------
+// 3b. Nothing promises a question count the questionnaire does not ask.
+//
+// The core round was seven questions before paths existed. It is now the six
+// universal questions, the path question, the subpath question and the path's
+// own — twelve to fourteen, depending on the path. "Seven questions" survived
+// in fourteen places across the views, the emails and a path's own marketing
+// subhead, which is a promise the second screen immediately breaks. The copy
+// says "about a dozen" now, so the guard is both halves: the stale phrase is
+// gone, and a dozen is still an honest word for the real count.
+
+console.log('\nThe promised question count is the real one:');
+const STALE_COUNT = [/seven[- ]question/i, /seven answers/i, /\bseven questions\b/i];
+for (const re of STALE_COUNT) {
+  const hits = sourceFiles.filter(p => re.test(fs.readFileSync(p, 'utf8')))
+    .map(p => path.relative(ROOT, p));
+  ok(`nothing says ${re}`, hits.length === 0, hits.join(', ') || 'clean');
+}
+{
+  const counts = paths.PATHS.map(p => paths.coreQuestions(p.slug).length);
+  const lo = Math.min(...counts), hi = Math.max(...counts);
+  ok('every path asks about a dozen core questions', lo >= 11 && hi <= 16, `${lo}–${hi}`);
+}
 
 
 // ---------------------------------------------------------------------------

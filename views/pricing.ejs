@@ -10,7 +10,7 @@
     <h3>Free</h3>
     <p class="price">$0<span class="muted small"> forever</span></p>
     <ul class="feature-list"><% freeFeatures.forEach(f => { %><li>✓ <%= f %></li><% }) %></ul>
-    <% if (!user) { %><a class="btn btn-ghost btn-block" href="/signup">Get started</a>
+    <% if (!user) { %><a class="btn btn-ghost btn-block" href="/paths">Find your path</a>
     <% } else if (plan === 'free') { %><span class="chip">Your current plan</span><% } %>
   </div>
   <% tiers.forEach(t => { %>

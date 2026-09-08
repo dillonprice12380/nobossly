@@ -49,11 +49,11 @@ const p = t => `<p style="margin:0 0 13px;font-size:15px;line-height:1.62;color:
 
 const TEMPLATES = {
   welcome: name => ({
-    subject: 'Your way out is seven questions away',
+    subject: 'Your way out starts with a path',
     html: shell(
       `Welcome, ${esc(name)}.`,
       p('You have an account. The next thing that happens is your <strong>Compass</strong> &mdash; your archetype, the strengths you actually have, the hours and runway you genuinely have outside your job, and an honest list of what to avoid.')
-      + p('It takes seven questions. About two minutes, tonight, after work. You can go deeper later if you want a sharper read, but you do not have to.'),
+      + p('It takes about a dozen questions, all written for the path you picked. About two minutes, tonight, after work. You can go deeper later if you want a sharper read, but you do not have to.'),
       'Draw my Compass', SITE + '/questionnaire')
   }),
 
@@ -62,7 +62,7 @@ const TEMPLATES = {
     html: shell(
       `Pick up where you left off, ${esc(name)}.`,
       p('Your answers are saved. Nothing was lost &mdash; the questionnaire opens exactly where you stopped.')
-      + p('It is seven questions in total, and the Compass is drawn the moment you finish the last one.'),
+      + p('It is about a dozen questions in total, and the Compass is drawn the moment you finish the last one.'),
       'Finish and see my Compass', SITE + '/questionnaire')
   }),
 
