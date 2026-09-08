@@ -2,6 +2,7 @@ const router = require('express').Router();
 const ai = require('../ai');
 const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const ladders = require('../ladders');
+const paths = require('../paths');
 const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
@@ -72,6 +73,15 @@ router.get('/', async (req, res, next) => {
     // The rungs of THIS member's path — a creator's Level 6 is "Sponsored",
     // a plumber's is "Regulars".
     const lvls = ladders.ladderFor(p.path);
+    // What this member actually chose, in words. Everything on this page is
+    // tailored to it, so it is worth saying out loud rather than leaving them
+    // to infer it from the quests.
+    const pathDef = paths.get(p.path);
+    const yourPath = pathDef ? {
+      label: pathDef.label,
+      emoji: pathDef.emoji,
+      subpath: (paths.subpathsOf(p.path).find(s => s.slug === p.subpath) || {}).label || null
+    } : null;
     const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '\ud83c\udf31' };
     const next = lvls.find(l => l.level === (p.current_level || 1) + 1);
 
@@ -111,7 +121,7 @@ router.get('/', async (req, res, next) => {
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
-      levelInfo: { current: cur, next }, ladder, aiReady: ai.hasKey(), pinned, analytics, coach,
+      levelInfo: { current: cur, next }, ladder, yourPath, aiReady: ai.hasKey(), pinned, analytics, coach,
       needsQuestionnaire, hasCompass
     });
   } catch (e) { next(e); }

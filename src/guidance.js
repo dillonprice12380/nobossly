@@ -4,6 +4,8 @@
 // database. Deliberately ZERO AI calls — every tip is deterministic, instant,
 // and free. Rules live in SQL so the library can grow without a deploy.
 
+const pathsLib = require('./paths');
+
 const DAY = 86400000;
 const dstr = d => new Date(d).toISOString().slice(0, 10);
 const daysBetween = (a, b) => Math.floor((b - a) / DAY);
@@ -44,6 +46,7 @@ function fill(msg, state) {
     .replace(/\{fit_total\}/g, String(state.fit_total || 5))
     .replace(/\{fit_gap\}/g, String(Math.max(0, (state.fit_total || 5) - (state.fit_passed || 0))))
     .replace(/\{signals_count\}/g, String(state.signals_count || 0))
+    .replace(/\{subpath\}/g, state.subpath_label || 'what you do')
     .replace(/\{challenge_due_days\}/g, String(state.challenge_due_days != null && state.challenge_due_days < 999 ? state.challenge_due_days : ''));
 }
 
@@ -92,6 +95,10 @@ async function computeState(sb, user, profile, pre = {}) {
     verification_pending: pendingVerifN > 0,
     founder_path: (qrun && qrun.founder_path) || 'exploring',
     path: (qrun && qrun.founder_path) || 'exploring',
+    subpath: pathsLib.subpathOf(qrun) || null,
+    // The readable version, for {subpath} in a rule's message.
+    subpath_label: (pathsLib.subpathsOf((qrun && qrun.founder_path) || '')
+      .find(s => s.slug === pathsLib.subpathOf(qrun)) || {}).label || null,
     // The questionnaire is the Level 1 quest now, so the Coach needs to know
     // whether it is still outstanding — it is the first thing to nudge.
     has_questionnaire: !!qrun,

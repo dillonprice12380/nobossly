@@ -125,6 +125,9 @@ function founderFacts(q) {
     has_traction_bar: !!tr,
     __traction: tr,
 
+    // What they actually do, not just the shape of it.
+    subpath: pathsLib.subpathOf(Q),
+
     creator_kind: audience ? audience.kind : null,
     creator_type: audience ? audience.type : null,
     audience_metric: audience ? audience.metric : null,

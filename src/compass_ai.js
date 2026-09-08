@@ -83,6 +83,20 @@ Use the right unit for the kind of creator they are, and say the number out loud
 // it does not have to attempt. Left out entirely when the answers it needs are
 // missing — a model asked to fill a gap will fill it, and a plausible invented
 // number is the worst thing this section could produce.
+// The path says what shape the business is; the subpath says what it is. A
+// Compass that knows "freelancer" writes about freelancing; one that knows
+// "copywriter" can name the actual work.
+function subpathBlock(q) {
+  const sub = paths.subpathOf(q);
+  if (!sub) return '';
+  const label = (paths.subpathsOf(q.founder_path).find(s => s.slug === sub) || {}).label || sub;
+  const free = ((q.path_answers || {}).subpath_other || '').trim();
+  return '\n\nWHAT THEY ACTUALLY DO: ' + label
+    + (free ? ' — in their own words, "' + free.slice(0, 200) + '"' : '')
+    + '.\nWrite at this level of specificity throughout. "Grow your audience" is\n'
+    + 'advice for a category; name the thing they actually make.';
+}
+
 function tractionBlock(q) {
   const hours = HOURS_MAX[String((q && q.hours_per_week) || '').trim().toLowerCase()];
   const tr = traction.tractionFor(q, { hours_per_week: hours });
@@ -111,7 +125,7 @@ async function generateCompass(token, q, scan, fromLibrary) {
             + gap + '. Do not restate, rephrase or overlap with the ones above; cover something they do not, drawn from this person\'s answers. Set check to "judgment" and metric, op and value to null.'
           : '\n\nReturn an EMPTY array for fit_test. The test is already complete.')
     : '';
-  const prompt = 'Their profile (questionnaire answers, verbatim keys):\n' + compactProfile(q) + tractionBlock(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC + fitBlock;
+  const prompt = 'Their profile (questionnaire answers, verbatim keys):\n' + compactProfile(q) + subpathBlock(q) + tractionBlock(q) + scanBlock + '\n\n' + PATH_TASKS[path] + '\n\n' + COMPASS_SPEC + fitBlock;
   return askJSON(token, system, prompt, 5000);
 }
 
