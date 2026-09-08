@@ -58,10 +58,15 @@ console.log('\nThe two routes to the quest stay separate:');
   // The gate is a CHALLENGE, not a new milestone, precisely so the ladder does
   // not have to change and the off-site route keeps working untouched.
   const cfg = require('./ladder-config.json');
-  const l2 = cfg.levels.find(l => l.level === 2);
-  const quest = l2.requirements.quests.find(q => q.title === 'Get 3 Feedback Sessions');
-  ok('the Level 2 requirement is still the same challenge', !!quest && quest.type === 'challenge',
-     quest ? quest.type : 'missing');
+  const ladders = require('../src/ladders');
+  // Rung 2 asks for it on every path, so peer review is a route to the same
+  // gate no matter which ladder someone is climbing.
+  const missing = ladders.SLUGS.filter(slug => {
+    const g = ladders.rungAt(slug, 2).gates.find(q => q.title === 'Get 3 Feedback Sessions');
+    return !g || g.type !== 'challenge';
+  });
+  ok('rung 2 asks for the same challenge on every path', missing.length === 0,
+     missing.join(', ') || ladders.SLUGS.length + ' paths');
   const ch = cfg.challenges.find(c => c.title === 'Get 3 Feedback Sessions');
   ok('it still requires proof, so the off-site route is unchanged', ch && ch.requires_proof === true);
   const giver = cfg.challenges.find(c => c.title === 'Give a Peer Review');

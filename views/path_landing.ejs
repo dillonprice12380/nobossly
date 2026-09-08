@@ -95,21 +95,15 @@
 </section>
 <% } %>
 
-<%# The shared spine — same for every path, and worth saying so. %>
+<%# This path's own ten rungs, in its own words. Same ten stages and the same
+    XP on every path — only the language changes, so the ladder stays one game. %>
 <section class="card">
-  <h2>🎮 Then the same ladder out as everyone else</h2>
-  <p class="muted">Ten levels between a job you want to leave and the month you can afford to leave it. XP alone can never buy a rung — every one gates on something real. The path changes the questions and the quests; it does not change what counts as progress.</p>
+  <h2>🎮 Your ten rungs, named for this path</h2>
+  <p class="muted">Every path climbs the same ten stages for the same XP, but a plumber's fifth rung is not a podcaster's. XP alone can never buy one — each gates on something that happened in the real world.</p>
   <div class="rung-row">
-    <span class="rung-pill">🌱 Ideator</span>
-    <span class="rung-pill">🔍 Explorer</span>
-    <span class="rung-pill">🔨 Builder</span>
-    <span class="rung-pill">⚡ Hustler</span>
-    <span class="rung-pill is-key">⚙️ Operator — first non-salary dollar</span>
-    <span class="rung-pill">🚀 Owner</span>
-    <span class="rung-pill">🛠️ Maker</span>
-    <span class="rung-pill">🎯 Launcher</span>
-    <span class="rung-pill is-key">💎 Operator Pro — full-time</span>
-    <span class="rung-pill">👑 Legend</span>
+    <% rungs.forEach(function (r) { %>
+      <span class="rung-pill<%= (r.level === 5 || r.level === 9) ? ' is-key' : '' %>"><%= r.emoji %> <%= r.title %><%= r.level === 5 ? ' — first money' : (r.level === 9 ? ' — the job ends' : '') %></span>
+    <% }) %>
   </div>
   <a class="btn btn-ghost" style="margin-top:1rem;display:inline-block" href="/how-it-works">How the whole thing works →</a>
 </section>

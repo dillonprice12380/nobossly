@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ai = require('../ai');
 const { awardXP, bumpStreak, ladderStatus } = require('../xp');
+const ladders = require('../ladders');
 const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
@@ -20,10 +21,9 @@ router.get('/', async (req, res, next) => {
     // claimed on the pages they actually land on rather than by the reviewer.
     try { await claimFeedbackGate(req); } catch (_) { /* self-heals on /reviews */ }
 
-    const [{ data: sprint }, { data: ideas }, { data: levels }, { data: acc }, { data: customAcc }, compassCount] = await Promise.all([
+    const [{ data: sprint }, { data: ideas }, { data: acc }, { data: customAcc }, compassCount] = await Promise.all([
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       req.sb.from('generated_ideas').select('id,name,tagline,status,is_favorited,success_likelihood').eq('user_id', req.user.id).order('position'),
-      req.sb.from('founder_levels').select('*').order('xp_required'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
       req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
       req.sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id)
@@ -69,7 +69,9 @@ router.get('/', async (req, res, next) => {
       ideasCount: (ideas || []).length, plan: res.locals.plan
     });
 
-    const lvls = levels || [];
+    // The rungs of THIS member's path — a creator's Level 6 is "Sponsored",
+    // a plumber's is "Regulars".
+    const lvls = ladders.ladderFor(p.path);
     const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '\ud83c\udf31' };
     const next = lvls.find(l => l.level === (p.current_level || 1) + 1);
 

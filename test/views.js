@@ -113,6 +113,7 @@ for (const def of paths.MARKETED) {
         title: def.label, metaDescription: def.marketing.subhead,
         canonicalUrl: 'https://nobossly.com/paths/' + def.slug,
         def, questions, criteria, challenges,
+        rungs: require("../src/ladders").ladderFor(def.slug),
         others: paths.MARKETED.filter(p => p.slug !== def.slug)
       });
     } catch (e) {
@@ -180,6 +181,7 @@ const marketing = {
 for (const def of paths.MARKETED) {
   marketing['path_landing.ejs:' + def.slug] = {
     def, questions: paths.ownQuestions(def.slug), criteria: [], challenges: [],
+    rungs: require('../src/ladders').ladderFor(def.slug),
     others: paths.MARKETED.filter(p => p.slug !== def.slug)
   };
 }

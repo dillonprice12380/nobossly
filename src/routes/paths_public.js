@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const paths = require('../paths');
 const lib = require('../fit_library');
+const ladders = require('../ladders');
 
 // Public landing pages, one per path.
 //
@@ -94,6 +95,8 @@ router.get('/:slug', async (req, res, next) => {
       // them — it is the most convincing thing on the page and it costs nothing
       // to keep true.
       questions: paths.ownQuestions(def.slug),
+      // The rungs this path actually climbs, named in its own vernacular.
+      rungs: ladders.ladderFor(def.slug),
       criteria,
       challenges,
       others: paths.MARKETED.filter(p => p.slug !== def.slug)

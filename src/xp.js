@@ -38,8 +38,11 @@ async function bumpStreak(sb, userId, profile) {
   }
 }
 
+const ladders = require('./ladders');
+
 // ---------- The Ladder ----------
-// Levels gate on real accomplishments (see founder_levels.requirements).
+// Levels gate on real accomplishments. Each path has its own ten rungs and
+// its own gates — see src/ladders.js, which is the source of truth for both.
 // current_level is the game score; verified_level is what real-world unlocks
 // check. Levels 1-7 self-verify on the honor-plus-witnesses system; reaching
 // 8+ opens a verification_request that an admin reviews — privacy-first, no
@@ -67,61 +70,11 @@ async function achievedQuests(sb, userId) {
   return have;
 }
 
-// A gate can be path-specific. `only` limits an entry to those paths, `except`
-// removes it from them, and an entry with neither applies to everybody — which
-// is most of them.
-//
-// This exists because several gates were written for one kind of business and
-// applied to all nine. A content creator does not register a company to take a
-// sponsorship, and a plumber at $1k months will never build a pitch deck. The
-// answer is a substitute of equal weight rather than a skipped rung: the site
-// promises the same ten-level ladder to everyone, and a path that clears Level
-// 10 on fewer real accomplishments makes that untrue.
-function questApplies(q, path) {
-  if (!q) return false;
-  const p = String(path || '').trim();
-  if (Array.isArray(q.only) && q.only.length) return q.only.includes(p);
-  if (Array.isArray(q.except) && q.except.length) return !q.except.includes(p);
-  return true;
-}
-
-// The gates that actually stand in front of THIS member. An unknown path (they
-// have not finished onboarding) falls back to the universal set, which is the
-// safe reading: it can only ever ask for gates that apply to everyone.
-function applicableQuests(reqmt, path) {
-  if (!reqmt || !Array.isArray(reqmt.quests)) return [];
-  return reqmt.quests.filter(q => questApplies(q, path));
-}
-
-// Gates that belong to OTHER paths. The quest board and the trophy case filter
-// by level only, so without this a creator browses "Serve 100 paying customers"
-// and "Registered my business" — gates that will never be theirs — sitting
-// beside the ones that are. Takes the levels rows so the caller can reuse a
-// query it already made.
-function foreignGateTitles(levels, path, type) {
-  const mine = new Set(), all = new Set();
-  for (const l of levels || []) {
-    for (const q of (l && l.requirements && l.requirements.quests) || []) {
-      if (!q || q.type !== type || !q.title) continue;
-      const t = String(q.title).trim().toLowerCase();
-      all.add(t);
-      if (questApplies(q, path)) mine.add(t);
-    }
-  }
-  return new Set([...all].filter(t => !mine.has(t)));
-}
-
-function meetsRequirements(reqmt, have, path) {
-  const quests = applicableQuests(reqmt, path);
-  if (!quests.length) return true;
-  const hits = quests.filter(qt =>
-    qt && have.has(String(qt.type || '') + ':' + String(qt.title || '').trim().toLowerCase())
-  ).length;
-  // Clamp to what applies. A `min` of 2 against a single applicable gate would
-  // be a rung nobody on that path could ever reach.
-  const need = (reqmt.min && reqmt.min > 0) ? Math.min(reqmt.min, quests.length) : quests.length;
-  return hits >= need;
-}
+// Gate logic lives in src/ladders.js now, because each path has its own ten
+// rungs and the gates are part of that definition rather than a set of
+// exceptions layered on a shared one. These are kept as thin wrappers so the
+// call sites read the same as they did.
+const meetsRequirements = (rung, have) => ladders.meetsRung(rung, have);
 
 // What stands between this founder and the next rung, in the two currencies the
 // ladder actually charges: XP, and completed real-world quests. Nothing in the
@@ -130,31 +83,29 @@ function meetsRequirements(reqmt, have, path) {
 // down toward a level they could never reach that way.
 async function ladderStatus(sb, userId, profile) {
   try {
-    const { data: levels } = await sb.from('founder_levels')
-      .select('level, title, emoji, xp_required, requirements, unlock_text').order('level');
+    const rungs = ladders.ladderFor(profile.path);
     const cur = profile.current_level || 1;
-    const next = (levels || []).find(l => l.level === cur + 1);
+    const next = rungs.find(r => r.level === cur + 1);
     if (!next) return null;
 
-    const reqs = next.requirements || {};
-    const list = applicableQuests(reqs, profile.path);
-    const have = list.length ? await achievedQuests(sb, userId) : new Set();
-    const quests = list.map(q => ({
-      type: q.type,
-      title: q.title,
-      href: q.type === 'challenge' ? '/challenges' : '/milestones',
-      done: have.has(String(q.type || '') + ':' + String(q.title || '').trim().toLowerCase())
+    const have = next.gates.length ? await achievedQuests(sb, userId) : new Set();
+    const quests = next.gates.map(g => ({
+      type: g.type,
+      title: g.title,
+      href: g.type === 'challenge' ? '/challenges' : '/milestones',
+      done: have.has(ladders.gateKey(g))
     }));
 
-    const needMin = (reqs.min && reqs.min > 0) ? Math.min(reqs.min, quests.length) : quests.length;
+    const needMin = next.min && next.min > 0 ? Math.min(next.min, quests.length) : quests.length;
     const doneCount = quests.filter(q => q.done).length;
     const xpNeeded = Math.max(0, (next.xp_required || 0) - (profile.xp_total || 0));
     const questsMet = doneCount >= needMin;
 
     return {
-      next, quests, needMin, doneCount, questsMet, xpNeeded,
+      next: { level: next.level, title: next.title, emoji: next.emoji,
+              xp_required: next.xp_required, unlock_text: ladders.unlockText(next) },
+      quests, needMin, doneCount, questsMet, xpNeeded,
       xpMet: xpNeeded === 0,
-      // What to actually tell them, rather than a bare number.
       blocker: !questsMet && xpNeeded > 0 ? 'both' : (!questsMet ? 'quests' : (xpNeeded > 0 ? 'xp' : null))
     };
   } catch (e) {
@@ -167,21 +118,17 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
   try {
     await sb.from('xp_events').insert({ user_id: userId, amount, reason, entity_type: entityType || null, entity_id: entityId || null });
     const newTotal = (profile.xp_total || 0) + amount;
-    const { data: levels } = await sb.from('founder_levels')
-      .select('level, xp_required, title, emoji, requirements, unlock_text')
-      .order('level', { ascending: true });
+    const levels = ladders.ladderFor(profile.path);
     const current = profile.current_level || 1;
     let level = current;
-    if (levels && levels.length) {
-      const maxXpLevel = levels.reduce((m, l) => (newTotal >= l.xp_required ? Math.max(m, l.level) : m), 1);
-      if (maxXpLevel > current) {
-        const have = await achievedQuests(sb, userId);
-        for (const l of levels) {
-          if (l.level <= level) continue;
-          if (newTotal < l.xp_required) break;
-          if (!meetsRequirements(l.requirements, have, profile.path)) break;
-          level = l.level;
-        }
+    const maxXpLevel = levels.reduce((m, l) => (newTotal >= l.xp_required ? Math.max(m, l.level) : m), 1);
+    if (maxXpLevel > current) {
+      const have = await achievedQuests(sb, userId);
+      for (const l of levels) {
+        if (l.level <= level) continue;
+        if (newTotal < l.xp_required) break;
+        if (!ladders.meetsRung(l, have)) break;
+        level = l.level;
       }
     }
     level = Math.max(level, current);
@@ -193,8 +140,8 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
     if (patch.verified_level) profile.verified_level = patch.verified_level;
     if (level > current) {
       profile.current_level = level;
-      const info = (levels || []).find(l => l.level === level) || {};
-      const msg = 'LEVEL UP! ' + (info.emoji || '\u2b06\ufe0f') + ' You are now Level ' + level + ' \u2014 ' + (info.title || '') + '. ' + (info.unlock_text || '');
+      const info = levels.find(l => l.level === level) || {};
+      const msg = 'LEVEL UP! ' + (info.emoji || '\u2b06\ufe0f') + ' You are now Level ' + level + ' \u2014 ' + (info.title || '') + '. ' + ladders.unlockText(info);
       await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
       if (level >= 8) {
         // Real-world unlocks (accelerator track, cohort leader, featured playbook)
@@ -221,4 +168,4 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
   }
 }
 
-module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements, ladderStatus, applicableQuests, questApplies, foreignGateTitles };
+module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements, ladderStatus };

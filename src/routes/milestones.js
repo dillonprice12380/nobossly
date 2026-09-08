@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ai = require('../ai');
-const { awardXP, foreignGateTitles } = require('../xp');
+const { awardXP } = require('../xp');
+const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { sweepMilestones } = require('../milestones_engine');
@@ -24,7 +25,7 @@ router.get('/', async (req, res, next) => {
       req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', req.user.id),
       req.sb.from('badges').select('id, name, emoji, tier'),
       req.sb.from('user_custom_milestones').select('*').eq('user_id', req.user.id).order('created_at'),
-      req.sb.from('founder_levels').select('level, title, emoji, xp_required, requirements').order('level')
+      Promise.resolve({ data: ladders.ladderFor(req.profile.path) })
     ]);
     const earned = {};
     (mine || []).forEach(m => earned[m.predefined_milestone_id] = m);
@@ -35,7 +36,7 @@ router.get('/', async (req, res, next) => {
     // criterion any more) still display if this founder earned them back then.
     const cats = {};
     const legacy = [];
-    const foreign = foreignGateTitles(levels || [], req.profile.path, 'milestone');
+    const foreign = ladders.foreignGateTitles(req.profile.path, 'milestone');
     // Real-world milestones: the things no metric can see — you registered the
     // business, you opened the bank account, you hit $1k MRR. Self-attested with
     // a written proof note, and deliberately kept apart from the auto trophies
@@ -56,7 +57,7 @@ router.get('/', async (req, res, next) => {
     // it matters rather than just what it is worth.
     const gatesLevel = {};
     (levels || []).forEach(l => {
-      const qs = (l.requirements && Array.isArray(l.requirements.quests)) ? l.requirements.quests : [];
+      const qs = Array.isArray(l.gates) ? l.gates : [];
       qs.forEach(q => {
         if (q && q.type === 'milestone' && q.title) {
           gatesLevel[String(q.title).trim().toLowerCase()] = l;

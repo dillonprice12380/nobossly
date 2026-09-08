@@ -23,7 +23,7 @@ const UNLOCKS = {
   7: [{
     kind: 'manual',
     label: 'Mentor track',
-    detail: 'You become eligible to mentor founders on lower rungs. Arranged with you directly.'
+    detail: 'You become eligible to mentor members on lower rungs. Arranged with you directly.'
   }],
   8: [{
     kind: 'manual',

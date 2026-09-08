@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL } = require('../unlocks');
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
@@ -51,13 +52,19 @@ router.get('/', async (req, res, next) => {
     await backfillBareProfiles();
 
     const { data: members } = await req.sb.from('profiles')
-      .select('username, display_name, profile_is_public, current_level, xp_total, created_at, avatar_url')
+      .select('username, display_name, profile_is_public, current_level, xp_total, created_at, avatar_url, path')
       .eq('account_status', 'active')
       .not('username', 'is', null)
       .order('xp_total', { ascending: false })
       .limit(200);
-    const { data: levels } = await req.sb.from('founder_levels').select('level, title, emoji');
-    res.render('members', { title: 'Members', members: members || [], levels: levels || [] });
+    // A rung is named differently on every path, so each member's title has to
+    // be read from THEIR ladder. One shared lookup would show a plumber a
+    // creator's word for the level they reached.
+    const withRung = (members || []).map(m => {
+      const r = ladders.rungAt(m.path, m.current_level || 1);
+      return { ...m, rung: r || { title: 'Dreamer', emoji: '\uD83C\uDF31' } };
+    });
+    res.render('members', { title: 'Members', members: withRung });
   } catch (e) { next(e); }
 });
 
@@ -85,13 +92,12 @@ router.post('/me/edit', async (req, res, next) => {
 router.get('/:username', async (req, res, next) => {
   try {
     const { data: p } = await req.sb.from('profiles')
-      .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, streak_days, tasks_completed, created_at, profile_is_public, account_status')
+      .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, streak_days, tasks_completed, created_at, profile_is_public, account_status, path')
       .eq('username', req.params.username).maybeSingle();
     if (!p || (p.account_status !== 'active' && p.id !== req.user.id)) return res.status(404).render('error', { title: 'Not found', message: 'Member not found.' });
-    const [{ data: ub }, { data: um }, { data: levels }, { data: customM }] = await Promise.all([
+    const [{ data: ub }, { data: um }, { data: customM }] = await Promise.all([
       req.sb.from('user_badges').select('badge_id, earned_at').eq('user_id', p.id),
       req.sb.from('user_milestones').select('predefined_milestone_id, earned_at').eq('user_id', p.id).eq('pinned', true).order('earned_at', { ascending: false }),
-      req.sb.from('founder_levels').select('level, title, emoji'),
       req.sb.from('user_custom_milestones').select('title, emoji, achieved_at').eq('user_id', p.id).eq('achieved', true).order('achieved_at', { ascending: false })
     ]);
     const badgeIds = (ub || []).map(b => b.badge_id);
@@ -101,7 +107,7 @@ router.get('/:username', async (req, res, next) => {
       milestoneIds.length ? req.sb.from('predefined_milestones').select('id, title, emoji').in('id', milestoneIds) : { data: [] }
     ]);
     const milestones = [...(preMilestones || []), ...((customM || []).map(c => ({ emoji: c.emoji, title: c.title })))];
-    const lvl = (levels || []).find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
+    const lvl = ladders.rungAt(p.path, p.current_level || 1) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
     const isMe = p.id === req.user.id;
 
     // Level 3 — Builder promises "your business name and link now show on your

@@ -1,296 +1,4 @@
 {
- "levels": [
-  {
-   "level": 1,
-   "title": "Ideator",
-   "emoji": "🌱",
-   "xp_required": 0,
-   "requirements": null
-  },
-  {
-   "level": 2,
-   "title": "Explorer",
-   "emoji": "🔍",
-   "xp_required": 100,
-   "requirements": {
-    "quests": [
-     {
-      "type": "milestone",
-      "title": "Compass Questions Answered"
-     },
-     {
-      "type": "milestone",
-      "title": "Passes Your Own Test"
-     },
-     {
-      "type": "milestone",
-      "title": "Three Real Signals"
-     },
-     {
-      "type": "challenge",
-      "title": "Get 3 Feedback Sessions"
-     },
-     {
-      "type": "challenge",
-      "title": "Validate your idea"
-     }
-    ]
-   }
-  },
-  {
-   "level": 3,
-   "title": "Builder",
-   "emoji": "🔨",
-   "xp_required": 300,
-   "requirements": {
-    "quests": [
-     {
-      "type": "milestone",
-      "title": "Blueprint Built"
-     },
-     {
-      "type": "challenge",
-      "title": "Ship Something"
-     },
-     {
-      "type": "milestone",
-      "title": "Sprint 1 Completed"
-     }
-    ]
-   }
-  },
-  {
-   "level": 4,
-   "title": "Hustler",
-   "emoji": "⚡",
-   "xp_required": 600,
-   "requirements": {
-    "quests": [
-     {
-      "type": "challenge",
-      "title": "5 Customer Conversations"
-     },
-     {
-      "type": "challenge",
-      "title": "Do 25 outreach touches"
-     }
-    ]
-   }
-  },
-  {
-   "level": 5,
-   "title": "Operator",
-   "emoji": "⚙️",
-   "xp_required": 1000,
-   "requirements": {
-    "quests": [
-     {
-      "type": "challenge",
-      "title": "Make your first sale"
-     },
-     {
-      "type": "milestone",
-      "title": "Registered my business",
-      "except": [
-       "creator",
-       "exploring"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Set up how you get paid",
-      "only": [
-       "creator",
-       "exploring"
-      ]
-     }
-    ]
-   }
-  },
-  {
-   "level": 6,
-   "title": "Owner",
-   "emoji": "🚀",
-   "xp_required": 1500,
-   "requirements": {
-    "quests": [
-     {
-      "type": "challenge",
-      "title": "Earn Your First $100"
-     },
-     {
-      "type": "milestone",
-      "title": "Opened a business bank account",
-      "except": [
-       "creator",
-       "exploring"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Separate your business money",
-      "only": [
-       "creator",
-       "exploring"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Collect 5 testimonials",
-      "except": [
-       "creator"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Collect 5 pieces of audience proof",
-      "only": [
-       "creator"
-      ]
-     }
-    ]
-   }
-  },
-  {
-   "level": 7,
-   "title": "Maker",
-   "emoji": "🛠️",
-   "xp_required": 2200,
-   "requirements": {
-    "quests": [
-     {
-      "type": "challenge",
-      "title": "Reach 10 paying customers",
-      "except": [
-       "brick_mortar",
-       "online_store"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Serve 100 paying customers",
-      "only": [
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Reach 50 paying customers",
-      "only": [
-       "online_store"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Automate one process"
-     }
-    ]
-   }
-  },
-  {
-   "level": 8,
-   "title": "Launcher",
-   "emoji": "🎯",
-   "xp_required": 3000,
-   "requirements": {
-    "quests": [
-     {
-      "type": "challenge",
-      "title": "Hit a $1k month",
-      "except": [
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Cover a month's rent from takings",
-      "only": [
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Built a pitch deck",
-      "only": [
-       "software",
-       "physical_product",
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Write your one-page plan",
-      "except": [
-       "software",
-       "physical_product",
-       "brick_mortar"
-      ]
-     }
-    ]
-   }
-  },
-  {
-   "level": 9,
-   "title": "Operator Pro",
-   "emoji": "💎",
-   "xp_required": 4000,
-   "requirements": {
-    "min": 2,
-    "quests": [
-     {
-      "type": "milestone",
-      "title": "Completed an accelerator program"
-     },
-     {
-      "type": "milestone",
-      "title": "Had my first profitable month"
-     },
-     {
-      "type": "milestone",
-      "title": "Went full-time on my business"
-     }
-    ]
-   }
-  },
-  {
-   "level": 10,
-   "title": "Legend",
-   "emoji": "👑",
-   "xp_required": 6000,
-   "requirements": {
-    "quests": [
-     {
-      "type": "milestone",
-      "title": "$1K MRR",
-      "only": [
-       "software",
-       "consultant"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Three $1k months in a row",
-      "except": [
-       "software",
-       "consultant",
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "milestone",
-      "title": "Three months of covering rent and paying yourself",
-      "only": [
-       "brick_mortar"
-      ]
-     },
-     {
-      "type": "challenge",
-      "title": "Document your playbook"
-     }
-    ]
-   }
-  }
- ],
  "challenges": [
   {
    "title": "30-Day Escape Plan",
@@ -328,6 +36,11 @@
    "requires_proof": true
   },
   {
+   "title": "Count footfall at three sites",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Cover a month's rent from takings",
    "xp_reward": 800,
    "requires_proof": true
@@ -353,6 +66,16 @@
    "requires_proof": true
   },
   {
+   "title": "Get three manufacturing quotes",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Get your Google Business Profile live and verified",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Give a Peer Review",
    "xp_reward": 60,
    "requires_proof": false
@@ -368,6 +91,11 @@
    "requires_proof": true
   },
   {
+   "title": "Interview 5 people in a field you are curious about",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Land a partnership",
    "xp_reward": 100,
    "requires_proof": false
@@ -378,14 +106,49 @@
    "requires_proof": false
   },
   {
+   "title": "List your first product properly",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Make one by hand and sell it",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Make your first sale",
    "xp_reward": 600,
+   "requires_proof": true
+  },
+  {
+   "title": "Pitch 25 brands or collaborators",
+   "xp_reward": 200,
    "requires_proof": true
   },
   {
    "title": "Post a Win",
    "xp_reward": 30,
    "requires_proof": false
+  },
+  {
+   "title": "Price one offer by the outcome",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Publish 12 pieces in 30 days",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Publish a portfolio that wins work",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Quote 10 jobs in two weeks",
+   "xp_reward": 200,
+   "requires_proof": true
   },
   {
    "title": "Raise your prices",
@@ -418,13 +181,33 @@
    "requires_proof": true
   },
   {
+   "title": "Ship something usable in 30 days",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Start a referral engine",
    "xp_reward": 100,
    "requires_proof": false
   },
   {
+   "title": "Test the concept without the lease",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
    "title": "Validate your idea",
    "xp_reward": 150,
+   "requires_proof": true
+  },
+  {
+   "title": "Watch 5 people use it without helping",
+   "xp_reward": 200,
+   "requires_proof": true
+  },
+  {
+   "title": "Work out your true unit margin",
+   "xp_reward": 200,
    "requires_proof": true
   }
  ],
