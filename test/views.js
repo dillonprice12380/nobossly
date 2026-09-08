@@ -114,6 +114,7 @@ for (const def of paths.MARKETED) {
         canonicalUrl: 'https://nobossly.com/paths/' + def.slug,
         def, questions, criteria, challenges,
         rungs: require("../src/ladders").ladderFor(def.slug),
+        subpaths: paths.subpathsOf(def.slug),
         others: paths.MARKETED.filter(p => p.slug !== def.slug)
       });
     } catch (e) {
@@ -182,6 +183,7 @@ for (const def of paths.MARKETED) {
   marketing['path_landing.ejs:' + def.slug] = {
     def, questions: paths.ownQuestions(def.slug), criteria: [], challenges: [],
     rungs: require('../src/ladders').ladderFor(def.slug),
+    subpaths: paths.subpathsOf(def.slug),
     others: paths.MARKETED.filter(p => p.slug !== def.slug)
   };
 }
@@ -268,7 +270,9 @@ ok('placeholders actually render as placeholders',
 // The conditional-question payload has to survive as parseable JSON, or the
 // browser silently shows every question at once.
 const conds = [...qHtml.matchAll(/data-show-if="([^"]*)"/g)].map(m => m[1]);
-ok('every showIf condition is present', conds.length === 2, conds.length + ' found');
+// The count grows as conditional questions are added, so this asserts the
+// mechanism is live rather than pinning a number that changes with content.
+ok('conditional questions carry their condition', conds.length >= 2, conds.length + ' found');
 ok('...and each parses after HTML decoding', conds.every(c => {
   try { return !!JSON.parse(c.replace(/&quot;/g, '"').replace(/&amp;/g, '&')); }
   catch (e) { return false; }

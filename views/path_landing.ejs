@@ -26,6 +26,18 @@
   <p class="pl-truth"><%= mk.truth %></p>
 </section>
 
+<%# The subpaths, straight from the definition the questionnaire renders. It is
+    the most concrete "this was written for me" signal on the page. %>
+<% if (subpaths && subpaths.length) { %>
+<section>
+  <h2>Which kind of <%= def.label.toLowerCase() %>?</h2>
+  <p class="muted">Your answer narrows the quests to your actual work, not your category. Nobody is forced into a box — the last option opens a text field.</p>
+  <div class="sub-row">
+    <% subpaths.forEach(function (sp) { %><span class="sub-chip"><%= sp.label %></span><% }) %>
+  </div>
+</section>
+<% } %>
+
 <%# The questions this path actually asks. Pulled from the same definition the
     product renders, so the page cannot promise a form that does not exist. %>
 <section>
@@ -135,6 +147,12 @@
   }
   .bar-card { border-left: 3px solid var(--accent); }
   .pl-bar { margin: .6rem 0 0; font-size: 1.05rem; line-height: 1.55; }
+  .sub-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .9rem; }
+  .sub-chip {
+    font-size: .88rem; padding: .35rem .7rem; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .sub-chip:last-child { border-style: dashed; color: var(--muted); }
   .q-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .7rem; margin-top: .9rem; }
   .q-card {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;

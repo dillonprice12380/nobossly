@@ -81,6 +81,133 @@ function showIfSatisfied(question, answers) {
   });
 }
 
+// ---------- subpaths ----------
+//
+// A path says what shape the business is; a subpath says what it actually is.
+// A freelance copywriter and a freelance developer both sell a skill by the
+// hour, but almost nothing they need to DO next is the same, and "content
+// creator" covers someone editing TikToks and someone running a blog with
+// forty thousand readers.
+//
+// Subpaths exist so a quest can be written for the second level of that
+// specificity. They are deliberately shallow — one question, one answer, never
+// a taxonomy someone has to navigate — and every path ends in "Something else",
+// which opens a free-text box rather than forcing a wrong answer.
+const OTHER = { slug: 'other', label: 'Something else' };
+
+const SUBPATHS = {
+  creator: [
+    { slug: 'social',     label: 'Short-form social (TikTok, Reels, Shorts)' },
+    { slug: 'youtube',    label: 'Long-form video (YouTube)' },
+    { slug: 'podcast',    label: 'Podcast' },
+    { slug: 'newsletter', label: 'Newsletter' },
+    { slug: 'blog',       label: 'Blog or publication' },
+    { slug: 'streaming',  label: 'Live streaming' },
+    OTHER
+  ],
+  freelancer: [
+    { slug: 'writing',   label: 'Writing and content' },
+    { slug: 'design',    label: 'Design and brand' },
+    { slug: 'dev',       label: 'Development and engineering' },
+    { slug: 'video',     label: 'Video and editing' },
+    { slug: 'marketing', label: 'Marketing and ads' },
+    { slug: 'ops',       label: 'Admin, ops and assistant work' },
+    OTHER
+  ],
+  consultant: [
+    { slug: 'business', label: 'Business and strategy' },
+    { slug: 'career',   label: 'Career and life coaching' },
+    { slug: 'health',   label: 'Health, fitness and nutrition' },
+    { slug: 'finance',  label: 'Finance and accounting' },
+    { slug: 'tech',     label: 'Technical and IT' },
+    OTHER
+  ],
+  local_service: [
+    { slug: 'trades',   label: 'Trades — plumbing, electrical, carpentry' },
+    { slug: 'cleaning', label: 'Cleaning' },
+    { slug: 'garden',   label: 'Garden and outdoor' },
+    { slug: 'auto',     label: 'Vehicle and mobile repair' },
+    { slug: 'beauty',   label: 'Mobile beauty and grooming' },
+    { slug: 'pets',     label: 'Pet services' },
+    OTHER
+  ],
+  brick_mortar: [
+    { slug: 'food',    label: 'Café or restaurant' },
+    { slug: 'retail',  label: 'Shop or retail' },
+    { slug: 'salon',   label: 'Salon or barber' },
+    { slug: 'fitness', label: 'Gym or studio' },
+    { slug: 'bar',     label: 'Bar or pub' },
+    OTHER
+  ],
+  online_store: [
+    { slug: 'handmade',  label: 'Handmade and craft' },
+    { slug: 'print',     label: 'Print on demand' },
+    { slug: 'wholesale', label: 'Wholesale and reselling' },
+    { slug: 'digital',   label: 'Digital products' },
+    { slug: 'dropship',  label: 'Dropshipping' },
+    OTHER
+  ],
+  physical_product: [
+    { slug: 'home',    label: 'Home and kitchen' },
+    { slug: 'apparel', label: 'Apparel and accessories' },
+    { slug: 'beauty',  label: 'Beauty and personal care' },
+    { slug: 'outdoor', label: 'Outdoor and sports gear' },
+    { slug: 'tech',    label: 'Electronics and gadgets' },
+    OTHER
+  ],
+  software: [
+    { slug: 'saas',        label: 'Software for businesses' },
+    { slug: 'consumer',    label: 'Consumer app or site' },
+    { slug: 'mobile',      label: 'Mobile app' },
+    { slug: 'extension',   label: 'Browser extension or plugin' },
+    { slug: 'ai',          label: 'AI tool' },
+    { slug: 'marketplace', label: 'Marketplace' },
+    OTHER
+  ],
+  // Nothing has been chosen yet on this path, so its subpath asks what pulls
+  // them rather than what they are. The slugs match the other paths on purpose:
+  // it is a soft first vote, and the Compass can read it.
+  exploring: [
+    { slug: 'creator',       label: 'Building an audience' },
+    { slug: 'freelancer',    label: 'Selling a skill' },
+    { slug: 'local_service', label: 'Work near where I live' },
+    { slug: 'online_store',  label: 'Selling products' },
+    { slug: 'software',      label: 'Building a product' },
+    { slug: 'unsure',        label: 'Genuinely no idea yet' }
+  ]
+};
+
+const subpathsOf = slug => SUBPATHS[slug] || [];
+const subpathLabels = slug => subpathsOf(slug).map(s => s.label);
+
+// The subpath a member picked, as a slug. Answers store the LABEL (that is what
+// a select posts), so this maps back.
+function subpathOf(q) {
+  if (!q) return null;
+  const pa = q.path_answers || {};
+  const label = String(pa.subpath || '').trim();
+  const found = subpathsOf(q.founder_path).find(s => s.label === label);
+  return found ? found.slug : null;
+}
+
+// The question every path asks, generated rather than repeated nine times.
+function subpathQuestion(slug) {
+  const subs = subpathsOf(slug);
+  if (!subs.length) return null;
+  const isExploring = slug === 'exploring';
+  return [
+    { name: 'subpath',
+      label: isExploring ? 'What pulls you most right now?' : 'What kind, specifically?',
+      type: 'select', required: true, options: subs.map(s => s.label),
+      hint: isExploring
+        ? 'A first vote, not a commitment. It only steers what you are shown.'
+        : 'This is what lets the quests be written for your actual work rather than your category.' },
+    { name: 'subpath_other', label: 'Tell us what', type: 'text',
+      showIf: { subpath: ['Something else'] },
+      placeholder: 'a few words is plenty' }
+  ];
+}
+
 // ---------- the creator audience bar ----------
 //
 // "How big is your audience" is two different questions. A social creator is
@@ -95,17 +222,20 @@ function showIfSatisfied(question, answers) {
 // planning without any number at all is planning in a vacuum, and "grow the
 // audience" is not a plan you can tell you are winning.
 const CREATOR_AUDIENCE = {
-  'Social media creator or influencer': { kind: 'social', metric: 'followers', target: 10000 },
-  'Video or podcast creator': { kind: 'social', metric: 'subscribers', target: 10000 },
-  'Newsletter writer': { kind: 'social', metric: 'subscribers', target: 10000 },
-  'Publisher or blogger': { kind: 'publisher', metric: 'monthly visitors', target: 50000 },
-  // Undecided defaults to the follower bar: it is the lower of the two, so it
+  social:     { kind: 'social',    metric: 'followers',   target: 10000 },
+  youtube:    { kind: 'social',    metric: 'subscribers', target: 10000 },
+  podcast:    { kind: 'social',    metric: 'subscribers', target: 10000 },
+  newsletter: { kind: 'social',    metric: 'subscribers', target: 10000 },
+  streaming:  { kind: 'social',    metric: 'followers',   target: 10000 },
+  blog:       { kind: 'publisher', metric: 'monthly visitors', target: 50000 },
+  // "Something else" takes the follower bar: it is the lower of the two, so it
   // never tells someone they are further from a target than they really are.
-  'Not sure yet': { kind: 'social', metric: 'followers', target: 10000 }
+  other:      { kind: 'social',    metric: 'followers',   target: 10000 }
 };
 const CREATOR_TYPES = Object.keys(CREATOR_AUDIENCE);
-const SOCIAL_CREATOR_TYPES = CREATOR_TYPES.filter(t => CREATOR_AUDIENCE[t].kind === 'social');
-const PUBLISHER_CREATOR_TYPES = CREATOR_TYPES.filter(t => CREATOR_AUDIENCE[t].kind === 'publisher');
+// showIf compares against what a select actually posts, which is the label.
+const creatorLabels = kind => subpathsOf('creator')
+  .filter(sp => (CREATOR_AUDIENCE[sp.slug] || {}).kind === kind).map(sp => sp.label);
 
 // The FLOOR of the band, deliberately — the opposite of the money buckets,
 // which take the top. A budget of "$500-2,000" means they can spend up to
@@ -130,8 +260,10 @@ const dashes = v => String(v == null ? '' : v).replace(/[\u2013\u2014]/g, '-').t
 function creatorAudience(q) {
   if (!q || q.founder_path !== 'creator') return null;
   const pa = q.path_answers || {};
-  const type = String(pa.creator_type || '').trim();
-  const spec = CREATOR_AUDIENCE[type] || CREATOR_AUDIENCE['Not sure yet'];
+  // The subpath IS the kind of creator — it replaced a separate "what kind of
+  // creator?" question that asked the same thing one level coarser.
+  const type = subpathOf(q) || 'other';
+  const spec = CREATOR_AUDIENCE[type] || CREATOR_AUDIENCE.other;
   const band = spec.kind === 'publisher' ? pa.monthly_traffic : pa.audience_size;
   const now = AUDIENCE_FLOOR[dashes(band).toLowerCase()];
   return {
@@ -168,9 +300,6 @@ const PATHS = [
         'Not started — no audience yet', 'Posting occasionally', 'Posting consistently, no income',
         'Earning something', 'This is my main income'
       ]),
-      { name: 'creator_type', label: 'What kind of creator?', type: 'select', required: true,
-        options: CREATOR_TYPES,
-        hint: 'This decides which number your plan is measured in — an audience you follow, or traffic you receive.' },
       { name: 'platform', label: 'Main platform', type: 'select', required: true,
         options: ['YouTube', 'TikTok', 'Instagram', 'X / Twitter', 'LinkedIn', 'Twitch', 'Newsletter', 'Podcast', 'Blog', 'Undecided'] },
       { name: 'niche', label: 'What is it about?', type: 'text', required: true,
@@ -179,11 +308,11 @@ const PATHS = [
       // do not become money at the same scale, so the question asked depends on
       // which kind of creator this is. showIf hides the one that does not apply.
       { name: 'audience_size', label: 'Followers or subscribers you have now', type: 'select',
-        showIf: { creator_type: SOCIAL_CREATOR_TYPES },
+        showIf: { subpath: creatorLabels('social') },
         options: ['None yet', 'Under 1,000', '1,000–10,000', '10,000–50,000', '50,000–250,000', '250,000+'],
         hint: 'Sponsorship offers realistically start arriving around 10,000.' },
       { name: 'monthly_traffic', label: 'Monthly visitors you get now', type: 'select',
-        showIf: { creator_type: PUBLISHER_CREATOR_TYPES },
+        showIf: { subpath: creatorLabels('publisher') },
         options: ['Under 1,000', '1,000–10,000', '10,000–50,000', '50,000–250,000', '250,000+'],
         hint: 'Ad and affiliate revenue realistically starts mattering around 50,000 a month.' },
       { name: 'monetization', label: 'How you think it makes money', type: 'checks',
@@ -553,7 +682,12 @@ const get = slug => BY_SLUG[slug] || null;
 // are what the fit test is built from.
 function coreQuestions(slug) {
   const p = get(slug);
-  return p ? UNIVERSAL_CORE.concat(p.core) : UNIVERSAL_CORE.slice();
+  if (!p) return UNIVERSAL_CORE.slice();
+  // The subpath sits immediately after "where are you with it?", because
+  // everything below it reads better once you know what the thing actually is.
+  const sub = subpathQuestion(slug) || [];
+  const [stage, ...rest] = p.core;
+  return UNIVERSAL_CORE.concat(stage && stage.name === 'stage' ? [stage, ...sub, ...rest] : [...sub, ...p.core]);
 }
 
 // The questions that belong to THIS path, as opposed to the six everyone
@@ -631,6 +765,7 @@ module.exports = {
   coreQuestions, ownQuestions, depthQuestions, depthSteps, totalSteps,
   REQUIRED_STEPS: 2,
   HOURS, BUDGET, RUNWAY, INCOME, WORK_STATUS,
-  CREATOR_AUDIENCE, CREATOR_TYPES, SOCIAL_CREATOR_TYPES, PUBLISHER_CREATOR_TYPES, creatorAudience,
+  CREATOR_AUDIENCE, CREATOR_TYPES, creatorLabels, creatorAudience,
+  SUBPATHS, subpathsOf, subpathLabels, subpathOf, subpathQuestion,
   showIfSatisfied
 };

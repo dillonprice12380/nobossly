@@ -106,9 +106,12 @@ const specificity = (c, p) => ['business_types', 'industries', 'customer_segment
 // when thin. AI top-up is paid-only (it costs money); pool matches are for
 // everyone.
 async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
-  // A declared path beats an AI classification of free text, so a founder with
+  // A declared path beats an AI classification of free text, so a member with
   // a path gets electives even before they have anything to classify.
   const path = profile.path || null;
+  // The subpath is what makes a quest land: "rewrite one page and measure what
+  // it does" is for a copywriter, not for every freelancer alive.
+  const subpath = profile.subpath || null;
   if (!profile.biz_type && !path) return { electives: [], unclassified: true };
 
   const { data: taken } = await sb.from('user_custom_challenges').select('tailored_id').eq('user_id', profile.id).not('tailored_id', 'is', null);
@@ -120,8 +123,13 @@ async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
   // A challenge tagged with paths is only for those paths. An untagged one is
   // general and still matched the old way, on classification tags.
   const onPath = c => !c.paths || !c.paths.length || (path && c.paths.includes(path));
+  // A subpath-tagged quest is ONLY for those subpaths. Untagged means it suits
+  // the whole path — which is most of them, and stays true for anyone who
+  // picked "Something else".
+  const onSubpath = c => !c.subpaths || !c.subpaths.length || (subpath && c.subpaths.includes(subpath));
   let list = (pool || []).filter(c => !takenSet.has(c.id)
     && onPath(c)
+    && onSubpath(c)
     && matches(c.business_types, profile.biz_type)
     && matches(c.industries, profile.biz_industry)
     && matches(c.customer_segments, profile.biz_segment)
@@ -129,7 +137,11 @@ async function getElectives(sb, profile, level, { paid, accessToken } = {}) {
   // Path-tagged first: written for exactly this kind of business, and chosen by
   // the founder rather than guessed at.
   const onPathScore = c => (c.paths && c.paths.length && path && c.paths.includes(path)) ? 1 : 0;
-  list.sort((a, b) => onPathScore(b) - onPathScore(a)
+  // Written for exactly this work beats written for this shape of business,
+  // which beats matched by an AI classification of free text.
+  const onSubpathScore = c => (c.subpaths && c.subpaths.length && subpath && c.subpaths.includes(subpath)) ? 1 : 0;
+  list.sort((a, b) => onSubpathScore(b) - onSubpathScore(a)
+    || onPathScore(b) - onPathScore(a)
     || specificity(b, profile) - specificity(a, profile)
     || (a.xp_reward - b.xp_reward));
 

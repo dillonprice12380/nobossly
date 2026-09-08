@@ -68,7 +68,7 @@ const PROFILES = {
     q: { founder_path: 'creator', work_status: 'Employed full-time', launch_budget: 'Under $500',
          hours_per_week: '5-10', runway: '1-3 months', income_year1: 'Replace part of salary',
          deal_breakers: [], credentials: '', industry_field: '', tech_level: 3, sales_comfort: 3,
-         path_answers: { stage: 'Posting occasionally', creator_type: 'Social media creator or influencer',
+         path_answers: { stage: 'Posting occasionally', subpath: 'Short-form social (TikTok, Reels, Shorts)',
                          audience_size: '1,000\u201310,000' } }
   },
   blogger: {
@@ -76,7 +76,7 @@ const PROFILES = {
     q: { founder_path: 'creator', work_status: 'Employed full-time', launch_budget: 'Under $500',
          hours_per_week: '5-10', runway: '1-3 months', income_year1: 'Replace part of salary',
          deal_breakers: [], credentials: '', industry_field: '', tech_level: 3, sales_comfort: 3,
-         path_answers: { stage: 'Posting occasionally', creator_type: 'Publisher or blogger',
+         path_answers: { stage: 'Posting occasionally', subpath: 'Blog or publication',
                          monthly_traffic: '10,000\u201350,000' } }
   }
 };
@@ -281,7 +281,7 @@ ok('neither is quoted the other one\'s bar',
 // The "why" reads their current size back to them, and has to survive not
 // knowing it rather than printing "null".
 const whyBlank = lib.toCriterion(audienceRow, lib.founderFacts({
-  founder_path: 'creator', path_answers: { creator_type: 'Publisher or blogger' }
+  founder_path: 'creator', path_answers: { subpath: 'Blog or publication' }
 })).why;
 ok('an unknown audience never renders as null or undefined',
    !/null|undefined|NaN/.test(whyBlank), whyBlank.slice(0, 90) + '…');

@@ -184,8 +184,11 @@ router.post('/', async (req, res, next) => {
       onboarding_completed: true,
       display_name: fresh.founder_name || undefined,
       // Mirrored so challenge matching and the Coach do not have to join
-      // through the questionnaire on every request.
-      path
+      // through the questionnaire on every request. The subpath is stored as a
+      // slug even though the answer is a label — everything downstream matches
+      // on slugs, and a label can be reworded without breaking the tags.
+      path,
+      subpath: paths.subpathOf(fresh)
     }).eq('id', req.user.id);
 
     // Answering is the Level 1 quest, so award its trophy now rather than

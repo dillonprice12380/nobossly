@@ -29,7 +29,7 @@ const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
 // personal number: on the creator page it should read as the actual figure.
 function visitorFacts(slug) {
   if (slug !== 'creator') return {};
-  const spec = paths.CREATOR_AUDIENCE[paths.SOCIAL_CREATOR_TYPES[0]];
+  const spec = paths.CREATOR_AUDIENCE.social;
   return { audience_target: spec.target, audience_metric: spec.metric };
 }
 
@@ -97,6 +97,7 @@ router.get('/:slug', async (req, res, next) => {
       questions: paths.ownQuestions(def.slug),
       // The rungs this path actually climbs, named in its own vernacular.
       rungs: ladders.ladderFor(def.slug),
+      subpaths: paths.subpathsOf(def.slug),
       criteria,
       challenges,
       others: paths.MARKETED.filter(p => p.slug !== def.slug)

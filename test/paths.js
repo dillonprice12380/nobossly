@@ -41,7 +41,10 @@ console.log('\nMaking a product and running a shop ask different things:');
   const pp = paths.coreQuestions('physical_product').concat(paths.depthQuestions('physical_product')).map(q => q.name);
   const os = paths.coreQuestions('online_store').concat(paths.depthQuestions('online_store')).map(q => q.name);
   const shared = pp.filter(n => os.includes(n));
-  const universal = paths.UNIVERSAL_CORE.concat(paths.UNIVERSAL_DEPTH).map(q => q.name).concat(['stage', 'product']);
+  // 'subpath' and 'subpath_other' are generated for every path, so they are
+  // shared by construction — same as 'stage'.
+  const universal = paths.UNIVERSAL_CORE.concat(paths.UNIVERSAL_DEPTH).map(q => q.name)
+    .concat(['stage', 'subpath', 'subpath_other', 'product']);
   const overlap = shared.filter(n => !universal.includes(n));
   ok('they share only the universal questions', overlap.length === 0, overlap.join(', ') || 'no unexpected overlap');
   ok('only the maker is asked about tooling and minimum orders',
@@ -193,24 +196,26 @@ console.log('\nEvery marketed path can carry a landing page:');
 
 console.log('\nCreators are measured in the right unit:');
 
-const SOCIAL = 'Social media creator or influencer';
-const PUBLISHER = 'Publisher or blogger';
+const SOCIAL = 'Short-form social (TikTok, Reels, Shorts)';
+const PUBLISHER = 'Blog or publication';
 const creatorQs = paths.coreQuestions('creator');
 const byName = Object.fromEntries(creatorQs.map(q => [q.name, q]));
 
-ok('the path asks what kind of creator they are', !!byName.creator_type,
-   (byName.creator_type ? byName.creator_type.options.length + ' kinds' : 'MISSING'));
-ok('every kind maps to a metric and a target',
-   paths.CREATOR_TYPES.every(t => paths.CREATOR_AUDIENCE[t].metric && paths.CREATOR_AUDIENCE[t].target > 0),
-   paths.CREATOR_TYPES.length + ' kinds');
+ok('the path asks what kind of creator they are', !!byName.subpath,
+   (byName.subpath ? byName.subpath.options.length + ' kinds' : 'MISSING'));
+ok('every creator subpath maps to a metric and a target',
+   paths.subpathsOf('creator').every(sp => {
+     const a = paths.CREATOR_AUDIENCE[sp.slug];
+     return a && a.metric && a.target > 0;
+   }), paths.subpathsOf('creator').length + ' subpaths');
 ok('the two question sets are mutually exclusive',
-   !paths.SOCIAL_CREATOR_TYPES.some(t => paths.PUBLISHER_CREATOR_TYPES.includes(t)),
-   paths.SOCIAL_CREATOR_TYPES.length + ' social, ' + paths.PUBLISHER_CREATOR_TYPES.length + ' publisher');
+   !paths.creatorLabels('social').some(t => paths.creatorLabels('publisher').includes(t)),
+   paths.creatorLabels('social').length + ' social, ' + paths.creatorLabels('publisher').length + ' publisher');
 
 // Only one audience question is ever asked, and it is the right one.
 for (const [kind, asked, hidden] of [[SOCIAL, 'audience_size', 'monthly_traffic'],
                                      [PUBLISHER, 'monthly_traffic', 'audience_size']]) {
-  const visible = creatorQs.filter(q => paths.showIfSatisfied(q, { creator_type: kind })).map(q => q.name);
+  const visible = creatorQs.filter(q => paths.showIfSatisfied(q, { subpath: kind })).map(q => q.name);
   ok(`${kind}: asked for ${asked}`, visible.includes(asked), visible.join(', '));
   ok(`${kind}: not asked for ${hidden}`, !visible.includes(hidden), 'correctly hidden');
 }
@@ -226,7 +231,7 @@ console.log('\nThe bar is the right number, read honestly:');
 
 const creatorRun = (type, band) => ({
   founder_path: 'creator',
-  path_answers: { creator_type: type, [type === PUBLISHER ? 'monthly_traffic' : 'audience_size']: band }
+  path_answers: { subpath: type, [type === PUBLISHER ? 'monthly_traffic' : 'audience_size']: band }
 });
 
 eq('an influencer is measured in followers',
@@ -261,11 +266,74 @@ eq('nobody off the creator path has an audience bar',
 
 // Switching kind must not leave the previous kind's number behind, or the
 // Compass reads a follower count back to a blogger.
-const stale = partition(creatorQs, { creator_type: PUBLISHER, monthly_traffic: '50,000–250,000' },
-                        { creator_type: SOCIAL, audience_size: '10,000–50,000' });
+const stale = partition(creatorQs, { subpath: PUBLISHER, monthly_traffic: '50,000–250,000' },
+                        { subpath: SOCIAL, audience_size: '10,000–50,000' });
 ok('switching to publisher clears the stale follower count',
    stale.pathAnswers.audience_size === undefined, JSON.stringify(stale.pathAnswers.audience_size));
 eq('...and keeps the new traffic figure', stale.pathAnswers.monthly_traffic, '50,000–250,000');
+
+
+// ---------------------------------------------------------------------------
+// Subpaths.
+//
+// The point of them is that a quest can be written for a copywriter rather than
+// for freelancers in general. That only works if every path offers one, every
+// answer maps back to a stable slug, and nobody is ever forced into a wrong
+// box — which is what "Something else" is for.
+
+console.log('\nEvery path narrows to a subpath:');
+
+for (const p of paths.PATHS) {
+  const subs = paths.subpathsOf(p.slug);
+  ok(`${p.slug}: offers subpaths`, subs.length >= 5, subs.length + ' options');
+  ok(`  ${p.slug}: slugs are unique`, new Set(subs.map(s => s.slug)).size === subs.length, 'unique');
+  ok(`  ${p.slug}: labels are unique`, new Set(subs.map(s => s.label)).size === subs.length, 'unique');
+}
+
+// Every path but "exploring" ends in an escape hatch. Exploring's subpath is a
+// soft vote between the other paths, where "genuinely no idea yet" already is
+// the escape hatch.
+for (const p of paths.PATHS) {
+  const subs = paths.subpathsOf(p.slug);
+  const hasOut = subs.some(s => s.slug === 'other' || s.slug === 'unsure');
+  ok(`  ${p.slug}: nobody is forced into a wrong box`, hasOut,
+     subs[subs.length - 1].label);
+}
+
+console.log('\nThe subpath question is asked, and answers map back to slugs:');
+
+for (const p of paths.PATHS) {
+  const names = paths.coreQuestions(p.slug).map(q => q.name);
+  ok(`${p.slug}: asks for a subpath`, names.includes('subpath'), 'in core');
+}
+
+// A select posts its label; everything downstream matches on slugs. If that
+// mapping breaks, every subpath-tagged quest silently stops matching.
+for (const p of paths.PATHS) {
+  const bad = paths.subpathsOf(p.slug).filter(sp =>
+    paths.subpathOf({ founder_path: p.slug, path_answers: { subpath: sp.label } }) !== sp.slug);
+  if (bad.length) { fail++; console.log(`  ✗ ${p.slug}: labels that do not map back: ${bad.map(b => b.label).join(', ')}`); }
+}
+ok('every label maps back to its slug', true, paths.PATHS.length + ' paths');
+eq('an unanswered subpath is null, not a guess',
+   paths.subpathOf({ founder_path: 'freelancer', path_answers: {} }), null);
+eq('a label from another path does not resolve',
+   paths.subpathOf({ founder_path: 'freelancer', path_answers: { subpath: 'Podcast' } }), null);
+
+// "Something else" opens a text box rather than swallowing the answer.
+const otherQ = paths.coreQuestions('freelancer').find(q => q.name === 'subpath_other');
+ok('choosing "Something else" asks what', !!otherQ && !!otherQ.showIf, otherQ ? 'conditional' : 'MISSING');
+ok('...and that box is not required', !!otherQ && !otherQ.required, 'optional');
+
+// The creator subpath doubles as the audience metric, so every one of its
+// options has to map to a bar — a subpath added without one would silently
+// hand that creator the wrong number.
+for (const sp of paths.subpathsOf('creator')) {
+  const a = paths.CREATOR_AUDIENCE[sp.slug];
+  if (!a || !a.target) { fail++; console.log(`  ✗ creator subpath "${sp.slug}" has no audience bar`); }
+}
+ok('every creator subpath carries an audience bar', true,
+   paths.subpathsOf('creator').length + ' subpaths');
 
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nPaths hold. All checks pass.');
 process.exit(fail ? 1 : 0);
