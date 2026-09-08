@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const ai = require('../ai');
-const { awardXP } = require('../xp');
+const { awardXP, foreignGateTitles } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { sweepMilestones } = require('../milestones_engine');
@@ -35,6 +35,7 @@ router.get('/', async (req, res, next) => {
     // criterion any more) still display if this founder earned them back then.
     const cats = {};
     const legacy = [];
+    const foreign = foreignGateTitles(levels || [], req.profile.path, 'milestone');
     // Real-world milestones: the things no metric can see — you registered the
     // business, you opened the bank account, you hit $1k MRR. Self-attested with
     // a written proof note, and deliberately kept apart from the auto trophies
@@ -44,7 +45,9 @@ router.get('/', async (req, res, next) => {
     (defs || []).forEach(d => {
       if (!d.is_active) { if (earned[d.id]) legacy.push(d); return; }
       if (d.auto_kind) (cats[d.category] = cats[d.category] || []).push(d);
-      else if (d.is_claimable) claimable.push(d);
+      // A gate written for another path is not this member's to claim. Anything
+      // already earned still shows — nobody loses a trophy to a path change.
+      else if (d.is_claimable) { if (!foreign.has(String(d.title || '').trim().toLowerCase()) || earned[d.id]) claimable.push(d); }
       else if (earned[d.id]) legacy.push(d);
     });
     const earnedCount = (defs || []).filter(d => earned[d.id]).length;

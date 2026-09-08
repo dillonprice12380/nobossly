@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const ai = require('../ai');
-const { awardXP } = require('../xp');
+const { awardXP, foreignGateTitles } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { ensureClassified, getElectives } = require('../tailor');
@@ -20,8 +20,9 @@ router.get('/', async (req, res, next) => {
     // profile until their blueprint changes.
     const profile = await ensureClassified(req.sb, req.accessToken, req.user.id, req.profile);
 
-    const [{ data: challenges }, { data: acc }, { data: custom }, { data: sprint }] = await Promise.all([
+    const [{ data: challenges }, { data: levels }, { data: acc }, { data: custom }, { data: sprint }] = await Promise.all([
       req.sb.from('challenges').select('*').eq('is_active', true).order('position'),
+      req.sb.from('founder_levels').select('requirements'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id),
       req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).order('created_at'),
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle()
@@ -33,7 +34,12 @@ router.get('/', async (req, res, next) => {
     // founder's current level — plus anything they've already accepted or
     // completed, which stays visible regardless of the band it came from.
     const inBand = c => c.min_level <= level && level <= c.max_level;
-    const all = (challenges || []).filter(c => c.is_cohort || accMap[c.id] || inBand(c));
+    // A gate written for another path is not this member's quest. Anything they
+    // already accepted stays visible either way — a board that removes work
+    // someone is part-way through is worse than one showing a stray card.
+    const foreign = foreignGateTitles(levels || [], profile.path, 'challenge');
+    const mine = c => !foreign.has(String(c.title || '').trim().toLowerCase());
+    const all = (challenges || []).filter(c => (c.is_cohort || accMap[c.id] || inBand(c)) && (accMap[c.id] || mine(c)));
 
     // Accepted-and-active challenges float to the top, completed sink to the
     // bottom, everything else keeps its curated position in between.

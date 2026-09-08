@@ -67,12 +67,59 @@ async function achievedQuests(sb, userId) {
   return have;
 }
 
-function meetsRequirements(reqmt, have) {
-  if (!reqmt || !Array.isArray(reqmt.quests) || !reqmt.quests.length) return true;
-  const hits = reqmt.quests.filter(qt =>
+// A gate can be path-specific. `only` limits an entry to those paths, `except`
+// removes it from them, and an entry with neither applies to everybody — which
+// is most of them.
+//
+// This exists because several gates were written for one kind of business and
+// applied to all nine. A content creator does not register a company to take a
+// sponsorship, and a plumber at $1k months will never build a pitch deck. The
+// answer is a substitute of equal weight rather than a skipped rung: the site
+// promises the same ten-level ladder to everyone, and a path that clears Level
+// 10 on fewer real accomplishments makes that untrue.
+function questApplies(q, path) {
+  if (!q) return false;
+  const p = String(path || '').trim();
+  if (Array.isArray(q.only) && q.only.length) return q.only.includes(p);
+  if (Array.isArray(q.except) && q.except.length) return !q.except.includes(p);
+  return true;
+}
+
+// The gates that actually stand in front of THIS member. An unknown path (they
+// have not finished onboarding) falls back to the universal set, which is the
+// safe reading: it can only ever ask for gates that apply to everyone.
+function applicableQuests(reqmt, path) {
+  if (!reqmt || !Array.isArray(reqmt.quests)) return [];
+  return reqmt.quests.filter(q => questApplies(q, path));
+}
+
+// Gates that belong to OTHER paths. The quest board and the trophy case filter
+// by level only, so without this a creator browses "Serve 100 paying customers"
+// and "Registered my business" — gates that will never be theirs — sitting
+// beside the ones that are. Takes the levels rows so the caller can reuse a
+// query it already made.
+function foreignGateTitles(levels, path, type) {
+  const mine = new Set(), all = new Set();
+  for (const l of levels || []) {
+    for (const q of (l && l.requirements && l.requirements.quests) || []) {
+      if (!q || q.type !== type || !q.title) continue;
+      const t = String(q.title).trim().toLowerCase();
+      all.add(t);
+      if (questApplies(q, path)) mine.add(t);
+    }
+  }
+  return new Set([...all].filter(t => !mine.has(t)));
+}
+
+function meetsRequirements(reqmt, have, path) {
+  const quests = applicableQuests(reqmt, path);
+  if (!quests.length) return true;
+  const hits = quests.filter(qt =>
     qt && have.has(String(qt.type || '') + ':' + String(qt.title || '').trim().toLowerCase())
   ).length;
-  const need = (reqmt.min && reqmt.min > 0) ? reqmt.min : reqmt.quests.length;
+  // Clamp to what applies. A `min` of 2 against a single applicable gate would
+  // be a rung nobody on that path could ever reach.
+  const need = (reqmt.min && reqmt.min > 0) ? Math.min(reqmt.min, quests.length) : quests.length;
   return hits >= need;
 }
 
@@ -90,7 +137,7 @@ async function ladderStatus(sb, userId, profile) {
     if (!next) return null;
 
     const reqs = next.requirements || {};
-    const list = Array.isArray(reqs.quests) ? reqs.quests : [];
+    const list = applicableQuests(reqs, profile.path);
     const have = list.length ? await achievedQuests(sb, userId) : new Set();
     const quests = list.map(q => ({
       type: q.type,
@@ -132,7 +179,7 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
         for (const l of levels) {
           if (l.level <= level) continue;
           if (newTotal < l.xp_required) break;
-          if (!meetsRequirements(l.requirements, have)) break;
+          if (!meetsRequirements(l.requirements, have, profile.path)) break;
           level = l.level;
         }
       }
@@ -174,4 +221,4 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
   }
 }
 
-module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements, ladderStatus };
+module.exports = { awardXP, bumpStreak, achievedQuests, meetsRequirements, ladderStatus, applicableQuests, questApplies, foreignGateTitles };

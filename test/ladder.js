@@ -21,7 +21,8 @@
 //     'milestones', (select json_agg(row_to_json(m)) from (select title,xp_reward,auto_kind,is_claimable from predefined_milestones where is_active) m)
 //   );
 
-const { meetsRequirements } = require('../src/xp');
+const { meetsRequirements, applicableQuests } = require('../src/xp');
+const paths = require('../src/paths');
 const cfg = require('./ladder-config.json');
 
 const key = (t, title) => t + ':' + String(title).trim().toLowerCase();
@@ -35,22 +36,94 @@ cfg.milestones.forEach(m => {
 });
 
 let fail = 0;
-const have = new Set();
-let xp = 0;
 
-console.log('Climbing on quest XP alone (no grinding tasks or check-ins):\n');
-for (const l of cfg.levels) {
-  const qs = (l.requirements && l.requirements.quests) || [];
-  for (const q of qs) {
-    const k = key(q.type, q.title);
-    if (!awardable.has(k)) { console.log(`  ✗ L${l.level}: "${q.title}" (${q.type}) is UNAWARDABLE`); fail++; continue; }
-    if (!have.has(k)) { have.add(k); xp += xpOf.get(k) || 0; }
+// Every path, all ten rungs.
+//
+// Gates are path-aware now: a creator is not asked to register a company, a
+// plumber is not asked for a pitch deck, and a shop is not handed a gate it
+// clears before lunch. The failure that shape invites is a path whose
+// substitute does not exist, is not awardable, or is worth less XP than the
+// gate it replaces — none of which throws. Every one of them would just quietly
+// strand somebody at a rung, exactly like the Level 4 cap this file was written
+// for. So the climb runs once per path, on that path's own gates.
+const climb = pathSlug => {
+  const have = new Set();
+  let xp = 0;
+  const problems = [];
+  for (const l of cfg.levels) {
+    for (const q of applicableQuests(l.requirements, pathSlug)) {
+      const k = key(q.type, q.title);
+      if (!awardable.has(k)) { problems.push(`L${l.level}: "${q.title}" (${q.type}) UNAWARDABLE`); continue; }
+      if (!have.has(k)) { have.add(k); xp += xpOf.get(k) || 0; }
+    }
+    if (!meetsRequirements(l.requirements, have, pathSlug)) problems.push(`L${l.level}: quests unmet`);
+    if (xp < l.xp_required) problems.push(`L${l.level}: ${l.xp_required - xp} XP short`);
   }
-  const questsOk = meetsRequirements(l.requirements, have);
-  const xpOk = xp >= l.xp_required;
-  if (!(questsOk && xpOk)) fail++;
-  console.log(`  ${questsOk && xpOk ? '✓' : '✗'} L${String(l.level).padStart(2)} ${l.title.padEnd(13)} quests ${questsOk ? 'ok' : 'NO'} · xp ${String(xp).padStart(5)}/${String(l.xp_required).padEnd(5)} ${xpOk ? 'ok' : 'SHORT ' + (l.xp_required - xp)}`);
+  return { xp, problems };
+};
+
+console.log('Every path climbs all ten rungs on quest XP alone:\n');
+const totals = {};
+for (const p of paths.PATHS) {
+  const { xp, problems } = climb(p.slug);
+  totals[p.slug] = xp;
+  if (problems.length) fail += problems.length;
+  console.log(`  ${problems.length ? '✗' : '✓'} ${p.slug.padEnd(17)} ${String(xp).padStart(5)} XP` +
+              (problems.length ? '  — ' + problems.join('; ') : ''));
 }
+
+// A member who has not finished onboarding has no path. They must still get a
+// coherent ladder rather than a rung with no gates or an impossible one.
+const nopath = climb(undefined);
+if (nopath.problems.length) fail += nopath.problems.length;
+console.log(`  ${nopath.problems.length ? '✗' : '✓'} ${'(no path set)'.padEnd(17)} ${String(nopath.xp).padStart(5)} XP` +
+            (nopath.problems.length ? '  — ' + nopath.problems.join('; ') : ''));
+
+// Substitution has to be like-for-like. If one path can reach Level 10 for less
+// XP than another, the swap quietly made that path's ladder shorter — which is
+// the thing the whole design was meant not to do.
+const spread = Object.values(totals);
+const even = Math.min(...spread) === Math.max(...spread);
+if (!even) fail++;
+console.log(`\n  ${even ? '✓' : '✗'} every path costs the same XP to climb  — ` +
+  (even ? spread[0] + ' XP each'
+        : Object.entries(totals).map(([k, v]) => k + ':' + v).join(', ')));
+
+// And each rung must actually ask every path for something.
+for (const p of paths.PATHS) {
+  for (const l of cfg.levels) {
+    if (!l.requirements) continue;
+    const n = applicableQuests(l.requirements, p.slug).length;
+    if (n === 0) { fail++; console.log(`  ✗ ${p.slug} has NO gate at L${l.level} — a free rung`); }
+  }
+}
+
+const have = new Set();
+let xp = totals.freelancer;
+cfg.levels.forEach(l => applicableQuests(l.requirements, 'freelancer').forEach(q => have.add(key(q.type, q.title))));
+
+// The quest board and the trophy case filter by level only, so a path-specific
+// gate would otherwise be browsable by everyone. Hiding is the easy half; the
+// half worth testing is that nobody's OWN gate goes missing, which would strand
+// them at that rung with no way to see what they needed.
+const { foreignGateTitles } = require('../src/xp');
+for (const p of paths.PATHS) {
+  for (const type of ['challenge', 'milestone']) {
+    const hidden = foreignGateTitles(cfg.levels, p.slug, type);
+    const ownGates = cfg.levels.flatMap(l => applicableQuests(l.requirements, p.slug))
+      .filter(q => q.type === type).map(q => q.title.trim().toLowerCase());
+    const lost = ownGates.filter(t => hidden.has(t));
+    if (lost.length) { fail++; console.log(`  ✗ ${p.slug} would have its own ${type} hidden: ${lost.join(', ')}`); }
+  }
+}
+const creatorHidden = foreignGateTitles(cfg.levels, 'creator', 'milestone');
+const hidesRegistration = creatorHidden.has('registered my business');
+if (!hidesRegistration) fail++;
+console.log(`\n  ${hidesRegistration ? '✓' : '✗'} a creator is not shown "Registered my business"`);
+const shopHidden = foreignGateTitles(cfg.levels, 'brick_mortar', 'challenge');
+const hidesTinyMonth = shopHidden.has('hit a $1k month');
+if (!hidesTinyMonth) fail++;
+console.log(`  ${hidesTinyMonth ? '✓' : '✗'} a shop is not shown "Hit a $1k month" — its rent is more than that`);
 
 // Level 9 is "any 2 of 3" — verify the min rule both ways.
 const l9 = cfg.levels.find(l => l.level === 9);
