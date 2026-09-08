@@ -39,6 +39,8 @@ async function bumpStreak(sb, userId, profile) {
 }
 
 const ladders = require('./ladders');
+const activity = require('./activity');
+const { notifySocial } = require('./notify');
 
 // ---------- The Ladder ----------
 // Levels gate on real accomplishments. Each path has its own ten rungs and
@@ -143,6 +145,13 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
       const info = levels.find(l => l.level === level) || {};
       const msg = 'LEVEL UP! ' + (info.emoji || '\u2b06\ufe0f') + ' You are now Level ' + level + ' \u2014 ' + (info.title || '') + '. ' + ladders.unlockText(info);
       await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+      // Out to the people following them, in both forms: the notification is a
+      // nudge they clear, the activity row is a thing that stays. The rung is
+      // named for their own path, so a follower on a different ladder reads
+      // "reached Level 5 — First Invoice" and learns something about them.
+      const who = profile.display_name || profile.username || 'A member';
+      await notifySocial(sb, userId, who + ' reached Level ' + level + ' \u2014 ' + (info.title || '') + ' ' + (info.emoji || '\ud83c\udf89'), 'profiles', null);
+      await activity.record(sb, userId, 'level', 'reached Level ' + level + ' \u2014 ' + (info.title || ''), { emoji: info.emoji, level });
       if (level >= 8) {
         // Real-world unlocks (accelerator track, cohort leader, featured playbook)
         // check verified_level, so they open on approval. Unique(user_id, level)

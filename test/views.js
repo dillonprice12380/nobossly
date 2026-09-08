@@ -230,7 +230,11 @@ for (const [name, data] of Object.entries(marketing)) {
 // server-rendered string or an email template cannot bring them back either.
 console.log('\nRetired names stay retired:');
 const RETIRED = ['Founder Compass', "Founder's Ladder", 'Founder’s Ladder', 'Founder&rsquo;s Ladder'];
-const sourceFiles = []
+// server.js belongs in here too: it renders the homepage and the sample
+// Compass directly, so it carries their <title> and meta description. It was
+// outside the scan, and both were still selling a "Founder Compass" and "The
+// Real-Life Founder Game" long after the word was gone from every view.
+const sourceFiles = [path.join(ROOT, 'server.js')]
   .concat(fs.readdirSync(VIEWS).filter(f => f.endsWith('.ejs')).map(f => path.join(VIEWS, f)))
   .concat(['src', 'src/routes'].flatMap(d => fs.readdirSync(path.join(ROOT, d))
     .filter(f => f.endsWith('.js')).map(f => path.join(ROOT, d, f))));

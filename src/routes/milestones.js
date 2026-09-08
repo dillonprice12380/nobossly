@@ -3,6 +3,7 @@ const ai = require('../ai');
 const { awardXP } = require('../xp');
 const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
+const activity = require('../activity');
 const { planOf } = require('../middleware/auth');
 const { sweepMilestones } = require('../milestones_engine');
 const { gate, gateCredits } = require('../upgrade');
@@ -104,6 +105,7 @@ router.post('/claim/:id', async (req, res, next) => {
 
     await awardXP(req.sb, req.user.id, req.profile, def.xp_reward || 50, 'Milestone: ' + def.title, 'predefined_milestones', def.id);
     await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' reached the milestone ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
+    await activity.record(req.sb, req.user.id, 'milestone', 'reached \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: def.id });
     back(def.emoji + ' ' + def.title + ' logged \u2014 +' + (def.xp_reward || 50) + ' XP. That is a real one.');
   } catch (e) { next(e); }
 });
@@ -148,6 +150,7 @@ router.post('/custom/:id/achieve', async (req, res, next) => {
       }).eq('id', m.id);
       await awardXP(req.sb, req.user.id, req.profile, m.xp_reward || 50, 'Goal: ' + m.title, 'user_custom_milestones', m.id);
       await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' achieved the goal ' + (m.emoji || '\ud83c\udfc6') + ' \u201c' + m.title + '\u201d', 'user_custom_milestones', m.id);
+      await activity.record(req.sb, req.user.id, 'milestone', 'achieved \u201c' + m.title + '\u201d', { emoji: m.emoji || '\ud83c\udfc6', entityType: 'user_custom_milestones', entityId: m.id });
     }
     res.redirect('/milestones');
   } catch (e) { next(e); }

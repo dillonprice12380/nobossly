@@ -3,6 +3,7 @@ const ai = require('../ai');
 const { awardXP } = require('../xp');
 const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
+const activity = require('../activity');
 const { planOf } = require('../middleware/auth');
 const { ensureClassified, getElectives } = require('../tailor');
 const { gate, gateCredits } = require('../upgrade');
@@ -210,6 +211,7 @@ router.post('/:id/finish', async (req, res, next) => {
       await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
       if (paid) {
         await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + ch.title + '\u201d \ud83c\udf89', 'challenges', ch.id);
+        await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + ch.title + '\u201d', { emoji: ch.emoji || '\ud83c\udfc1', entityType: 'challenges', entityId: ch.id });
         if (ch.badge_id) {
           const { data: hasBadge } = await req.sb.from('user_badges').select('id').eq('user_id', req.user.id).eq('badge_id', ch.badge_id).maybeSingle();
           if (!hasBadge) {
@@ -308,6 +310,7 @@ router.post('/custom/:id/finish', async (req, res, next) => {
       await req.sb.from('user_custom_challenges').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', c.id);
       await awardXP(req.sb, req.user.id, req.profile, c.xp_reward || 50, 'Completed challenge: ' + c.title, 'user_custom_challenges', c.id);
       if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
+      await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + c.title + '\u201d', { emoji: c.emoji || '\ud83c\udfc1', entityType: 'user_custom_challenges', entityId: c.id });
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
   } catch (e) { next(e); }

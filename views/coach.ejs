@@ -1,0 +1,178 @@
+<%- include('partials/head') %>
+<%
+  var open = (ctx.quests || []).filter(function (q) { return !q.done; });
+  var doneCount = plan && Array.isArray(plan.items) ? plan.items.filter(function (i) { return i.done; }).length : 0;
+%>
+<div class="page-head">
+  <div>
+    <h1>🧭 Your coach</h1>
+    <p class="muted">It already knows where you are. You do not have to explain yourself.</p>
+  </div>
+  <a class="btn btn-ghost" href="/dashboard">Back to dashboard</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (needsQuestionnaire) { %>
+  <div class="card center">
+    <h2>Answer your path questions first</h2>
+    <p class="muted">The coach is only worth anything because it knows your path, your rung, your hours and your constraints. None of that exists yet.</p>
+    <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/questionnaire">Answer them now →</a>
+  </div>
+<% } else { %>
+
+<%# What the coach knows, shown back to the member. This is deliberate: an AI
+    that claims to know your situation has to prove it, and a member who can see
+    the facts it is working from can correct them. %>
+<div class="card coach-knows">
+  <h2 class="small" style="margin:0 0 .5rem">What it is working from</h2>
+  <div class="knows-row">
+    <span class="chip"><%= ctx.rungEmoji || '🎮' %> Level <%= ctx.level %> — <%= ctx.rungTitle %></span>
+    <span class="chip"><%= ctx.pathLabel %><% if (ctx.subpathLabel) { %> · <%= ctx.subpathLabel %><% } %></span>
+    <% if (ctx.hours) { %><span class="chip">🕗 <%= ctx.hours %></span><% } %>
+    <% if (ctx.streak) { %><span class="chip">🔥 <%= ctx.streak %>-day streak</span><% } %>
+    <% if (ctx.bar) { %><span class="chip"><%= ctx.bar.label %>: <%= ctx.bar.current == null ? '—' : ctx.bar.current %> / <%= ctx.bar.target %></span><% } %>
+  </div>
+  <% if (ctx.next) { %>
+    <p class="muted small" style="margin:.6rem 0 0">
+      Next rung is <strong>Level <%= ctx.next.level %> — <%= ctx.next.title %></strong><% if (open.length) { %>,
+      blocked on <%= open.map(function (q) { return q.title; }).join(', ') %><% } %>.
+    </p>
+  <% } %>
+</div>
+
+<%# ---------------------------------------------------------------- the plan %>
+<div class="card" id="plan">
+  <div class="page-head" style="margin:0 0 .6rem">
+    <div><h2 style="margin:0">📋 This week</h2>
+    <p class="muted small" style="margin:.2rem 0 0">Three things, sized to the hours you actually have.</p></div>
+    <% if (plan) { %><span class="chip <%= doneCount === plan.items.length ? 'chip-success' : '' %>"><%= doneCount %>/<%= plan.items.length %> done</span><% } %>
+  </div>
+
+  <% if (plan && plan.items && plan.items.length) { %>
+    <% if (plan.intro) { %><p><%= plan.intro %></p><% } %>
+    <ul class="task-list" style="margin:.7rem 0 0">
+      <% plan.items.forEach(function (it, i) { %>
+        <li class="task <%= it.done ? 'done' : '' %>">
+          <form method="post" action="/coach/plan/<%= i %>/toggle" style="display:inline">
+            <button class="task-check" type="submit" aria-label="<%= it.done ? 'Mark not done' : 'Mark done' %>"><%= it.done ? '✓' : '' %></button>
+          </form>
+          <div>
+            <strong><%= it.title %></strong>
+            <% if (it.day || it.minutes) { %><span class="tag"><%= it.day %><% if (it.minutes) { %> · <%= it.minutes %> min<% } %></span><% } %>
+            <% if (it.why) { %><p class="muted small" style="margin:.2rem 0 0"><%= it.why %></p><% } %>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+    <% if (paid) { %>
+      <form method="post" action="/coach/plan" style="margin-top:.9rem">
+        <button class="btn btn-ghost">Rewrite this week</button>
+      </form>
+    <% } %>
+  <% } else if (paid) { %>
+    <p class="muted">Nothing written for this week yet. It will read last week before it writes this one.</p>
+    <form method="post" action="/coach/plan" style="margin-top:.9rem">
+      <button class="btn btn-primary">Write this week’s plan →</button>
+    </form>
+  <% } else { %>
+    <p class="muted">Every Monday the coach reads your rung, the quest blocking it, your hours and what you actually finished last week — then writes three things for the week. It is the one thing here that is worthless in arrears, which is why it is part of the Escape plan.</p>
+    <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/pricing">See the Escape plan →</a>
+  <% } %>
+</div>
+
+<%# ------------------------------------------------------------- the reading %>
+<div class="card" id="reading">
+  <div class="page-head" style="margin:0 0 .6rem">
+    <div><h2 style="margin:0">📚 Read this week</h2>
+    <p class="muted small" style="margin:.2rem 0 0">Three of the guides, picked for the rung you are standing on. Free.</p></div>
+  </div>
+  <% if (readingGuides && readingGuides.length) { %>
+    <% var why = {}; (reading && reading.reasoning ? reading.reasoning.split('\n') : []).forEach(function (line) {
+         var bits = line.split(' — '); if (bits.length > 1) why[bits[0]] = bits.slice(1).join(' — '); }); %>
+    <% readingGuides.forEach(function (g) { %>
+      <div style="padding:.5rem 0;border-top:1px solid var(--border)">
+        <a href="/guides/<%= g.slug %>"><strong><%= g.title %></strong></a>
+        <% if (why[g.title]) { %><p class="muted small" style="margin:.2rem 0 0"><%= why[g.title] %></p><% } %>
+      </div>
+    <% }) %>
+    <form method="post" action="/coach/reading" style="margin-top:.8rem"><button class="btn btn-ghost btn-sm">Pick again</button></form>
+  <% } else { %>
+    <p class="muted">Over a hundred guides, and three of them are the ones for this week.</p>
+    <form method="post" action="/coach/reading" style="margin-top:.7rem"><button class="btn btn-ghost">Pick my three →</button></form>
+  <% } %>
+</div>
+
+<%# ------------------------------------------------------------- proof review %>
+<% if (typeof review !== 'undefined' && review) { %>
+  <div class="card" id="proof">
+    <h2>🔍 <%= reviewGate %></h2>
+    <p class="chip <%= review.clears ? 'chip-success' : '' %>" style="display:inline-block"><%= review.clears ? 'Clears the gate' : 'Not yet' %></p>
+    <p style="margin-top:.6rem"><strong><%= review.verdict %></strong></p>
+    <% if (review.missing && review.missing.length) { %>
+      <h3 class="small">What it still needs</h3>
+      <ul class="feature-list"><% review.missing.forEach(function (m) { %><li><%= m %></li><% }) %></ul>
+    <% } %>
+    <% if (review.stronger) { %><p class="muted small">💬 For the Wins wall: <%= review.stronger %></p><% } %>
+  </div>
+<% } %>
+
+<% if (open.length) { %>
+  <div class="card">
+    <h2>🔍 Check your proof before you claim it</h2>
+    <p class="muted small">The Wins wall is public and a rung is meant to mean something. Say what you actually did and the coach will tell you whether it clears.</p>
+    <% if (paid) { %>
+      <form method="post" action="/coach/proof">
+        <label>Which quest
+          <select name="gate">
+            <% open.forEach(function (q) { %><option value="<%= q.title %>" <%= (typeof reviewGate !== 'undefined' && reviewGate === q.title) ? 'selected' : '' %>><%= q.title %></option><% }) %>
+          </select>
+        </label>
+        <label>What you did
+          <textarea name="note" rows="4" maxlength="2000" placeholder="What happened, when, and how someone else could tell it was real."><%= typeof reviewNote !== 'undefined' ? reviewNote : '' %></textarea>
+        </label>
+        <button class="btn btn-primary">Check it →</button>
+      </form>
+    <% } else { %>
+      <a class="btn btn-ghost" href="/pricing">Part of the Escape plan →</a>
+    <% } %>
+  </div>
+<% } %>
+
+<%# -------------------------------------------------------------- the chat %>
+<div class="card" id="chat">
+  <div class="page-head" style="margin:0 0 .6rem">
+    <div><h2 style="margin:0">💬 Stuck?</h2>
+    <p class="muted small" style="margin:.2rem 0 0">It knows all of the above already. Just say what is in the way.</p></div>
+    <% if (messages.length) { %><form method="post" action="/coach/clear"><button class="btn btn-ghost btn-sm">Clear</button></form><% } %>
+  </div>
+
+  <% if (messages.length) { %>
+    <div class="coach-thread">
+      <% messages.forEach(function (m, i) { %>
+        <div class="coach-msg <%= m.role === 'user' ? 'from-me' : 'from-coach' %>" <%= i === messages.length - 1 ? 'id=latest' : '' %>>
+          <%- String(m.content || '').split('\n\n').map(function (p) { return '<p>' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>') + '</p>'; }).join('') %>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <form method="post" action="/coach/ask" style="margin-top:.8rem">
+    <textarea name="question" rows="3" maxlength="1500" required placeholder="e.g. I have four hours this week and no idea which of these to do first."></textarea>
+    <button class="btn btn-primary">Ask →</button>
+    <% if (typeof credits !== 'undefined' && credits) { %>
+      <span class="muted small" style="margin-left:.6rem">⚡ <%= credits.balance %> credits left this month</span>
+    <% } %>
+  </form>
+</div>
+
+<style>
+  .coach-knows .knows-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .coach-thread { display: flex; flex-direction: column; gap: .7rem; max-height: 34rem; overflow-y: auto; padding-right: .3rem; }
+  .coach-msg { border-radius: 12px; padding: .7rem .9rem; max-width: 46rem; }
+  .coach-msg p { margin: 0 0 .5rem; }
+  .coach-msg p:last-child { margin-bottom: 0; }
+  .coach-msg.from-me { background: var(--panel-2); border: 1px solid var(--border); align-self: flex-end; }
+  .coach-msg.from-coach { background: var(--panel); border: 1px solid var(--accent); align-self: flex-start; }
+</style>
+<% } %>
+<%- include('partials/foot') %>

@@ -91,13 +91,15 @@ app.use((req, res, next) => {
 
 app.use('/', require('./src/routes/auth'));
 app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
-app.use('/compass', requireAuth, require('./src/routes/compass')); // Founder Compass + draft-your-idea advisor
+app.use('/compass', requireAuth, require('./src/routes/compass')); // the Compass + draft-your-idea advisor
 app.use('/ideas', requireAuth, require('./src/routes/ideas'));
 app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
 app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));
+app.use('/coach', requireAuth, require('./src/routes/coach')); // the weekly plan, the coach chat, proof review, the reading list
+app.use('/feed', requireAuth, require('./src/routes/feed')); // what the people you follow have been doing
 app.use('/community', require('./src/routes/community'));
 app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
 app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review
@@ -119,9 +121,9 @@ app.use('/admin', requireAdmin, require('./src/routes/admin'));
 // public and indexable, so a visitor can judge it before signing up.
 app.get('/sample-compass', (req, res) => {
   res.render('compass_sample', {
-    title: 'A real Founder Compass, worked through',
+    title: 'A real Compass, worked through',
     compass: require('./src/sample_compass'),
-    metaDescription: 'See exactly what a NoBossly Founder Compass gives you: your founder archetype, your real strengths and constraints, the territories where you hold an edge, a 5-point fit test and an honest avoid list — worked through for one founder, start to finish.'
+    metaDescription: 'See exactly what a NoBossly Compass gives you: your archetype, your real strengths and constraints, the territories where you hold an edge, a 5-point fit test and an honest avoid list — worked through for one member, start to finish.'
   });
 });
 
@@ -130,7 +132,7 @@ app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'The Real-Life Founder Game', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly turns starting a business into a game you play in real life: draw your Founder Compass, choose your own idea, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month.' });
+  res.render('home', { title: 'Work Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly turns getting out of your job into a game you play in real life: pick one of nine paths, draw your Compass, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month, handing in your notice.' });
 });
 
 app.get('/robots.txt', (req, res) => {

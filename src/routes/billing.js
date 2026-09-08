@@ -47,22 +47,36 @@ async function applySub(userId, { tier, status, customer, subId, periodEnd, life
   if (error) throw new Error('apply_subscription: ' + error.message);
 }
 
+// The line these two lists draw is the whole monetisation argument: free gets
+// you a verdict, paid gets you a companion. One-time artifacts — the Compass,
+// the first blueprint, your idea stress-tested — are free, because they are the
+// proof the thing works and the reason anyone signs up. What is dated,
+// personal and recurring is the subscription, because it is the only kind of
+// output that stops being useful the moment you cancel.
+//
+// The game itself is never behind the wall. All ten rungs, all XP, every quest,
+// the forum and the Wins wall stay free forever: free members posting wins are
+// the product for paying ones, and gating progression would cost more at the
+// top of the funnel than it could ever earn at the bottom.
 const FREE_FEATURES = [
-  'Your Compass — archetype, territories & fit test',
-  'Draft your own idea + advisor stress-test',
-  'Community forum & the Wins wall',
-  'Cohort challenges, streaks & XP',
-  'The Ladder — all 10 levels, from first customer to full-time',
+  'Your first Compass — archetype, territories & fit test, with a live market scan',
+  'Draft your own idea + the advisor’s stress-test against your fit test',
+  'Ask the coach — it knows your path, your rung and the quest blocking it',
+  'A weekly reading list picked from 100+ guides for the rung you are on',
+  'One launch blueprint',
+  'The whole ladder — all 10 rungs, named for your path',
+  'Community forum, peer feedback, the Wins wall, streaks & XP',
   'Up to 8 open tasks (manual)'
 ];
 const PAID_FEATURES = [
-  'Everything in Free',
-  'Launch blueprints for your chosen idea',
-  'AI-planned 7-day sprints & daily check-ins',
+  'Everything in Free, and the AI ceiling lifted',
+  'This week’s plan — three dated actions, written from your rung and the hours you have',
+  'Proof review — does what you did actually clear the gate?',
+  'Unlimited Compass redraws, ideas and launch blueprints',
   'Live demand signals — real market evidence with named sources',
-  'AI roadmaps & automatic task dispersement',
-  'AI-tailored challenges & milestones',
-  'Badges & community shout-outs',
+  'AI-planned 7-day sprints & automatic task dispersement',
+  'AI-tailored challenges, goals & startup budget',
+  'Start your own group, run collaboration projects',
   'Priority support'
 ];
 

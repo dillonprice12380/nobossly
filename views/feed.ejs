@@ -1,0 +1,72 @@
+<%- include('partials/head') %>
+<%
+  var ago = function (d) {
+    var s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 90) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    if (s < 604800) return Math.round(s / 86400) + 'd ago';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+%>
+<div class="page-head">
+  <div>
+    <h1>👥 Your feed</h1>
+    <p class="muted">Everyone here is fitting this around a job. This is them doing it.</p>
+  </div>
+  <a class="btn btn-ghost" href="/members">Find members</a>
+</div>
+
+<% if (!following) { %>
+  <div class="card center">
+    <h2>You are not following anyone yet</h2>
+    <p class="muted">Follow a few members and their real milestones show up here — first customer, first non-salary dollar, the day they hand in their notice.</p>
+    <% if (suggestions.length) { %>
+      <div class="grid" style="margin-top:1rem;text-align:left">
+        <% suggestions.forEach(function (p) { %>
+          <div class="card" style="display:flex;gap:.7rem;align-items:center">
+            <div class="avatar-circle"><% if (p.avatar_url) { %><img src="<%= p.avatar_url %>" alt=""><% } else { %><%= (p.display_name || p.username || '?').slice(0,1).toUpperCase() %><% } %></div>
+            <div style="flex:1;min-width:0">
+              <a href="/members/<%= p.username %>"><strong><%= p.display_name || p.username %></strong></a>
+              <p class="muted small" style="margin:.15rem 0 0">Level <%= p.current_level || 1 %><% if (pathLabel(p.path)) { %> · <%= pathLabel(p.path) %><% } %></p>
+            </div>
+            <form method="post" action="/follow/<%= p.id %>"><button class="btn btn-ghost btn-sm">Follow</button></form>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+<% } else if (!events.length) { %>
+  <div class="card center">
+    <h2>Nothing yet</h2>
+    <p class="muted">You follow <%= following %> <%= following === 1 ? 'member' : 'members' %>. When one of them clears a quest or reaches a rung, it lands here.</p>
+    <a class="btn btn-ghost" style="margin-top:.9rem;display:inline-block" href="/members">Follow a few more</a>
+  </div>
+<% } else { %>
+  <div class="feed-list">
+    <% events.forEach(function (e) { %>
+      <div class="card feed-item">
+        <div class="avatar-circle">
+          <% if (e.who.avatar_url) { %><img src="<%= e.who.avatar_url %>" alt=""><% } else { %><%= (e.who.display_name || e.who.username || '?').slice(0,1).toUpperCase() %><% } %>
+        </div>
+        <div style="flex:1;min-width:0">
+          <p style="margin:0">
+            <a href="/members/<%= e.who.username %>"><strong><%= e.who.display_name || e.who.username %></strong></a>
+            <%= e.emoji ? ' ' + e.emoji : '' %> <%= e.title %>
+          </p>
+          <p class="muted small" style="margin:.2rem 0 0">
+            <%= ago(e.created_at) %>
+            <% var t = rungTitle(e.who.path, e.who.current_level); if (t) { %> · Level <%= e.who.current_level %> — <%= t %><% } %>
+          </p>
+        </div>
+        <% if (e.kind === 'win') { %><a class="chip" href="/wins">On the wall</a><% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<style>
+  .feed-list { display: flex; flex-direction: column; gap: .5rem; }
+  .feed-item { display: flex; gap: .8rem; align-items: center; padding: .8rem .9rem; }
+</style>
+<%- include('partials/foot') %>

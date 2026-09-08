@@ -48,6 +48,23 @@ const FEATURES = {
     gets: ['Week-1 actions dispersed with staggered deadlines', 'The same for every new blueprint', 'Manual task entry stays free'],
     back: { href: '/ideas', label: 'Back to my ideas' }
   },
+  weekly_plan: {
+    title: 'This week\u2019s plan',
+    blurb: 'Every Monday, the coach reads where you are on your ladder \u2014 the exact quest blocking your next rung \u2014 the hours you said you have after work, and what you actually finished last week. Then it writes three things for this week. Not a template: three specific actions, dated, sized to your evenings.',
+    gets: ['Three actions a week, aimed at the rung you are actually on',
+           'Written against what you finished last week, not what you were asked to do',
+           'Sized to the hours and the money you told us you have',
+           'Your ladder, your quests and the whole community stay free either way'],
+    back: { href: '/coach', label: 'Back to the coach' }
+  },
+  proof_review: {
+    title: 'Proof review',
+    blurb: 'Before you claim a rung, the coach reads what you wrote as proof and tells you whether it actually clears the gate \u2014 and what would make it beyond doubt. The Wins wall is public; this is what keeps a rung meaning something.',
+    gets: ['An honest read on whether your proof clears the gate',
+           'What is missing, specifically',
+           'A stronger way to say it on the Wins wall'],
+    back: { href: '/coach', label: 'Back to the coach' }
+  },
   out_of_credits: {
     title: 'You have used this month\u2019s free AI',
     blurb: 'Every AI call on NoBossly draws on a monthly allowance \u2014 drawing a Compass, stress-testing an idea, a coach reply. The free allowance refills on the 1st. The Escape plan lifts the ceiling far enough that you will not meet it.',
