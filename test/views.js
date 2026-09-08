@@ -270,6 +270,45 @@ for (const re of STALE_COUNT) {
 
 
 // ---------------------------------------------------------------------------
+// 3c. The feed names each member's rung from THEIR ladder, not the viewer's.
+//
+// Nine paths means Level 4 is "Regular" for a creator and "Quoting" for a
+// plumber. Every view that renders someone else's level has to look the title
+// up against that person's own path — the feed, the dashboard peek and the
+// member directory all do, and the failure is silent: the page renders, the
+// number is right, and the word is somebody else's.
+
+console.log('\nThe feed reads each member from their own ladder:');
+{
+  const ladders = require('../src/ladders');
+  const helpers = {
+    rungTitle: (p, l) => { const r = (ladders.ladderFor(p) || []).find(x => x.level === l); return r ? r.title : ''; },
+    pathLabel: (s) => { const p = paths.get(s); return p ? p.label : ''; }
+  };
+  const at = (path, username) => ({
+    id: 'e-' + username, kind: 'level', title: 'reached Level 4', emoji: '\u2b06\ufe0f',
+    created_at: new Date().toISOString(),
+    who: { username, display_name: username, current_level: 4, path }
+  });
+  const html = render('feed.ejs', Object.assign({ user: { id: 'me' } }, helpers, {
+    following: 2, suggestions: [],
+    events: [at('creator', 'ana'), at('local_service', 'bo')]
+  }));
+  const creator = ladders.ladderFor('creator').find(r => r.level === 4).title;
+  const trade = ladders.ladderFor('local_service').find(r => r.level === 4).title;
+  ok('two members at Level 4 on different paths get different words',
+     creator !== trade, `${creator} vs ${trade}`);
+  ok('...and both of those words are on the page',
+     html.includes(creator) && html.includes(trade), `${creator}, ${trade}`);
+
+  // The empty states are the ones a new member actually sees first.
+  const noFollows = render('feed.ejs', Object.assign({ user: { id: 'me' } }, helpers,
+    { following: 0, events: [], suggestions: [] }));
+  ok('following nobody renders a way out of it', /Find members|not following anyone/i.test(noFollows), 'has a next step');
+}
+
+
+// ---------------------------------------------------------------------------
 // 4. Attributes built inside a template tag are not double-escaped.
 //
 // `<%= %>` escapes what it prints, so a string that already contains escaped

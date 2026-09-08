@@ -131,10 +131,62 @@
   </div>
 <% } %>
 
-<%# The Coach: rule-matched tips for exactly where this member is right now. %>
+<%# This week's plan, written by the coach from the rung you are on. The card
+    shows up even with nothing in it, because an empty one is the invitation. %>
+<div class="card" style="border-left:3px solid var(--accent)">
+  <div class="page-head" style="margin:0 0 .5rem">
+    <div><h2 style="margin:0">📋 This week</h2></div>
+    <% if (typeof weekPlan !== 'undefined' && weekPlan && weekPlan.items && weekPlan.items.length) { %>
+      <span class="chip"><%= weekPlan.items.filter(function (i) { return i.done; }).length %>/<%= weekPlan.items.length %> done</span>
+    <% } %>
+  </div>
+  <% if (typeof weekPlan !== 'undefined' && weekPlan && weekPlan.items && weekPlan.items.length) { %>
+    <ul class="task-list" style="margin:0">
+      <% weekPlan.items.forEach(function (it, i) { %>
+        <li class="task <%= it.done ? 'done' : '' %>">
+          <form method="post" action="/coach/plan/<%= i %>/toggle" style="display:inline">
+            <button class="task-check" type="submit" aria-label="Toggle"><%= it.done ? '✓' : '' %></button>
+          </form>
+          <div><strong><%= it.title %></strong><% if (it.day) { %> <span class="tag"><%= it.day %></span><% } %></div>
+        </li>
+      <% }) %>
+    </ul>
+    <a class="btn btn-ghost btn-sm" style="margin-top:.7rem;display:inline-block" href="/coach">Open the coach →</a>
+  <% } else { %>
+    <p class="muted" style="margin:0">Nothing written for this week yet. The coach reads the rung you are on, the quest blocking the next one, and the hours you said you have — then writes three things.</p>
+    <a class="btn btn-primary btn-sm" style="margin-top:.7rem;display:inline-block" href="/coach">Write this week →</a>
+  <% } %>
+</div>
+
+<%# What the people you follow have been doing. Five rows; the rest is /feed. %>
+<% if (typeof feedPeek !== 'undefined' && feedPeek && feedPeek.length) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2 style="margin:0">👥 Your people</h2></div>
+      <a class="btn btn-ghost btn-sm" href="/feed">See all</a>
+    </div>
+    <% feedPeek.forEach(function (ev) { %>
+      <div class="milestone-row">
+        <p style="margin:.25rem 0">
+          <a href="/members/<%= ev.who.username %>"><strong><%= ev.who.display_name || ev.who.username %></strong></a>
+          <%= ev.emoji ? ' ' + ev.emoji : '' %> <%= ev.title %>
+        </p>
+      </div>
+    <% }) %>
+  </div>
+<% } else if (typeof following !== 'undefined' && !following) { %>
+  <div class="card">
+    <h2>👥 Your people</h2>
+    <p class="muted" style="margin:.3rem 0 0">Nobody yet. Follow a few members and their real milestones land here — first customer, first non-salary dollar, the day they hand in their notice.</p>
+    <a class="btn btn-ghost btn-sm" style="margin-top:.7rem;display:inline-block" href="/members">Find members →</a>
+  </div>
+<% } %>
+
+<%# Rule-matched nudges for exactly where this member is right now. Distinct
+    from the coach above: these are matched by rule, that one is written. %>
 <% if (typeof coach !== 'undefined' && coach && coach.length) { %>
   <div class="card coach-card" style="border-left:3px solid var(--accent)">
-    <h2>🎙️ Coach</h2>
+    <h2>🎙️ Nudges</h2>
     <% coach.forEach(function (t) { %>
       <div class="milestone-row">
         <p style="margin:.25rem 0"><%= t.message %></p>
@@ -148,6 +200,8 @@
   <h2><svg class="icon icon-lg"><use href="#i-suitcase"/></svg> Workspace</h2>
   <div class="workspace-grid">
     <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Start here — your map out</span></a>
+    <a class="ws-tile" href="/coach"><span class="ws-emoji">💬</span><strong>Coach</strong><span class="muted small">This week's plan, and somewhere to say you're stuck</span></a>
+    <a class="ws-tile" href="/feed"><span class="ws-emoji">👥</span><strong>Feed</strong><span class="muted small">What the people you follow are doing</span></a>
     <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>My ideas</strong><span class="muted small">Drafts &amp; advisor verdicts</span></a>
     <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
     <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins</span></a>

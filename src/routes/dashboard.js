@@ -8,6 +8,8 @@ const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
 const { claimFeedbackGate } = require('./reviews');
 const credits = require('../credits');
+const coachLib = require('../coach');
+const activity = require('../activity');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -120,10 +122,28 @@ router.get('/', async (req, res, next) => {
       };
     }
 
+    // This week's plan and a peek at the feed. Both are cheap reads and both
+    // are things nobody would ever find if the only door to them were a nav
+    // link — the dashboard is where people actually land.
+    const [weekPlan, feed] = await Promise.all([
+      req.sb.from('weekly_plans').select('week_of, intro, items')
+        .eq('user_id', req.user.id).eq('week_of', coachLib.thisMonday())
+        .maybeSingle().then(r => r.data, () => null),
+      activity.feedFor(req.sb, req.user.id, { limit: 5 })
+    ]);
+
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
       levelInfo: { current: cur, next }, ladder, yourPath, aiReady: ai.hasKey(), pinned, analytics, coach,
-      needsQuestionnaire, hasCompass
+      needsQuestionnaire, hasCompass,
+      weekPlan, feedPeek: feed.events, following: feed.following,
+      // A follower's rung has to come from THEIR ladder: Level 4 is "Regular"
+      // for a creator and "Quoting" for a plumber, and printing the viewer's
+      // word over someone else's achievement is the bug this prevents.
+      rungTitle: (path, level) => {
+        const r = (ladders.ladderFor(path) || []).find(x => x.level === level);
+        return r ? r.title : '';
+      }
     });
   } catch (e) { next(e); }
 });

@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL } = require('../unlocks');
+const activity = require('../activity');
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
 // Uses the service role key so it bypasses RLS entirely. Fast no-op once every
@@ -142,7 +143,12 @@ router.get('/:username', async (req, res, next) => {
       iBlocked: !!(blockRow && blockRow.length),
       blockedMe: !!(blockedMeRow && blockedMeRow.length)
     };
-    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL });
+    // What they have actually done lately. This is the payoff for following
+    // someone: a Follow button is only worth pressing if there is something on
+    // the other side of it. RLS decides what is readable, so a private profile
+    // simply returns nothing here rather than needing a second rule.
+    const recent = await activity.forUser(req.sb, p.id, 8);
+    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent });
   } catch (e) { next(e); }
 });
 

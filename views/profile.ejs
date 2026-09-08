@@ -86,4 +86,20 @@
     <% } else { %><p class="muted">No milestones marked yet.</p><% } %>
   </div>
 </div>
+
+<%# Lately. A Follow button is only worth pressing if there is something on the
+    other side of it, and badges and trophies are a cabinet, not a timeline.
+    RLS decides what is readable here, so a private profile simply returns
+    nothing rather than needing its own rule in the view. %>
+<% if (typeof recent !== 'undefined' && recent && recent.length) { %>
+  <div class="card">
+    <h3><svg class="icon"><use href="#i-trophy"/></svg> Lately</h3>
+    <% recent.forEach(function (ev) { %>
+      <div class="milestone-row">
+        <p style="margin:.25rem 0"><%= ev.emoji || '•' %> <%= ev.title %></p>
+        <span class="muted small" style="flex:none"><%= new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
 <%- include('partials/foot') %>
