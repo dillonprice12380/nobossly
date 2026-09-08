@@ -5,7 +5,8 @@ const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { sweepMilestones } = require('../milestones_engine');
-const { gate } = require('../upgrade');
+const { gate, gateCredits } = require('../upgrade');
+const credits = require('../credits');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -114,8 +115,11 @@ router.post('/generate', async (req, res, next) => {
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/milestones?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor goals to it.'));
     let items;
-    try { items = await ai.generateMilestones(req.accessToken, bp); }
-    catch (err) { return res.redirect('/milestones?msg=' + encodeURIComponent('Could not generate goals: ' + err.message)); }
+    try { items = await credits.run(req.sb, 'milestones', () => ai.generateMilestones(req.accessToken, bp)); }
+    catch (err) {
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/milestones');
+      return res.redirect('/milestones?msg=' + encodeURIComponent('Could not generate goals: ' + err.message));
+    }
     if (!Array.isArray(items) || !items.length) return res.redirect('/milestones?msg=' + encodeURIComponent('No goals were generated \u2014 please try again.'));
     // Replace any not-yet-achieved AI goals with the fresh set; keep achieved ones.
     await req.sb.from('user_custom_milestones').delete().eq('user_id', req.user.id).eq('achieved', false);

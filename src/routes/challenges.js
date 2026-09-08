@@ -5,7 +5,8 @@ const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 const { ensureClassified, getElectives } = require('../tailor');
-const { gate } = require('../upgrade');
+const { gate, gateCredits } = require('../upgrade');
+const credits = require('../credits');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 const nameOf = req => (req.profile.display_name || req.profile.username || 'A member');
@@ -262,8 +263,11 @@ router.post('/generate', async (req, res, next) => {
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/challenges?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor challenges to it.'));
     let items;
-    try { items = await ai.generateChallenges(req.accessToken, bp); }
-    catch (err) { return res.redirect('/challenges?msg=' + encodeURIComponent('Could not generate challenges: ' + err.message)); }
+    try { items = await credits.run(req.sb, 'challenges', () => ai.generateChallenges(req.accessToken, bp)); }
+    catch (err) {
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/challenges');
+      return res.redirect('/challenges?msg=' + encodeURIComponent('Could not generate challenges: ' + err.message));
+    }
     if (!Array.isArray(items) || !items.length) return res.redirect('/challenges?msg=' + encodeURIComponent('No challenges were generated \u2014 please try again.'));
     // Replace not-yet-completed AI challenges (pending/abandoned) with the fresh set.
     await req.sb.from('user_custom_challenges').delete().eq('user_id', req.user.id).in('status', ['pending', 'abandoned']).is('tailored_id', null);

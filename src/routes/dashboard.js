@@ -7,6 +7,7 @@ const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
 const { claimFeedbackGate } = require('./reviews');
+const credits = require('../credits');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -144,7 +145,8 @@ router.post('/sprint/start/:blueprintId', async (req, res) => {
 
     const { count } = await req.sb.from('sprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const sprintNumber = (count || 0) + 1;
-    const plan = await ai.generateSprintTasks(req.accessToken, bp, sprintNumber);
+    const plan = await credits.run(req.sb, 'sprint',
+      () => ai.generateSprintTasks(req.accessToken, bp, sprintNumber));
 
     const start = new Date();
     const end = new Date(Date.now() + 6 * 86400000);

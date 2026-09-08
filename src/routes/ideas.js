@@ -1,9 +1,10 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
-const { gate } = require('../upgrade');
+const { gate, gateCredits } = require('../upgrade');
 const ai = require('../ai');
 const qs = require('../questionnaires');
 const { sweepMilestones } = require('../milestones_engine');
+const credits = require('../credits');
 
 // This page used to be the AI idea generator: answer a questionnaire, receive
 // six business ideas, pick one. That is retired. The beginning of NoBossly is
@@ -123,7 +124,8 @@ router.post('/:id/evidence', async (req, res, next) => {
     const { data: idea } = await req.sb.from('generated_ideas').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (!idea) return res.redirect('/ideas');
     try {
-      const ev = await ai.demandEvidence(req.accessToken, idea);
+      const ev = await credits.run(req.sb, 'demand',
+        () => ai.demandEvidence(req.accessToken, idea));
       if (!ev || !Array.isArray(ev.signals)) throw new Error('no signals returned');
       await req.sb.from('generated_ideas').update({ demand_evidence: ev, evidence_at: new Date().toISOString() }).eq('id', idea.id);
       // Mirror the search results into idea_signals so they count toward the
@@ -141,6 +143,7 @@ router.post('/:id/evidence', async (req, res, next) => {
       if (rows.length) await req.sb.from('idea_signals').insert(rows);
       try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) {}
     } catch (err) {
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/ideas/' + idea.id);
       return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Could not gather demand signals — please try again. (' + err.message + ')'));
     }
     res.redirect('/ideas/' + idea.id);

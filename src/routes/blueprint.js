@@ -4,6 +4,7 @@ const qs = require('../questionnaires');
 const { awardXP } = require('../xp');
 const { planOf } = require('../middleware/auth');
 const { gate, gateJson } = require('../upgrade');
+const credits = require('../credits');
 
 const clampXP = v => Math.max(10, Math.min(200, parseInt(v, 10) || 50));
 const okDays = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
@@ -13,8 +14,8 @@ const okDays = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 3
 // or fails blueprint creation; the results appear on the Milestones/Challenges pages.
 async function generateTailoredSets(req, bp) {
   const [ms, chs] = await Promise.all([
-    ai.generateMilestones(req.accessToken, bp).catch(() => null),
-    ai.generateChallenges(req.accessToken, bp).catch(() => null)
+    credits.run(req.sb, 'milestones', () => ai.generateMilestones(req.accessToken, bp)).catch(() => null),
+    credits.run(req.sb, 'challenges', () => ai.generateChallenges(req.accessToken, bp)).catch(() => null)
   ]);
   if (Array.isArray(ms) && ms.length) {
     await req.sb.from('user_custom_milestones').delete().eq('user_id', req.user.id).eq('achieved', false);
@@ -63,7 +64,8 @@ async function runBlueprintGeneration(req, idea, jobId) {
     // from an older idea isn't described using answers from a later run.
     const q = (await qs.byId(sb, req.user.id, idea.questionnaire_id))
       || (await qs.latestCompleted(sb, req.user.id));
-    const bp = await ai.generateBlueprint(req.accessToken, idea, q || {});
+    const bp = await credits.run(sb, 'blueprint',
+      () => ai.generateBlueprint(req.accessToken, idea, q || {}));
     const row = {
       user_id: req.user.id, idea_id: idea.id,
       business_name: bp.business_name || idea.name, tagline: bp.tagline || idea.tagline,
@@ -89,7 +91,11 @@ async function runBlueprintGeneration(req, idea, jobId) {
     }
   } catch (e) {
     console.error('blueprint generation', e);
-    await finish({ status: 'error', error: 'Blueprint generation failed: ' + e.message });
+    // A background job has no page to render a panel into, so the rail's own
+    // wording goes into the job error the polling client displays.
+    await finish({ status: 'error', error: e.outOfCredits
+      ? credits.brokeMessage(e.credits)
+      : 'Blueprint generation failed: ' + e.message });
   }
 }
 

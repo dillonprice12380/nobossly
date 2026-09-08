@@ -48,6 +48,14 @@ const FEATURES = {
     gets: ['Week-1 actions dispersed with staggered deadlines', 'The same for every new blueprint', 'Manual task entry stays free'],
     back: { href: '/ideas', label: 'Back to my ideas' }
   },
+  out_of_credits: {
+    title: 'You have used this month\u2019s free AI',
+    blurb: 'Every AI call on NoBossly draws on a monthly allowance \u2014 drawing a Compass, stress-testing an idea, a coach reply. The free allowance refills on the 1st. The Escape plan lifts the ceiling far enough that you will not meet it.',
+    gets: ['A ceiling high enough you will not think about it again',
+           'The weekly plan, the coach, and proof review',
+           'Your ladder, your quests, the forum and the Wins wall stay free either way'],
+    back: { href: '/dashboard', label: 'Back to dashboard' }
+  },
   groups: {
     title: 'Starting a group',
     blurb: 'Anyone can join and post in groups. Creating and running one is a paid feature.',
@@ -85,4 +93,19 @@ function gateJson(res, key) {
   });
 }
 
-module.exports = { gate, gateJson, FEATURES };
+// The refusal a member meets when the AI rail says no. A free member gets the
+// upgrade panel, because the ceiling really is the reason. A paying member who
+// has burned 400 credits in a month is almost certainly a script, and selling
+// them a plan they already have would be nonsense — they get the plain limit.
+function gateCredits(res, c, backHref) {
+  if (c && c.plan === 'paid') {
+    return res.status(429).render('error', {
+      title: 'Fair-use ceiling',
+      message: 'That is a lot of AI in one month \u2014 you have reached the fair-use ceiling on your plan. '
+             + 'It refills on the 1st. If you are genuinely working at this pace, reply to any NoBossly email and we will raise it.'
+    });
+  }
+  return gate(res, 'out_of_credits', backHref);
+}
+
+module.exports = { gate, gateJson, gateCredits, FEATURES };

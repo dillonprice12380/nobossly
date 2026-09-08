@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const ai = require('../ai');
 const { planOf } = require('../middleware/auth');
-const { gate } = require('../upgrade');
+const { gate, gateCredits } = require('../upgrade');
+const credits = require('../credits');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -82,8 +83,11 @@ router.post('/ai/suggest', async (req, res, next) => {
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!bp) return res.redirect('/budget?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor a startup budget to it.'));
     let items;
-    try { items = await ai.generateBudget(req.accessToken, bp); }
-    catch (err) { return res.redirect('/budget?msg=' + encodeURIComponent('Could not generate a budget: ' + err.message)); }
+    try { items = await credits.run(req.sb, 'budget', () => ai.generateBudget(req.accessToken, bp)); }
+    catch (err) {
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/budget');
+      return res.redirect('/budget?msg=' + encodeURIComponent('Could not generate a budget: ' + err.message));
+    }
     if (!Array.isArray(items) || !items.length) return res.redirect('/budget?msg=' + encodeURIComponent('No budget was generated — please try again.'));
     for (const it of items.slice(0, 12)) {
       const category = String(it.category || '').trim().slice(0, 40);
@@ -110,8 +114,11 @@ router.post('/ai/insights', async (req, res, next) => {
       }))
     };
     let insights = null;
-    try { insights = await ai.budgetInsights(req.accessToken, summary); }
-    catch (err) { payload.msg = 'Could not generate insights: ' + err.message; }
+    try { insights = await credits.run(req.sb, 'budget', () => ai.budgetInsights(req.accessToken, summary)); }
+    catch (err) {
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/budget');
+      payload.msg = 'Could not generate insights: ' + err.message;
+    }
     res.render('budget', Object.assign(payload, { insights }));
   } catch (e) { next(e); }
 });

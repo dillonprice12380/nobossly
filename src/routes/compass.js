@@ -7,6 +7,7 @@ const { sweepMilestones } = require('../milestones_engine');
 const fitLib = require('../fit');
 const lib = require('../fit_library');
 const pathsLib = require('../paths');
+const credits = require('../credits');
 
 // One line per path, shown while the Compass is being drawn.
 const LABELS = {
@@ -64,6 +65,26 @@ async function runCompassGeneration(req, q, jobId) {
     .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', jobId)
     .then(() => {}, e => console.error('compass job update', e && e.message));
   const report = (stage, progress, label) => patchJob({ stage, progress, stage_label: label || (STEPS(path).find(s => s.id === stage) || {}).label || '' });
+  // The FIRST Compass is free and unmetered, on any plan, even at a zero
+  // balance. It is the most expensive call in the product — a live market scan
+  // plus a crawl of their own site — and that is exactly why it is given away:
+  // it is the moment someone believes the thing works, and it happens before
+  // they have any reason to pay. Redraws come out of the allowance.
+  let charged = false;
+  try {
+    const { count: drawnBefore } = await sb.from('founder_compasses')
+      .select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
+    if (drawnBefore || 0) {
+      const paid = await credits.spend(sb, 'compass');
+      if (!paid.ok) return patchJob({ status: 'error', error: credits.brokeMessage(paid) });
+      charged = true;
+    }
+  } catch (err) {
+    // A rail that cannot be read must not become a free pass.
+    console.error('compass credits', err && err.message);
+    return patchJob({ status: 'error', error: 'Could not check your AI credits. Please try again.' });
+  }
+
   try {
     await report('queued', FLOORS.queued);
     let scan = null;
@@ -100,6 +121,10 @@ async function runCompassGeneration(req, q, jobId) {
     await patchJob({ status: 'done', progress: 100, stage: 'done', redirect: '/compass' });
   } catch (e) {
     console.error('compass generation', e);
+    // Charged before the call, so a failure has to give it back. The edge
+    // function has a hard 150s limit and dies on it often enough that this is
+    // not a hypothetical.
+    if (charged) await credits.refund(sb, 'compass');
     await patchJob({ status: 'error', error: 'Compass generation failed: ' + e.message });
   }
 }
@@ -145,7 +170,8 @@ async function runAdvisor(req, idea, compass, q, draft, plan) {
   const pinned = Array.isArray(idea.fit_test) && idea.fit_test.length
     ? idea.fit_test
     : fitLib.pinFitTest(compass && compass.fit_test);
-  const adv = await cai.adviseIdea(req.accessToken, q, compass, draft, pinned);
+  const adv = await credits.run(req.sb, 'advisor',
+    () => cai.adviseIdea(req.accessToken, q, compass, draft, pinned));
   const modelResults = Array.isArray(adv.fit_results)
     ? adv.fit_results.map(f => ({ criterion: s(f && f.criterion, 200), pass: !!(f && f.pass), note: s(f && f.note, 300) }))
     : null;
@@ -236,7 +262,8 @@ router.post('/draft', async (req, res, next) => {
       return res.redirect('/ideas/' + idea.id);
     } catch (err) {
       console.error('advisor', err && err.message);
-      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your idea is saved. The advisor could not run just now (' + err.message + ') \u2014 you can retry from your Compass.'));
+      const why = err.outOfCredits ? credits.brokeMessage(err.credits) : 'the advisor could not run just now (' + err.message + ')';
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your idea is saved \u2014 ' + why));
     }
   } catch (e) { next(e); }
 });
@@ -273,7 +300,8 @@ router.post('/draft/:id/revise', async (req, res, next) => {
       return res.redirect('/ideas/' + idea.id);
     } catch (err) {
       console.error('advisor revise', err && err.message);
-      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your revision is saved, but the advisor could not run: ' + err.message));
+      const why = err.outOfCredits ? credits.brokeMessage(err.credits) : 'the advisor could not run: ' + err.message;
+      return res.redirect('/ideas/' + idea.id + '?msg=' + encodeURIComponent('Your revision is saved \u2014 ' + why));
     }
   } catch (e) { next(e); }
 });

@@ -119,6 +119,22 @@ async function attachUser(req, res, next) {
         res.locals.unreadCount = count || 0;
         res.locals.unreadMsgs = typeof msgCount === 'number' ? msgCount : 0;
       } catch (_) { res.locals.unreadCount = 0; res.locals.unreadMsgs = 0; }
+
+      // The AI balance, fetched only for free members — they are the only ones
+      // who are ever shown it. A paying member's ceiling exists to stop abuse,
+      // and the pricing page promises no per-report fees, so putting a meter in
+      // front of them would both break that promise and teach them to ration
+      // something they already bought. Skipping them also halves the cost of
+      // this lookup across the site.
+      res.locals.credits = null;
+      if (res.locals.plan === 'free') {
+        try {
+          const { data: c } = await sb.rpc('ai_credit_status');
+          if (c && c.visible !== false) {
+            res.locals.credits = { balance: c.balance || 0, cap: c.cap || 0 };
+          }
+        } catch (_) { /* the header is not worth a 500 */ }
+      }
     } else {
       clearSessionCookies(res);
     }

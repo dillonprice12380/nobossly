@@ -8,6 +8,7 @@
 // the AI writes new electives INTO the pool (source='ai'), so every
 // generation deepens the database for the next similar member.
 const paths = require('./paths');
+const credits = require('./credits');
 
 const EDGE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1/ai-proxy';
 
@@ -79,10 +80,13 @@ async function ensureClassified(sb, accessToken, userId, profile) {
 
     const tax = await taxonomy(sb);
     const lists = KINDS.map(k => `${k}: ${tax[k].map(t => t.slug).join(', ')}`).join('\n\n');
-    const out = await askJSON(accessToken,
+    // Metered like every other AI call. This one fires from a page load rather
+    // than a button, so an unmetered version would be the easiest loop in the
+    // product to trip by accident.
+    const out = await credits.run(sb, 'classify', () => askJSON(accessToken,
       'You classify businesses against a fixed taxonomy. You always pick the single closest slug from each provided list — never invent slugs, never leave a field blank.',
       `${brief.text}\n\nClassify this business. Choose EXACTLY ONE slug from each list below (copy the slug verbatim):\n\n${lists}\n\nReturn JSON: { "business_type": "...", "industry": "...", "customer_segment": "...", "value_prop": "..." }`,
-      500);
+      500));
 
     const patch = { biz_classified_at: new Date().toISOString() };
     for (const k of KINDS) {

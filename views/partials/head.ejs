@@ -99,6 +99,9 @@
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
+          <% if (typeof credits !== 'undefined' && credits) { %>
+            <span class="muted small" style="padding:.1rem .9rem .4rem;display:block">⚡ <%= credits.balance %> of <%= credits.cap %> AI credits left this month</span>
+          <% } %>
           <% if (typeof plan !== 'undefined' && plan === 'free') { %><a href="/pricing"><svg class="icon"><use href="#i-upgrade"/></svg> Upgrade</a><% } %>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
