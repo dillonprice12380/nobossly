@@ -1,3 +1,9 @@
 <%- include('partials/head') %>
-<div class="card auth-card"><h2>Oops</h2><p><%= message %></p><a class="btn btn-primary" href="/dashboard">Back to dashboard</a></div>
+<div class="card auth-card"><h2>Oops</h2><p><%= message %></p>
+  <%# The reference is the whole point: it is what turns "it broke" into a row
+      in app_errors with the route and the stack attached. %>
+  <% if (typeof ref !== 'undefined' && ref) { %>
+    <p class="muted small">Reference <code><%= ref %></code> — quote this and we can look up exactly what happened.</p>
+  <% } %>
+  <a class="btn btn-primary" href="/dashboard">Back to dashboard</a></div>
 <%- include('partials/foot') %>

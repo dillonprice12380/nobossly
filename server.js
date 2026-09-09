@@ -232,9 +232,33 @@ setTimeout(sweepEmail, 2 * 60 * 1000);
 setInterval(sweepEmail, 12 * 60 * 60 * 1000);
 
 app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'Page not found.' }));
+// "Oops. Something went wrong." three times today, and no way to find out why:
+// the app is not on Supabase so its logs are not in that project, it wrote
+// nothing to the database, and console.error goes to a host that is not always
+// reachable from wherever the diagnosis is happening. Every failure had to be
+// inferred from Supabase's edge logs, which works for a bad query and not at
+// all for a TypeError in a route.
+//
+// So each error gets a short reference, goes to the console AND to app_errors
+// (admin-readable only — a stack trace is not for whoever tripped it), and the
+// page shows the reference so it can be quoted. Logging is best-effort and
+// never allowed to become the error itself.
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).render('error', { title: 'Error', message: err.userMessage || 'Something went wrong. Please try again.' });
+  const ref = Math.random().toString(36).slice(2, 8).toUpperCase();
+  console.error('[' + ref + ']', req.method, req.originalUrl, err);
+  try {
+    (req.sb || require('./src/supabase').anonClient())
+      .rpc('log_app_error', {
+        p_ref: ref, p_path: req.originalUrl, p_method: req.method,
+        p_message: String((err && err.message) || err).slice(0, 2000),
+        p_stack: String((err && err.stack) || '').slice(0, 8000)
+      }).then(() => {}, () => {});
+  } catch (_) { /* never let the logger throw */ }
+  res.status(500).render('error', {
+    title: 'Error',
+    message: err.userMessage || 'Something went wrong. Please try again.',
+    ref
+  });
 });
 
 const port = process.env.PORT || 3000;

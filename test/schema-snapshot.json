@@ -90,6 +90,16 @@
       "plan",
       "user_id"
     ],
+    "app_errors": [
+      "created_at",
+      "id",
+      "message",
+      "method",
+      "path",
+      "ref",
+      "stack",
+      "user_id"
+    ],
     "app_secrets": [
       "key",
       "value"
