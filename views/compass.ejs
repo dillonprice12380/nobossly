@@ -98,8 +98,13 @@
     <label class="small">Problem it solves<input name="problem" maxlength="1000"></label>
     <label class="small">First customer you'd target<input name="customer" maxlength="500"></label>
     <label class="small">How it makes money<input name="monetization" maxlength="500"></label>
-    <div class="cta-row"><button type="submit" class="btn btn-primary">Run it past your advisor</button>
-    <a class="btn btn-ghost" href="/ideas">See my ideas</a></div>
+    <div class="cta-row"><button type="submit" class="btn btn-primary">Run it past your advisor</button></div>
   </form>
+
+  <% if (ideas && ideas.length) { %>
+    <h2 style="margin:1.4rem 0 .2rem">Your ideas (<%= ideas.length %>)</h2>
+    <p class="muted small" style="margin:0 0 .2rem">Open one to see how it scored, add evidence, revise it, or build the blueprint.</p>
+    <%- include('partials/idea_list', { groups: groups, showRunHeadings: showRunHeadings }) %>
+  <% } %>
 </div>
 <%- include('partials/foot') %>

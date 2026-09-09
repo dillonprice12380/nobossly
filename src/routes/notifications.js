@@ -7,7 +7,7 @@ const LINKS = {
   messages: () => '/messages',
   tasks: () => '/tasks',
   task: () => '/tasks',
-  ideas: () => '/ideas',
+  ideas: () => '/compass',
   generated_ideas: id => '/ideas/' + id,
   blueprints: id => '/blueprint/' + id,
   blueprint: id => '/blueprint/' + id,
@@ -35,7 +35,7 @@ function hrefFor(n) {
     case 'task_due':
     case 'task_assigned':
     case 'tasks': return '/tasks';
-    case 'ideas': return '/ideas';
+    case 'ideas': return '/compass';
     default: return '/notifications';
   }
 }

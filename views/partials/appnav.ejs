@@ -20,8 +20,11 @@
     { href: '/coach',          label: 'Coach',      short: 'Coach',  icon: 'i-idea',      match: ['/coach'] },
     // The Compass is where the product starts, and it had no tab at all — it was
     // reachable only from a tile buried below the fold on the dashboard.
-    { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire'] },
-    { href: '/ideas',          label: 'My ideas',   short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
+    // My ideas was a tab of its own until the list moved onto the Compass. A
+    // single draft still has its own page at /ideas/:id, and the blueprint hangs
+    // off it, so both match here — otherwise opening a draft would drop the tab
+    // row, which is the bug that put Coach and Feed out in the cold.
+    { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire', '/ideas', '/blueprint'] },
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
     // One name per thing. The nav said "Challenges" and "Milestones" while the
     // pages themselves, the upgrade panel and the ladder all said "quests" and

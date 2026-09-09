@@ -3,7 +3,6 @@ const { safeBack } = require('../safe_back');
 const { planOf } = require('../middleware/auth');
 const { gate, gateCredits } = require('../upgrade');
 const ai = require('../ai');
-const qs = require('../questionnaires');
 const { sweepMilestones } = require('../milestones_engine');
 const credits = require('../credits');
 
@@ -12,49 +11,15 @@ const credits = require('../credits');
 // the Compass, and the only ideas that land here now are ones the
 // founder drafted themselves and ran past the Compass advisor (/compass/draft).
 //
-// The route survives because those drafts need somewhere to live, be reviewed
-// and be turned into a blueprint.
+// The route survives because a single draft still needs a page of its own —
+// the graded fit test, the evidence, the blueprint. What is gone is the INDEX:
+// a list of drafts was a top-level tab sitting next to the Compass that creates
+// them, which is one activity split across two places. The list is on the
+// Compass now; /ideas sends you there.
 
-const pathsLib = require('../paths');
-const PATH_LABELS = {};
-pathsLib.PATHS.forEach(p => { PATH_LABELS[p.slug] = p.label; });
-
-router.get('/', async (req, res, next) => {
-  try {
-    // Newest run first, then the order the generator returned within that run —
-    // for the existing-business path, position 0 is the verdict on their business.
-    const [{ data: ideas }, runs, finishedRuns] = await Promise.all([
-      req.sb.from('generated_ideas').select('*').eq('user_id', req.user.id)
-        .order('created_at', { ascending: false }).order('position', { ascending: true }),
-      qs.all(req.sb, req.user.id),
-      qs.completedCount(req.sb, req.user.id)
-    ]);
-    const runMap = {};
-    runs.forEach(r => { runMap[r.id] = r; });
-    const groups = [];
-    const byRun = {};
-    (ideas || []).forEach(i => {
-      const key = i.questionnaire_id || 'unlinked';
-      if (!byRun[key]) {
-        const run = runMap[i.questionnaire_id] || null;
-        byRun[key] = {
-          key,
-          runNumber: run ? run.run_number : null,
-          pathLabel: run ? (PATH_LABELS[run.founder_path] || '') : '',
-          date: i.created_at,
-          ideas: []
-        };
-        groups.push(byRun[key]);
-      }
-      byRun[key].ideas.push(i);
-    });
-    res.render('ideas', {
-      title: 'Your ideas', ideas: ideas || [], groups,
-      showRunHeadings: groups.length > 1,
-      hasQuestionnaire: finishedRuns > 0, aiReady: ai.hasKey()
-    });
-  } catch (e) { next(e); }
-});
+// The list is on the Compass. Anything still pointing here — a bookmark, an
+// older notification, a cached page — lands where it now lives.
+router.get('/', (req, res) => res.redirect('/compass'));
 
 // Old links and cached clients still ask for the retired generator. Without
 // this they fall through to /:id below and only redirect by accident, because

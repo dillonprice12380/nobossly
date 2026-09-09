@@ -2,6 +2,7 @@ const router = require('express').Router();
 const ai = require('../ai');
 const cai = require('../compass_ai');
 const qsvc = require('../questionnaires');
+const ideasList = require('../ideas_list');
 const { awardXP } = require('../xp');
 const { sweepMilestones } = require('../milestones_engine');
 const fitLib = require('../fit');
@@ -42,10 +43,16 @@ router.get('/', async (req, res, next) => {
       .eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
     const q = await qsvc.latestCompleted(req.sb, req.user.id);
     if (!compass) return res.redirect(q ? '/compass/generate' : '/questionnaire');
+    // The drafts live here now rather than behind a tab of their own — drafting
+    // an idea and looking at your drafts are one activity, and they were two
+    // tabs apart.
+    const runs = await qsvc.all(req.sb, req.user.id);
+    const drafts = await ideasList.forUser(req.sb, req.user.id, runs);
     // `motivation` is only ever asked in the final depth step, so its absence is
     // an exact test for "this founder has only answered the core seven".
     const canDeepen = !!q && !q.motivation;
-    res.render('compass', { title: 'Your Compass', compass, canDeepen, msg: req.query.msg || null });
+    res.render('compass', { title: 'Your Compass', compass, canDeepen, msg: req.query.msg || null,
+      ideas: drafts.ideas, groups: drafts.groups, showRunHeadings: drafts.showRunHeadings });
   } catch (e) { next(e); }
 });
 

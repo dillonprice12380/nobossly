@@ -1,0 +1,42 @@
+<%# The member's drafts. This used to be the body of /ideas, a top-level tab of
+    its own; it lives on the Compass now, directly under the form that creates
+    them, because drafting an idea and looking at your drafts are one activity
+    and the product had them two tabs apart. A single draft still opens its own
+    page — that is where the fit results, the evidence and the blueprint are.
+
+    Expects: groups (from src/ideas_list.js), showRunHeadings. %>
+<% groups.forEach(function (g) { %>
+  <% if (showRunHeadings) { %>
+    <h3 class="small muted" style="margin:1.4rem 0 .5rem">
+      <% if (g.runNumber) { %>Compass #<%= g.runNumber %><% if (g.pathLabel) { %> · <%= g.pathLabel %><% } %>
+      <% } else { %>Earlier ideas<% } %>
+      <% if (g.date) { %> · <%= new Date(g.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %><% } %>
+    </h3>
+  <% } %>
+  <div class="grid">
+    <% g.ideas.forEach(function (i) { %>
+      <a class="card idea-card" href="/ideas/<%= i.id %>">
+        <div class="idea-top">
+          <% if (i.category) { %><span class="tag"><%= i.category %></span><% } %>
+          <% if (i.is_favorited) { %><span>⭐</span><% } %>
+          <% if (i.cut_at) { %><span class="chip">✂️ cut</span><% } %>
+        </div>
+        <h3><%= i.name %></h3>
+        <p class="muted"><%= i.tagline %></p>
+        <%# A draft carries no scores until the advisor has run on it, so showing
+            "0% success · demand 0/10" would be a verdict the advisor never gave. %>
+        <% if (i.best_fit_pct) { %>
+          <div class="scores"><span class="chip">✅ fit <%= i.best_fit_pct %>%</span>
+          <% if (i.success_likelihood) { %><span class="chip">🎯 <%= i.success_likelihood %>% success</span><% } %></div>
+        <% } else if (i.success_likelihood) { %>
+          <div class="scores">
+            <span class="chip">🎯 <%= i.success_likelihood %>% success</span>
+            <% if (i.demand_score) { %><span class="chip">📈 demand <%= i.demand_score %>/10</span><% } %>
+          </div>
+        <% } else { %>
+          <span class="chip">Advisor hasn't run yet</span>
+        <% } %>
+      </a>
+    <% }) %>
+  </div>
+<% }) %>

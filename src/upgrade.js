@@ -34,19 +34,19 @@ const FEATURES = {
     title: 'More than one blueprint',
     blurb: 'The free plan builds one full launch blueprint. Paid lifts the cap so you can blueprint every idea worth taking seriously and compare them side by side.',
     gets: ['Unlimited launch blueprints', 'Live demand evidence on any idea', 'Week-1 actions dispersed straight to your task board'],
-    back: { href: '/ideas', label: 'Back to my ideas' }
+    back: { href: '/compass', label: 'Back to your Compass' }
   },
   demand_evidence: {
     title: 'Live demand evidence',
     blurb: 'Searches the live web for real signals that people want what your idea sells — the posts, the complaints, the money already changing hands.',
     gets: ['Real demand signals gathered for any idea', 'Refresh as the market moves', 'Runs automatically on your top idea'],
-    back: { href: '/ideas', label: 'Back to my ideas' }
+    back: { href: '/compass', label: 'Back to your Compass' }
   },
   disperse_tasks: {
     title: 'Blueprint → task board',
     blurb: 'Breaks your blueprint\'s Week-1 actions into dated tasks on your board so the first week plans itself.',
     gets: ['Week-1 actions dispersed with staggered deadlines', 'The same for every new blueprint', 'Manual task entry stays free'],
-    back: { href: '/ideas', label: 'Back to my ideas' }
+    back: { href: '/compass', label: 'Back to your Compass' }
   },
   weekly_plan: {
     title: 'This week\u2019s plan',
