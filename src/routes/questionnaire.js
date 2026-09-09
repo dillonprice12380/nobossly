@@ -37,6 +37,25 @@ function readAnswer(q, body) {
 
 const answered = v => Array.isArray(v) ? v.length > 0 : (v !== null && v !== undefined && String(v).trim() !== '');
 
+// Every write in this file used to ignore its error. That is how the path
+// chooser broke silently for eight of the nine paths: a stale CHECK constraint
+// rejected the UPDATE, nothing read the error, the route redirected to step 2
+// anyway, and the GET for step 2 saw founder_path still null and sent the
+// member back to step 1. From the outside it looked like the button did
+// nothing, which is the hardest kind of bug to report and the easiest to miss.
+//
+// A write that does not land is now said out loud. The member gets a sentence
+// they can repeat to us; the server log gets the constraint name.
+async function save(sb, id, patch) {
+  const { error } = await sb.from('questionnaire_responses').update(patch).eq('id', id);
+  if (error) {
+    console.error('questionnaire save', error.code || '', error.message, JSON.stringify(patch).slice(0, 300));
+    const err = new Error(error.message);
+    err.saveFailed = true;
+    throw err;
+  }
+}
+
 // Splits a set of answers into the columns they belong in. Universal questions
 // carry a `col` and write to their own column, because the fit-criteria library
 // matches on those exact fields; everything else is path-specific and goes to
@@ -155,7 +174,13 @@ router.post('/', async (req, res, next) => {
       // rather than leaving a creator's follower count on a plumber's profile.
       const patch = { founder_path: chosen };
       if (run.founder_path && run.founder_path !== chosen) patch.path_answers = {};
-      await req.sb.from('questionnaire_responses').update(patch).eq('id', run.id);
+      try {
+        await save(req.sb, run.id, patch);
+      } catch (err) {
+        if (!err.saveFailed) throw err;
+        return res.redirect('/questionnaire?step=1&msg=' + encodeURIComponent(
+          'That path could not be saved, so nothing has changed. This is our fault, not yours \u2014 please try again, and tell us if it keeps happening.'));
+      }
       return res.redirect('/questionnaire?step=2');
     }
 
@@ -169,17 +194,26 @@ router.post('/', async (req, res, next) => {
       : (steps[step - REQUIRED_STEPS - 1] || []);
 
     const { cols, pathAnswers } = partition(questions, req.body, run.path_answers);
-    await req.sb.from('questionnaire_responses')
-      .update({ ...cols, path_answers: pathAnswers, updated_at: new Date().toISOString() })
-      .eq('id', run.id);
+    try {
+      await save(req.sb, run.id, { ...cols, path_answers: pathAnswers, updated_at: new Date().toISOString() });
+    } catch (err) {
+      if (!err.saveFailed) throw err;
+      return res.redirect('/questionnaire?step=' + step + '&msg=' + encodeURIComponent(
+        'Your answers could not be saved, so nothing has changed. Please try again \u2014 and tell us if it keeps happening.'));
+    }
 
     if (step < REQUIRED_STEPS) return res.redirect('/questionnaire?step=' + (step + 1));
 
     // Clearing the core completes onboarding. Readiness is recomputed on every
     // save, so deepening later sharpens it rather than needing a redo.
     const fresh = await qs.byId(req.sb, req.user.id, run.id);
-    await req.sb.from('questionnaire_responses')
-      .update({ completed: true, readiness_score: readinessScore(path, fresh) }).eq('id', run.id);
+    try {
+      await save(req.sb, run.id, { completed: true, readiness_score: readinessScore(path, fresh) });
+    } catch (err) {
+      if (!err.saveFailed) throw err;
+      return res.redirect('/questionnaire?step=' + step + '&msg=' + encodeURIComponent(
+        'Your answers are saved but the run could not be marked complete. Please try Continue again.'));
+    }
     await req.sb.from('profiles').update({
       onboarding_completed: true,
       display_name: fresh.founder_name || undefined,

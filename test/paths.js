@@ -335,5 +335,61 @@ for (const sp of paths.subpathsOf('creator')) {
 ok('every creator subpath carries an audience bar', true,
    paths.subpathsOf('creator').length + ' subpaths');
 
+// ---------------------------------------------------------------------------
+// The database's CHECK constraint has to know the same nine slugs.
+//
+// This is the guard for the bug that broke onboarding: the constraint on
+// questionnaire_responses.founder_path still listed the pre-rewrite stage names
+// ('existing', 'idea', 'exploring') months after the nine paths shipped, so the
+// database rejected eight of the nine slugs the form offers. 'exploring'
+// survived the rename by coincidence, which is exactly why nobody noticed — the
+// only member who ever completed onboarding had picked the one path that still
+// passed.
+//
+// A constraint that enumerates values is a snapshot, and snapshots drift. The
+// sandbox cannot reach the database, so this compares src/paths.js against the
+// SQL that was actually shipped: add a path without a migration and this fails.
+
+const fs = require('fs');
+const path = require('path');
+const MIGRATION = path.join(__dirname, '..', 'migrations', '2026-09-09_fix_stale_check_constraints.sql');
+
+// Anchored on the ADD CONSTRAINT itself. Counting occurrences of the name is
+// too fragile — it also appears in this file's header comment and in the
+// COMMENT ON, which is what made the first version of this test read the wrong
+// block and report every slug as missing.
+const allowedIn = (sql, constraint) => {
+  const m = sql.match(new RegExp('add constraint ' + constraint + '[\\s\\S]*?array\\[([\\s\\S]*?)\\]'));
+  return (m ? m[1] : '').split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
+};
+
+{
+  const sql = fs.readFileSync(MIGRATION, 'utf8');
+  const inSql = allowedIn(sql, 'questionnaire_responses_founder_path_chk').sort();
+  const inCode = paths.PATHS.map(p => p.slug).slice().sort();
+
+  const missing = inCode.filter(s => !inSql.includes(s));
+  const extra   = inSql.filter(s => !inCode.includes(s));
+  ok('the founder_path CHECK constraint lists every path in paths.js',
+     missing.length === 0,
+     missing.length ? 'MISSING FROM THE MIGRATION: ' + missing.join(', ') + ' — onboarding will fail silently for these' : inSql.length + ' slugs');
+  ok('...and lists nothing that is not a path any more',
+     extra.length === 0, extra.join(', ') || 'clean');
+}
+
+// Same class of drift, caught the same way: the profile editor's stage options
+// have to be values the profiles constraint accepts.
+{
+  const sql = fs.readFileSync(MIGRATION, 'utf8');
+  const allowed = allowedIn(sql, 'profiles_founder_stage_check');
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'profile_edit.ejs'), 'utf8');
+  const offered = ((view.match(/\[([^\]]*)\]\.forEach\(o =>/) || [])[1] || '')
+    .split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
+  const rejected = offered.filter(o => !allowed.includes(o));
+  ok('every stage the profile editor offers is one the database accepts',
+     offered.length > 0 && rejected.length === 0,
+     rejected.length ? 'REJECTED: ' + rejected.join(', ') : offered.length + ' options');
+}
+
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nPaths hold. All checks pass.');
 process.exit(fail ? 1 : 0);
