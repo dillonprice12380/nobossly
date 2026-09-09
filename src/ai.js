@@ -284,12 +284,18 @@ Include 3-6 signals. Only include signals backed by something you actually found
 
 async function generateBlueprint(token, idea, q) {
   const system = 'You are NoBossly, an expert startup strategist who creates actionable launch blueprints.';
+  // Every one of these is interpolated straight into the prompt, and half of
+  // them are empty until the advisor has run. A member who drafts an idea, has
+  // the advisor fail (out of credits, edge function timeout) and then builds a
+  // blueprint was handing the model the literal word "undefined" as their
+  // market analysis. An absent field has to read as absent.
+  const said = v => { const s = String(v == null ? '' : v).trim(); return s || 'not stated yet'; };
   const prompt = `${profileSummaryText(q)}
 
-Chosen business idea: ${idea.name} — ${idea.tagline}
-Category: ${idea.category}
-Why them: ${idea.why_you}
-Market: ${idea.market_analysis}
+Chosen business idea: ${said(idea.name)} — ${said(idea.tagline)}
+Category: ${said(idea.category)}
+Why them: ${said(idea.why_you)}
+Market: ${said(idea.market_analysis)}
 
 Create a launch blueprint as a JSON object with fields:
 business_name (string), tagline (string), positioning (2-3 sentences), elevator_pitch (string),
@@ -309,10 +315,14 @@ If they are already trading, build from their current traction rather than from 
 
 async function generateSprintTasks(token, blueprint, sprintNumber) {
   const system = 'You are NoBossly, a startup execution coach who breaks launches into focused weekly sprints.';
-  const prompt = `Business: ${blueprint.business_name} — ${blueprint.tagline}
-Positioning: ${blueprint.positioning}
-GTM: ${blueprint.gtm_strategy}
-Week-1 actions: ${JSON.stringify(blueprint.gtm_week1_actions)}
+  // blueprintSummary() below guards every one of these with `|| ''`; this
+  // prompt was written separately and did not, so a blueprint saved before the
+  // model filled a field told the sprint planner "Positioning: undefined".
+  const said = v => { const s = String(v == null ? '' : v).trim(); return s || 'not stated yet'; };
+  const prompt = `Business: ${said(blueprint.business_name)} — ${said(blueprint.tagline)}
+Positioning: ${said(blueprint.positioning)}
+GTM: ${said(blueprint.gtm_strategy)}
+Week-1 actions: ${JSON.stringify(blueprint.gtm_week1_actions || [])}
 
 This is Sprint #${sprintNumber} (7 days). Return a JSON object:
 { "theme": "short sprint theme", "goal": "one-sentence sprint goal", "tasks": [ { "title": "...", "description": "1-2 sentences", "priority": "high"|"medium"|"low" } ] }

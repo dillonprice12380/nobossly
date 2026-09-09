@@ -126,6 +126,82 @@ const REQUIRED_SUBKEYS = [
     ok('...with no "undefined" in it',
        !advThrew && captured.length && !/\bundefined\b/.test(captured[0].prompt), 'clean');
 
+    // ---------------------------------------------------------------------
+    // The same class of bug, everywhere else a prompt is built.
+    //
+    // COMPASS_SPEC was a constant referenced and never declared. Nothing caught
+    // it because prompts are assembled inside functions that only run with a
+    // real token and a real row. src/ai.js has eight more such functions and
+    // src/coach.js four; none of them had ever been executed by a test.
+
+    console.log('\nEvery other prompt builder runs:');
+
+    const ai = require('../src/ai');
+    const q = answersFor('consultant');
+    // Deliberately SPARSE. This is an idea the moment it is drafted: a name and
+    // the member's own words, and nothing the advisor would later add. Building
+    // a blueprint from one is a real sequence — the advisor can fail, or be
+    // refused for credits — and it is how "Market: undefined" reached the model.
+    const idea = { id: 'i1', name: 'An idea' };
+    // Likewise a blueprint with only the columns the insert always sets.
+    const bp = { id: 'b1', business_name: 'B' };
+
+    const CALLS = [
+      ['ai.marketScan', () => ai.marketScan('tok', q)],
+      ['ai.demandEvidence', () => ai.demandEvidence('tok', idea)],
+      ['ai.generateBlueprint', () => ai.generateBlueprint('tok', idea, q)],
+      ['ai.generateSprintTasks', () => ai.generateSprintTasks('tok', bp, 1)],
+      ['ai.generateMilestones', () => ai.generateMilestones('tok', bp)],
+      ['ai.generateChallenges', () => ai.generateChallenges('tok', bp)],
+      ['ai.generateBudget', () => ai.generateBudget('tok', bp)],
+      ['ai.budgetInsights', () => ai.budgetInsights('tok', { month: 'May', totalBudget: 100, totalSpent: 50, categories: [] })]
+    ];
+
+    for (const [name, run] of CALLS) {
+      captured.length = 0;
+      let threw = null;
+      try { await run(); } catch (e) { threw = e; }
+      // A JSON-shape complaint is fine — the stub returns a fixed body. A
+      // ReferenceError is not, and that is the whole point of this test.
+      const isRef = threw && threw instanceof ReferenceError;
+      ok(`${name}: no missing identifier`, !isRef, isRef ? threw.message : 'ok');
+      if (captured.length) {
+        ok(`${name}: no "undefined" in the prompt`,
+           !/\bundefined\b/.test(captured[0].prompt),
+           (String(captured[0].prompt).match(/.{0,40}\bundefined\b.{0,40}/) || ['clean'])[0]);
+      }
+    }
+
+    // The coach spends a credit before it calls, so its client needs stubbing
+    // too. rpc() returning ok:true is what spend_ai_credits() returns.
+    const coach = require('../src/coach');
+    const sb = { rpc: async () => ({ data: { ok: true, plan: 'paid', balance: 99, cap: 400, cost: 1, visible: false } }) };
+    const ctx = {
+      name: 'Sam', pathLabel: 'Coach or consultant', subpathLabel: 'Career coaching',
+      level: 4, topLevel: 10, rungTitle: 'In the Room', next: { level: 5, title: 'First Fee' },
+      quests: [{ title: 'Land one paid client', done: false }], needMin: 1, xpNeeded: 50,
+      hours: '5-10', runway: '3-6 months', budget: 'Under $500', dealBreakers: 'cold calling',
+      streak: 3, bar: null, idea: null, fitResults: [], fitTest: [], lastWeek: null, checkins: []
+    };
+
+    for (const [name, run] of [
+      ['coach.weeklyPlan', () => coach.weeklyPlan(sb, 'tok', ctx)],
+      ['coach.reply', () => coach.reply(sb, 'tok', ctx, [], 'I am stuck')],
+      ['coach.reviewProof', () => coach.reviewProof(sb, 'tok', ctx, 'Land one paid client', 'I did it')],
+      ['coach.readingList', () => coach.readingList(sb, 'tok', ctx, [{ id: 'g', title: 'A guide', excerpt: 'e' }])]
+    ]) {
+      captured.length = 0;
+      let threw = null;
+      try { await run(); } catch (e) { threw = e; }
+      const isRef = threw && threw instanceof ReferenceError;
+      ok(`${name}: no missing identifier`, !isRef, isRef ? threw.message : 'ok');
+      if (captured.length) {
+        ok(`${name}: no "undefined" in the prompt`,
+           !/\bundefined\b/.test(captured[0].prompt),
+           (String(captured[0].prompt).match(/.{0,40}\bundefined\b.{0,40}/) || ['clean'])[0]);
+      }
+    }
+
   } finally {
     global.fetch = realFetch;
   }

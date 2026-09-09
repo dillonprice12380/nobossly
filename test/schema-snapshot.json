@@ -1,0 +1,1613 @@
+{
+ "_comment": [
+  "A snapshot of what the database will actually accept, taken 2026-09-09.",
+  "test/schema-drift.js compares every write in src/ against this. It exists",
+  "because four separate features were silently broken by the code writing a",
+  "value the schema rejected -- every notification in the product, cutting an",
+  "idea, the coach thread, and deactivating an account -- with the errors",
+  "swallowed at the call site so nothing surfaced.",
+  "Regenerate after any migration that adds a column or changes a CHECK."
+ ],
+ "columns": {
+  "accountability_pairs": [
+   "created_at",
+   "ended_at",
+   "id",
+   "match_score",
+   "notes",
+   "started_at",
+   "status",
+   "user_a",
+   "user_b"
+  ],
+  "activity_events": [
+   "created_at",
+   "emoji",
+   "entity_id",
+   "entity_type",
+   "id",
+   "kind",
+   "level",
+   "title",
+   "user_id"
+  ],
+  "ai_conversations": [
+   "context_type",
+   "created_at",
+   "credits_used",
+   "id",
+   "messages",
+   "updated_at",
+   "user_id"
+  ],
+  "ai_credit_costs": [
+   "cost",
+   "kind",
+   "label",
+   "updated_at"
+  ],
+  "ai_credit_plans": [
+   "monthly",
+   "plan",
+   "updated_at",
+   "visible"
+  ],
+  "ai_credits": [
+   "balance",
+   "created_at",
+   "id",
+   "issued_cap",
+   "period_key",
+   "total_purchased",
+   "total_used",
+   "updated_at",
+   "user_id"
+  ],
+  "ai_memory": [
+   "active_sprint_context",
+   "business_summary",
+   "context",
+   "id",
+   "last_briefed_at",
+   "updated_at",
+   "user_id"
+  ],
+  "ai_reading_lists": [
+   "created_at",
+   "guide_ids",
+   "id",
+   "reasoning",
+   "sprint_id",
+   "user_id",
+   "week_of"
+  ],
+  "ai_spend": [
+   "balance_after",
+   "cost",
+   "created_at",
+   "id",
+   "kind",
+   "plan",
+   "user_id"
+  ],
+  "app_secrets": [
+   "key",
+   "value"
+  ],
+  "badges": [
+   "created_at",
+   "criteria_type",
+   "criteria_value",
+   "description",
+   "emoji",
+   "id",
+   "is_active",
+   "name",
+   "position",
+   "slug",
+   "tier",
+   "xp_reward"
+  ],
+  "beta_programs": [
+   "created_at",
+   "deadline",
+   "description",
+   "feedback_format",
+   "id",
+   "idea_id",
+   "ideal_tester",
+   "max_testers",
+   "owner_id",
+   "status",
+   "tester_count",
+   "title",
+   "updated_at",
+   "what_testing"
+  ],
+  "beta_testers": [
+   "enrolled_at",
+   "feedback",
+   "id",
+   "program_id",
+   "rating",
+   "status",
+   "tester_id"
+  ],
+  "blueprints": [
+   "business_name",
+   "created_at",
+   "differentiators",
+   "elevator_pitch",
+   "gtm_channels",
+   "gtm_first_customer",
+   "gtm_strategy",
+   "gtm_week1_actions",
+   "icp_archetype",
+   "icp_demographics",
+   "icp_description",
+   "icp_motivations",
+   "icp_pain_points",
+   "icp_watering_holes",
+   "id",
+   "idea_id",
+   "is_active",
+   "positioning",
+   "pricing_tiers",
+   "projection_month12",
+   "projection_month3",
+   "projection_month6",
+   "revenue_rationale",
+   "revenue_type",
+   "roadmap_summary",
+   "tagline",
+   "updated_at",
+   "user_id"
+  ],
+  "budgets": [
+   "category",
+   "created_at",
+   "id",
+   "monthly_limit",
+   "user_id"
+  ],
+  "business_taxonomy": [
+   "id",
+   "kind",
+   "label",
+   "slug"
+  ],
+  "challenge_acceptances": [
+   "accepted_at",
+   "challenge_id",
+   "completed_at",
+   "due_date",
+   "duration_days",
+   "id",
+   "status",
+   "user_id"
+  ],
+  "challenge_completions": [
+   "challenge_id",
+   "completed_at",
+   "flagged",
+   "id",
+   "proof_note",
+   "user_id"
+  ],
+  "challenges": [
+   "badge_id",
+   "challenge_type",
+   "created_at",
+   "criteria",
+   "description",
+   "emoji",
+   "ends_at",
+   "id",
+   "is_active",
+   "is_cohort",
+   "max_level",
+   "min_level",
+   "position",
+   "requires_proof",
+   "slug",
+   "starts_at",
+   "title",
+   "xp_reward"
+  ],
+  "cms_contents": [
+   "author_id",
+   "blocks",
+   "body",
+   "created_at",
+   "custom_type",
+   "excerpt",
+   "featured_image",
+   "id",
+   "published_at",
+   "seo_description",
+   "seo_title",
+   "sidebar_id",
+   "slug",
+   "status",
+   "title",
+   "type",
+   "updated_at",
+   "view_count"
+  ],
+  "cms_guide_categories": [
+   "category_id",
+   "guide_id"
+  ],
+  "cms_guide_locations": [
+   "guide_id",
+   "location_id",
+   "varies_by_child"
+  ],
+  "cms_guides": [
+   "author_id",
+   "blocks",
+   "body",
+   "created_at",
+   "excerpt",
+   "id",
+   "published_at",
+   "seo_description",
+   "seo_title",
+   "sidebar_id",
+   "slug",
+   "status",
+   "title",
+   "updated_at"
+  ],
+  "collab_members": [
+   "created_at",
+   "id",
+   "invited_by",
+   "project_id",
+   "role",
+   "status",
+   "user_id"
+  ],
+  "collab_projects": [
+   "created_at",
+   "description",
+   "id",
+   "name",
+   "owner_id"
+  ],
+  "collab_requests": [
+   "created_at",
+   "description",
+   "id",
+   "idea_id",
+   "is_public",
+   "offering",
+   "recipient_id",
+   "requester_id",
+   "role_type",
+   "skills_needed",
+   "status",
+   "title",
+   "updated_at"
+  ],
+  "community_feed": [
+   "active_idea_name",
+   "avatar_url",
+   "comment_count",
+   "content",
+   "created_at",
+   "current_level",
+   "display_name",
+   "founder_stage",
+   "id",
+   "is_pinned",
+   "like_count",
+   "link_title",
+   "link_url",
+   "milestone_icon",
+   "milestone_label",
+   "post_type",
+   "repost_count",
+   "subscription_tier",
+   "user_id",
+   "username"
+  ],
+  "conversations": [
+   "created_at",
+   "id",
+   "last_message_at",
+   "participant_a",
+   "participant_b"
+  ],
+  "daily_checkins": [
+   "blockers",
+   "checkin_date",
+   "created_at",
+   "id",
+   "mood_score",
+   "progress_note",
+   "sprint_id",
+   "tomorrow_plan",
+   "user_id",
+   "wins_today",
+   "xp_awarded"
+  ],
+  "email_log": [
+   "created_at",
+   "email_type",
+   "error_msg",
+   "id",
+   "resend_id",
+   "status",
+   "subject",
+   "to_email",
+   "user_id"
+  ],
+  "expenses": [
+   "amount",
+   "category",
+   "created_at",
+   "id",
+   "note",
+   "spent_at",
+   "user_id"
+  ],
+  "fit_criteria_library": [
+   "applies_when",
+   "category",
+   "check_kind",
+   "created_at",
+   "criterion",
+   "is_active",
+   "metric",
+   "op",
+   "paths",
+   "priority",
+   "slug",
+   "value",
+   "value_from",
+   "why"
+  ],
+  "follows": [
+   "created_at",
+   "follower_id",
+   "following_id",
+   "id"
+  ],
+  "forum_categories": [
+   "created_at",
+   "description",
+   "emoji",
+   "id",
+   "is_locked",
+   "name",
+   "position",
+   "slug"
+  ],
+  "forum_reactions": [
+   "created_at",
+   "entity_id",
+   "entity_type",
+   "id",
+   "reaction",
+   "user_id"
+  ],
+  "forum_replies": [
+   "body",
+   "body_html",
+   "created_at",
+   "edited_at",
+   "id",
+   "thread_id",
+   "updated_at",
+   "user_id"
+  ],
+  "forum_threads": [
+   "body",
+   "body_html",
+   "category_id",
+   "created_at",
+   "edited_at",
+   "id",
+   "is_locked",
+   "is_pinned",
+   "last_reply_at",
+   "reply_count",
+   "tags",
+   "title",
+   "updated_at",
+   "user_id",
+   "view_count"
+  ],
+  "founder_compasses": [
+   "created_at",
+   "data",
+   "founder_path",
+   "id",
+   "questionnaire_id",
+   "user_id"
+  ],
+  "founder_levels": [
+   "emoji",
+   "level",
+   "perks",
+   "requirements",
+   "title",
+   "unlock_text",
+   "xp_required"
+  ],
+  "friendships": [
+   "addressee_id",
+   "created_at",
+   "id",
+   "requester_id",
+   "responded_at",
+   "status"
+  ],
+  "generated_ideas": [
+   "advisor",
+   "best_fit_passed",
+   "best_fit_pct",
+   "category",
+   "competitor_landscape",
+   "competitors",
+   "created_at",
+   "cut_at",
+   "cut_reason",
+   "demand_evidence",
+   "demand_score",
+   "draft",
+   "evidence_at",
+   "first_steps",
+   "fit_applicable",
+   "fit_passed",
+   "fit_pct",
+   "fit_test",
+   "fit_total",
+   "fit_verified",
+   "id",
+   "is_favorited",
+   "is_pinned",
+   "legal_nuances",
+   "market_analysis",
+   "name",
+   "passion_score",
+   "position",
+   "profile_summary",
+   "questionnaire_id",
+   "revision_count",
+   "source",
+   "startup_cost_full",
+   "startup_cost_lean",
+   "startup_cost_standard",
+   "status",
+   "success_likelihood",
+   "tagline",
+   "time_to_revenue",
+   "updated_at",
+   "user_id",
+   "why_you"
+  ],
+  "generation_jobs": [
+   "created_at",
+   "error",
+   "id",
+   "kind",
+   "progress",
+   "redirect",
+   "stage",
+   "stage_label",
+   "status",
+   "updated_at",
+   "user_id"
+  ],
+  "group_members": [
+   "group_id",
+   "joined_at",
+   "role",
+   "user_id"
+  ],
+  "group_posts": [
+   "body",
+   "created_at",
+   "group_id",
+   "id",
+   "user_id"
+  ],
+  "groups": [
+   "created_at",
+   "description",
+   "id",
+   "name",
+   "owner_id",
+   "slug"
+  ],
+  "guidance_rules": [
+   "active",
+   "category",
+   "conditions",
+   "cooldown_days",
+   "cta_href",
+   "cta_label",
+   "key",
+   "message",
+   "priority"
+  ],
+  "guidance_seen": [
+   "id",
+   "rule_key",
+   "seen_at",
+   "user_id"
+  ],
+  "guide_categories": [
+   "created_at",
+   "description",
+   "id",
+   "name",
+   "slug",
+   "sort_order"
+  ],
+  "guide_h2_backup": [
+   "backed_up_at",
+   "old_h2",
+   "slug"
+  ],
+  "guide_locations": [
+   "code",
+   "created_at",
+   "id",
+   "kind",
+   "name",
+   "neighbors",
+   "parent_id",
+   "slug",
+   "sort_order"
+  ],
+  "idea_signals": [
+   "claim",
+   "created_at",
+   "id",
+   "idea_id",
+   "source",
+   "strength",
+   "url",
+   "user_id"
+  ],
+  "idea_versions": [
+   "advisor",
+   "created_at",
+   "draft",
+   "fit_passed",
+   "fit_total",
+   "id",
+   "idea_id",
+   "success_likelihood",
+   "user_id",
+   "version_no"
+  ],
+  "karma_transactions": [
+   "amount",
+   "created_at",
+   "entity_id",
+   "entity_type",
+   "id",
+   "reason",
+   "user_id"
+  ],
+  "messages": [
+   "attachment_name",
+   "attachment_type",
+   "attachment_url",
+   "content",
+   "conversation_id",
+   "created_at",
+   "id",
+   "is_read",
+   "link_domain",
+   "link_image",
+   "link_title",
+   "link_url",
+   "sender_id"
+  ],
+  "notifications": [
+   "actor_id",
+   "created_at",
+   "entity_id",
+   "entity_type",
+   "id",
+   "is_read",
+   "message",
+   "type",
+   "user_id"
+  ],
+  "peer_reviews": [
+   "created_at",
+   "description",
+   "feedback",
+   "id",
+   "rating",
+   "request_id",
+   "review_type",
+   "reviewer_id",
+   "rubric_scores",
+   "status",
+   "submitter_id",
+   "title",
+   "updated_at",
+   "url_or_content",
+   "xp_awarded"
+  ],
+  "post_comments": [
+   "content",
+   "created_at",
+   "id",
+   "parent_id",
+   "post_id",
+   "updated_at",
+   "user_id"
+  ],
+  "post_reactions": [
+   "created_at",
+   "id",
+   "post_id",
+   "user_id"
+  ],
+  "posts": [
+   "comment_count",
+   "content",
+   "created_at",
+   "id",
+   "is_pinned",
+   "like_count",
+   "link_title",
+   "link_url",
+   "milestone_icon",
+   "milestone_label",
+   "post_type",
+   "repost_count",
+   "updated_at",
+   "user_id"
+  ],
+  "predefined_milestones": [
+   "auto_kind",
+   "auto_target",
+   "badge_id",
+   "category",
+   "created_at",
+   "description",
+   "emoji",
+   "id",
+   "is_active",
+   "is_claimable",
+   "position",
+   "slug",
+   "title",
+   "xp_reward"
+  ],
+  "pricing_tiers": [
+   "interval_label",
+   "is_active",
+   "key",
+   "mode",
+   "name",
+   "price_cents",
+   "sort",
+   "stripe_price_id",
+   "tagline"
+  ],
+  "profiles": [
+   "account_status",
+   "avatar_url",
+   "bio",
+   "biz_classified_at",
+   "biz_industry",
+   "biz_segment",
+   "biz_type",
+   "biz_value_prop",
+   "created_at",
+   "current_level",
+   "delete_requested_at",
+   "display_name",
+   "display_preference",
+   "founder_stage",
+   "generations_used",
+   "id",
+   "industry",
+   "is_admin",
+   "is_lifetime",
+   "last_active_at",
+   "last_checkin_date",
+   "linkedin_url",
+   "location",
+   "longest_streak",
+   "marketing_emails_enabled",
+   "milestone_emails_enabled",
+   "needs_username",
+   "notification_emails_enabled",
+   "occupation",
+   "onboarding_completed",
+   "path",
+   "profile_completed",
+   "profile_is_public",
+   "streak_days",
+   "streak_freeze_used_month",
+   "stripe_customer_id",
+   "stripe_subscription_id",
+   "subpath",
+   "subscription_period_end",
+   "subscription_start_date",
+   "subscription_status",
+   "subscription_tier",
+   "tasks_completed",
+   "twitter_handle",
+   "unsubscribed_all",
+   "updated_at",
+   "username",
+   "verified_level",
+   "website_url",
+   "weekly_digest_enabled",
+   "xp_total",
+   "years_experience"
+  ],
+  "public_profiles": [
+   "avatar_url",
+   "bio",
+   "created_at",
+   "current_level",
+   "display_name",
+   "follower_count",
+   "following_count",
+   "founder_stage",
+   "id",
+   "idea_count",
+   "industry",
+   "linkedin_url",
+   "location",
+   "occupation",
+   "post_count",
+   "streak_days",
+   "subscription_tier",
+   "twitter_handle",
+   "username",
+   "website_url",
+   "xp_total"
+  ],
+  "questionnaire_responses": [
+   "advice_topic",
+   "age_range",
+   "ai_stance",
+   "avoid_industries",
+   "biggest_fear",
+   "biggest_obstacle",
+   "biz_age",
+   "biz_best_channel",
+   "biz_channels",
+   "biz_customer_count",
+   "biz_description",
+   "biz_goal_12mo",
+   "biz_growth_blocker",
+   "biz_misconceptions",
+   "biz_model",
+   "biz_models",
+   "biz_name",
+   "biz_offerings",
+   "biz_pivot_openness",
+   "biz_pricing",
+   "biz_profitability",
+   "biz_revenue_monthly",
+   "biz_stage",
+   "biz_traction_metric",
+   "biz_trend",
+   "biz_url",
+   "biz_whats_stuck",
+   "biz_whats_working",
+   "competition_preference",
+   "completed",
+   "created_at",
+   "credentials",
+   "customer_access",
+   "deal_breakers",
+   "energizing_work",
+   "existing_assets",
+   "founder_name",
+   "founder_path",
+   "has_idea",
+   "hobbies",
+   "hours_per_week",
+   "hustle_mode",
+   "id",
+   "idea_biggest_unknown",
+   "idea_customer",
+   "idea_description",
+   "idea_differentiator",
+   "idea_known_competitors",
+   "idea_monetization",
+   "idea_problem",
+   "idea_stage",
+   "idea_validation",
+   "idea_why_now",
+   "ideal_day",
+   "income_year1",
+   "industry_field",
+   "launch_budget",
+   "learning_appetite",
+   "location",
+   "marketing_comfort",
+   "motivation",
+   "passion_topic",
+   "path_answers",
+   "prior_attempts",
+   "problem_pain",
+   "readiness_score",
+   "regret",
+   "risk_tolerance",
+   "run_number",
+   "runway",
+   "sales_comfort",
+   "skills",
+   "success_definition",
+   "superpower",
+   "target_customer",
+   "team_preference",
+   "tech_level",
+   "unfair_advantage",
+   "updated_at",
+   "user_id",
+   "work_mode",
+   "work_status"
+  ],
+  "reports": [
+   "created_at",
+   "details",
+   "id",
+   "reason",
+   "reporter_id",
+   "resolved_at",
+   "status",
+   "target_id",
+   "target_type"
+  ],
+  "reposts": [
+   "created_at",
+   "id",
+   "post_id",
+   "user_id"
+  ],
+  "revenue_entries": [
+   "amount",
+   "created_at",
+   "currency",
+   "description",
+   "entry_date",
+   "entry_type",
+   "id",
+   "idea_id",
+   "is_recurring",
+   "source",
+   "updated_at",
+   "user_id"
+  ],
+  "sidebars": [
+   "created_at",
+   "html_bottom",
+   "html_middle",
+   "html_top",
+   "id",
+   "name",
+   "show_similar",
+   "updated_at"
+  ],
+  "site_assets": [
+   "data_b64",
+   "key",
+   "mime",
+   "updated_at"
+  ],
+  "site_settings": [
+   "description",
+   "id",
+   "key",
+   "updated_at",
+   "value"
+  ],
+  "skill_swaps": [
+   "created_at",
+   "description",
+   "duration",
+   "id",
+   "matched_with",
+   "offering",
+   "rating",
+   "requesting",
+   "status",
+   "updated_at",
+   "user_id"
+  ],
+  "sprint_tasks": [
+   "ai_generated",
+   "completed_at",
+   "created_at",
+   "description",
+   "due_date",
+   "id",
+   "position",
+   "priority",
+   "sprint_id",
+   "status",
+   "title",
+   "updated_at",
+   "user_id"
+  ],
+  "sprints": [
+   "blueprint_id",
+   "completed_at",
+   "created_at",
+   "days_label",
+   "end_date",
+   "goal",
+   "id",
+   "idea_id",
+   "sprint_number",
+   "start_date",
+   "status",
+   "tasks_done",
+   "tasks_total",
+   "theme",
+   "updated_at",
+   "user_id",
+   "velocity_pct"
+  ],
+  "streaks": [
+   "current_streak",
+   "id",
+   "last_activity",
+   "longest_streak",
+   "updated_at",
+   "user_id"
+  ],
+  "survey_responses": [
+   "answers",
+   "created_at",
+   "id",
+   "responder_id",
+   "survey_id",
+   "xp_awarded"
+  ],
+  "surveys": [
+   "created_at",
+   "creator_id",
+   "deadline",
+   "description",
+   "id",
+   "idea_id",
+   "questions",
+   "response_count",
+   "status",
+   "target_count",
+   "title",
+   "updated_at",
+   "xp_reward"
+  ],
+  "tailored_challenges": [
+   "business_types",
+   "created_at",
+   "customer_segments",
+   "description",
+   "emoji",
+   "id",
+   "industries",
+   "is_active",
+   "max_level",
+   "min_level",
+   "paths",
+   "source",
+   "subpaths",
+   "suggested_days",
+   "title",
+   "value_props",
+   "xp_reward"
+  ],
+  "task_lists": [
+   "color",
+   "created_at",
+   "id",
+   "name",
+   "position",
+   "user_id"
+  ],
+  "tasks": [
+   "assigned_to",
+   "completed_at",
+   "created_at",
+   "description",
+   "due_date",
+   "due_time",
+   "id",
+   "labels",
+   "list_id",
+   "parent_id",
+   "position",
+   "priority",
+   "reminded_1d",
+   "reminded_1h",
+   "reminded_overdue",
+   "source_blueprint_id",
+   "status",
+   "title",
+   "updated_at",
+   "user_id"
+  ],
+  "user_badges": [
+   "badge_id",
+   "earned_at",
+   "id",
+   "user_id"
+  ],
+  "user_blocks": [
+   "blocked_id",
+   "blocker_id",
+   "created_at"
+  ],
+  "user_custom_challenges": [
+   "accepted_at",
+   "blueprint_id",
+   "completed_at",
+   "created_at",
+   "description",
+   "due_date",
+   "duration_days",
+   "emoji",
+   "id",
+   "status",
+   "suggested_days",
+   "tailored_id",
+   "title",
+   "user_id",
+   "xp_reward"
+  ],
+  "user_custom_milestones": [
+   "achieved",
+   "achieved_at",
+   "blueprint_id",
+   "category",
+   "created_at",
+   "date_achieved",
+   "description",
+   "emoji",
+   "id",
+   "title",
+   "user_id",
+   "xp_reward"
+  ],
+  "user_dashboard_stats": [
+   "active_ideas",
+   "active_sprints",
+   "ai_credits",
+   "badges_earned",
+   "blueprints_created",
+   "current_level",
+   "current_mrr",
+   "followers",
+   "following",
+   "founder_stage",
+   "karma_balance",
+   "milestones_earned",
+   "posts_count",
+   "streak_days",
+   "subscription_tier",
+   "tasks_completed",
+   "unread_messages",
+   "unread_notifications",
+   "user_id",
+   "xp_total"
+  ],
+  "user_milestones": [
+   "created_at",
+   "custom_description",
+   "custom_title",
+   "date_achieved",
+   "earned_at",
+   "emoji",
+   "id",
+   "is_pinned",
+   "is_shared",
+   "pinned",
+   "predefined_milestone_id",
+   "user_id"
+  ],
+  "user_subscriptions": [
+   "billing_cycle",
+   "cancelled_at",
+   "created_at",
+   "current_period_end",
+   "current_period_start",
+   "id",
+   "plan_id",
+   "status",
+   "stripe_subscription_id",
+   "tier",
+   "updated_at",
+   "user_id"
+  ],
+  "vault_guides": [
+   "author_id",
+   "content",
+   "created_at",
+   "guide_type",
+   "id",
+   "is_community",
+   "is_featured",
+   "is_verified",
+   "read_time_mins",
+   "slug",
+   "source_url",
+   "stage_relevance",
+   "summary",
+   "tags",
+   "title",
+   "topic",
+   "updated_at",
+   "view_count",
+   "vote_count"
+  ],
+  "vault_votes": [
+   "created_at",
+   "guide_id",
+   "id",
+   "user_id"
+  ],
+  "verification_requests": [
+   "created_at",
+   "evidence_kind",
+   "evidence_note",
+   "evidence_url",
+   "id",
+   "level",
+   "reviewed_at",
+   "reviewer_note",
+   "status",
+   "user_id"
+  ],
+  "weekly_plans": [
+   "created_at",
+   "gate_summary",
+   "hours",
+   "id",
+   "intro",
+   "items",
+   "level",
+   "rung_title",
+   "updated_at",
+   "user_id",
+   "week_of"
+  ],
+  "wins": [
+   "amount_usd",
+   "approved",
+   "approved_at",
+   "category",
+   "created_at",
+   "id",
+   "rejected_at",
+   "story",
+   "title",
+   "user_id"
+  ],
+  "xp_events": [
+   "amount",
+   "created_at",
+   "entity_id",
+   "entity_type",
+   "id",
+   "reason",
+   "user_id"
+  ],
+  "xp_leaderboard": [
+   "avatar_url",
+   "current_level",
+   "display_name",
+   "founder_stage",
+   "id",
+   "level_emoji",
+   "level_title",
+   "rank",
+   "username",
+   "xp_total"
+  ]
+ },
+ "enums": {
+  "accountability_pairs": {
+   "status": [
+    "pending",
+    "active",
+    "ended"
+   ]
+  },
+  "activity_events": {
+   "kind": [
+    "level",
+    "challenge",
+    "milestone",
+    "badge",
+    "win",
+    "idea",
+    "streak",
+    "sprint",
+    "compass"
+   ]
+  },
+  "ai_conversations": {
+   "context_type": [
+    "coach",
+    "general",
+    "blueprint",
+    "sprint",
+    "idea",
+    "cofounder"
+   ]
+  },
+  "badges": {
+   "tier": [
+    "beginner",
+    "intermediate",
+    "advanced",
+    "legendary"
+   ]
+  },
+  "beta_programs": {
+   "status": [
+    "open",
+    "full",
+    "closed",
+    "archived"
+   ]
+  },
+  "beta_testers": {
+   "status": [
+    "enrolled",
+    "testing",
+    "completed",
+    "dropped"
+   ]
+  },
+  "business_taxonomy": {
+   "kind": [
+    "business_type",
+    "industry",
+    "customer_segment",
+    "value_prop"
+   ]
+  },
+  "challenge_acceptances": {
+   "status": [
+    "active",
+    "completed",
+    "abandoned"
+   ]
+  },
+  "challenges": {
+   "challenge_type": [
+    "weekly",
+    "monthly",
+    "one_time",
+    "sprint"
+   ]
+  },
+  "cms_contents": {
+   "status": [
+    "draft",
+    "published"
+   ],
+   "type": [
+    "blog",
+    "page",
+    "custom"
+   ]
+  },
+  "cms_guides": {
+   "status": [
+    "draft",
+    "published"
+   ]
+  },
+  "collab_members": {
+   "role": [
+    "owner",
+    "member"
+   ],
+   "status": [
+    "invited",
+    "accepted",
+    "declined"
+   ]
+  },
+  "collab_requests": {
+   "role_type": [
+    "cofounder",
+    "advisor",
+    "freelancer",
+    "skill_partner",
+    "accountability"
+   ],
+   "status": [
+    "open",
+    "matched",
+    "closed"
+   ]
+  },
+  "email_log": {
+   "email_type": [
+    "welcome",
+    "weekly_brief",
+    "subscription_confirmed",
+    "milestone_achieved",
+    "streak_reminder",
+    "badge_earned",
+    "notification_digest",
+    "custom"
+   ],
+   "status": [
+    "sent",
+    "failed",
+    "bounced",
+    "unsubscribed"
+   ]
+  },
+  "forum_reactions": {
+   "entity_type": [
+    "thread",
+    "reply"
+   ],
+   "reaction": [
+    "thumbs_up",
+    "heart",
+    "clap",
+    "laugh",
+    "inspired"
+   ]
+  },
+  "friendships": {
+   "status": [
+    "pending",
+    "accepted",
+    "declined"
+   ]
+  },
+  "generated_ideas": {
+   "status": [
+    "active",
+    "archived",
+    "converted",
+    "dropped"
+   ]
+  },
+  "group_members": {
+   "role": [
+    "owner",
+    "member"
+   ]
+  },
+  "guide_locations": {
+   "kind": [
+    "global",
+    "bloc",
+    "country",
+    "region",
+    "state"
+   ]
+  },
+  "notifications": {
+   "type": [
+    "levels",
+    "message",
+    "milestone",
+    "wins",
+    "social",
+    "community",
+    "challenges",
+    "forum_reply",
+    "collab_invite",
+    "collab_response",
+    "task_assigned",
+    "like",
+    "follow",
+    "comment",
+    "repost",
+    "mention",
+    "badge",
+    "system"
+   ]
+  },
+  "peer_reviews": {
+   "review_type": [
+    "idea",
+    "blueprint",
+    "landing_page",
+    "pitch_deck",
+    "copy",
+    "pricing",
+    "general"
+   ],
+   "status": [
+    "pending",
+    "in_review",
+    "completed",
+    "withdrawn"
+   ]
+  },
+  "posts": {
+   "post_type": [
+    "win",
+    "insight",
+    "question",
+    "sprint_update",
+    "resource"
+   ]
+  },
+  "predefined_milestones": {
+   "category": [
+    "foundation",
+    "traction",
+    "revenue",
+    "community",
+    "product",
+    "personal",
+    "momentum"
+   ]
+  },
+  "pricing_tiers": {
+   "mode": [
+    "subscription",
+    "payment"
+   ]
+  },
+  "profiles": {
+   "account_status": [
+    "active",
+    "deactivated",
+    "pending_deletion",
+    "suspended",
+    "deleted"
+   ],
+   "display_preference": [
+    "name",
+    "username"
+   ],
+   "founder_stage": [
+    "Dreaming",
+    "Validating",
+    "Building",
+    "Launched",
+    "Growing",
+    "Scaling",
+    "exploring",
+    "ideating",
+    "building",
+    "launched",
+    "scaling"
+   ],
+   "subscription_tier": [
+    "free",
+    "month",
+    "quarter",
+    "year",
+    "lifetime",
+    "builder",
+    "founder",
+    "studio"
+   ]
+  },
+  "questionnaire_responses": {
+   "founder_path": [
+    "creator",
+    "freelancer",
+    "consultant",
+    "local_service",
+    "brick_mortar",
+    "online_store",
+    "physical_product",
+    "software",
+    "exploring"
+   ]
+  },
+  "reports": {
+   "status": [
+    "open",
+    "resolved",
+    "dismissed"
+   ],
+   "target_type": [
+    "forum_thread",
+    "forum_reply",
+    "user",
+    "message"
+   ]
+  },
+  "revenue_entries": {
+   "entry_type": [
+    "revenue",
+    "expense",
+    "refund"
+   ]
+  },
+  "skill_swaps": {
+   "status": [
+    "open",
+    "matched",
+    "completed",
+    "cancelled"
+   ]
+  },
+  "sprint_tasks": {
+   "priority": [
+    "low",
+    "medium",
+    "high"
+   ],
+   "status": [
+    "todo",
+    "in_progress",
+    "done",
+    "skipped"
+   ]
+  },
+  "sprints": {
+   "status": [
+    "upcoming",
+    "active",
+    "completed",
+    "abandoned"
+   ]
+  },
+  "surveys": {
+   "status": [
+    "active",
+    "closed",
+    "archived"
+   ]
+  },
+  "tailored_challenges": {
+   "source": [
+    "curated",
+    "ai"
+   ]
+  },
+  "tasks": {
+   "priority": [
+    "urgent",
+    "high",
+    "medium",
+    "low"
+   ],
+   "status": [
+    "todo",
+    "in_progress",
+    "blocked",
+    "done"
+   ]
+  },
+  "user_subscriptions": {
+   "billing_cycle": [
+    "monthly",
+    "annual",
+    "lifetime"
+   ],
+   "status": [
+    "active",
+    "inactive",
+    "cancelled",
+    "past_due",
+    "trialing"
+   ]
+  },
+  "vault_guides": {
+   "guide_type": [
+    "guide",
+    "playbook",
+    "template",
+    "tool_rec",
+    "case_study"
+   ]
+  }
+ }
+}
