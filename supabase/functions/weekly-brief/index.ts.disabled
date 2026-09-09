@@ -1,0 +1,97 @@
+// DISABLED 2026-09-09. Only copy — the edge functions had no source control.
+//
+// The most expensive of the retired functions. It calls the Anthropic API
+// DIRECTLY with a raw ANTHROPIC_API_KEY edge secret — not through ai-proxy —
+// and, unlike its siblings, performs NO credit check whatsoever. It reads
+// ai_credits.balance only to print it in the prompt. So any signed-in member
+// could call it in a loop and bill the account with nothing in the way.
+//
+// Superseded by coach.weeklyPlan() in src/coach.js, which writes the same kind
+// of brief from the member's rung, blocking gate and real hours, and is charged
+// through credits.run(sb, 'weekly_plan').
+//
+// Also note: it pins claude-sonnet-4-20250514, long superseded.
+
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const MODEL = 'claude-sonnet-4-20250514';
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } });
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401 });
+
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+
+    const body = await req.json().catch(() => ({}));
+    const sendEmail = body.send_email !== false;
+
+    const [profileRes, sprintsRes, tasksRes, revenueRes, creditsRes] = await Promise.all([
+      supabase.from('profiles').select('display_name, founder_stage, xp_total, current_level, streak_days, weekly_digest_enabled').eq('id', user.id).single(),
+      supabase.from('sprints').select('theme, goal, status, tasks_done, tasks_total, velocity_pct').eq('user_id', user.id).eq('status', 'active').limit(3),
+      supabase.from('sprint_tasks').select('title, status, priority').eq('user_id', user.id).in('status', ['todo', 'in_progress']).order('priority', { ascending: false }).limit(10),
+      supabase.rpc('get_user_mrr', { p_user_id: user.id }),
+      supabase.from('ai_credits').select('balance').eq('user_id', user.id).single()
+    ]);
+
+    const profile = profileRes.data;
+    const sprints = sprintsRes.data || [];
+    const pending = tasksRes.data || [];
+    const mrr     = revenueRes.data || 0;
+    const credits = creditsRes.data?.balance || 0;
+
+    const prompt = `You are the AI Co-Founder for NoBossly. Generate a weekly founder brief for this person.
+
+FOUNDER: ${profile?.display_name || 'Founder'} | Stage: ${profile?.founder_stage} | Level ${profile?.current_level} (${profile?.xp_total} XP) | ${profile?.streak_days}-day streak
+
+ACTIVE SPRINTS:
+${sprints.map(s => `- ${s.theme}: ${s.goal} (${s.tasks_done}/${s.tasks_total} tasks, ${s.velocity_pct}% velocity)`).join('\n') || 'No active sprints'}
+
+PENDING TASKS:
+${pending.map(t => `- [${t.priority}] ${t.title}`).join('\n') || 'No pending tasks'}
+
+CURRENT MRR: $${mrr} | AI CREDITS: ${credits}
+
+Return ONLY valid JSON:
+{"subject":"Email subject line","headline":"One punchy sentence","progress_summary":"2-3 sentences on what they accomplished this week","focus_this_week":"2-3 sentences on what matters most right now","top_3_tasks":["task 1","task 2","task 3"],"honest_observation":"One direct, specific observation or challenge for them","motivational_close":"One genuine closing sentence","metrics":{"xp":${profile?.xp_total || 0},"level":${profile?.current_level || 1},"streak":${profile?.streak_days || 0},"mrr":${mrr},"credits":${credits}}}`;
+
+    const aiResponse = await fetch(ANTHROPIC_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': Deno.env.get('ANTHROPIC_API_KEY')!, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: MODEL, max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+
+    if (!aiResponse.ok) throw new Error(`Anthropic error: ${aiResponse.status}`);
+    const aiData = await aiResponse.json();
+    const raw    = aiData.content?.find((b: {type:string}) => b.type === 'text')?.text || '{}';
+    const brief  = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    await supabase.from('ai_memory').update({
+      active_sprint_context: sprints.map(s => `${s.theme}: ${s.goal}`).join('; ') || null,
+      last_briefed_at: new Date().toISOString()
+    }).eq('user_id', user.id);
+
+    let emailResult = null;
+    if (sendEmail && profile?.weekly_digest_enabled !== false) {
+      const emailRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+        body: JSON.stringify({ type: 'weekly_brief', user_id: user.id, to_email: user.email, to_name: profile?.display_name || 'Founder', data: brief })
+      });
+      emailResult = await emailRes.json();
+    }
+
+    return new Response(JSON.stringify({ success: true, brief, email_sent: !!(sendEmail && profile?.weekly_digest_enabled !== false), email_result: emailResult }),
+      { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+});

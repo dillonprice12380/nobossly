@@ -1,0 +1,86 @@
+// DISABLED 2026-09-09. Only copy — the edge functions had no source control.
+//
+// Same family: OpenAI (gpt-4o-mini) on its own OPENAI_API_KEY, callable by any
+// signed-in member, writing blueprints with the service role key, decrementing
+// ai_credits.balance by hand outside spend_ai_credits().
+//
+// Worse than its siblings in one respect: it deactivates every existing
+// blueprint for the idea before inserting its own, so calling it would silently
+// replace a blueprint the member had built through the application.
+//
+// Superseded by ai.generateBlueprint() in src/ai.js, charged via
+// credits.run(sb, 'blueprint').
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+function json(b, s = 200) { return new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
+function txt(v) { if (v == null) return null; if (typeof v === "string") return v; if (Array.isArray(v)) return v.join("\n"); return String(v); }
+function arr(v) { if (v == null) return null; if (Array.isArray(v)) return v.map((x) => String(x)); return [String(v)]; }
+function clampInt(v, min, max) { const n = Math.round(Number(v)); if (Number.isNaN(n)) return null; return Math.max(min, Math.min(max, n)); }
+
+async function callOpenAI(apiKey, system, user) {
+  const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, temperature: 0.7, response_format: { type: "json_object" }, messages: [ { role: "system", content: system }, { role: "user", content: user } ] }),
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`OpenAI error ${res.status}: ${t.slice(0,300)}`); }
+  const data = await res.json();
+  return JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) return json({ error: "AI is not configured. Set the OPENAI_API_KEY secret in Supabase." }, 500);
+    const url = Deno.env.get("SUPABASE_URL"); const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    const auth = req.headers.get("Authorization") ?? "";
+    const uc = createClient(url, anon, { global: { headers: { Authorization: auth } } });
+    const { data: { user }, error: ue } = await uc.auth.getUser();
+    if (ue || !user) return json({ error: "Not authenticated." }, 401);
+    const admin = createClient(url, svc);
+    const body = await req.json().catch(() => ({}));
+    const ideaId = body.idea_id ?? body.ideaId ?? null;
+    if (!ideaId) return json({ error: "idea_id is required." }, 400);
+    const { data: idea, error: ie } = await admin.from("generated_ideas").select("*").eq("id", ideaId).eq("user_id", user.id).maybeSingle();
+    if (ie) throw ie;
+    if (!idea) return json({ error: "Idea not found." }, 404);
+    const { data: q } = await admin.from("questionnaire_responses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: credits } = await admin.from("ai_credits").select("*").eq("user_id", user.id).maybeSingle();
+    if (credits && typeof credits.balance === "number" && credits.balance <= 0) return json({ error: "You're out of AI credits.", code: "NO_CREDITS" }, 402);
+
+    const system = "You are NoBossly's business strategist. You turn a chosen idea into a concrete, executable business blueprint. Be specific, realistic, and grounded. Always answer in valid JSON matching the requested schema.";
+    const userPrompt = `Build a complete business blueprint for this idea.\n\nIDEA\n- Name: ${idea.name}\n- Tagline: ${idea.tagline ?? ""}\n- Category: ${idea.category ?? ""}\n- Summary: ${idea.profile_summary ?? ""}\n- Why this founder: ${idea.why_you ?? ""}\n- Market analysis: ${idea.market_analysis ?? ""}\n- Competitor landscape: ${idea.competitor_landscape ?? ""}\n\nFOUNDER CONTEXT\n- Budget: ${q?.launch_budget ?? "—"} | Runway: ${q?.runway ?? "—"} | Hours/wk: ${q?.hours_per_week ?? "—"} | Risk: ${q?.risk_tolerance ?? "—"} | Income target yr1: ${q?.income_year1 ?? "—"}\n- Skills: ${(q?.skills ?? []).join?.(", ") ?? ""} | Models: ${(q?.biz_models ?? []).join?.(", ") ?? ""}\n\nReturn JSON with EXACTLY these keys:\nbusiness_name, tagline, positioning (one paragraph), elevator_pitch (2-3 sentences),\nicp_archetype (short label), icp_description (paragraph), icp_demographics (array of strings), icp_motivations (array), icp_pain_points (array), icp_watering_holes (array of where to find them),\nrevenue_type (e.g. subscription, one-time, service retainer), revenue_rationale (paragraph),\npricing_tiers (array of objects: {name, price, features:[...]}),\nprojection_month3 (short text), projection_month6 (short text), projection_month12 (short text),\ndifferentiators (array of objects: {title, detail}),\nroadmap_summary (paragraph), gtm_strategy (paragraph), gtm_first_customer (paragraph),\ngtm_channels (array of objects: {channel, tactic}), gtm_week1_actions (array of 4-6 strings).`;
+
+    const ai = await callOpenAI(OPENAI_API_KEY, system, userPrompt);
+    const row = {
+      user_id: user.id, idea_id: ideaId,
+      business_name: txt(ai.business_name) ?? idea.name,
+      tagline: txt(ai.tagline) ?? idea.tagline,
+      positioning: txt(ai.positioning), elevator_pitch: txt(ai.elevator_pitch),
+      icp_archetype: txt(ai.icp_archetype), icp_description: txt(ai.icp_description),
+      icp_demographics: arr(ai.icp_demographics), icp_motivations: arr(ai.icp_motivations),
+      icp_pain_points: arr(ai.icp_pain_points), icp_watering_holes: arr(ai.icp_watering_holes),
+      revenue_type: txt(ai.revenue_type), revenue_rationale: txt(ai.revenue_rationale),
+      pricing_tiers: ai.pricing_tiers ?? null,
+      projection_month3: txt(ai.projection_month3), projection_month6: txt(ai.projection_month6), projection_month12: txt(ai.projection_month12),
+      differentiators: ai.differentiators ?? null,
+      roadmap_summary: txt(ai.roadmap_summary), gtm_strategy: txt(ai.gtm_strategy), gtm_first_customer: txt(ai.gtm_first_customer),
+      gtm_channels: ai.gtm_channels ?? null, gtm_week1_actions: arr(ai.gtm_week1_actions),
+      is_active: true,
+    };
+    await admin.from("blueprints").update({ is_active: false }).eq("user_id", user.id).eq("idea_id", ideaId);
+    const { data: inserted, error: insErr } = await admin.from("blueprints").insert(row).select().single();
+    if (insErr) throw insErr;
+    if (credits) await admin.from("ai_credits").update({ balance: (credits.balance ?? 1) - 1, total_used: (credits.total_used ?? 0) + 1, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+    return json({ blueprint: inserted });
+  } catch (e) { return json({ error: e?.message ?? String(e) }, 500); }
+});

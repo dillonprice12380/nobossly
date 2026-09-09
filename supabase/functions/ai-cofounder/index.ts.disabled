@@ -1,0 +1,102 @@
+// DISABLED 2026-09-09. Only copy — the edge functions had no source control.
+//
+// Three reasons this had to go:
+//
+//  1. It calls OPENAI (api.openai.com, gpt-4o-mini) with its own OPENAI_API_KEY
+//     edge secret. The application uses Anthropic through the ai-proxy function.
+//     This was a second, unmetered AI provider nobody was watching, reachable by
+//     any signed-in member with the public anon key and their own JWT.
+//
+//  2. It decrements ai_credits.balance by hand (`balance - 1`) instead of going
+//     through spend_ai_credits(). It does not know about the cost table, the
+--     plan cap, period_key or issued_cap, so it both under-charges and corrupts
+//     the month's accounting.
+//
+//  3. It INSERTs into ai_conversations with a context_type — the same table the
+//     coach uses. Since 2026-09-09 that table has a unique index on
+//     (user_id, context_type), so this insert now fails outright for anyone who
+//     has used the coach.
+//
+// Superseded by src/coach.js (reply()), which uses the same context idea but
+// reads the member's rung, subpath and blocking gate, and charges through the
+// rail. To restore, port it onto credits.run() first.
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+function json(b, s = 200) { return new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
+
+async function chat(apiKey, messages) {
+  const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, temperature: 0.7, messages }),
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`OpenAI error ${res.status}: ${t.slice(0,300)}`); }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) return json({ error: "AI is not configured. Set the OPENAI_API_KEY secret in Supabase." }, 500);
+    const url = Deno.env.get("SUPABASE_URL"); const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    const auth = req.headers.get("Authorization") ?? "";
+    const uc = createClient(url, anon, { global: { headers: { Authorization: auth } } });
+    const { data: { user }, error: ue } = await uc.auth.getUser();
+    if (ue || !user) return json({ error: "Not authenticated." }, 401);
+    const admin = createClient(url, svc);
+    const body = await req.json().catch(() => ({}));
+    const message = (body.message ?? body.prompt ?? "").toString().trim();
+    if (!message) return json({ error: "message is required." }, 400);
+    const contextType = body.context_type ?? body.contextType ?? "general";
+    let conversationId = body.conversation_id ?? body.conversationId ?? null;
+
+    const { data: credits } = await admin.from("ai_credits").select("*").eq("user_id", user.id).maybeSingle();
+    if (credits && typeof credits.balance === "number" && credits.balance <= 0) return json({ error: "You're out of AI credits.", code: "NO_CREDITS" }, 402);
+
+    const { data: mem } = await admin.from("ai_memory").select("*").eq("user_id", user.id).maybeSingle();
+    const { data: bp } = await admin.from("blueprints").select("business_name,positioning,gtm_strategy").eq("user_id", user.id).eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: sprint } = await admin.from("sprints").select("theme,goal,tasks_done,tasks_total").eq("user_id", user.id).eq("status", "active").order("sprint_number", { ascending: false }).limit(1).maybeSingle();
+    const { data: profile } = await admin.from("profiles").select("display_name,founder_stage,current_level,streak_days").eq("id", user.id).maybeSingle();
+
+    const contextBlock = [
+      profile ? `Founder: ${profile.display_name ?? ""} (stage: ${profile.founder_stage ?? ""}, level ${profile.current_level ?? 1}, ${profile.streak_days ?? 0}-day streak).` : "",
+      bp ? `Current business: ${bp.business_name}. Positioning: ${bp.positioning ?? ""}. GTM: ${bp.gtm_strategy ?? ""}.` : "",
+      sprint ? `Active sprint: "${sprint.theme}" — goal: ${sprint.goal} (${sprint.tasks_done ?? 0}/${sprint.tasks_total ?? 0} tasks done).` : "",
+      mem?.business_summary ? `Memory: ${mem.business_summary}` : "",
+      mem?.active_sprint_context ? `Sprint context: ${mem.active_sprint_context}` : "",
+    ].filter(Boolean).join("\n");
+
+    const system = `You are the founder's AI co-founder inside NoBossly — a sharp, encouraging, no-fluff startup partner. Give specific, actionable advice tailored to their actual business and current sprint. Be concise and direct. If you don't have enough context, ask one focused question.\n\nWHAT YOU KNOW:\n${contextBlock || "No business context yet — help them get started."}`;
+
+    let history = [];
+    if (conversationId) {
+      const { data: conv } = await admin.from("ai_conversations").select("messages").eq("id", conversationId).eq("user_id", user.id).maybeSingle();
+      if (conv?.messages && Array.isArray(conv.messages)) history = conv.messages;
+    }
+    const trimmed = history.slice(-12);
+    const apiMessages = [ { role: "system", content: system }, ...trimmed.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: message } ];
+    const reply = await chat(OPENAI_API_KEY, apiMessages);
+
+    const now = new Date().toISOString();
+    const newMessages = [ ...history, { role: "user", content: message, at: now }, { role: "assistant", content: reply, at: now } ];
+
+    if (conversationId) {
+      await admin.from("ai_conversations").update({ messages: newMessages, credits_used: (history.length / 2 | 0) + 1, updated_at: now }).eq("id", conversationId);
+    } else {
+      const { data: created, error: ce } = await admin.from("ai_conversations").insert({ user_id: user.id, context_type: contextType, messages: newMessages, credits_used: 1 }).select("id").single();
+      if (ce) throw ce; conversationId = created.id;
+    }
+    if (credits) await admin.from("ai_credits").update({ balance: (credits.balance ?? 1) - 1, total_used: (credits.total_used ?? 0) + 1, updated_at: now }).eq("user_id", user.id);
+    return json({ reply, conversation_id: conversationId });
+  } catch (e) { return json({ error: e?.message ?? String(e) }, 500); }
+});

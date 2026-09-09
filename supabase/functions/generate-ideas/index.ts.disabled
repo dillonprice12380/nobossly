@@ -1,0 +1,178 @@
+// DISABLED 2026-09-09. Only copy — the edge functions had no source control.
+//
+// This is the AI idea generator that was DELIBERATELY RETIRED from the product:
+// NoBossly stopped handing people a list of business ideas and made the Compass
+// the beginning, with the member drafting their own idea and the advisor
+// stress-testing it. The function stayed live and callable by any signed-in
+// member the whole time.
+//
+// Three problems, in order:
+//   1. It contradicts the product. Calling it inserts machine-written ideas into
+//      generated_ideas, the same table the app uses for member-drafted ones —
+//      without source='user', without a pinned fit test, without a Compass.
+//   2. OpenAI (gpt-4o-mini) on its own OPENAI_API_KEY, unmetered by the rail.
+//   3. It reads the OLD questionnaire shape (age_range, hobbies, superpower,
+//      hustle_mode, biz_models…), most of which no longer exists — the core is
+//      six universal questions plus a path and a subpath now.
+//
+// Kept only as a record of what the generator used to ask for.
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+function clampInt(v, min, max) {
+  const n = Math.round(Number(v));
+  if (Number.isNaN(n)) return null;
+  return Math.max(min, Math.min(max, n));
+}
+function asText(v) {
+  if (v == null) return null;
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) return v.join("\n");
+  return String(v);
+}
+
+function buildUserPrompt(q, count) {
+  const join = (v) => Array.isArray(v) ? v.join(", ") : (v ?? "—");
+  return `Generate ${count} distinct, high-potential business ideas tailored to THIS specific founder.
+Use everything below. Ideas must fit their skills, budget, risk tolerance, time, and life goals.
+Avoid generic "start a blog / dropshipping store" suggestions. Be specific, realistic, and personal.
+
+FOUNDER PROFILE
+- Name: ${q.founder_name ?? "—"}
+- Age range: ${q.age_range ?? "—"}
+- Work status: ${q.work_status ?? "—"}
+- Industry / field: ${q.industry_field ?? "—"}
+- Location: ${q.location ?? "—"}
+- Hobbies: ${join(q.hobbies)}
+- People ask their advice about: ${q.advice_topic ?? "—"}
+- A problem/pain they care about: ${q.problem_pain ?? "—"}
+- What they're passionate about: ${q.passion_topic ?? "—"}
+- Skills: ${join(q.skills)}
+- Their superpower: ${q.superpower ?? "—"}
+- Tech comfort (1-10): ${q.tech_level ?? "—"}
+- Credentials: ${q.credentials ?? "—"}
+
+WORK STYLE & PREFERENCES
+- Preferred work mode: ${q.work_mode ?? "—"}
+- Team preference: ${q.team_preference ?? "—"}
+- Energizing kinds of work: ${join(q.energizing_work)}
+- Stance on using AI: ${q.ai_stance ?? "—"}
+- Risk tolerance: ${q.risk_tolerance ?? "—"}
+
+RESOURCES & CONSTRAINTS
+- Launch budget: ${q.launch_budget ?? "—"}
+- Runway: ${q.runway ?? "—"}
+- Income target year 1: ${q.income_year1 ?? "—"}
+- Hours/week available: ${q.hours_per_week ?? "—"}
+- Hustle mode: ${q.hustle_mode ?? "—"}
+- Preferred business models: ${join(q.biz_models)}
+- Deal-breakers (avoid these): ${join(q.deal_breakers)}
+
+MOTIVATION
+- Has an idea already? ${q.has_idea ?? "—"}
+- Their idea (if any): ${q.idea_description ?? "—"}
+- Ideal work day: ${q.ideal_day ?? "—"}
+- What they'd regret not trying: ${q.regret ?? "—"}
+- Biggest fear: ${q.biggest_fear ?? "—"}
+
+For EACH idea return an object with EXACTLY these fields:
+- name, tagline, category, profile_summary, why_you, market_analysis, competitor_landscape,
+- success_likelihood (int 0-100), demand_score (int 1-10), passion_score (int 1-10),
+- time_to_revenue, startup_cost_lean, startup_cost_standard, startup_cost_full,
+- legal_nuances, first_steps (newline-separated string).
+market_analysis and competitor_landscape must each be a real, substantive paragraph.
+
+Respond ONLY as JSON: { "ideas": [ { ... }, ... ] }`;
+}
+
+const SYSTEM_PROMPT =
+  "You are NoBossly's senior startup advisor. You turn a founder's real profile into specific, fundable, executable business ideas. You are honest about risk, grounded in real markets, and never generic. You always answer in valid JSON matching the requested schema.";
+
+async function callOpenAI(apiKey, userPrompt) {
+  const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model, temperature: 0.8, response_format: { type: "json_object" },
+      messages: [ { role: "system", content: SYSTEM_PROMPT }, { role: "user", content: userPrompt } ],
+    }),
+  });
+  if (!res.ok) { const txt = await res.text(); throw new Error(`OpenAI error ${res.status}: ${txt.slice(0, 300)}`); }
+  const data = await res.json();
+  return JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) return json({ error: "AI is not configured. Set the OPENAI_API_KEY secret in Supabase, then try again." }, 500);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey     = Deno.env.get("SUPABASE_ANON_KEY");
+    const authHeader  = req.headers.get("Authorization") ?? "";
+
+    const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) return json({ error: "Not authenticated." }, 401);
+
+    const admin = createClient(supabaseUrl, serviceKey);
+    const body = await req.json().catch(() => ({}));
+    const count = clampInt(body.count ?? 3, 1, 5) ?? 3;
+
+    let questionnaire = body.responses ?? null;
+    let questionnaireId = body.questionnaire_id ?? body.questionnaireId ?? null;
+
+    if (!questionnaire) {
+      let query = admin.from("questionnaire_responses").select("*").eq("user_id", user.id);
+      query = questionnaireId ? query.eq("id", questionnaireId) : query.order("created_at", { ascending: false });
+      const { data, error } = await query.limit(1).maybeSingle();
+      if (error) throw error;
+      questionnaire = data;
+      questionnaireId = data?.id ?? null;
+    }
+    if (!questionnaire) return json({ error: "No questionnaire found. Complete the questionnaire first." }, 400);
+
+    const { data: credits } = await admin.from("ai_credits").select("*").eq("user_id", user.id).maybeSingle();
+    if (credits && typeof credits.balance === "number" && credits.balance <= 0) return json({ error: "You're out of AI credits.", code: "NO_CREDITS" }, 402);
+
+    const aiJson = await callOpenAI(OPENAI_API_KEY, buildUserPrompt(questionnaire, count));
+    const ideas = Array.isArray(aiJson?.ideas) ? aiJson.ideas : [];
+    if (ideas.length === 0) return json({ error: "The AI did not return any ideas. Please try again." }, 502);
+
+    const rows = ideas.slice(0, count).map((it, i) => ({
+      user_id: user.id, questionnaire_id: questionnaireId,
+      name: asText(it.name) ?? "Untitled idea", tagline: asText(it.tagline), category: asText(it.category),
+      profile_summary: asText(it.profile_summary), why_you: asText(it.why_you),
+      market_analysis: asText(it.market_analysis), competitor_landscape: asText(it.competitor_landscape),
+      success_likelihood: clampInt(it.success_likelihood, 0, 100),
+      demand_score: clampInt(it.demand_score, 0, 10), passion_score: clampInt(it.passion_score, 0, 10),
+      time_to_revenue: asText(it.time_to_revenue), startup_cost_lean: asText(it.startup_cost_lean),
+      startup_cost_standard: asText(it.startup_cost_standard), startup_cost_full: asText(it.startup_cost_full),
+      legal_nuances: asText(it.legal_nuances), first_steps: asText(it.first_steps), position: i + 1,
+    }));
+
+    const { data: inserted, error: insErr } = await admin.from("generated_ideas").insert(rows).select();
+    if (insErr) throw insErr;
+
+    if (credits) {
+      await admin.from("ai_credits").update({
+        balance: (credits.balance ?? 1) - 1, total_used: (credits.total_used ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", user.id);
+    }
+    return json({ ideas: inserted, questionnaire_id: questionnaireId });
+  } catch (e) { return json({ error: e?.message ?? String(e) }, 500); }
+});

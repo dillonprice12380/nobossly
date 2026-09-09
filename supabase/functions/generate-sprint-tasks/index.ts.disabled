@@ -1,0 +1,98 @@
+// DISABLED 2026-09-09. Only copy — the edge functions had no source control.
+//
+// Same family as ai-cofounder: OpenAI (gpt-4o-mini) on its own OPENAI_API_KEY,
+// reachable by any signed-in member, writing sprints and sprint_tasks with the
+// service role key, and decrementing ai_credits.balance by hand instead of
+// going through spend_ai_credits().
+//
+// Superseded by ai.generateSprintTasks() in src/ai.js, which runs on Anthropic
+// through the ai-proxy function and is charged via credits.run(sb, 'sprint').
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+function json(b, s = 200) { return new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
+function txt(v) { if (v == null) return null; if (typeof v === "string") return v; return String(v); }
+
+async function callOpenAI(apiKey, system, user) {
+  const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, temperature: 0.6, response_format: { type: "json_object" }, messages: [ { role: "system", content: system }, { role: "user", content: user } ] }),
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`OpenAI error ${res.status}: ${t.slice(0,300)}`); }
+  const data = await res.json();
+  return JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) return json({ error: "AI is not configured. Set the OPENAI_API_KEY secret in Supabase." }, 500);
+    const url = Deno.env.get("SUPABASE_URL"); const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); const anon = Deno.env.get("SUPABASE_ANON_KEY");
+    const auth = req.headers.get("Authorization") ?? "";
+    const uc = createClient(url, anon, { global: { headers: { Authorization: auth } } });
+    const { data: { user }, error: ue } = await uc.auth.getUser();
+    if (ue || !user) return json({ error: "Not authenticated." }, 401);
+    const admin = createClient(url, svc);
+    const body = await req.json().catch(() => ({}));
+
+    let sprintId = body.sprint_id ?? body.sprintId ?? null;
+    let blueprintId = body.blueprint_id ?? body.blueprintId ?? null;
+    let ideaId = body.idea_id ?? body.ideaId ?? null;
+    let sprint = null;
+
+    if (sprintId) {
+      const { data, error } = await admin.from("sprints").select("*").eq("id", sprintId).eq("user_id", user.id).maybeSingle();
+      if (error) throw error; sprint = data;
+      if (sprint) { blueprintId = blueprintId ?? sprint.blueprint_id; ideaId = ideaId ?? sprint.idea_id; }
+    }
+    let blueprint = null;
+    if (blueprintId) { const { data } = await admin.from("blueprints").select("*").eq("id", blueprintId).eq("user_id", user.id).maybeSingle(); blueprint = data; }
+    else if (ideaId) { const { data } = await admin.from("blueprints").select("*").eq("idea_id", ideaId).eq("user_id", user.id).eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(); blueprint = data; if (blueprint) blueprintId = blueprint.id; }
+    let idea = null;
+    if (ideaId) { const { data } = await admin.from("generated_ideas").select("*").eq("id", ideaId).maybeSingle(); idea = data; }
+
+    const { data: credits } = await admin.from("ai_credits").select("*").eq("user_id", user.id).maybeSingle();
+    if (credits && typeof credits.balance === "number" && credits.balance <= 0) return json({ error: "You're out of AI credits.", code: "NO_CREDITS" }, 402);
+
+    const ctx = `BUSINESS: ${blueprint?.business_name ?? idea?.name ?? "a new business"}\nPOSITIONING: ${blueprint?.positioning ?? idea?.profile_summary ?? ""}\nGTM STRATEGY: ${blueprint?.gtm_strategy ?? ""}\nWEEK 1 ACTIONS: ${(blueprint?.gtm_week1_actions ?? []).join?.("; ") ?? ""}\nROADMAP: ${blueprint?.roadmap_summary ?? ""}`;
+    const system = "You are NoBossly's execution coach. You break a business plan into a focused 2-week sprint of concrete, doable tasks for a solo founder. Tasks are specific and action-oriented (start with a verb). Always answer in valid JSON.";
+    const prevTheme = sprint?.theme ? `The current sprint theme is: ${sprint.theme}. Goal: ${sprint.goal}. Generate tasks that serve THIS theme.` : "Propose a sprint theme and goal, then the tasks.";
+    const userPrompt = `${ctx}\n\n${prevTheme}\n\nReturn JSON: { "theme": string, "goal": string, "days_label": string (e.g. "Days 1-14"), "tasks": [ { "title": string, "description": string, "priority": "low"|"medium"|"high" } ] }. Generate 6-8 tasks ordered by what to do first.`;
+
+    const ai = await callOpenAI(OPENAI_API_KEY, system, userPrompt);
+    const tasks = Array.isArray(ai.tasks) ? ai.tasks : [];
+    if (tasks.length === 0) return json({ error: "No tasks generated. Try again." }, 502);
+
+    if (!sprint) {
+      const { data: last } = await admin.from("sprints").select("sprint_number").eq("user_id", user.id).order("sprint_number", { ascending: false }).limit(1).maybeSingle();
+      const nextNum = (last?.sprint_number ?? 0) + 1;
+      const { data: created, error: se } = await admin.from("sprints").insert({
+        user_id: user.id, blueprint_id: blueprintId, idea_id: ideaId,
+        sprint_number: nextNum, theme: txt(ai.theme) ?? `Sprint ${nextNum}`, days_label: txt(ai.days_label) ?? "Days 1-14",
+        goal: txt(ai.goal) ?? "Make tangible progress toward launch.", status: "active",
+      }).select().single();
+      if (se) throw se; sprint = created; sprintId = created.id;
+    }
+
+    const rows = tasks.map((t, i) => ({
+      user_id: user.id, sprint_id: sprintId,
+      title: txt(t.title) ?? `Task ${i + 1}`, description: txt(t.description),
+      priority: ["low", "medium", "high"].includes(t.priority) ? t.priority : "medium",
+      status: "todo", position: i, ai_generated: true,
+    }));
+    const { data: inserted, error: te } = await admin.from("sprint_tasks").insert(rows).select();
+    if (te) throw te;
+    await admin.from("sprints").update({ tasks_total: (sprint.tasks_total ?? 0) + rows.length, updated_at: new Date().toISOString() }).eq("id", sprintId);
+    if (credits) await admin.from("ai_credits").update({ balance: (credits.balance ?? 1) - 1, total_used: (credits.total_used ?? 0) + 1, updated_at: new Date().toISOString() }).eq("user_id", user.id);
+    return json({ sprint, tasks: inserted });
+  } catch (e) { return json({ error: e?.message ?? String(e) }, 500); }
+});
