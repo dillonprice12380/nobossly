@@ -107,6 +107,63 @@ function tractionBlock(q) {
     + 'at the hours and runway they have. If it is not, say so; that is the most useful sentence on the page.';
 }
 
+// The output shape, and the standard it has to meet.
+//
+// This constant was referenced by generateCompass() and never defined, so every
+// Compass generation died on `COMPASS_SPEC is not defined` before it reached the
+// model. The shape below is not invented — it is exactly what views/compass.ejs
+// reads and what src/sample_compass.js demonstrates, so the worked example on
+// /sample-compass and a real member's Compass are the same object.
+//
+// Counts are stated because "3-4 territories" reliably produces 3-4 and "some
+// territories" reliably produces seven thin ones.
+const COMPASS_SPEC = `Return a JSON object with exactly these keys:
+
+"archetype": { "name": a named class, 2-4 words, specific to them and not a horoscope,
+               "emoji": one emoji,
+               "tagline": one sentence in second person naming the edge they actually hold,
+               "description": 2-3 sentences — how their type wins, AND the failure their type
+                              typically walks into. Both halves. A description with no failure
+                              mode in it is flattery and they will feel it. }
+
+"loadout": { "strengths": 4-6 short phrases drawn from their own answers, not generic virtues,
+             "advantages": 2-4 phrases — things that are true of THEM and not of a stranger
+                           with the same idea. Access, credibility, a network, a rare skill.
+                           If they genuinely have none yet, return fewer and say so in
+                           honest_notes rather than inventing one,
+             "constraints": 3-5 phrases, each binding and concrete — the hours they actually
+                            have, the money, the day job, anything on their deal-breaker list,
+             "honest_notes": 2-3 full sentences of straight talk. This is the most valuable
+                             field on the page. Do the arithmetic their situation implies —
+                             income goal against hours available, budget against what the path
+                             costs to start — and say plainly what it means. If the numbers do
+                             not work, that sentence is the most useful thing you will write. }
+
+"territories": 3-4 objects, each:
+  { "name": an opportunity area, concrete enough to act on — not "consulting" but the
+            specific problem, buyer and setting,
+    "temperature": exactly one of "hot", "warm", "steady",
+    "why_you": 1-2 sentences on why THIS person has an edge here specifically,
+    "example_plays": 2-4 short concrete offers they could actually sell,
+    "watch_out": one sentence naming the thing that most often kills this. }
+
+"fit_test": exactly 5 objects unless told otherwise below, each:
+  { "criterion": a pass/fail question about any FUTURE idea, written from their own
+                 constraints — the questions they should hold every idea to,
+    "why": one sentence tying it to something they told you,
+    "check": "judgment", "metric": null, "op": null, "value": null }
+
+"avoid_list": 3 objects: { "territory": something tempting but wrong for their situation,
+                           "reason": one sentence, grounded in their constraints not in taste }
+
+"toolkit": 4-6 objects: { "name": a real, currently-existing tool,
+                          "purpose": what it does for them in this specific case,
+                          "cost": "free", "freemium", or an approximate price }
+
+Write every word in second person. Never use the words founder, entrepreneur or startup.
+Ground everything in what they actually answered — if a field would be filler, make it shorter
+and truer instead.`;
+
 async function generateCompass(token, q, scan, fromLibrary) {
   const path = PATH_TASKS[q && q.founder_path] ? q.founder_path : 'exploring';
   const system = "You are NoBossly's strategist. The person you are writing for wants out of a job, and almost always still has one — treat their remaining hours, their runway and their salary as the central facts, not as background. You never prescribe which business they should start; you sharpen their judgement so they can choose for themselves. Everything you write is grounded in their actual answers and any market scan provided. You are candid: naming a real constraint or a mismatch respectfully serves them better than encouragement. Speak to them in second person, and avoid the words founder, entrepreneur and startup — say what they are actually doing instead.";
