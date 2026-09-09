@@ -247,9 +247,11 @@ router.post('/:id/review', async (req, res, next) => {
       .eq('submitter_id', reqRow.submitter_id).eq('status', 'completed').not('request_id', 'is', null);
     const total = count || 0;
 
-    await req.sb.from('peer_reviews')
-      .update({ status: total >= SESSIONS_NEEDED ? 'completed' : 'in_review', updated_at: new Date().toISOString() })
-      .eq('id', reqRow.id).then(...quiet('peer_reviews.update'));
+    // The request's status is derived by peer_reviews_sync_request_status_trg
+    // now. It used to be written from here — by the REVIEWER, onto the
+    // submitter's row — which is the only reason the update policy had to let a
+    // non-owner touch somebody else's review at all. That same latitude let a
+    // member rewrite what a reviewer had said about their work.
 
     if (total >= SESSIONS_NEEDED) {
       // The gate belongs to the founder who ASKED, not the reviewer, so it

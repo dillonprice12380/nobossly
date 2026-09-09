@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node test/ladder.js && node test/paths.js && node test/level1-loop.js && node test/fit.js && node test/fit-library.js && node test/traction.js && node test/peer-review.js && node test/credits.js && node test/ai-prompts.js && node test/schema-drift.js && node test/silent-writes.js && node test/nav.js && node test/economy.js && node test/budget.js && node test/score-integrity.js && node test/completions-integrity.js && node test/views.js"
+    "test": "node test/ladder.js && node test/paths.js && node test/level1-loop.js && node test/fit.js && node test/fit-library.js && node test/traction.js && node test/peer-review.js && node test/credits.js && node test/ai-prompts.js && node test/schema-drift.js && node test/silent-writes.js && node test/nav.js && node test/economy.js && node test/budget.js && node test/score-integrity.js && node test/completions-integrity.js && node test/permissions.js && node test/views.js"
   },
   "engines": {
     "node": ">=20"
