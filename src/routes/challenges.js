@@ -188,20 +188,21 @@ router.post('/:id/finish', async (req, res, next) => {
   try {
     const paid = isPaid(req);
     const back = req.body.from === 'dashboard' ? '/dashboard' : '/quests';
-    const [{ data: a }, { data: ch }] = await Promise.all([
-      req.sb.from('challenge_acceptances').select('*').eq('challenge_id', req.params.id).eq('user_id', req.user.id).maybeSingle(),
-      req.sb.from('challenges').select('*').eq('id', req.params.id).maybeSingle()
-    ]);
-    if (a && a.status === 'active' && ch) {
-      const proof = String(req.body.proof_note || '').trim();
-      if (ch.requires_proof && proof.length < 25) {
-        return res.redirect('/quests?msg=' + encodeURIComponent('\u201c' + ch.title + '\u201d is a quest \u2014 add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
-      }
-      const acceptedMs = a.accepted_at ? new Date(a.accepted_at).getTime() : 0;
-      const flagged = !!(ch.requires_proof && (ch.xp_reward || 0) >= 150 && acceptedMs && (Date.now() - acceptedMs) < 86400000);
-      await req.sb.from('challenge_acceptances').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', a.id);
-      const { data: existing } = await req.sb.from('challenge_completions').select('id').eq('user_id', req.user.id).eq('challenge_id', a.challenge_id).maybeSingle();
-      if (!existing) await req.sb.from('challenge_completions').insert({ user_id: req.user.id, challenge_id: a.challenge_id, proof_note: proof, flagged });
+    // Whether this quest is finishable, and whether the proof clears the bar,
+    // is decided in the database. It used to be decided here and then written
+    // with an INSERT the member could have made themselves — and a
+    // challenge_completions row is what level_reached() reads to decide a rung.
+    const proof = String(req.body.proof_note || '').trim();
+    const { data: done, error: doneErr } = await req.sb.rpc('complete_quest_for', {
+      p_challenge_id: req.params.id, p_proof: proof
+    });
+    if (doneErr) console.error('[db] complete_quest_for failed:', doneErr.message);
+    if (done && done.reason === 'needs_proof') {
+      return res.redirect('/quests?msg=' + encodeURIComponent('\u201c' + done.title + '\u201d is a quest \u2014 add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
+    }
+    if (done && done.ok) {
+      const ch = { id: req.params.id, title: done.title, emoji: done.emoji,
+                   badge_id: done.badge_id, requires_proof: done.requires_proof };
       // Witnessed progress: quest completions go to the Wins wall (admin-reviewed).
       if (ch.requires_proof && proof) {
         await req.sb.from('wins').insert({

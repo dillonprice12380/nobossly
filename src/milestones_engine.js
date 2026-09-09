@@ -1,111 +1,64 @@
 // Auto-award engine for milestone trophies.
 //
-// Milestones are no longer self-claimed. Every active definition in
-// predefined_milestones carries a measurable criterion (auto_kind +
-// auto_target); this engine computes the founder's real numbers and awards
-// anything newly satisfied. It runs after task completions (dashboard
-// toggle), after daily check-ins, and on every /milestones visit — so the
-// trophy case is self-healing: whatever the founder did, the next look at
+// Every active definition in predefined_milestones carries a measurable
+// criterion (auto_kind + auto_target). The sweep computes the member's real
+// numbers and awards anything newly satisfied. It runs after task completions
+// (dashboard toggle), after daily check-ins, and on every /trophies visit — so
+// the trophy case is self-healing: whatever the member did, the next look at
 // the page reflects it.
+//
+// The counting used to happen here, and the insert with it — under the member's
+// own credentials, against a user_milestones INSERT policy that only checked
+// `auth.uid() = user_id`. So the row that says you earned a trophy could be
+// written without earning it, and level_reached() reads exactly those rows to
+// decide your rung. sweep_trophies_for() owns both halves now.
+//
+// The counting followed the insert deliberately. Leaving computeMetrics() here
+// would have meant two implementations of the same fifteen numbers, and a
+// trophy case whose progress bars disagree with what it actually awards is the
+// drift this codebase keeps finding. The RPC returns the metrics it used, and
+// this file renders those rather than counting anything itself.
 const { awardXP } = require('./xp');
 const { notifySocial } = require('./notify');
 const activity = require('./activity');
 
 const { quiet } = require('./db');
-const n = async q => { const { count } = await q; return count || 0; };
-
-async function computeMetrics(sb, userId, profile, kinds) {
-  const m = {};
-  const want = k => kinds.has(k);
-  const jobs = [];
-  if (want('ideas')) jobs.push(n(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.ideas = v));
-  // Only completed runs count: a half-answered questionnaire has not produced
-  // the answers the Compass needs, and this trophy gates leaving Level 1.
-  if (want('questionnaire')) jobs.push(n(sb.from('questionnaire_responses').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('completed', true)).then(v => m.questionnaire = v));
-  if (want('blueprints')) jobs.push(n(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.blueprints = v));
-  // The Level 1 refinement loop. A PERCENTAGE, not a count: the fit test is
-  // whatever length the Compass wrote, and counting passes against a fixed
-  // target of five soft-locked anyone whose test was shorter. It is the best
-  // reached on ANY of the founder's ideas, so revising into a worse score never
-  // takes back a trophy, and a threshold can only be crossed once.
-  if (want('idea_fit_pct')) jobs.push(
-    sb.from('generated_ideas').select('best_fit_pct').eq('user_id', userId).then(({ data }) =>
-      m.idea_fit_pct = (data || []).reduce((best, r) => Math.max(best, r.best_fit_pct || 0), 0), () => { m.idea_fit_pct = 0; })
-  );
-  if (want('ideas_cut')) jobs.push(n(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', userId).not('cut_at', 'is', null)).then(v => m.ideas_cut = v));
-  // Signals are counted per idea, not summed across them: the quest is three
-  // pieces of evidence for ONE idea, and one signal each on three ideas is not
-  // the same thing.
-  if (want('signals')) jobs.push(
-    sb.from('idea_signals').select('idea_id').eq('user_id', userId).then(({ data }) => {
-      const per = {};
-      (data || []).forEach(r => { per[r.idea_id] = (per[r.idea_id] || 0) + 1; });
-      m.signals = Object.keys(per).reduce((best, k) => Math.max(best, per[k]), 0);
-    }, () => { m.signals = 0; })
-  );
-  if (want('tasks')) jobs.push(n(sb.from('sprint_tasks').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'done')).then(v => m.tasks = v));
-  if (want('checkins')) jobs.push(n(sb.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.checkins = v));
-  if (want('followers')) jobs.push(n(sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId)).then(v => m.followers = v));
-  if (want('challenges')) jobs.push(n(sb.from('challenge_completions').select('id', { count: 'exact', head: true }).eq('user_id', userId)).then(v => m.challenges = v));
-  if (want('posts')) jobs.push(Promise.all([
-    n(sb.from('forum_threads').select('id', { count: 'exact', head: true }).eq('user_id', userId)),
-    n(sb.from('forum_replies').select('id', { count: 'exact', head: true }).eq('user_id', userId))
-  ]).then(([a, b]) => m.posts = a + b));
-  if (want('sprints_started') || want('sprints_done')) jobs.push(
-    sb.from('sprints').select('status, tasks_total, tasks_done').eq('user_id', userId).then(({ data }) => {
-      const rows = data || [];
-      m.sprints_started = rows.length;
-      // Nothing flips a sprint to 'completed' automatically yet, so a sprint
-      // with every task done counts as done — the honest reading either way.
-      m.sprints_done = rows.filter(s => s.status === 'completed' || ((s.tasks_total || 0) > 0 && (s.tasks_done || 0) >= s.tasks_total)).length;
-    })
-  );
-  if (want('streak')) m.streak = Math.max(profile.streak_days || 0, profile.longest_streak || 0);
-  if (want('profile')) m.profile = (profile.display_name && profile.bio) ? 1 : 0;
-  await Promise.all(jobs);
-  return m;
-}
 
 // Returns { fresh, metrics }: fresh = definitions awarded during this sweep,
 // metrics = current counts per kind (the page uses these for progress bars).
 async function sweepMilestones(sb, userId, profile, paid) {
-  const [{ data: defs }, { data: mine }] = await Promise.all([
-    sb.from('predefined_milestones').select('*').eq('is_active', true).not('auto_kind', 'is', null),
-    sb.from('user_milestones').select('predefined_milestone_id').eq('user_id', userId)
-  ]);
-  const earned = new Set((mine || []).map(r => r.predefined_milestone_id));
-  const kinds = new Set((defs || []).map(d => d.auto_kind));
-  const metrics = await computeMetrics(sb, userId, profile, kinds);
+  const { data: res, error } = await sb.rpc('sweep_trophies_for');
+  if (error) { console.error('[db] sweep_trophies_for failed:', error.message); return { fresh: [], metrics: {} }; }
+  if (!res) return { fresh: [], metrics: {} };
 
-  const fresh = [];
-  for (const def of (defs || [])) {
-    if (earned.has(def.id)) continue;
-    const have = metrics[def.auto_kind] || 0;
-    if (have < (def.auto_target || 1)) continue;
-    const { error } = await sb.from('user_milestones').insert({
-      user_id: userId, predefined_milestone_id: def.id, emoji: def.emoji,
-      date_achieved: new Date().toISOString().slice(0, 10), pinned: paid
-    });
-    if (error) continue; // e.g. raced with another request — skip quietly
-    fresh.push(def);
+  const metrics = res.metrics || {};
+  const ids = res.fresh || [];
+  if (!ids.length) return { fresh: [], metrics };
+
+  // Everything below is what was always safe: telling the member, and telling
+  // the people following them.
+  const { data: defs } = await sb.from('predefined_milestones').select('*').in('id', ids);
+  const fresh = defs || [];
+
+  for (const def of fresh) {
     await awardXP(sb, userId, profile, 'trophy', 'Trophy: ' + def.title, 'predefined_milestones', def.id);
     await sb.rpc('push_notification', {
       target_user: userId, ntype: 'milestone',
-      nmessage: '\ud83c\udfc6 Trophy unlocked: ' + (def.emoji || '') + ' ' + def.title + ' (+' + (def.xp_reward || 50) + ' XP)',
+      nmessage: '🏆 Trophy unlocked: ' + (def.emoji || '') + ' ' + def.title + ' (+' + (def.xp_reward || 50) + ' XP)',
       nentity_type: 'predefined_milestones', nentity_id: def.id
     }).then(...quiet('push_notification:milestone'));
     if (paid) {
       const who = profile.display_name || profile.username || 'A member';
-      await notifySocial(sb, userId, who + ' unlocked the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
-      await activity.record(sb, userId, 'milestone', 'unlocked \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: def.id });
+      await notifySocial(sb, userId, who + ' unlocked the trophy ' + (def.emoji || '🏆') + ' “' + def.title + '”', 'predefined_milestones', def.id);
+      await activity.record(sb, userId, 'milestone', 'unlocked “' + def.title + '”', { emoji: def.emoji || '🏆', entityType: 'predefined_milestones', entityId: def.id });
       if (def.badge_id) {
         const { data: hasBadge } = await sb.from('user_badges').select('id').eq('user_id', userId).eq('badge_id', def.badge_id).maybeSingle();
         if (!hasBadge) {
           await sb.from('user_badges').insert({ user_id: userId, badge_id: def.badge_id });
           const { data: b } = await sb.from('badges').select('name, emoji').eq('id', def.badge_id).maybeSingle();
           if (b) {
-            await notifySocial(sb, userId, who + ' earned the ' + b.emoji + ' \u201c' + b.name + '\u201d badge', 'badges', def.badge_id).then(...quiet('badges.insert'));
-            await activity.record(sb, userId, 'badge', 'earned the \u201c' + b.name + '\u201d badge', { emoji: b.emoji, entityType: 'badges', entityId: def.badge_id });
+            await notifySocial(sb, userId, who + ' earned the ' + b.emoji + ' “' + b.name + '” badge', 'badges', def.badge_id).then(...quiet('badges.insert'));
+            await activity.record(sb, userId, 'badge', 'earned the “' + b.name + '” badge', { emoji: b.emoji, entityType: 'badges', entityId: def.badge_id });
           }
         }
       }

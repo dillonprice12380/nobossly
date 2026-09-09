@@ -42,24 +42,21 @@ const RUBRIC = [
 
 const scoreOf = v => { const n = parseInt(v, 10); return (n >= 1 && n <= 5) ? n : null; };
 
-// Marks a named challenge complete for a user, idempotently. Used for both
-// sides of this feature, so the ladder sees peer-review work exactly as it sees
-// a challenge finished the ordinary way.
-async function completeChallenge(req, title, note) {
-  const { data: ch } = await req.sb.from('challenges').select('id, title, xp_reward').eq('title', title).maybeSingle();
-  if (!ch) return null;
-  const { data: existing } = await req.sb.from('challenge_completions')
-    .select('id').eq('user_id', req.user.id).eq('challenge_id', ch.id).maybeSingle();
-  if (existing) return null;
-  const { error } = await req.sb.from('challenge_completions')
-    .insert({ user_id: req.user.id, challenge_id: ch.id, proof_note: note || '' });
-  if (error) return null;          // raced with another request — nothing to do
-  await req.sb.from('challenge_acceptances')
-    .update({ status: 'completed', completed_at: new Date().toISOString() })
-    .eq('user_id', req.user.id).eq('challenge_id', ch.id).eq('status', 'active')
-    .then(...quiet('challenge_acceptances.update'));
-  await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed quest: ' + ch.title, 'challenges', ch.id);
-  return ch;
+// Marks one of this feature's two quests complete, idempotently, so the ladder
+// sees peer-review work exactly as it sees a quest finished the ordinary way.
+//
+// This used to take any title and insert the completion row directly. Both
+// halves were a problem: the row is what level_reached() reads to decide a
+// rung, and a function that completes a quest BY NAME is a hole with a tidy
+// signature. complete_review_quest_for names the two quests itself and recounts
+// the reviews that earn them — one you wrote, or three other people wrote about
+// your work — so neither can be claimed by asking.
+async function completeChallenge(req, which) {
+  const { data: res, error } = await req.sb.rpc('complete_review_quest_for', { p_which: which });
+  if (error) { console.error('[db] complete_review_quest_for failed:', error.message); return null; }
+  if (!res || !res.ok) return null;
+  await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed quest: ' + res.title, 'challenges', res.challenge_id);
+  return { id: res.challenge_id, title: res.title };
 }
 
 // Display names for the people on screen. Reviewer identity matters here — a
@@ -233,7 +230,7 @@ router.post('/:id/review', async (req, res, next) => {
     }
 
     await awardXP(req.sb, req.user.id, req.profile, 'peer_review_given', 'Gave a peer review: ' + reqRow.title, 'peer_reviews', reqRow.id);
-    await completeChallenge(req, GIVER_CHALLENGE, 'Reviewed a peer’s ' + reqRow.review_type + ' on NoBossly.');
+    await completeChallenge(req, 'giver');
 
     // Tell the founder somebody answered. This is the notification that makes
     // the queue feel alive rather than a form that swallows things.
@@ -272,16 +269,11 @@ router.post('/:id/review', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Claims "Get 3 Feedback Sessions" for the signed-in founder once three peers
-// have reviewed their work. It runs on their own client, so RLS applies exactly
-// as it would to any other challenge completion.
+// Claims "Get 3 Feedback Sessions" once three peers have reviewed their work.
+// The count used to be made here and the answer written; it is made inside
+// complete_review_quest_for now, from the same peer_reviews rows.
 async function claimFeedbackGate(req) {
-  const { count } = await req.sb.from('peer_reviews')
-    .select('id', { count: 'exact', head: true })
-    .eq('submitter_id', req.user.id).eq('status', 'completed').not('request_id', 'is', null);
-  if ((count || 0) < SESSIONS_NEEDED) return null;
-  return completeChallenge(req, GATE_CHALLENGE,
-    (count || 0) + ' peer reviews received on NoBossly.');
+  return completeChallenge(req, 'gate');
 }
 
 module.exports = router;

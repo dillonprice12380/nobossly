@@ -85,27 +85,28 @@ router.post('/:id/achieve', (req, res) => res.redirect('/trophies'));
 router.post('/claim/:id', async (req, res, next) => {
   const back = m => res.redirect('/trophies?msg=' + encodeURIComponent(m));
   try {
-    const { data: def } = await req.sb.from('predefined_milestones')
-      .select('*').eq('id', req.params.id).eq('is_active', true).eq('is_claimable', true).maybeSingle();
-    if (!def) return res.redirect('/trophies');
-
+    // The written account is the standard these are held to, and it used to be
+    // enforced here — beside an INSERT the member could have made without it,
+    // into the table level_reached() reads to decide a rung. The claim is a
+    // request now: claim_trophy_for re-checks that the trophy is claimable, that
+    // the note clears the bar, and that it has not already been logged, and
+    // decides `pinned` from the plan rather than from anything sent up.
     const note = String(req.body.proof_note || '').trim().slice(0, 2000);
-    if (note.length < 30) {
-      return back('Add a bit more detail to \u201c' + def.title + '\u201d \u2014 a few honest sentences on what you actually did.');
+    const { data: def, error: claimErr } = await req.sb.rpc('claim_trophy_for', {
+      p_milestone_id: req.params.id, p_note: note
+    });
+    if (claimErr) { console.error('[db] claim_trophy_for failed:', claimErr.message); return res.redirect('/trophies'); }
+    if (!def || !def.ok) {
+      if (def && def.reason === 'needs_note') {
+        return back('Add a bit more detail to \u201c' + def.title + '\u201d \u2014 a few honest sentences on what you actually did.');
+      }
+      if (def && def.reason === 'already') return back('You have already logged \u201c' + def.title + '\u201d.');
+      return res.redirect('/trophies');
     }
 
-    // Idempotent: the unique index on (user_id, predefined_milestone_id) makes a
-    // double submit a no-op rather than a second XP award.
-    const { error } = await req.sb.from('user_milestones').insert({
-      user_id: req.user.id, predefined_milestone_id: def.id, emoji: def.emoji,
-      custom_description: note, date_achieved: new Date().toISOString().slice(0, 10),
-      pinned: isPaid(req)
-    });
-    if (error) return back('You have already logged \u201c' + def.title + '\u201d.');
-
-    await awardXP(req.sb, req.user.id, req.profile, 'milestone_claim', 'Trophy: ' + def.title, 'predefined_milestones', def.id);
-    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' earned the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
-    await activity.record(req.sb, req.user.id, 'milestone', 'reached \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: def.id });
+    await awardXP(req.sb, req.user.id, req.profile, 'milestone_claim', 'Trophy: ' + def.title, 'predefined_milestones', req.params.id);
+    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' earned the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', req.params.id);
+    await activity.record(req.sb, req.user.id, 'milestone', 'reached \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: req.params.id });
     back(def.emoji + ' ' + def.title + ' logged \u2014 +' + (def.xp_reward || 50) + ' XP. That is a real one.');
   } catch (e) { next(e); }
 });
