@@ -276,8 +276,15 @@ body.theme-light .nav {
   border-bottom: none;
   box-shadow: 0 2px 14px rgba(11, 61, 46, .25);
 }
-body.theme-light .nav-links a, body.theme-light .brand { color: #eafff5; }
-body.theme-light .nav-links a:hover { color: #6ee7b7; }
+/* Scoped to DIRECT children. The light-theme nav bar is dark green, so its
+   links are near-white — but the bell, Resources and account menus are light
+   panels hanging off that same nav, and an unscoped `.nav-links a` painted
+   their contents white-on-white. Notifications were unreadable unless you
+   hovered, because :hover swapped them to mint. The Resources and account
+   menus had each been patched with their own `color: var(--text) !important`;
+   scoping the source rule is the fix those patches were working around. */
+body.theme-light .nav-links > a, body.theme-light .brand { color: #eafff5; }
+body.theme-light .nav-links > a:hover { color: #6ee7b7; }
 body.theme-light .nav .btn-ghost { color: #eafff5; border-color: rgba(255,255,255,.3); }
 body.theme-light .nav .btn-primary { background: #10b981; border-color: #10b981; }
 /* Card elevation and hover now live in interaction.css for BOTH themes; the

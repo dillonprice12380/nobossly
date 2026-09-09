@@ -26,7 +26,10 @@ function quiet(label) {
     // failure arrives here, in the SUCCESS handler, shaped as { error }. That
     // is precisely why these were so easy to miss.
     (res) => {
-      if (res && res.error) {
+      // The client wrapper in src/supabase.js already reports write failures
+      // and marks them, so the same error is not printed twice — once as
+      // `notifications.insert` and again as `push_notification:levels`.
+      if (res && res.error && !res.__dbLogged) {
         console.error('[db] ' + label + ' failed:',
                       res.error.code || '', res.error.message || res.error);
       }
