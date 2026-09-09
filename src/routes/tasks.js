@@ -171,7 +171,7 @@ router.post('/:id/update', async (req, res, next) => {
     if (error) return res.json({ error: error.message });
     if (patch.status === 'done') {
       const { awardXP } = require('../xp');
-      await awardXP(req.sb, req.user.id, req.profile, 10, 'Completed a task', 'tasks', req.params.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'task_done', 'Completed a task', 'tasks', req.params.id);
       await req.sb.from('profiles').update({ tasks_completed: (req.profile.tasks_completed || 0) + 1 }).eq('id', req.user.id);
     }
     res.json({ ok: true });

@@ -594,6 +594,13 @@
       "reason",
       "user_id"
     ],
+    "ladder_rungs": [
+      "path",
+      "level",
+      "xp_required",
+      "min_gates",
+      "gates"
+    ],
     "messages": [
       "attachment_name",
       "attachment_type",
@@ -1193,6 +1200,13 @@
       "story",
       "title",
       "user_id"
+    ],
+    "xp_award_kinds": [
+      "amount",
+      "amount_from",
+      "code",
+      "description",
+      "max_amount"
     ],
     "xp_events": [
       "amount",

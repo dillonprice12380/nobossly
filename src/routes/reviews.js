@@ -58,7 +58,7 @@ async function completeChallenge(req, title, note) {
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('user_id', req.user.id).eq('challenge_id', ch.id).eq('status', 'active')
     .then(...quiet('challenge_acceptances.update'));
-  await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed quest: ' + ch.title, 'challenges', ch.id);
+  await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed quest: ' + ch.title, 'challenges', ch.id);
   return ch;
 }
 
@@ -232,7 +232,7 @@ router.post('/:id/review', async (req, res, next) => {
       return res.redirect(back + '?msg=' + encodeURIComponent('You have already reviewed this one.'));
     }
 
-    await awardXP(req.sb, req.user.id, req.profile, REVIEW_XP, 'Gave a peer review: ' + reqRow.title, 'peer_reviews', reqRow.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'peer_review_given', 'Gave a peer review: ' + reqRow.title, 'peer_reviews', reqRow.id);
     await completeChallenge(req, GIVER_CHALLENGE, 'Reviewed a peer’s ' + reqRow.review_type + ' on NoBossly.');
 
     // Tell the founder somebody answered. This is the notification that makes

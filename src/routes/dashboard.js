@@ -185,7 +185,7 @@ router.post('/sprint/start/:blueprintId', async (req, res) => {
       status: 'todo', position: i, ai_generated: true
     }));
     if (taskRows.length) await req.sb.from('sprint_tasks').insert(taskRows);
-    await awardXP(req.sb, req.user.id, req.profile, 30, 'Started a sprint', 'sprints', sprint.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'sprint_started', 'Started a sprint', 'sprints', sprint.id);
     // Sprint 1 Started (and friends) unlock the moment it happens.
     try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) { /* trophies self-heal on the milestones page */ }
     res.json({ redirect: '/dashboard' });
@@ -218,7 +218,7 @@ router.post('/task/:id/toggle', async (req, res) => {
     let trophies = [];
     if (done) {
       await req.sb.from('profiles').update({ tasks_completed: (req.profile.tasks_completed || 0) + 1 }).eq('id', req.user.id);
-      xp = await awardXP(req.sb, req.user.id, req.profile, 10, 'Completed task: ' + task.title, 'sprint_tasks', task.id);
+      xp = await awardXP(req.sb, req.user.id, req.profile, 'sprint_task_done', 'Completed task: ' + task.title, 'sprint_tasks', task.id);
       // Trophy sweep: task-count milestones (and a full sprint's worth of tasks
       // finishing a sprint) unlock right here, and the client gets to celebrate.
       try {
@@ -253,7 +253,7 @@ router.post('/checkin', async (req, res, next) => {
       wins_today: b.wins_today || '', tomorrow_plan: b.tomorrow_plan || '', xp_awarded: 15
     });
     const streak = await bumpStreak(req.sb, req.user.id, req.profile);
-    await awardXP(req.sb, req.user.id, req.profile, 15, 'Daily check-in (streak ' + streak + ')', 'daily_checkins', null);
+    await awardXP(req.sb, req.user.id, req.profile, 'daily_checkin', 'Daily check-in (streak ' + streak + ')', 'daily_checkins', null);
     // Streak + check-in trophies unlock the moment the streak ticks over. The
     // fresh streak value hasn't landed on req.profile, so pass it along.
     try {

@@ -84,7 +84,7 @@ async function runBlueprintGeneration(req, idea, jobId) {
     const { data: created, error } = await sb.from('blueprints').insert(row).select().maybeSingle();
     if (error) throw error;
     await sb.from('generated_ideas').update({ status: 'converted' }).eq('id', idea.id);
-    await awardXP(sb, req.user.id, req.profile, 50, 'Created a launch blueprint', 'blueprints', created.id);
+    await awardXP(sb, req.user.id, req.profile, 'blueprint_created', 'Created a launch blueprint', 'blueprints', created.id);
     await finish({ status: 'done', redirect: '/blueprint/' + created.id });
     if (planOf(req.profile) === 'paid') {
       generateTailoredSets(req, created).catch(e => console.error('tailored gen', e && e.message));
@@ -174,7 +174,7 @@ router.post('/:id/disperse', async (req, res, next) => {
     }));
     const { error } = await req.sb.from('tasks').insert(rows);
     if (error) return res.redirect('/blueprint/' + bp.id + '?err=' + enc('Could not add tasks: ' + error.message));
-    await awardXP(req.sb, req.user.id, req.profile, 15, 'Dispersed Week 1 actions to tasks', 'blueprints', bp.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'blueprint_dispersed', 'Dispersed Week 1 actions to tasks', 'blueprints', bp.id);
     res.redirect('/tasks?list=' + (list ? list.id : ''));
   } catch (e) { next(e); }
 });

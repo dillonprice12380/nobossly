@@ -117,7 +117,7 @@ async function runCompassGeneration(req, q, jobId) {
       user_id: req.user.id, questionnaire_id: q.id, founder_path: path, data
     });
     if (error) throw error;
-    await awardXP(sb, req.user.id, req.profile, 25, 'Compass drawn', 'founder_compasses', null);
+    await awardXP(sb, req.user.id, req.profile, 'compass_drawn', 'Compass drawn', 'founder_compasses', null);
     await patchJob({ status: 'done', progress: 100, stage: 'done', redirect: '/compass' });
   } catch (e) {
     console.error('compass generation', e);
@@ -256,7 +256,7 @@ router.post('/draft', async (req, res, next) => {
       status: 'active', position: (count || 0)
     }).select('*').maybeSingle();
     if (error || !idea) throw (error || new Error('could not save your idea'));
-    await awardXP(req.sb, req.user.id, req.profile, 15, 'Drafted your own idea: ' + draft.name, 'generated_ideas', idea.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'idea_drafted', 'Drafted your own idea: ' + draft.name, 'generated_ideas', idea.id);
     try {
       await runAdvisor(req, idea, compass && compass.data, q, draft, res.locals.plan);
       return res.redirect('/ideas/' + idea.id);

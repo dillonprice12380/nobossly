@@ -105,7 +105,7 @@ router.post('/c/:slug/thread', requireAuth, async (req, res, next) => {
       category_id: cat.id, user_id: req.user.id, title, body, body_html: bodyHtml, tags, last_reply_at: new Date().toISOString()
     }).select().maybeSingle();
     if (error) throw error;
-    await awardXP(req.sb, req.user.id, req.profile, 10, 'Started a forum thread', 'forum_threads', thread.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'forum_thread', 'Started a forum thread', 'forum_threads', thread.id);
     await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' posted in the forum: "' + title.slice(0, 60) + '"', 'forum_threads', thread.id);
     res.redirect('/community/t/' + thread.id);
   } catch (e) { next(e); }
@@ -148,7 +148,7 @@ router.post('/t/:id/reply', requireAuth, async (req, res, next) => {
     if (body || bodyHtml) {
       await req.sb.from('forum_replies').insert({ thread_id: thread.id, user_id: req.user.id, body, body_html: bodyHtml });
       await req.sb.from('forum_threads').update({ reply_count: (thread.reply_count || 0) + 1, last_reply_at: new Date().toISOString() }).eq('id', thread.id);
-      await awardXP(req.sb, req.user.id, req.profile, 5, 'Replied in the forum', 'forum_replies', null);
+      await awardXP(req.sb, req.user.id, req.profile, 'forum_reply', 'Replied in the forum', 'forum_replies', null);
       const { data: full } = await req.sb.from('forum_threads').select('user_id, title').eq('id', thread.id).maybeSingle();
       if (full && full.user_id !== req.user.id) {
         await req.sb.rpc('push_notification', { target_user: full.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'Someone') + ' replied to your thread "' + (full.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(...quiet('push_notification:forum_reply'));
@@ -304,7 +304,7 @@ router.post('/beta/:id/join', requireAuth, async (req, res, next) => {
       if (!existing) {
         await req.sb.from('beta_testers').insert({ program_id: prog.id, tester_id: req.user.id, status: 'enrolled' });
         await req.sb.from('beta_programs').update({ tester_count: (prog.tester_count || 0) + 1 }).eq('id', prog.id);
-        await awardXP(req.sb, req.user.id, req.profile, 15, 'Joined a beta program', 'beta_programs', prog.id);
+        await awardXP(req.sb, req.user.id, req.profile, 'beta_joined', 'Joined a beta program', 'beta_programs', prog.id);
       }
     }
     res.redirect('/community/collab');

@@ -73,7 +73,7 @@ router.post('/:id/approve', async (req, res, next) => {
       // Award XP to the winner + notify. Non-fatal if RLS blocks cross-user writes.
       try {
         const { data: wp } = await req.sb.from('profiles').select('*').eq('id', win.user_id).maybeSingle();
-        if (wp) await awardXP(req.sb, win.user_id, wp, 25, 'Win featured on the wall: ' + win.title, 'wins', win.id);
+        if (wp) await awardXP(req.sb, win.user_id, wp, 'win_featured', 'Win featured on the wall: ' + win.title, 'wins', win.id);
       } catch (e2) { console.error('win xp', e2.message); }
       await req.sb.rpc('push_notification', { target_user: win.user_id, ntype: 'wins', nmessage: 'Your win “' + win.title + '” is now live on the Wins wall 🎉', nentity_type: null, nentity_id: null }).then(...quiet('push_notification:wins'));
       // Into the winner's follower feed. Approval runs under the admin's client

@@ -1,37 +1,25 @@
-// XP + streak helpers. All writes use the user's own client (RLS applies).
+// XP + streak. Neither is decided here any more.
 //
 // bumpStreak is called ONLY by the daily check-in. It used to run at the end of
 // awardXP too, which meant the streak advanced on any XP event at all — ticking
 // a task, drafting an idea — while the dashboard and homepage sold it as daily
 // check-in discipline. The number and the label now mean the same thing.
-
+//
+// The arithmetic used to be here: read last_checkin_date, decide whether
+// yesterday counted, write the answer — all as the member, from columns the
+// member could set first. Locking streak_days without locking
+// last_checkin_date would only have moved the forgery one column across, so the
+// whole calculation moved into bump_streak_for(). Same rules: twice in a day
+// does nothing, yesterday continues the run, one missed day a month is covered.
 async function bumpStreak(sb, userId, profile) {
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    const last = profile.last_checkin_date;
-    if (last === today) return profile.streak_days || 0;
-    const day = 86400000;
-    const yesterday = new Date(Date.now() - day).toISOString().slice(0, 10);
-    const twoAgo = new Date(Date.now() - 2 * day).toISOString().slice(0, 10);
-    const month = today.slice(0, 7);
-    const patch = { last_checkin_date: today };
-    let streak;
-    if (last === yesterday) {
-      streak = (profile.streak_days || 0) + 1;
-    } else if (last === twoAgo && profile.streak_freeze_used_month !== month) {
-      streak = (profile.streak_days || 0) + 1; // freeze covers the one missed day
-      patch.streak_freeze_used_month = month;
-    } else {
-      streak = 1;
-    }
-    patch.streak_days = streak;
-    patch.longest_streak = Math.max(profile.longest_streak || 0, streak);
-    await sb.from('profiles').update(patch).eq('id', userId);
-    profile.streak_days = streak;
-    profile.last_checkin_date = today;
-    profile.longest_streak = patch.longest_streak;
-    if (patch.streak_freeze_used_month) profile.streak_freeze_used_month = patch.streak_freeze_used_month;
-    return streak;
+    const { data: res, error } = await sb.rpc('bump_streak_for');
+    if (error) { console.error('[db] bump_streak_for failed:', error.message); return profile.streak_days || 0; }
+    if (!res) return profile.streak_days || 0;
+    profile.streak_days = res.streak;
+    profile.longest_streak = Math.max(profile.longest_streak || 0, res.streak);
+    if (!res.already) profile.last_checkin_date = new Date().toISOString().slice(0, 10);
+    return res.streak;
   } catch (e) {
     console.error('bumpStreak', e.message);
     return profile.streak_days || 0;
@@ -141,30 +129,35 @@ async function ladderStatus(sb, userId, profile) {
   }
 }
 
-async function awardXP(sb, userId, profile, amount, reason, entityType, entityId) {
+// How much XP something is worth, and what rung it puts you on, are decided in
+// the database — see migrations/2026-09-09_the_score_is_server_owned.sql.
+//
+// This used to compute the amount here, insert the xp_events row, work out the
+// level and write it to profiles, all under the member's own credentials. Which
+// meant all of it was reachable without going through this function at all: a
+// PATCH to your own profiles row set xp_total and current_level to anything,
+// and an INSERT into xp_events minted XP out of nothing. Both confirmed against
+// production before they were closed.
+//
+// So `code` replaces `amount`. The caller says WHAT happened; xp_award_kinds
+// says what it is worth, and level_reached() reads the ladder and the member's
+// actual completions to decide the rung. Everything below the RPC call is the
+// part that was always safe: telling the member, and telling their followers.
+async function awardXP(sb, userId, profile, code, reason, entityType, entityId) {
   try {
-    await sb.from('xp_events').insert({ user_id: userId, amount, reason, entity_type: entityType || null, entity_id: entityId || null });
-    const newTotal = (profile.xp_total || 0) + amount;
+    const { data: res, error } = await sb.rpc('award_xp_for', {
+      p_code: code, p_entity_type: entityType || null, p_entity_id: entityId || null,
+      p_label: reason || null, p_target: userId
+    });
+    if (error) { console.error('[db] award_xp_for failed:', error.message, '(' + code + ')'); return null; }
+    if (!res) return null;
+
+    const newTotal = res.xp_total;
+    const level = res.level;
     const levels = ladders.ladderFor(profile.path);
     const current = profile.current_level || 1;
-    let level = current;
-    const maxXpLevel = levels.reduce((m, l) => (newTotal >= l.xp_required ? Math.max(m, l.level) : m), 1);
-    if (maxXpLevel > current) {
-      const have = await achievedQuests(sb, userId);
-      for (const l of levels) {
-        if (l.level <= level) continue;
-        if (newTotal < l.xp_required) break;
-        if (!ladders.meetsRung(l, have)) break;
-        level = l.level;
-      }
-    }
-    level = Math.max(level, current);
-    const patch = { xp_total: newTotal, current_level: level, last_active_at: new Date().toISOString() };
-    // Levels 1-7 self-verify; 8+ waits for admin review of a verification request.
-    if (level <= 7) patch.verified_level = Math.max(profile.verified_level || 1, level);
-    await sb.from('profiles').update(patch).eq('id', userId);
     profile.xp_total = newTotal;
-    if (patch.verified_level) profile.verified_level = patch.verified_level;
+    if (level <= 7) profile.verified_level = Math.max(profile.verified_level || 1, level);
     if (level > current) {
       profile.current_level = level;
       const info = levels.find(l => l.level === level) || {};
@@ -204,7 +197,7 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
     // ladder rather than hard-coded to 10 so adding a rung doesn't strand it.
     const topLevel = (levels || []).reduce((m, l) => Math.max(m, l.level), 1);
     return {
-      newTotal, level, leveledUp: level > current,
+      newTotal, level, amount: res.amount, leveledUp: level > current,
       title: reached.title || '', emoji: reached.emoji || '',
       isMax: level >= topLevel
     };

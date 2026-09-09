@@ -88,7 +88,7 @@ async function sweepMilestones(sb, userId, profile, paid) {
     });
     if (error) continue; // e.g. raced with another request — skip quietly
     fresh.push(def);
-    await awardXP(sb, userId, profile, def.xp_reward || 50, 'Trophy: ' + def.title, 'predefined_milestones', def.id);
+    await awardXP(sb, userId, profile, 'trophy', 'Trophy: ' + def.title, 'predefined_milestones', def.id);
     await sb.rpc('push_notification', {
       target_user: userId, ntype: 'milestone',
       nmessage: '\ud83c\udfc6 Trophy unlocked: ' + (def.emoji || '') + ' ' + def.title + ' (+' + (def.xp_reward || 50) + ' XP)',

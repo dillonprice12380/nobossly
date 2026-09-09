@@ -173,7 +173,7 @@ router.post('/:id/accept', async (req, res, next) => {
       } else {
         await req.sb.from('challenge_acceptances').insert({ user_id: req.user.id, challenge_id: ch.id, duration_days: duration, due_date: due });
       }
-      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + ch.title, 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + ch.title, 'challenges', ch.id);
       if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + ch.title + '\u201d', 'challenges', ch.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
@@ -209,7 +209,7 @@ router.post('/:id/finish', async (req, res, next) => {
           category: 'challenge', story: proof.slice(0, 1000)
         }).then(...quiet('wins.insert'));
       }
-      await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed quest: ' + ch.title, 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed quest: ' + ch.title, 'challenges', ch.id);
       if (paid) {
         await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest \u201c' + ch.title + '\u201d \ud83c\udf89', 'challenges', ch.id);
         await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + ch.title + '\u201d', { emoji: ch.emoji || '\ud83c\udfc1', entityType: 'challenges', entityId: ch.id });
@@ -253,7 +253,7 @@ router.post('/tailored/:id/accept', async (req, res, next) => {
       due_date: new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10),
       accepted_at: new Date().toISOString()
     });
-    await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + t.title, 'tailored_challenges', t.id);
+    await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + t.title, 'tailored_challenges', t.id);
     if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + t.title + '\u201d', 'tailored_challenges', t.id);
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
@@ -297,7 +297,7 @@ router.post('/custom/:id/accept', async (req, res, next) => {
     if (c && c.status !== 'completed') {
       const due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
       await req.sb.from('user_custom_challenges').update({ status: 'active', duration_days: duration, due_date: due, accepted_at: new Date().toISOString(), completed_at: null }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + c.title, 'user_custom_challenges', c.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + c.title, 'user_custom_challenges', c.id);
       if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + c.title + '\u201d', 'user_custom_challenges', c.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
@@ -309,7 +309,7 @@ router.post('/custom/:id/finish', async (req, res, next) => {
     const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (c && c.status === 'active') {
       await req.sb.from('user_custom_challenges').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, c.xp_reward || 50, 'Completed quest: ' + c.title, 'user_custom_challenges', c.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'custom_quest_completed', 'Completed quest: ' + c.title, 'user_custom_challenges', c.id);
       if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
       await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + c.title + '\u201d', { emoji: c.emoji || '\ud83c\udfc1', entityType: 'user_custom_challenges', entityId: c.id });
     }
