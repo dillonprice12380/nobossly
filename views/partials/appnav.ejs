@@ -6,18 +6,34 @@
   // Teams (/collaborations) is deliberately absent: the collab hub has no
   // members yet, and an empty team surface reads as a ghost town to a new
   // signup. The route stays mounted; re-add the tab once there are people.
+  //
+  // This row is also what decides whether the section nav renders at all
+  // (_inApp, below). Coach and Feed were reachable from the top nav and from a
+  // dashboard tile but were not in here, so opening either one made the entire
+  // section nav disappear — the two newest surfaces were the two places you
+  // lost your bearings. The Wins wall was worse: named all over the marketing
+  // copy, linked from no navigation anywhere.
   var _p = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
   var APP_NAV = [
     { href: '/dashboard',      label: 'Home',       short: 'Home',   icon: 'i-suitcase',  match: ['/dashboard'] },
+    // Second, because it is the one surface meant to be opened every week.
+    { href: '/coach',          label: 'Coach',      short: 'Coach',  icon: 'i-idea',      match: ['/coach'] },
     // The Compass is where the product starts, and it had no tab at all — it was
     // reachable only from a tile buried below the fold on the dashboard.
     { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire'] },
     { href: '/ideas',          label: 'My ideas',   short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
-    { href: '/challenges',     label: 'Challenges', short: 'Goals',  icon: 'i-challenge', match: ['/challenges'] },
-    { href: '/milestones',     label: 'Milestones', short: 'Wins',   icon: 'i-milestone', match: ['/milestones'] },
+    // Short names are what the phone bar shows. "Milestones" was short-named
+    // "Wins", which now collides with the Wins wall two tabs down; "Goals"
+    // collided with the AI-tailored goals sold on the upgrade panel. Both now
+    // use the words the product uses elsewhere — the dashboard already counts
+    // "quests" and the milestones page is already a "trophy case".
+    { href: '/challenges',     label: 'Challenges', short: 'Quests', icon: 'i-challenge', match: ['/challenges'] },
+    { href: '/milestones',     label: 'Milestones', short: 'Trophies', icon: 'i-milestone', match: ['/milestones'] },
     { href: '/budget',         label: 'Budget',     short: 'Budget', icon: 'i-market',    match: ['/budget'] },
+    { href: '/feed',           label: 'Feed',       short: 'Feed',   icon: 'i-team',      match: ['/feed'] },
     { href: '/community',      label: 'Community',  short: 'Forum',  icon: 'i-community', match: ['/community'] },
+    { href: '/wins',           label: 'Wins wall',  short: 'Wins',   icon: 'i-trophy',    match: ['/wins'] },
     { href: '/reviews',        label: 'Peer review', short: 'Reviews', icon: 'i-team',   match: ['/reviews'] }
   ];
   var _active = function (item) {

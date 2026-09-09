@@ -68,7 +68,7 @@
               <strong><%= q.title %></strong>
               <p class="muted small" style="margin:.1rem 0 0"><%= q.type === 'challenge' ? 'Challenge' : 'Real-world milestone' %><%= q.done ? ' · done' : '' %></p>
             </div>
-            <% if (!q.done) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= q.href %>">Go</a><% } %>
+            <% if (!q.done) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= q.href %>"><%= q.cta || 'Go' %></a><% } %>
           </li>
         <% }) %>
       </ul>
@@ -196,20 +196,11 @@
   </div>
 <% } %>
 
-<div class="card">
-  <h2><svg class="icon icon-lg"><use href="#i-suitcase"/></svg> Workspace</h2>
-  <div class="workspace-grid">
-    <a class="ws-tile" href="/compass"><span class="ws-emoji">🧭</span><strong>Compass</strong><span class="muted small">Start here — your map out</span></a>
-    <a class="ws-tile" href="/coach"><span class="ws-emoji">💬</span><strong>Coach</strong><span class="muted small">This week's plan, and somewhere to say you're stuck</span></a>
-    <a class="ws-tile" href="/feed"><span class="ws-emoji">👥</span><strong>Feed</strong><span class="muted small">What the people you follow are doing</span></a>
-    <a class="ws-tile" href="/ideas"><span class="ws-emoji"><svg class="icon"><use href="#i-idea"/></svg></span><strong>My ideas</strong><span class="muted small">Drafts &amp; advisor verdicts</span></a>
-    <a class="ws-tile" href="/tasks"><span class="ws-emoji"><svg class="icon"><use href="#i-task"/></svg></span><strong>Tasks</strong><span class="muted small">Your kanban board</span></a>
-    <a class="ws-tile" href="/milestones"><span class="ws-emoji"><svg class="icon"><use href="#i-milestone"/></svg></span><strong>Milestones</strong><span class="muted small">Mark your wins</span></a>
-    <a class="ws-tile" href="/challenges"><span class="ws-emoji"><svg class="icon"><use href="#i-challenge"/></svg></span><strong>Challenges</strong><span class="muted small">Your quest board</span></a>
-    <a class="ws-tile" href="/budget"><span class="ws-emoji">💰</span><strong>Budget</strong><span class="muted small">Expenses &amp; budgets</span></a>
-    <a class="ws-tile" href="/reviews"><span class="ws-emoji"><svg class="icon"><use href="#i-team"/></svg></span><strong>Peer review</strong><span class="muted small">Give and get feedback</span></a>
-  </div>
-</div>
+<%# The Workspace tile grid used to sit here. Every one of its nine tiles is a
+    tab in the section nav at the top of this page, so it was a third way to
+    reach the same nine places — on the screen a member sees most often. The
+    section nav is the one that survives, because it is on every page rather
+    than only this one. %>
 
 <% if (sprint) { %>
   <div class="card" id="sprint-card">

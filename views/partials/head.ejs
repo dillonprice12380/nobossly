@@ -62,10 +62,11 @@
   <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   <div class="nav-links" id="nav-links">
     <% if (user) { %>
+      <%# One rule: this bar is global — the way back into the app, the
+          library, and the things waiting for you. Everywhere you actually
+          work is a tab in the section nav, so Coach, Feed and Community are
+          not repeated here. %>
       <a href="/dashboard">Dashboard</a>
-      <a href="/coach">Coach</a>
-      <a href="/feed">Feed</a>
-      <a href="/community">Community</a>
       <div class="nav-dropdown" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
         <div class="nav-dd-menu">

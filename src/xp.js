@@ -40,6 +40,7 @@ async function bumpStreak(sb, userId, profile) {
 
 const ladders = require('./ladders');
 const activity = require('./activity');
+const questRoutes = require('./quest_routes');
 const { notifySocial } = require('./notify');
 
 const { quiet } = require('./db');
@@ -92,12 +93,34 @@ async function ladderStatus(sb, userId, profile) {
     if (!next) return null;
 
     const have = next.gates.length ? await achievedQuests(sb, userId) : new Set();
-    const quests = next.gates.map(g => ({
-      type: g.type,
-      title: g.title,
-      href: g.type === 'challenge' ? '/challenges' : '/milestones',
-      done: have.has(ladders.gateKey(g))
-    }));
+
+    // Where each quest is actually done. Five of the milestone gates are
+    // awarded automatically from something you do on another page entirely, so
+    // the definitions are loaded and their auto_kind decides the destination —
+    // the same field sweepMilestones() awards on, rather than a second list
+    // that would drift. A failed lookup falls back to the old behaviour.
+    let defs = {};
+    const milestoneTitles = next.gates.filter(g => g.type === 'milestone').map(g => g.title);
+    if (milestoneTitles.length) {
+      // Seven titles have two rows apiece — an old seed and a newer one, the
+      // old one deactivated rather than deleted. Without the is_active filter
+      // whichever row came back last would decide the link.
+      const { data } = await sb.from('predefined_milestones')
+        .select('title, auto_kind, is_claimable')
+        .eq('is_active', true).in('title', milestoneTitles);
+      (data || []).forEach(d => { defs[d.title] = d; });
+    }
+
+    const quests = next.gates.map(g => {
+      const to = questRoutes.destinationFor(g, defs[g.title]);
+      return {
+        type: g.type,
+        title: g.title,
+        href: to.href,
+        cta: to.cta,
+        done: have.has(ladders.gateKey(g))
+      };
+    });
 
     const needMin = next.min && next.min > 0 ? Math.min(next.min, quests.length) : quests.length;
     const doneCount = quests.filter(q => q.done).length;
