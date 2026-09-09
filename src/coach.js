@@ -107,7 +107,14 @@ async function contextFor(sb, userId, profile, q) {
   const [ladder, ideaRow, planRow, checkins] = await Promise.all([
     require('./xp').ladderStatus(sb, userId, p).catch(() => null),
     sb.from('generated_ideas')
-      .select('name, tagline, draft, fit_test, fit_results, success_likelihood, cut_at')
+      // fit_results is NOT a column. The graded results live inside the
+      // `advisor` jsonb — src/routes/compass.js writes patch.advisor.fit_results
+      // — and asking for a column that does not exist makes PostgREST reject the
+      // whole select with a 400. supabase-js resolves rather than rejects, so
+      // ideaRow came back null and the coach has been answering without the
+      // member's idea, fit test or fit results in front of it. Every reply,
+      // every weekly plan, every proof review.
+      .select('name, tagline, draft, fit_test, advisor, success_likelihood, cut_at')
       .eq('user_id', userId).is('cut_at', null)
       .order('is_favorited', { ascending: false }).order('position').limit(1)
       .maybeSingle().then(r => r.data, () => null),
@@ -157,7 +164,8 @@ async function contextFor(sb, userId, profile, q) {
     dealBreakers: (q && q.deal_breakers) || null,
     idea: ideaRow || null,
     fitTest: (ideaRow && Array.isArray(ideaRow.fit_test) && ideaRow.fit_test) || [],
-    fitResults: (ideaRow && Array.isArray(ideaRow.fit_results) && ideaRow.fit_results) || [],
+    fitResults: (ideaRow && ideaRow.advisor && Array.isArray(ideaRow.advisor.fit_results)
+      && ideaRow.advisor.fit_results) || [],
     bar,
     streak: p.streak_days || 0,
     lastWeek,

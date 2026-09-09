@@ -35,16 +35,28 @@ begin
 end $function$;
 
 -- ---------------------------------------------------------------------------
--- 12. process_task_reminders() could be run by anyone, signed in or not.
+-- 12. process_task_reminders() can be run by anyone, signed in or not.
 --
--- It writes task_due notifications and flips the reminded_* flags that make it
--- idempotent, so the damage was bounded to reminders arriving at a moment
--- somebody else chose. It is also dead: the daily reminder is a pg_cron job
--- that calls the task-reminders edge function, which does its own querying
--- under the service role and never touches this. Revoked rather than dropped,
--- because "nothing calls it" is a claim about today.
+-- NOT CLOSED, and the attempt to close it broke production for fourteen
+-- minutes. I revoked it, having called it dead: the daily reminder EMAIL is a
+-- pg_cron job that calls the task-reminders edge function, which queries under
+-- the service role and never touches this function. Both of those are true.
+--
+-- What I did not do was grep the Node app. server.js:217 runs its own
+-- setInterval every ten minutes and calls this through the ANON client — the
+-- in-app task_due notifications, which are a different feature from the daily
+-- email. The logs are unambiguous: 200 at 21:07 UTC, then 401 every ten minutes
+-- from 21:21, which is exactly when the revoke landed.
+--
+-- Restored. What a caller can actually do here is run the sweep earlier than
+-- scheduled; it is idempotent through the reminded_* flags and only ever
+-- notifies a task's own owner about their own task, which is why this was the
+-- weakest item on the audit. Closing it properly means putting the sweep behind
+-- the service role key or a shared secret in app_secrets — both need a
+-- deployment env var set first, so it is the owner's call rather than a silent
+-- trade of a working feature for a marginal gain.
 
-revoke all on function public.process_task_reminders() from public, anon, authenticated;
+grant execute on function public.process_task_reminders() to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 15. pg_net's HTTP functions were executable by every role.

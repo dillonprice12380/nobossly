@@ -139,8 +139,14 @@ const hygiene = read('migrations/2026-09-09_audit_fixes_hygiene.sql');
 ok('admin is granted only on a confirmed address',
    /lower\(u\.email\) = 'dillonprice@nobossly\.com'[\s\S]{0,80}email_confirmed_at is not null/.test(hygiene),
    'the address alone was the whole test before');
-ok('process_task_reminders is no longer callable by anyone signed out or in',
-   /revoke all on function public\.process_task_reminders\(\) from public, anon, authenticated/.test(hygiene));
+// Deliberately still open, and the file has to say so. server.js:217 calls it
+// through the anon client every ten minutes for the in-app task_due
+// notifications; revoking it returned 401 every ten minutes until it was put
+// back. If it is ever closed for real, the caller has to move first.
+ok('process_task_reminders is still callable by the sweep that needs it',
+   /grant execute on function public\.process_task_reminders\(\) to anon, authenticated/.test(hygiene)
+   && /setInterval/.test(read('server.js')) && /process_task_reminders/.test(read('server.js')),
+   'server.js runs the sweep on an interval through the anon client');
 for (const fn of ['set_updated_at()', 'guide_location_filter_ids(text)', 'count_guides(text, text, text)',
                   'guide_facets(text, text, text)', 'list_guides(text, text, text, integer, integer)',
                   'similar_location_guides(uuid, integer)']) {
