@@ -42,6 +42,7 @@ const ladders = require('./ladders');
 const activity = require('./activity');
 const { notifySocial } = require('./notify');
 
+const { quiet } = require('./db');
 // ---------- The Ladder ----------
 // Levels gate on real accomplishments. Each path has its own ten rungs and
 // its own gates — see src/ladders.js, which is the source of truth for both.
@@ -144,7 +145,7 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
       profile.current_level = level;
       const info = levels.find(l => l.level === level) || {};
       const msg = 'LEVEL UP! ' + (info.emoji || '\u2b06\ufe0f') + ' You are now Level ' + level + ' \u2014 ' + (info.title || '') + '. ' + ladders.unlockText(info);
-      await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+      await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(...quiet('push_notification:levels'));
       // Out to the people following them, in both forms: the notification is a
       // nudge they clear, the activity row is a thing that stays. The rung is
       // named for their own path, so a follower on a different ladder reads
@@ -156,8 +157,8 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
         // Real-world unlocks (accelerator track, cohort leader, featured playbook)
         // check verified_level, so they open on approval. Unique(user_id, level)
         // makes the insert idempotent.
-        await sb.from('verification_requests').insert({ user_id: userId, level }).then(() => {}, () => {});
-        await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+        await sb.from('verification_requests').insert({ user_id: userId, level }).then(...quiet('verification_requests.insert'));
+        await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(...quiet('push_notification:levels'));
       }
     }
     // The level's own title and emoji ride along so the celebration can name

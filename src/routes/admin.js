@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { serviceClient } = require('../supabase');
 
+const { quiet } = require('../db');
 // ---------- Block editor rendering ----------
 const escHtml = t => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const inlineMd = t => escHtml(t)
@@ -92,10 +93,10 @@ router.post('/verifications/:id', async (req, res, next) => {
     const msg = action === 'approve'
       ? '✅ Level ' + vr.level + ' verified — your real-world unlocks are open. ' + (note || '')
       : 'Your Level ' + vr.level + ' verification needs another look. ' + (note || 'Add more detail or a public link and resubmit from /challenges/verify.');
-    await req.sb.rpc('push_notification', { target_user: vr.user_id, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+    await req.sb.rpc('push_notification', { target_user: vr.user_id, ntype: 'levels', nmessage: msg.slice(0, 500), nentity_type: null, nentity_id: null }).then(...quiet('push_notification:levels'));
     if (action === 'reject') {
       // Re-open so the founder can improve their evidence and resubmit.
-      await req.sb.from('verification_requests').update({ status: 'pending', reviewed_at: null }).eq('id', vr.id).then(() => {}, () => {});
+      await req.sb.from('verification_requests').update({ status: 'pending', reviewed_at: null }).eq('id', vr.id).then(...quiet('push_notification:levels'));
     }
     res.redirect('/admin/verifications');
   } catch (e) { next(e); }

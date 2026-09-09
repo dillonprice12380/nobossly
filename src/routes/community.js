@@ -4,6 +4,7 @@ const { notifySocial } = require('../notify');
 const { sanitizeForumHtml, addLinkCards } = require('../richtext');
 const { requireAuth } = require('../middleware/auth');
 const { anonClient } = require('../supabase');
+const { quiet } = require('../db');
 const db = req => req.sb || anonClient();
 
 const REACTIONS = [
@@ -150,7 +151,7 @@ router.post('/t/:id/reply', requireAuth, async (req, res, next) => {
       await awardXP(req.sb, req.user.id, req.profile, 5, 'Replied in the forum', 'forum_replies', null);
       const { data: full } = await req.sb.from('forum_threads').select('user_id, title').eq('id', thread.id).maybeSingle();
       if (full && full.user_id !== req.user.id) {
-        await req.sb.rpc('push_notification', { target_user: full.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'Someone') + ' replied to your thread "' + (full.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(() => {}, () => {});
+        await req.sb.rpc('push_notification', { target_user: full.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'Someone') + ' replied to your thread "' + (full.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(...quiet('push_notification:forum_reply'));
       }
     }
     res.redirect('/community/t/' + thread.id);

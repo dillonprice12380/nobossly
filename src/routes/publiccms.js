@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { anonClient } = require('../supabase');
 
+const { quiet } = require('../db');
 const client = req => req.sb || anonClient();
 
 const PER_PAGE = 12;
@@ -237,7 +238,7 @@ router.get('/blog/:slug', async (req, res, next) => {
     if (!post) return res.status(404).render('error', { title: 'Not found', message: 'Post not found.' });
     const { html, toc } = buildToc(post.body);
     post.body = html;
-    client(req).rpc('increment_blog_views', { post_slug: post.slug }).then(() => {}, () => {});
+    client(req).rpc('increment_blog_views', { post_slug: post.slug }).then(...quiet('increment_blog_views'));
     let authorName = null;
     if (post.author_id) {
       const { data: a } = await client(req).from('profiles').select('display_name, username').eq('id', post.author_id).maybeSingle();

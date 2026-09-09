@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { anonClient } = require('../supabase');
 const { awardXP } = require('../xp');
 
+const { quiet } = require('../db');
 const enc = encodeURIComponent;
 const CATS = {
   first_dollar: '💵 First dollar',
@@ -74,11 +75,11 @@ router.post('/:id/approve', async (req, res, next) => {
         const { data: wp } = await req.sb.from('profiles').select('*').eq('id', win.user_id).maybeSingle();
         if (wp) await awardXP(req.sb, win.user_id, wp, 25, 'Win featured on the wall: ' + win.title, 'wins', win.id);
       } catch (e2) { console.error('win xp', e2.message); }
-      await req.sb.rpc('push_notification', { target_user: win.user_id, ntype: 'wins', nmessage: 'Your win “' + win.title + '” is now live on the Wins wall 🎉', nentity_type: null, nentity_id: null }).then(() => {}, () => {});
+      await req.sb.rpc('push_notification', { target_user: win.user_id, ntype: 'wins', nmessage: 'Your win “' + win.title + '” is now live on the Wins wall 🎉', nentity_type: null, nentity_id: null }).then(...quiet('push_notification:wins'));
       // Into the winner's follower feed. Approval runs under the admin's client
       // and activity_events is own-rows-only, so this goes through a definer
       // function that can do nothing except mirror an already-approved win.
-      await req.sb.rpc('record_win_activity', { p_win: win.id }).then(() => {}, () => {});
+      await req.sb.rpc('record_win_activity', { p_win: win.id }).then(...quiet('record_win_activity'));
     }
     res.redirect('/wins');
   } catch (e) { next(e); }

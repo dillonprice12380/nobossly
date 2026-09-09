@@ -6,6 +6,7 @@
 
 const pathsLib = require('./paths');
 
+const { quiet } = require('./db');
 const DAY = 86400000;
 const dstr = d => new Date(d).toISOString().slice(0, 10);
 const daysBetween = (a, b) => Math.floor((b - a) / DAY);
@@ -186,7 +187,7 @@ async function pickTips(sb, userId, state, limit = 2) {
   const picked = eligible.slice(0, limit);
   if (picked.length && logSeen) {
     sb.from('guidance_seen').insert(picked.map(p => ({ user_id: userId, rule_key: p.key })))
-      .then(() => {}, () => {});
+      .then(...quiet('guidance_seen.insert'));
   }
   return picked.map(p => ({ key: p.key, category: p.category, message: fill(p.message, state), cta_label: p.cta_label, cta_href: p.cta_href }));
 }

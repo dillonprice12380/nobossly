@@ -11,6 +11,7 @@ const { awardXP } = require('./xp');
 const { notifySocial } = require('./notify');
 const activity = require('./activity');
 
+const { quiet } = require('./db');
 const n = async q => { const { count } = await q; return count || 0; };
 
 async function computeMetrics(sb, userId, profile, kinds) {
@@ -92,10 +93,10 @@ async function sweepMilestones(sb, userId, profile, paid) {
       target_user: userId, ntype: 'milestone',
       nmessage: '\ud83c\udfc6 Trophy unlocked: ' + (def.emoji || '') + ' ' + def.title + ' (+' + (def.xp_reward || 50) + ' XP)',
       nentity_type: 'predefined_milestones', nentity_id: def.id
-    }).then(() => {}, () => {});
+    }).then(...quiet('push_notification:milestone'));
     if (paid) {
       const who = profile.display_name || profile.username || 'A member';
-      await notifySocial(sb, userId, who + ' unlocked the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id).then(() => {}, () => {});
+      await notifySocial(sb, userId, who + ' unlocked the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
       await activity.record(sb, userId, 'milestone', 'unlocked \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: def.id });
       if (def.badge_id) {
         const { data: hasBadge } = await sb.from('user_badges').select('id').eq('user_id', userId).eq('badge_id', def.badge_id).maybeSingle();
@@ -103,7 +104,7 @@ async function sweepMilestones(sb, userId, profile, paid) {
           await sb.from('user_badges').insert({ user_id: userId, badge_id: def.badge_id });
           const { data: b } = await sb.from('badges').select('name, emoji').eq('id', def.badge_id).maybeSingle();
           if (b) {
-            await notifySocial(sb, userId, who + ' earned the ' + b.emoji + ' \u201c' + b.name + '\u201d badge', 'badges', def.badge_id).then(() => {}, () => {});
+            await notifySocial(sb, userId, who + ' earned the ' + b.emoji + ' \u201c' + b.name + '\u201d badge', 'badges', def.badge_id).then(...quiet('badges.insert'));
             await activity.record(sb, userId, 'badge', 'earned the \u201c' + b.name + '\u201d badge', { emoji: b.emoji, entityType: 'badges', entityId: def.badge_id });
           }
         }

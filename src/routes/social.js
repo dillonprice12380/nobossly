@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { requireAuth, planOf } = require('../middleware/auth');
 const { gate } = require('../upgrade');
 
+const { quiet } = require('../db');
 const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || ('group-' + Date.now());
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -9,7 +10,7 @@ function notify(req, targetUser, message, entityType, entityId) {
   return req.sb.rpc('push_notification', {
     target_user: targetUser, ntype: 'social', nmessage: message,
     nentity_type: entityType || null, nentity_id: entityId || null
-  }).then(() => {}, () => {});
+  }).then(...quiet('push_notification:social'));
 }
 
 // ---------------- Reports ----------------

@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
 
+const { quiet } = require('../db');
 const STATUSES = ['todo', 'in_progress', 'blocked', 'done'];
 const PRIORITIES = ['urgent', 'high', 'medium', 'low'];
 
@@ -129,7 +130,7 @@ router.post('/create', async (req, res, next) => {
         target_user: assignee, ntype: 'task_assigned',
         nmessage: (req.profile.display_name || 'A teammate') + ' assigned you a task: "' + title.slice(0, 60) + '"',
         nentity_type: null, nentity_id: null
-      }).then(() => {}, () => {});
+      }).then(...quiet('push_notification:task_assigned'));
     }
     res.json({ ok: true, task: data });
   } catch (e) { next(e); }
@@ -162,7 +163,7 @@ router.post('/:id/update', async (req, res, next) => {
             target_user: b.assigned_to, ntype: 'task_assigned',
             nmessage: (req.profile.display_name || 'A teammate') + ' assigned you a task' + (b.title ? ': "' + String(b.title).slice(0, 60) + '"' : ''),
             nentity_type: null, nentity_id: null
-          }).then(() => {}, () => {});
+          }).then(...quiet('push_notification:task_assigned'));
         }
       }
     }

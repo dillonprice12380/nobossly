@@ -3,6 +3,7 @@ const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
 
+const { quiet } = require('../db');
 // The peer-review route to "Get 3 Feedback Sessions".
 //
 // That quest previously had exactly one route: talk to three people off-site
@@ -56,7 +57,7 @@ async function completeChallenge(req, title, note) {
   await req.sb.from('challenge_acceptances')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('user_id', req.user.id).eq('challenge_id', ch.id).eq('status', 'active')
-    .then(() => {}, () => {});
+    .then(...quiet('challenge_acceptances.update'));
   await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
   return ch;
 }
@@ -240,7 +241,7 @@ router.post('/:id/review', async (req, res, next) => {
       target_user: reqRow.submitter_id, ntype: 'community',
       nmessage: '💬 ' + nameOf(req) + ' reviewed “' + reqRow.title + '”',
       nentity_type: 'peer_reviews', nentity_id: reqRow.id
-    }).then(() => {}, () => {});
+    }).then(...quiet('push_notification:community'));
 
     // Count the founder's completed reviews across ALL their requests, and
     // clear the gate at three.
@@ -251,7 +252,7 @@ router.post('/:id/review', async (req, res, next) => {
 
     await req.sb.from('peer_reviews')
       .update({ status: total >= SESSIONS_NEEDED ? 'completed' : 'in_review', updated_at: new Date().toISOString() })
-      .eq('id', reqRow.id).then(() => {}, () => {});
+      .eq('id', reqRow.id).then(...quiet('peer_reviews.update'));
 
     if (total >= SESSIONS_NEEDED) {
       // The gate belongs to the founder who ASKED, not the reviewer, so it
@@ -261,11 +262,11 @@ router.post('/:id/review', async (req, res, next) => {
         target_user: reqRow.submitter_id, ntype: 'challenges',
         nmessage: '🎯 Three peers have now reviewed your work — open Peer review to claim “' + GATE_CHALLENGE + '”.',
         nentity_type: 'peer_reviews', nentity_id: reqRow.id
-      }).then(() => {}, () => {});
+      }).then(...quiet('push_notification:challenges'));
     }
 
     if (planOf(req.profile) === 'paid') {
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' gave a peer review 💬', 'peer_reviews', reqRow.id).then(() => {}, () => {});
+      await notifySocial(req.sb, req.user.id, nameOf(req) + ' gave a peer review 💬', 'peer_reviews', reqRow.id);
     }
     res.redirect(back + '?msg=' + encodeURIComponent('Review posted — +' + REVIEW_XP + ' XP. That is the half of this that makes the queue work.'));
   } catch (e) { next(e); }

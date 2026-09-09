@@ -9,6 +9,7 @@ const { ensureClassified, getElectives } = require('../tailor');
 const { gate, gateCredits } = require('../upgrade');
 const credits = require('../credits');
 
+const { quiet } = require('../db');
 const isPaid = req => planOf(req.profile) === 'paid';
 const nameOf = req => (req.profile.display_name || req.profile.username || 'A member');
 const cleanDuration = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
@@ -206,7 +207,7 @@ router.post('/:id/finish', async (req, res, next) => {
         await req.sb.from('wins').insert({
           user_id: req.user.id, title: '\ud83c\udfc6 Quest complete: ' + ch.title,
           category: 'challenge', story: proof.slice(0, 1000)
-        }).then(() => {}, () => {});
+        }).then(...quiet('wins.insert'));
       }
       await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
       if (paid) {

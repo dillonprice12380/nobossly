@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { fetchOg, firstUrl } = require('../notify');
 
+const { quiet } = require('../db');
 async function findOrCreateConversation(sb, me, other) {
   const { data: existing } = await sb.from('conversations').select('*')
     .or(`and(participant_a.eq.${me},participant_b.eq.${other}),and(participant_a.eq.${other},participant_b.eq.${me})`)
@@ -105,7 +106,7 @@ router.post('/c/:id', async (req, res, next) => {
         attachment_url: attachmentUrl, attachment_name: attachmentName, attachment_type: attachmentType, ...link });
       await req.sb.from('conversations').update({ last_message_at: new Date().toISOString() }).eq('id', convo.id);
       const otherId = convo.participant_a === req.user.id ? convo.participant_b : convo.participant_a;
-      await req.sb.rpc('push_notification', { target_user: otherId, ntype: 'message', nmessage: (req.profile.display_name || 'Someone') + ' sent you a message', nentity_type: 'conversations', nentity_id: convo.id }).then(() => {}, () => {});
+      await req.sb.rpc('push_notification', { target_user: otherId, ntype: 'message', nmessage: (req.profile.display_name || 'Someone') + ' sent you a message', nentity_type: 'conversations', nentity_id: convo.id }).then(...quiet('push_notification:message'));
     }
     res.redirect('/messages/c/' + req.params.id);
   } catch (e) { next(e); }

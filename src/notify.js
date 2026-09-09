@@ -1,7 +1,8 @@
+const { quiet } = require('./db');
 // Social fan-out + link preview helpers
 function notifySocial(sb, actorId, message, entityType, entityId) {
   return sb.rpc('notify_social', { actor: actorId, nmessage: message, netype: entityType || null, neid: entityId || null })
-    .then(() => {}, () => {});
+    .then(...quiet('notify_social'));
 }
 
 // Fetch Open Graph preview for a URL (best effort, 4s timeout)

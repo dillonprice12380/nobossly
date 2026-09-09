@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
 const { gate } = require('../upgrade');
 
+const { quiet } = require('../db');
 const isPaid = req => planOf(req.profile) === 'paid';
 
 router.get('/', async (req, res, next) => {
@@ -59,7 +60,7 @@ router.post('/:id/invite', async (req, res, next) => {
       target_user: person.id, ntype: 'collab_invite',
       nmessage: (req.profile.display_name || 'Someone') + ' invited you to collaborate on "' + project.name + '"',
       nentity_type: 'collab_projects', nentity_id: project.id
-    }).then(() => {}, () => {});
+    }).then(...quiet('push_notification:collab_invite'));
     res.redirect('/collaborations?msg=' + encodeURIComponent('Invite sent to ' + (person.display_name || person.username) + '.'));
   } catch (e) { next(e); }
 });
@@ -75,7 +76,7 @@ router.post('/invite/:id/respond', async (req, res, next) => {
           target_user: invite.project.owner_id, ntype: 'collab_response',
           nmessage: (req.profile.display_name || 'Someone') + (status === 'accepted' ? ' joined ' : ' declined ') + '"' + invite.project.name + '"',
           nentity_type: 'collab_projects', nentity_id: invite.project_id
-        }).then(() => {}, () => {});
+        }).then(...quiet('push_notification:collab_response'));
       }
     }
     res.redirect('/collaborations');

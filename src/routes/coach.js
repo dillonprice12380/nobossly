@@ -21,6 +21,7 @@ const paths = require('../paths');
 const { requireAuth, planOf } = require('../middleware/auth');
 const { gate, gateCredits } = require('../upgrade');
 
+const { quiet } = require('../db');
 router.use(requireAuth);
 
 const enc = encodeURIComponent;
@@ -147,7 +148,7 @@ router.post('/ask', async (req, res, next) => {
       active_sprint_context: coach.brief(ctx).slice(0, 4000),
       last_briefed_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' }).then(() => {}, () => {});
+    }, { onConflict: 'user_id' }).then(...quiet('ai_memory.upsert'));
 
     res.redirect('/coach#latest');
   } catch (e) { next(e); }
