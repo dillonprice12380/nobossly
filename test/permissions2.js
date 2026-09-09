@@ -132,5 +132,28 @@ ok('...and stop at thirty', /if v_recent >= 30 then/.test(sql));
 ok('notifying yourself is never limited', /target_user is distinct from auth\.uid\(\) and not is_admin\(\)/.test(sql),
    'level-ups, trophies and task reminders all go to the member themselves');
 
-console.log(fail ? `\n${fail} failing` : '\nAll good');
+// ---------------------------------------------------------------------------
+console.log('\nThe low-severity items:');
+
+const hygiene = read('migrations/2026-09-09_audit_fixes_hygiene.sql');
+ok('admin is granted only on a confirmed address',
+   /lower\(u\.email\) = 'dillonprice@nobossly\.com'[\s\S]{0,80}email_confirmed_at is not null/.test(hygiene),
+   'the address alone was the whole test before');
+ok('process_task_reminders is no longer callable by anyone signed out or in',
+   /revoke all on function public\.process_task_reminders\(\) from public, anon, authenticated/.test(hygiene));
+for (const fn of ['set_updated_at()', 'guide_location_filter_ids(text)', 'count_guides(text, text, text)',
+                  'guide_facets(text, text, text)', 'list_guides(text, text, text, integer, integer)',
+                  'similar_location_guides(uuid, integer)']) {
+  ok(`${fn.split('(')[0]} has a pinned search_path`,
+     hygiene.includes(`alter function public.${fn} set search_path to 'public';`));
+}
+
+// pg_net is load-bearing: cron job 1 calls net.http_post to run the daily
+// reminder. Dropping or moving it would have ended those emails silently.
+ok('pg_net is neither dropped nor moved', !/drop extension pg_net/i.test(hygiene)
+   && !/alter extension pg_net set schema/i.test(hygiene),
+   'cron job 1 calls net.http_post for the daily reminder emails');
+ok('...and the revoke that cannot work is not left in the file as if it did',
+   !/^revoke all on function net\./m.test(hygiene),
+   'postgres cannot revoke a grant supabase_admin made');
 process.exit(fail ? 1 : 0);
