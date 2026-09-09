@@ -83,10 +83,10 @@
     <% } else { %><p class="muted">No badges yet.</p><% } %>
   </div>
   <div class="card">
-    <h3><svg class="icon"><use href="#i-trophy"/></svg> Awards & milestones (<%= milestones.length %>)</h3>
+    <h3><svg class="icon"><use href="#i-trophy"/></svg> Awards & trophies (<%= milestones.length %>)</h3>
     <% if (milestones.length) { %>
       <ul class="feature-list"><% milestones.forEach(m => { %><li><%= m.emoji %> <%= m.title %></li><% }) %></ul>
-    <% } else { %><p class="muted">No milestones marked yet.</p><% } %>
+    <% } else { %><p class="muted">No trophies yet.</p><% } %>
   </div>
 </div>
 

@@ -118,7 +118,7 @@ router.get('/verify', async (req, res, next) => {
   try {
     const { data: vr } = await req.sb.from('verification_requests').select('*')
       .eq('user_id', req.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!vr) return res.redirect('/challenges?msg=' + encodeURIComponent('No verification is pending \u2014 keep climbing!'));
+    if (!vr) return res.redirect('/quests?msg=' + encodeURIComponent('No verification is pending \u2014 keep climbing!'));
     res.render('verify_level', { title: 'Verify Level ' + vr.level, vr, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
@@ -129,14 +129,14 @@ router.post('/verify', async (req, res, next) => {
     const kind = ['public_link', 'redacted_screenshot', 'call', 'note_only'].includes(b.evidence_kind) ? b.evidence_kind : 'note_only';
     const note = String(b.evidence_note || '').trim().slice(0, 2000);
     if (note.length < 30) {
-      return res.redirect('/challenges/verify?msg=' + encodeURIComponent('Add a bit more detail \u2014 a few sentences on what you did and how it went.'));
+      return res.redirect('/quests/verify?msg=' + encodeURIComponent('Add a bit more detail \u2014 a few sentences on what you did and how it went.'));
     }
     const url = String(b.evidence_url || '').trim().slice(0, 500) || null;
     const { error } = await req.sb.from('verification_requests')
       .update({ evidence_kind: kind, evidence_note: note, evidence_url: url })
       .eq('user_id', req.user.id).eq('status', 'pending');
     if (error) throw error;
-    res.redirect('/challenges?msg=' + encodeURIComponent('Evidence submitted \u2014 your verification is in review. Unlocks open on approval.'));
+    res.redirect('/quests?msg=' + encodeURIComponent('Evidence submitted \u2014 your verification is in review. Unlocks open on approval.'));
   } catch (e) { next(e); }
 });
 
@@ -144,7 +144,7 @@ router.post('/verify', async (req, res, next) => {
 router.get('/:id/leaderboard', async (req, res, next) => {
   try {
     const { data: ch } = await req.sb.from('challenges').select('*').eq('id', req.params.id).maybeSingle();
-    if (!ch) return res.redirect('/challenges');
+    if (!ch) return res.redirect('/quests');
     const { data: rows, error } = await req.sb.rpc('cohort_leaderboard', { p_challenge: ch.id });
     if (error) throw error;
     res.render('cohort_leaderboard', { title: ch.title + ' \u2014 Leaderboard', ch, rows: rows || [], myId: req.user.id });
@@ -160,7 +160,7 @@ router.post('/:id/accept', async (req, res, next) => {
       // Cohorts share a fixed window: everyone's deadline is the cohort end date.
       if (ch.is_cohort) {
         if (ch.ends_at && new Date(ch.ends_at).getTime() < Date.now()) {
-          return res.redirect('/challenges?msg=' + encodeURIComponent('That cohort has already ended \u2014 keep an eye out for the next one.'));
+          return res.redirect('/quests?msg=' + encodeURIComponent('That cohort has already ended \u2014 keep an eye out for the next one.'));
         }
         const end = ch.ends_at ? new Date(ch.ends_at) : new Date(Date.now() + 30 * 86400000);
         duration = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
@@ -168,15 +168,15 @@ router.post('/:id/accept', async (req, res, next) => {
       }
       const { data: existing } = await req.sb.from('challenge_acceptances').select('id, status').eq('user_id', req.user.id).eq('challenge_id', ch.id).maybeSingle();
       if (existing) {
-        if (existing.status === 'completed') return res.redirect('/challenges');
+        if (existing.status === 'completed') return res.redirect('/quests');
         await req.sb.from('challenge_acceptances').update({ status: 'active', duration_days: duration, due_date: due, accepted_at: new Date().toISOString(), completed_at: null }).eq('id', existing.id);
       } else {
         await req.sb.from('challenge_acceptances').insert({ user_id: req.user.id, challenge_id: ch.id, duration_days: duration, due_date: due });
       }
-      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted challenge: ' + ch.title, 'challenges', ch.id);
-      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + ch.title + '\u201d', 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + ch.title, 'challenges', ch.id);
+      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + ch.title + '\u201d', 'challenges', ch.id);
     }
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 
@@ -187,7 +187,7 @@ router.post('/:id/accept', async (req, res, next) => {
 router.post('/:id/finish', async (req, res, next) => {
   try {
     const paid = isPaid(req);
-    const back = req.body.from === 'dashboard' ? '/dashboard' : '/challenges';
+    const back = req.body.from === 'dashboard' ? '/dashboard' : '/quests';
     const [{ data: a }, { data: ch }] = await Promise.all([
       req.sb.from('challenge_acceptances').select('*').eq('challenge_id', req.params.id).eq('user_id', req.user.id).maybeSingle(),
       req.sb.from('challenges').select('*').eq('id', req.params.id).maybeSingle()
@@ -195,7 +195,7 @@ router.post('/:id/finish', async (req, res, next) => {
     if (a && a.status === 'active' && ch) {
       const proof = String(req.body.proof_note || '').trim();
       if (ch.requires_proof && proof.length < 25) {
-        return res.redirect('/challenges?msg=' + encodeURIComponent('\u201c' + ch.title + '\u201d is a quest \u2014 add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
+        return res.redirect('/quests?msg=' + encodeURIComponent('\u201c' + ch.title + '\u201d is a quest \u2014 add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
       }
       const acceptedMs = a.accepted_at ? new Date(a.accepted_at).getTime() : 0;
       const flagged = !!(ch.requires_proof && (ch.xp_reward || 0) >= 150 && acceptedMs && (Date.now() - acceptedMs) < 86400000);
@@ -209,9 +209,9 @@ router.post('/:id/finish', async (req, res, next) => {
           category: 'challenge', story: proof.slice(0, 1000)
         }).then(...quiet('wins.insert'));
       }
-      await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed quest: ' + ch.title, 'challenges', ch.id);
       if (paid) {
-        await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + ch.title + '\u201d \ud83c\udf89', 'challenges', ch.id);
+        await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest \u201c' + ch.title + '\u201d \ud83c\udf89', 'challenges', ch.id);
         await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + ch.title + '\u201d', { emoji: ch.emoji || '\ud83c\udfc1', entityType: 'challenges', entityId: ch.id });
         if (ch.badge_id) {
           const { data: hasBadge } = await req.sb.from('user_badges').select('id').eq('user_id', req.user.id).eq('badge_id', ch.badge_id).maybeSingle();
@@ -230,7 +230,7 @@ router.post('/:id/finish', async (req, res, next) => {
 router.post('/:id/abandon', async (req, res, next) => {
   try {
     await req.sb.from('challenge_acceptances').update({ status: 'abandoned' }).eq('challenge_id', req.params.id).eq('user_id', req.user.id);
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 
@@ -241,9 +241,9 @@ router.post('/:id/abandon', async (req, res, next) => {
 router.post('/tailored/:id/accept', async (req, res, next) => {
   try {
     const { data: t } = await req.sb.from('tailored_challenges').select('*').eq('id', req.params.id).eq('is_active', true).maybeSingle();
-    if (!t) return res.redirect('/challenges');
+    if (!t) return res.redirect('/quests');
     const { data: existing } = await req.sb.from('user_custom_challenges').select('id, status').eq('user_id', req.user.id).eq('tailored_id', t.id).maybeSingle();
-    if (existing) return res.redirect('/challenges');
+    if (existing) return res.redirect('/quests');
     const duration = cleanDuration(req.body.duration_days || t.suggested_days);
     await req.sb.from('user_custom_challenges').insert({
       user_id: req.user.id, tailored_id: t.id,
@@ -253,9 +253,9 @@ router.post('/tailored/:id/accept', async (req, res, next) => {
       due_date: new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10),
       accepted_at: new Date().toISOString()
     });
-    await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted challenge: ' + t.title, 'tailored_challenges', t.id);
-    if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + t.title + '\u201d', 'tailored_challenges', t.id);
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + t.title, 'tailored_challenges', t.id);
+    if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + t.title + '\u201d', 'tailored_challenges', t.id);
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 
@@ -264,14 +264,14 @@ router.post('/generate', async (req, res, next) => {
   try {
     if (!isPaid(req)) return gate(res, 'ai_challenges');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!bp) return res.redirect('/challenges?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor challenges to it.'));
+    if (!bp) return res.redirect('/quests?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor quests to it.'));
     let items;
     try { items = await credits.run(req.sb, 'challenges', () => ai.generateChallenges(req.accessToken, bp)); }
     catch (err) {
-      if (err.outOfCredits) return gateCredits(res, err.credits, '/challenges');
-      return res.redirect('/challenges?msg=' + encodeURIComponent('Could not generate challenges: ' + err.message));
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/quests');
+      return res.redirect('/quests?msg=' + encodeURIComponent('Could not generate quests: ' + err.message));
     }
-    if (!Array.isArray(items) || !items.length) return res.redirect('/challenges?msg=' + encodeURIComponent('No challenges were generated \u2014 please try again.'));
+    if (!Array.isArray(items) || !items.length) return res.redirect('/quests?msg=' + encodeURIComponent('No quests were generated \u2014 please try again.'));
     // Replace not-yet-completed AI challenges (pending/abandoned) with the fresh set.
     await req.sb.from('user_custom_challenges').delete().eq('user_id', req.user.id).in('status', ['pending', 'abandoned']).is('tailored_id', null);
     const rows = items.slice(0, 10).map(c => ({
@@ -283,7 +283,7 @@ router.post('/generate', async (req, res, next) => {
       xp_reward: Math.max(10, Math.min(200, parseInt(c.xp_reward, 10) || 50))
     }));
     await req.sb.from('user_custom_challenges').insert(rows);
-    res.redirect('/challenges?msg=' + encodeURIComponent('Your AI-tailored challenges are ready.'));
+    res.redirect('/quests?msg=' + encodeURIComponent('Your AI-tailored quests are ready.'));
   } catch (e) { next(e); }
 });
 
@@ -297,10 +297,10 @@ router.post('/custom/:id/accept', async (req, res, next) => {
     if (c && c.status !== 'completed') {
       const due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
       await req.sb.from('user_custom_challenges').update({ status: 'active', duration_days: duration, due_date: due, accepted_at: new Date().toISOString(), completed_at: null }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted challenge: ' + c.title, 'user_custom_challenges', c.id);
-      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the challenge \u201c' + c.title + '\u201d', 'user_custom_challenges', c.id);
+      await awardXP(req.sb, req.user.id, req.profile, 5, 'Accepted quest: ' + c.title, 'user_custom_challenges', c.id);
+      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest \u201c' + c.title + '\u201d', 'user_custom_challenges', c.id);
     }
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 
@@ -309,18 +309,18 @@ router.post('/custom/:id/finish', async (req, res, next) => {
     const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (c && c.status === 'active') {
       await req.sb.from('user_custom_challenges').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, c.xp_reward || 50, 'Completed challenge: ' + c.title, 'user_custom_challenges', c.id);
-      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the challenge \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
+      await awardXP(req.sb, req.user.id, req.profile, c.xp_reward || 50, 'Completed quest: ' + c.title, 'user_custom_challenges', c.id);
+      if (isPaid(req)) await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest \u201c' + c.title + '\u201d \ud83c\udf89', 'user_custom_challenges', c.id);
       await activity.record(req.sb, req.user.id, 'challenge', 'completed \u201c' + c.title + '\u201d', { emoji: c.emoji || '\ud83c\udfc1', entityType: 'user_custom_challenges', entityId: c.id });
     }
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 
 router.post('/custom/:id/abandon', async (req, res, next) => {
   try {
     await req.sb.from('user_custom_challenges').update({ status: 'abandoned' }).eq('id', req.params.id).eq('user_id', req.user.id);
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/challenges');
+    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
 });
 

@@ -58,7 +58,7 @@ async function completeChallenge(req, title, note) {
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('user_id', req.user.id).eq('challenge_id', ch.id).eq('status', 'active')
     .then(...quiet('challenge_acceptances.update'));
-  await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed challenge: ' + ch.title, 'challenges', ch.id);
+  await awardXP(req.sb, req.user.id, req.profile, ch.xp_reward || 50, 'Completed quest: ' + ch.title, 'challenges', ch.id);
   return ch;
 }
 

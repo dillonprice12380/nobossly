@@ -1,5 +1,5 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Milestones</h1><p class="muted">Your trophy case. Most trophies unlock themselves while you play. The real-world milestones below — the ones no metric can see — you log yourself, with a written account.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Trophies</h1><p class="muted">Your trophy case. Most of it unlocks itself while you play. The real-world trophies below — the ones no metric can see — you log yourself, with a written account.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
 <% if (fresh && fresh.length) { %>
@@ -15,7 +15,7 @@
     inside the app can see them, so you log them with a proof note. %>
 <% if (typeof claimable !== 'undefined' && claimable.length) { %>
   <div class="card">
-    <h2>🌍 Real-world milestones</h2>
+    <h2>🌍 Real-world trophies</h2>
     <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account of what happened. They carry the top rungs of the Ladder.</p>
     <% claimable.forEach(function (m) {
          var got = earned[m.id];
@@ -27,7 +27,7 @@
           <span class="chip">⚡ <%= m.xp_reward %> XP</span>
           <% if (gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
           <% if (!got) { %>
-            <form method="post" action="/milestones/claim/<%= m.id %>" style="margin:.5rem 0 0">
+            <form method="post" action="/trophies/claim/<%= m.id %>" style="margin:.5rem 0 0">
               <textarea name="proof_note" rows="2" required minlength="30"
                 placeholder="What actually happened? A few sentences — when, where, the specifics."></textarea>
               <button class="btn btn-primary btn-sm" style="margin-top:.35rem">I did this</button>
@@ -84,7 +84,7 @@
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
       <div><h2>✨ Your personal goals</h2><p class="muted small">AI-tailored to your launch blueprint. These are your own targets — you check them off yourself; trophies above are earned only by playing.</p></div>
-      <form method="post" action="/milestones/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
+      <form method="post" action="/trophies/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
     </div>
     <% if (!custom.length) { %>
       <p class="muted">No tailored goals yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
@@ -99,7 +99,7 @@
           <% if (m.achieved) { %>
             <span class="chip chip-success">✅ <%= m.date_achieved %></span>
           <% } else { %>
-            <form method="post" action="/milestones/custom/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
+            <form method="post" action="/trophies/custom/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
           <% } %>
         </div>
       <% }) %>

@@ -23,13 +23,13 @@
     { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire'] },
     { href: '/ideas',          label: 'My ideas',   short: 'Ideas',  icon: 'i-idea',      match: ['/ideas', '/blueprint'] },
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
-    // Short names are what the phone bar shows. "Milestones" was short-named
-    // "Wins", which now collides with the Wins wall two tabs down; "Goals"
-    // collided with the AI-tailored goals sold on the upgrade panel. Both now
-    // use the words the product uses elsewhere — the dashboard already counts
-    // "quests" and the milestones page is already a "trophy case".
-    { href: '/challenges',     label: 'Challenges', short: 'Quests', icon: 'i-challenge', match: ['/challenges'] },
-    { href: '/milestones',     label: 'Milestones', short: 'Trophies', icon: 'i-milestone', match: ['/milestones'] },
+    // One name per thing. The nav said "Challenges" and "Milestones" while the
+    // pages themselves, the upgrade panel and the ladder all said "quests" and
+    // "trophy case" — so the product had two words for each of its two loops
+    // and the phone bar's short names had already quietly switched to the
+    // second set. The routes answer to both spellings; these are the names.
+    { href: '/quests',         label: 'Quests',     short: 'Quests', icon: 'i-challenge', match: ['/quests', '/challenges'] },
+    { href: '/trophies',       label: 'Trophies',   short: 'Trophies', icon: 'i-milestone', match: ['/trophies', '/milestones'] },
     { href: '/budget',         label: 'Budget',     short: 'Budget', icon: 'i-market',    match: ['/budget'] },
     { href: '/feed',           label: 'Feed',       short: 'Feed',   icon: 'i-team',      match: ['/feed'] },
     { href: '/community',      label: 'Community',  short: 'Forum',  icon: 'i-community', match: ['/community'] },

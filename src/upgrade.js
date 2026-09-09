@@ -7,12 +7,12 @@
 
 const FEATURES = {
   ai_challenges: {
-    title: 'AI-tailored challenges',
-    blurb: 'Reads your active blueprint and writes a set of challenges built around your actual business — your customers, your channel, your bottleneck — instead of the shared quest board.',
-    gets: ['A fresh set of up to 10 challenges tailored to your blueprint',
+    title: 'AI-tailored quests',
+    blurb: 'Reads your active blueprint and writes a set of quests built around your actual business — your customers, your channel, your bottleneck — instead of the shared quest board.',
+    gets: ['A fresh set of up to 10 quests tailored to your blueprint',
            'Regenerate whenever your blueprint changes',
            'Everything on the shared quest board stays free either way'],
-    back: { href: '/challenges', label: 'Back to challenges' }
+    back: { href: '/quests', label: 'Back to quests' }
   },
   ai_milestones: {
     title: 'AI-tailored goals',
@@ -20,7 +20,7 @@ const FEATURES = {
     gets: ['Up to 10 personal goals written from your blueprint',
            'Regenerate as the business moves',
            'Your trophy case stays free and keeps unlocking'],
-    back: { href: '/milestones', label: 'Back to milestones' }
+    back: { href: '/trophies', label: 'Back to trophies' }
   },
   ai_budget: {
     title: 'AI startup budget',

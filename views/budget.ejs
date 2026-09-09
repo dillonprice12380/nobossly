@@ -6,6 +6,22 @@
 
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
 
+<%# The number they already gave us. "Money you can put in to start" is a
+    required question on every path and the fit test holds every idea against
+    it, so this tab opening on a blank form was the app forgetting something the
+    member had been made to declare before they saw anything else. %>
+<% if (typeof suggestion !== 'undefined' && suggestion.length) { %>
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <h3 style="margin-top:0">Start from what you already told us</h3>
+    <p class="muted">On your Compass you said you could put in <strong><%= launchBudget %></strong> to start. Here is that spread over your first <%= starterMonths %> months, in the categories your path actually spends on. Nothing is locked in — change or delete any of it.</p>
+    <ul class="feature-list" style="margin:.4rem 0 .8rem">
+      <% suggestion.forEach(r => { %><li><%= r.category %> — $<%= r.monthly_limit %>/mo</li><% }) %>
+    </ul>
+    <form method="post" action="/budget/start" class="inline"><button class="btn btn-primary btn-sm">Use this as my starting budget</button></form>
+    <span class="muted small" style="margin-left:.5rem">or set your own below</span>
+  </div>
+<% } %>
+
 <% if (typeof paid !== 'undefined' && paid) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
@@ -23,7 +39,7 @@
 <% } else { %>
   <div class="card" style="border:1px dashed var(--border)">
     <h3>✨ Want an AI-built startup budget?</h3>
-    <p class="muted">Budgeting and expense tracking are free. Upgrade to get a lean startup budget tailored to your blueprint, plus AI insights on your spending.</p>
+    <p class="muted">Budgeting, expense tracking and the starting budget above are all free. Upgrade and the coach reads your actual blueprint — what you are building, for whom — and writes a budget for that, then tells you each month where the money is really going.</p>
     <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
   </div>
 <% } %>
@@ -36,8 +52,22 @@
       <div class="budget-bar"><div class="budget-fill <%= pct >= 100 ? 'over' : pct >= 80 ? 'warn' : '' %>" style="width:<%= pct %>%"></div></div>
       <p class="muted small"><%= pct %>% of monthly budget used</p>
     <% } %>
+    <%# The ceiling they set themselves, on the questionnaire, before any of
+        this existed. It is a launch total rather than a monthly figure, so it
+        is shown as one. %>
+    <% if (typeof launchBudgetUsd !== 'undefined' && launchBudgetUsd) { %>
+      <p class="muted small" style="margin-top:.35rem">Your launch budget: <strong>$<%= launchBudgetUsd.toLocaleString() %></strong> — the <%= launchBudget %> you said you could put in to start.</p>
+    <% } %>
     <h3 style="margin-top:1rem">Categories</h3>
-    <% if (!cats.length) { %><p class="muted small">Add a category and limit below to start budgeting.</p><% } %>
+    <% if (!cats.length) { %>
+      <% if (typeof suggestion !== 'undefined' && suggestion.length) { %>
+        <p class="muted small">Nothing set yet — take the starting budget above, or add your own category below.</p>
+      <% } else if (typeof launchBudget !== 'undefined' && launchBudget) { %>
+        <p class="muted small">You said you could put in <strong><%= launchBudget %></strong> to start. Add the categories you will actually spend it on below.</p>
+      <% } else { %>
+        <p class="muted small">Add a category and limit below to start budgeting. <a href="/questionnaire">Answering your Compass questions</a> lets this page start itself from the money you said you had.</p>
+      <% } %>
+    <% } %>
     <% cats.forEach(cat => { const b = budgets.find(x => x.category === cat); const spent = spentByCat[cat] || 0; const lim = b ? Number(b.monthly_limit) : 0; const pct = lim ? Math.min(100, Math.round(spent / lim * 100)) : 0; %>
       <div class="budget-row">
         <div class="budget-row-head">

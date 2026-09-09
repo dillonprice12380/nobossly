@@ -7,7 +7,7 @@
     <p class="muted small" style="margin:.3rem 0">Never upload bank statements or full financial documents. Good evidence: a link with a public footprint (your live site with pricing, a testimonial, a customer review), a screenshot with everything sensitive cropped or blacked out except the relevant total, or just book a quick call. Whatever you attach is visible to the NoBossly admin only — never to other members — and is deleted after review.</p>
   </div>
   <% if (msg) { %><p class="error"><%= msg %></p><% } %>
-  <form method="post" action="/challenges/verify">
+  <form method="post" action="/quests/verify">
     <label class="small">Evidence type
       <select name="evidence_kind">
         <option value="public_link">Public link (live site, testimonial, review)</option>

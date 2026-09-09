@@ -25,6 +25,7 @@ const path = require('path');
 const questRoutes = require('../src/quest_routes');
 
 const ROOT = path.join(__dirname, '..');
+const VIEWS_DIR = path.join(ROOT, 'views');
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 let fail = 0;
@@ -113,10 +114,10 @@ for (const kind of AUTO_KINDS) {
 // The two fallbacks, and the one challenge with an on-platform home.
 const claim = questRoutes.destinationFor({ type: 'milestone', title: '$1,000 Revenue' },
                                          { auto_kind: null, is_claimable: true });
-ok(`a self-claimed milestone → ${claim.href}`, resolves(claim.href) && claim.href === '/milestones',
-   'claimable milestones are logged on the trophy case, which is right');
+ok(`a self-claimed trophy → ${claim.href}`, resolves(claim.href) && claim.href === '/trophies',
+   'self-claimed trophies are logged on the trophy case, which is right');
 const chal = questRoutes.destinationFor({ type: 'challenge', title: 'Validate your idea' });
-ok(`a challenge → ${chal.href}`, resolves(chal.href) && chal.href === '/challenges');
+ok(`a quest → ${chal.href}`, resolves(chal.href) && chal.href === '/quests');
 const feedback = questRoutes.destinationFor({ type: 'challenge', title: 'Get 3 Feedback Sessions' });
 ok(`"Get 3 Feedback Sessions" → ${feedback.href}`, feedback.href === '/reviews' && resolves(feedback.href),
    'the peer-review queue is the on-platform way to do it');
@@ -169,6 +170,49 @@ if (loggedIn) {
   const both = inTop.filter(h => APP_NAV.some(i => i.href === h) && h !== '/dashboard');
   ok('the top nav does not duplicate section tabs', both.length === 0,
      both.join(', ') || 'only /dashboard, which is the way home');
+}
+
+// ---------------------------------------------------------------------------
+// 3. One name per thing.
+//
+// The nav said "Challenges" and "Milestones" while the pages themselves, the
+// upgrade panel and the ladder countdown all said "quests" and "trophy case".
+// Two words for each of the product's two loops, and the phone bar had already
+// quietly switched to the second set — which is how "Wins" ended up meaning
+// both Milestones and the Wins wall. These hold the settled names.
+
+console.log('\nThe product has one word for each of its two loops:');
+
+const renamed = { '/quests': 'Quests', '/trophies': 'Trophies' };
+for (const [href, label] of Object.entries(renamed)) {
+  const tab = APP_NAV.find(i => i.href === href);
+  ok(`${href} is the tab, labelled "${label}"`, !!tab && tab.label === label,
+     tab ? `labelled "${tab.label}"` : 'no tab points there');
+}
+
+// Old URLs are in notifications already sent and in whatever anyone bookmarked.
+// They are mounted, not redirected, so a POST to one still works.
+for (const old of ['/challenges', '/milestones']) {
+  ok(`${old} still resolves`, resolves(old), 'the former name has to keep working');
+  ok(`...and ${old} is matched by its tab, so the nav still renders there`,
+     APP_NAV.some(i => i.match.includes(old)));
+}
+
+// The retired names must not come back as the name of a section. The words
+// themselves are ordinary English and stay allowed in prose; what is banned is
+// a heading or nav label that names the tab by its old name.
+const RETIRED = [
+  [/<h1>[^<]*\bChallenges\b/, 'no page heading says "Challenges"'],
+  [/<h1>[^<]*\bMilestones\b/, 'no page heading says "Milestones"'],
+  [/label: 'Challenges'/,       'no nav tab is labelled "Challenges"'],
+  [/label: 'Milestones'/,       'no nav tab is labelled "Milestones"']
+];
+const viewSrc = fs.readdirSync(VIEWS_DIR, { recursive: true })
+  .filter(f => String(f).endsWith('.ejs'))
+  .map(f => ({ f, src: fs.readFileSync(path.join(VIEWS_DIR, String(f)), "utf8") }));
+for (const [rx, why] of RETIRED) {
+  const hit = viewSrc.filter(v => rx.test(v.src.replace(/<svg[\s\S]*?<\/svg>/g, '')));
+  ok(why, hit.length === 0, hit.map(v => v.f).join(', ') || 'clean');
 }
 
 console.log(fail ? `\n${fail} failing` : '\nAll good');

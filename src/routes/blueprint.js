@@ -9,9 +9,9 @@ const credits = require('../credits');
 const clampXP = v => Math.max(10, Math.min(200, parseInt(v, 10) || 50));
 const okDays = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
 
-// Paid founders get an AI-tailored set of milestones & challenges built from their
+// Paid founders get an AI-tailored set of goals & quests built from their
 // blueprint. Runs in the background after the blueprint completes so it never blocks
-// or fails blueprint creation; the results appear on the Milestones/Challenges pages.
+// or fails blueprint creation; the results appear on the Trophies/Quests pages.
 async function generateTailoredSets(req, bp) {
   const [ms, chs] = await Promise.all([
     credits.run(req.sb, 'milestones', () => ai.generateMilestones(req.accessToken, bp)).catch(() => null),

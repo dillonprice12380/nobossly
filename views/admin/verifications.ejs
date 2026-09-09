@@ -31,7 +31,7 @@
   <p class="muted small">Big quests finished less than 24h after acceptance. Flags are a prompt to look, not a verdict — sometimes people accept after the work is done.</p>
   <% flagged.forEach(function (f) { var u = pmap[f.user_id] || {}; var c = cmap[f.challenge_id] || {}; %>
     <div class="card">
-      <strong>@<%= u.username || f.user_id %></strong> — <%= c.title || 'challenge' %>
+      <strong>@<%= u.username || f.user_id %></strong> — <%= c.title || 'quest' %>
       <p class="muted small" style="margin:.2rem 0">completed <%= f.completed_at ? new Date(f.completed_at).toLocaleString() : '' %></p>
       <% if (f.proof_note) { %><p class="small" style="margin:.2rem 0"><%= f.proof_note %></p><% } %>
     </div>

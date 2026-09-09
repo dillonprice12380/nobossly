@@ -76,18 +76,18 @@ router.get('/', async (req, res, next) => {
 
 // Manual claiming of AUTO trophies is retired. Old cached pages may still POST
 // here — just bounce back to the trophy case, where the sweep tells the truth.
-router.post('/:id/achieve', (req, res) => res.redirect('/milestones'));
+router.post('/:id/achieve', (req, res) => res.redirect('/trophies'));
 
 // Claim a real-world milestone. These carry the ladder's top five rungs and
 // cannot be measured from inside the app, so they are self-attested — but a
 // written account is required, the same standard the proof-gated challenges
 // hold, and it is stored against the claim.
 router.post('/claim/:id', async (req, res, next) => {
-  const back = m => res.redirect('/milestones?msg=' + encodeURIComponent(m));
+  const back = m => res.redirect('/trophies?msg=' + encodeURIComponent(m));
   try {
     const { data: def } = await req.sb.from('predefined_milestones')
       .select('*').eq('id', req.params.id).eq('is_active', true).eq('is_claimable', true).maybeSingle();
-    if (!def) return res.redirect('/milestones');
+    if (!def) return res.redirect('/trophies');
 
     const note = String(req.body.proof_note || '').trim().slice(0, 2000);
     if (note.length < 30) {
@@ -104,7 +104,7 @@ router.post('/claim/:id', async (req, res, next) => {
     if (error) return back('You have already logged \u201c' + def.title + '\u201d.');
 
     await awardXP(req.sb, req.user.id, req.profile, def.xp_reward || 50, 'Milestone: ' + def.title, 'predefined_milestones', def.id);
-    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' reached the milestone ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
+    await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' earned the trophy ' + (def.emoji || '\ud83c\udfc6') + ' \u201c' + def.title + '\u201d', 'predefined_milestones', def.id);
     await activity.record(req.sb, req.user.id, 'milestone', 'reached \u201c' + def.title + '\u201d', { emoji: def.emoji || '\ud83c\udfc6', entityType: 'predefined_milestones', entityId: def.id });
     back(def.emoji + ' ' + def.title + ' logged \u2014 +' + (def.xp_reward || 50) + ' XP. That is a real one.');
   } catch (e) { next(e); }
@@ -115,14 +115,14 @@ router.post('/generate', async (req, res, next) => {
   try {
     if (!isPaid(req)) return gate(res, 'ai_milestones');
     const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!bp) return res.redirect('/milestones?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor goals to it.'));
+    if (!bp) return res.redirect('/trophies?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor goals to it.'));
     let items;
     try { items = await credits.run(req.sb, 'milestones', () => ai.generateMilestones(req.accessToken, bp)); }
     catch (err) {
-      if (err.outOfCredits) return gateCredits(res, err.credits, '/milestones');
-      return res.redirect('/milestones?msg=' + encodeURIComponent('Could not generate goals: ' + err.message));
+      if (err.outOfCredits) return gateCredits(res, err.credits, '/trophies');
+      return res.redirect('/trophies?msg=' + encodeURIComponent('Could not generate goals: ' + err.message));
     }
-    if (!Array.isArray(items) || !items.length) return res.redirect('/milestones?msg=' + encodeURIComponent('No goals were generated \u2014 please try again.'));
+    if (!Array.isArray(items) || !items.length) return res.redirect('/trophies?msg=' + encodeURIComponent('No goals were generated \u2014 please try again.'));
     // Replace any not-yet-achieved AI goals with the fresh set; keep achieved ones.
     await req.sb.from('user_custom_milestones').delete().eq('user_id', req.user.id).eq('achieved', false);
     const rows = items.slice(0, 10).map(m => ({
@@ -134,7 +134,7 @@ router.post('/generate', async (req, res, next) => {
       xp_reward: Math.max(10, Math.min(200, parseInt(m.xp_reward, 10) || 50))
     }));
     await req.sb.from('user_custom_milestones').insert(rows);
-    res.redirect('/milestones?msg=' + encodeURIComponent('Your AI-tailored goals are ready.'));
+    res.redirect('/trophies?msg=' + encodeURIComponent('Your AI-tailored goals are ready.'));
   } catch (e) { next(e); }
 });
 
@@ -152,7 +152,7 @@ router.post('/custom/:id/achieve', async (req, res, next) => {
       await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' achieved the goal ' + (m.emoji || '\ud83c\udfc6') + ' \u201c' + m.title + '\u201d', 'user_custom_milestones', m.id);
       await activity.record(req.sb, req.user.id, 'milestone', 'achieved \u201c' + m.title + '\u201d', { emoji: m.emoji || '\ud83c\udfc6', entityType: 'user_custom_milestones', entityId: m.id });
     }
-    res.redirect('/milestones');
+    res.redirect('/trophies');
   } catch (e) { next(e); }
 });
 

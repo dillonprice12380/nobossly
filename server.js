@@ -97,13 +97,19 @@ app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
 app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
-app.use('/challenges', requireAuth, require('./src/routes/challenges'));
+// The quest board and the trophy case. Both answer to their old names too:
+// /challenges and /milestones are in the wild — in notifications already sent,
+// in anything anyone bookmarked — and they are mounted rather than redirected
+// so that a POST to an old URL still works instead of silently becoming a GET.
+app.use('/quests', requireAuth, require('./src/routes/challenges'));
+app.use('/challenges', requireAuth, require('./src/routes/challenges'));   // former name
 app.use('/coach', requireAuth, require('./src/routes/coach')); // the weekly plan, the coach chat, proof review, the reading list
 app.use('/feed', requireAuth, require('./src/routes/feed')); // what the people you follow have been doing
 app.use('/community', require('./src/routes/community'));
 app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
 app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review
-app.use('/milestones', requireAuth, require('./src/routes/milestones'));
+app.use('/trophies', requireAuth, require('./src/routes/milestones'));
+app.use('/milestones', requireAuth, require('./src/routes/milestones'));   // former name
 app.use('/collaborations', requireAuth, require('./src/routes/collaborations'));
 app.use('/messages', requireAuth, require('./src/routes/messages'));
 app.use('/notifications', requireAuth, require('./src/routes/notifications'));

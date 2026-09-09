@@ -1,9 +1,9 @@
 // Where a quest is actually done.
 //
 // The Ladder names what is blocking your next rung, and until now every one of
-// those quests linked to the same two pages: /challenges or /milestones,
+// those quests linked to the same two pages: /quests or /trophies,
 // decided by a single ternary on the gate's type. For a challenge that is
-// usually right — you accept challenges on /challenges. For a milestone it was
+// usually right — you take quests on on the quest board. For a trophy it was
 // usually wrong.
 //
 // Twelve of the seventeen milestone gates are self-claimed, and /milestones is
@@ -35,20 +35,20 @@ const BY_AUTO_KIND = {
   checkins:        { href: '/dashboard',     cta: 'Check in' },
   streak:          { href: '/dashboard',     cta: 'Check in' },
   followers:       { href: '/members',       cta: 'Find members' },
-  challenges:      { href: '/challenges',    cta: 'Take one on' },
+  challenges:      { href: '/quests',        cta: 'Take one on' },
   posts:           { href: '/community',     cta: 'Post' },
   profile:         { href: '/members/me/edit', cta: 'Fill it in' }
 };
 
-// Challenges are accepted on /challenges, with one exception: the peer-review
+// Quests are accepted on /quests, with one exception: the peer-review
 // queue is a whole route built to earn this specific quest, and the generic
 // link pointed away from it.
 const CHALLENGE_ROUTES = {
   'Get 3 Feedback Sessions': { href: '/reviews', cta: 'Get reviews' }
 };
 
-const CLAIM = { href: '/milestones', cta: 'Log it' };
-const CHALLENGE = { href: '/challenges', cta: 'Take it on' };
+const CLAIM = { href: '/trophies', cta: 'Log it' };
+const CHALLENGE = { href: '/quests', cta: 'Take it on' };
 
 // `def` is the predefined_milestones row for a milestone gate, when one was
 // loaded. Without it the old behaviour is the fallback, so a missing row
