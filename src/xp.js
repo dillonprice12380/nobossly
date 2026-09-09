@@ -41,6 +41,7 @@ async function bumpStreak(sb, userId, profile) {
 const ladders = require('./ladders');
 const activity = require('./activity');
 const questRoutes = require('./quest_routes');
+const unlocks = require('./unlocks');
 const { notifySocial } = require('./notify');
 
 const { quiet } = require('./db');
@@ -176,6 +177,18 @@ async function awardXP(sb, userId, profile, amount, reason, entityType, entityId
       const who = profile.display_name || profile.username || 'A member';
       await notifySocial(sb, userId, who + ' reached Level ' + level + ' \u2014 ' + (info.title || '') + ' ' + (info.emoji || '\ud83c\udf89'), 'profiles', null);
       await activity.record(sb, userId, 'level', 'reached Level ' + level + ' \u2014 ' + (info.title || ''), { emoji: info.emoji, level });
+
+      // Say what the rung just gave them. The dashboard previews the unlocks of
+      // the level you are climbing toward, so the moment you arrive they drop
+      // off the screen — Level 3's showcase and Level 7's mentor listing both
+      // switched on silently. Only 'live' unlocks are announced: a 'manual' one
+      // has not happened yet, and saying it has is the thing unlocks.js exists
+      // to prevent.
+      const live = unlocks.forLevel(level).filter(u => u.kind === 'live');
+      for (const u of live) {
+        await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: ('\ud83c\udf81 ' + u.label + '. ' + u.detail).slice(0, 500), nentity_type: null, nentity_id: null }).then(...quiet('push_notification:unlock'));
+      }
+
       if (level >= 8) {
         // Real-world unlocks (accelerator track, cohort leader, featured playbook)
         // check verified_level, so they open on approval. Unique(user_id, level)

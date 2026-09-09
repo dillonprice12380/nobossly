@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const ladders = require('../ladders');
-const { showsBuild, SHOWCASE_LEVEL } = require('../unlocks');
+const { showsBuild, SHOWCASE_LEVEL, isMentor, MENTOR_LEVEL } = require('../unlocks');
 const activity = require('../activity');
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
@@ -53,7 +53,7 @@ router.get('/', async (req, res, next) => {
     await backfillBareProfiles();
 
     const { data: members } = await req.sb.from('profiles')
-      .select('username, display_name, profile_is_public, current_level, xp_total, created_at, avatar_url, path')
+      .select('username, display_name, profile_is_public, current_level, verified_level, mentor_available, xp_total, created_at, avatar_url, path')
       .eq('account_status', 'active')
       .not('username', 'is', null)
       .order('xp_total', { ascending: false })
@@ -63,15 +63,19 @@ router.get('/', async (req, res, next) => {
     // creator's word for the level they reached.
     const withRung = (members || []).map(m => {
       const r = ladders.rungAt(m.path, m.current_level || 1);
-      return { ...m, rung: r || { title: 'Dreamer', emoji: '\uD83C\uDF31' } };
+      return { ...m, rung: r || { title: 'Dreamer', emoji: '\uD83C\uDF31' }, mentor: isMentor(m) };
     });
-    res.render('members', { title: 'Members', members: withRung });
+    // Mentors first. The Level 7 unlock is "anyone on a lower rung can find
+    // you", and 200 members ordered by XP is not findable — it is a wall.
+    const mentors = withRung.filter(m => m.mentor);
+    res.render('members', { title: 'Members', members: withRung, mentors, mentorLevel: MENTOR_LEVEL });
   } catch (e) { next(e); }
 });
 
 // Edit own profile
 router.get('/me/edit', (req, res) => {
-  res.render('profile_edit', { title: 'Edit profile', p: req.profile, saved: req.query.saved });
+  res.render('profile_edit', { title: 'Edit profile', p: req.profile, saved: req.query.saved,
+    isMentor: isMentor(req.profile), mentorLevel: MENTOR_LEVEL });
 });
 
 router.post('/me/edit', async (req, res, next) => {
@@ -84,7 +88,12 @@ router.post('/me/edit', async (req, res, next) => {
       website_url: (b.website_url || '').slice(0, 200),
       occupation: (b.occupation || '').slice(0, 80),
       founder_stage: b.founder_stage || null,
-      notification_emails_enabled: b.notification_emails_enabled === 'on'
+      notification_emails_enabled: b.notification_emails_enabled === 'on',
+      // Only writable once the rung is reached; below it the checkbox is not
+      // rendered, and a hand-rolled POST must not be able to set the flag that
+      // decides whether someone is advertised as available to help.
+      ...(isMentor({ ...req.profile, mentor_available: true })
+        ? { mentor_available: b.mentor_available === 'on' } : {})
     }).eq('id', req.user.id);
     res.redirect('/members/me/edit?saved=1');
   } catch (e) { next(e); }
@@ -93,7 +102,7 @@ router.post('/me/edit', async (req, res, next) => {
 router.get('/:username', async (req, res, next) => {
   try {
     const { data: p } = await req.sb.from('profiles')
-      .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, streak_days, tasks_completed, created_at, profile_is_public, account_status, path')
+      .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, verified_level, mentor_available, streak_days, tasks_completed, created_at, profile_is_public, account_status, path')
       .eq('username', req.params.username).maybeSingle();
     if (!p || (p.account_status !== 'active' && p.id !== req.user.id)) return res.status(404).render('error', { title: 'Not found', message: 'Member not found.' });
     const [{ data: ub }, { data: um }, { data: customM }] = await Promise.all([
@@ -148,7 +157,7 @@ router.get('/:username', async (req, res, next) => {
     // the other side of it. RLS decides what is readable, so a private profile
     // simply returns nothing here rather than needing a second rule.
     const recent = await activity.forUser(req.sb, p.id, 8);
-    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent });
+    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent, mentor: isMentor(p), mentorLevel: MENTOR_LEVEL });
   } catch (e) { next(e); }
 });
 

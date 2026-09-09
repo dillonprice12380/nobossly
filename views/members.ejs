@@ -1,5 +1,31 @@
 <%- include('partials/head') %>
 <div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-profile"/></svg> Members</h1><p class="muted">Everyone here is building their way out of a job.</p></div></div>
+
+<%# The Level 7 unlock is "anyone on a lower rung can find you", and a
+    200-strong list sorted by XP is not findable. Mentors get their own row at
+    the top, so the unlock is delivered to the people it is for as much as to
+    the mentor. Absent entirely until someone has earned it — an empty
+    "Mentors" heading advertises a thing the platform cannot yet do. %>
+<% if ((mentors || []).length) { %>
+  <div class="card">
+    <h2 style="margin-top:0">🧑‍🏫 Open to mentoring</h2>
+    <p class="muted small" style="margin:.15rem 0 .7rem">Members past Level <%= mentorLevel %> who have said they will help. Message them.</p>
+    <div class="grid">
+      <% mentors.forEach(m => { const lvl = m.rung; %>
+        <a class="card idea-card" href="/members/<%= m.username %>">
+          <div class="profile-head" style="align-items:center">
+            <div class="avatar-circle"><%= ((m.profile_is_public === false ? m.username : (m.display_name || m.username)) || '?').slice(0,1).toUpperCase() %></div>
+            <div>
+              <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
+              <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %></p>
+            </div>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+
 <% if (!members.length) { %>
   <div class="card center"><p class="muted">No members yet.</p></div>
 <% } else { %>
@@ -11,6 +37,7 @@
           <div>
             <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
             <% if (m.profile_is_public === false) { %><span class="chip" style="margin-left:.3rem">🔒 private</span><% } %>
+            <% if (m.mentor) { %><span class="chip chip-success" style="margin-left:.3rem">🧑‍🏫 Mentor</span><% } %>
             <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %> &middot; &#9889; <%= m.xp_total || 0 %> XP</p>
           </div>
         </div>

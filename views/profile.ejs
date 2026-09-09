@@ -11,6 +11,9 @@
           <span class="chip">🔥 <%= p.streak_days || 0 %>-day streak</span>
           <span class="chip">✅ <%= p.tasks_completed || 0 %> tasks done</span>
           <% if (p.founder_stage) { %><span class="chip">🚀 <%= p.founder_stage %></span><% } %>
+          <%# The Level 7 unlock, delivered. Shown to everyone, including them,
+              so the rung visibly gave them something. %>
+          <% if (mentor) { %><span class="chip chip-success" title="Level <%= mentorLevel %>+ — open to helping members on lower rungs">🧑‍🏫 Mentor</span><% } %>
         <% } %>
       </div>
     </div>

@@ -15,6 +15,13 @@
       </select>
     </label>
     <label class="check"><input type="checkbox" name="notification_emails_enabled" <%= p.notification_emails_enabled !== false ? 'checked' : '' %>> Email me task deadline reminders</label>
+    <%# Only shown once the mentor rung is verified. Being listed as available
+        to help is a commitment made in public, so it is declinable — but it is
+        on by default, because the rung was earned rather than asked for. The
+        route ignores this field for anyone below the rung. %>
+    <% if ((p.verified_level || 1) >= mentorLevel) { %>
+      <label class="check"><input type="checkbox" name="mentor_available" <%= p.mentor_available !== false ? 'checked' : '' %>> List me as a mentor &mdash; members on lower rungs can find and message me</label>
+    <% } %>
     <button class="btn btn-primary">Save</button>
   </form>
 </div>
