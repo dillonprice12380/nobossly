@@ -183,10 +183,10 @@ async function awardXP(sb, userId, profile, code, reason, entityType, entityId) 
       }
 
       if (level >= 8) {
-        // Real-world unlocks (accelerator track, cohort leader, featured playbook)
-        // check verified_level, so they open on approval. Unique(user_id, level)
-        // makes the insert idempotent.
-        await sb.from('verification_requests').insert({ user_id: userId, level }).then(...quiet('verification_requests.insert'));
+        // The request itself is filed by award_xp_for, from the level it just
+        // worked out. It used to be inserted here, under the member's own
+        // credentials — which meant one could be filed by hand, at any rung,
+        // and approving it set verified_level to whatever it claimed.
         await sb.rpc('push_notification', { target_user: userId, ntype: 'levels', nmessage: 'Level ' + level + ' unlocks touch the real world, so they open after a quick verification. Add your evidence \u2014 a public link, a REDACTED screenshot, or book a call. Never upload full financial documents.', nentity_type: null, nentity_id: null }).then(...quiet('push_notification:levels'));
       }
     }

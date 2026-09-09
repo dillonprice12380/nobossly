@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { safeBack } = require('../safe_back');
 const { planOf } = require('../middleware/auth');
 const { gate, gateCredits } = require('../upgrade');
 const ai = require('../ai');
@@ -153,11 +154,10 @@ router.post('/:id/evidence', async (req, res, next) => {
 router.post('/:id/favorite', async (req, res) => {
   const { data: idea } = await req.sb.from('generated_ideas').select('is_favorited').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
   if (idea) await req.sb.from('generated_ideas').update({ is_favorited: !idea.is_favorited }).eq('id', req.params.id);
-  // Same-origin only — never bounce the founder off-site on the strength of a
-  // header someone else's page can set.
-  const ref = req.get('referer') || '';
-  const sameOrigin = ref.startsWith(req.protocol + '://' + req.get('host') + '/');
-  res.redirect(sameOrigin ? ref : '/ideas');
+  // Same-origin only — never bounce the member off-site on the strength of a
+  // header someone else's page can set. src/safe_back.js is where that rule
+  // lives now, because the social routes were not applying it at all.
+  res.redirect(safeBack(req, '/ideas'));
 });
 
 module.exports = router;

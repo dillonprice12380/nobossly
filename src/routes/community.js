@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { sanitizeForumHtml, addLinkCards } = require('../richtext');
+const { safeBack } = require('../safe_back');
 const { requireAuth } = require('../middleware/auth');
 const { anonClient } = require('../supabase');
 const { quiet } = require('../db');
@@ -237,7 +238,7 @@ router.post('/react', requireAuth, async (req, res, next) => {
     const entityType = req.body.entity_type === 'reply' ? 'reply' : 'thread';
     const entityId = req.body.entity_id;
     const reaction = String(req.body.reaction || '');
-    const back = req.body.back || '/community';
+    const back = safeBack(req, '/community');
     if (!entityId || !REACTIONS.some(r => r.key === reaction)) return res.redirect(back);
     const { data: existing } = await req.sb.from('forum_reactions').select('id')
       .eq('user_id', req.user.id).eq('entity_type', entityType).eq('entity_id', entityId).eq('reaction', reaction).maybeSingle();

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { requireAuth, planOf } = require('../middleware/auth');
+const { safeBack, relativePath } = require('../safe_back');
 const { gate } = require('../upgrade');
 
 const { quiet } = require('../db');
@@ -18,8 +19,8 @@ const REPORT_TYPES = { forum_thread: 'forum post', forum_reply: 'forum comment',
 
 router.get('/report', requireAuth, (req, res) => {
   const type = req.query.type, id = req.query.id;
-  if (!REPORT_TYPES[type] || !UUID_RE.test(id || '')) return res.redirect(req.get('referer') || '/community');
-  res.render('report', { title: 'Report ' + REPORT_TYPES[type], type, id, label: REPORT_TYPES[type], back: req.query.back || req.get('referer') || '/community', done: false });
+  if (!REPORT_TYPES[type] || !UUID_RE.test(id || '')) return res.redirect(safeBack(req, '/community'));
+  res.render('report', { title: 'Report ' + REPORT_TYPES[type], type, id, label: REPORT_TYPES[type], back: relativePath(req.query.back) || safeBack(req, '/community'), done: false });
 });
 
 router.post('/report', requireAuth, async (req, res, next) => {
@@ -43,14 +44,14 @@ router.post('/block/:userId', requireAuth, async (req, res, next) => {
       await req.sb.from('friendships').delete().or(`and(requester_id.eq.${req.user.id},addressee_id.eq.${req.params.userId}),and(requester_id.eq.${req.params.userId},addressee_id.eq.${req.user.id})`);
       await req.sb.from('follows').delete().or(`and(follower_id.eq.${req.user.id},following_id.eq.${req.params.userId}),and(follower_id.eq.${req.params.userId},following_id.eq.${req.user.id})`);
     }
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
 router.post('/unblock/:userId', requireAuth, async (req, res, next) => {
   try {
     await req.sb.from('user_blocks').delete().eq('blocker_id', req.user.id).eq('blocked_id', req.params.userId);
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
@@ -61,14 +62,14 @@ router.post('/follow/:userId', requireAuth, async (req, res, next) => {
       const { error } = await req.sb.from('follows').upsert({ follower_id: req.user.id, following_id: req.params.userId }, { onConflict: 'follower_id,following_id' });
       if (!error) await notify(req, req.params.userId, (req.profile.display_name || req.profile.username || 'A member') + ' started following you', 'profiles', req.user.id);
     }
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
 router.post('/unfollow/:userId', requireAuth, async (req, res, next) => {
   try {
     await req.sb.from('follows').delete().eq('follower_id', req.user.id).eq('following_id', req.params.userId);
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
@@ -85,7 +86,7 @@ router.post('/friends/request/:userId', requireAuth, async (req, res, next) => {
         await req.sb.from('friendships').update({ status: 'pending', responded_at: null }).eq('id', existing.id);
       }
     }
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
@@ -96,21 +97,21 @@ router.post('/friends/:id/accept', requireAuth, async (req, res, next) => {
       await req.sb.from('friendships').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', f.id);
       await notify(req, f.requester_id, (req.profile.display_name || req.profile.username || 'A member') + ' accepted your friend request', 'profiles', req.user.id);
     }
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
 router.post('/friends/:id/decline', requireAuth, async (req, res, next) => {
   try {
     await req.sb.from('friendships').update({ status: 'declined', responded_at: new Date().toISOString() }).eq('id', req.params.id).eq('addressee_id', req.user.id);
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
 router.post('/friends/:id/remove', requireAuth, async (req, res, next) => {
   try {
     await req.sb.from('friendships').delete().eq('id', req.params.id).or(`requester_id.eq.${req.user.id},addressee_id.eq.${req.user.id}`);
-    res.redirect(req.body.back || req.get('referer') || '/members');
+    res.redirect(safeBack(req, '/members'));
   } catch (e) { next(e); }
 });
 
