@@ -376,6 +376,10 @@ body.theme-light .footer .btn { color: #eafff5; border-color: rgba(255,255,255,.
 /* The dashboard workspace tiles lived here. Removed with the grid itself:
    every tile duplicated a tab in the section nav. */
 
+/* A crossed-out list price beside the markdown. Muted and smaller, so the
+   number people actually pay stays the one they read first. */
+.price .was { text-decoration: line-through; color: var(--muted); font-size: .62em; font-weight: 400; margin-right: .15rem; }
+
 /* deletion banner */
 .warn-banner { background: #fef3c7; color: #92400e; border-bottom: 1px solid #fcd34d; padding: .6rem 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; font-size: .92rem; }
 

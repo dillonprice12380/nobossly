@@ -18,7 +18,17 @@
       <% if (t.key === 'year') { %><span class="chip chip-success">Best value</span><% } %>
       <% if (t.key === 'lifetime') { %><span class="chip">Early member</span><% } %>
       <h3><%= t.name %></h3>
-      <p class="price">$<%= (t.price_cents / 100).toFixed(t.price_cents % 100 ? 2 : 0) %><span class="muted small"> <%= t.interval_label %></span></p>
+      <%# The offer is what they pay today; listCents is what it normally costs.
+          During a markdown both are shown, because a saving nobody can see is
+          not a saving. The fallback is for any caller that hands over a raw row:
+          the list price is always the safe answer, and a view that throws when
+          its data is a shape short is how the Compass went down. %>
+      <% var o = t.offer || { cents: t.price_cents, listCents: t.price_cents, isPromo: false, label: null }; %>
+      <p class="price">
+        <% if (o.isPromo) { %><span class="was">$<%= (o.listCents / 100).toFixed(o.listCents % 100 ? 2 : 0) %></span> <% } %>
+        $<%= (o.cents / 100).toFixed(o.cents % 100 ? 2 : 0) %><span class="muted small"> <%= t.interval_label %></span>
+      </p>
+      <% if (o.isPromo && o.label) { %><p><span class="chip chip-success"><%= o.label %></span></p><% } %>
       <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
       <ul class="feature-list"><% paidFeatures.forEach(f => { %><li>✓ <%= f %></li><% }) %></ul>
       <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Start free, then upgrade</a>

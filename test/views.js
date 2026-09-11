@@ -169,8 +169,15 @@ for (const def of paths.MARKETED) {
 console.log('\nThe pages still say what the site is about:');
 
 const freeFeatures = require('../src/routes/billing');   // side-effect-free require
-const TIERS = [{ key: 'month', name: 'Escape Monthly', tagline: 'Full access, billed monthly',
-                 price_cents: 1200, interval_label: 'per month' }];
+// One tier marked down and one at list price, so the page is exercised in both
+// states. The offer is attached the way src/routes/billing.js attaches it.
+const TIERS = require('../src/pricing').withOffer([
+  { key: 'month', name: 'Escape Monthly', tagline: 'Full access, billed monthly',
+    price_cents: 1200, interval_label: 'per month',
+    promo_price_cents: 600, promo_label: '2026/27 launch price — 50% off' },
+  { key: 'lifetime', name: 'Escape Lifetime', tagline: 'One payment.',
+    price_cents: 35000, interval_label: 'one-time' }
+]);
 
 const marketing = {
   'home.ejs': { paths: paths.MARKETED },

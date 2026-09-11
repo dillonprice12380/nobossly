@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { requireAuth, planOf } = require('../middleware/auth');
 const { anonClient, serviceClient } = require('../supabase');
+const pricing = require('../pricing');
 
 const STRIPE_KEY = () => process.env.STRIPE_SECRET_KEY || '';
 const SUB_SECRET = () => process.env.SUB_SYNC_SECRET || '';
@@ -87,7 +88,11 @@ router.get('/pricing', async (req, res, next) => {
     const { data: tiers } = await sb.from('pricing_tiers').select('*').eq('is_active', true).order('sort');
     res.render('pricing', {
       title: 'Pricing',
-      tiers: tiers || [],
+      // Each tier carries what it costs TODAY and what it normally costs. Both
+      // the page and the checkout below read that from src/pricing.js, because
+      // a page advertising one number while checkout charges another is the
+      // one bug this area must not have.
+      tiers: pricing.withOffer(tiers),
       freeFeatures: FREE_FEATURES, paidFeatures: PAID_FEATURES,
       plan: req.profile ? planOf(req.profile) : null,
       upgrade: req.query.upgrade, msg: req.query.msg || null
@@ -126,14 +131,21 @@ router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
       'metadata[user_id]': req.user.id
     };
 
-    if (tier.stripe_price_id) {
+    // What this tier costs today — the markdown when one is running, the list
+    // price otherwise. Never tier.price_cents directly: during a promotion that
+    // is the crossed-out number.
+    const offer = pricing.offerFor(tier);
+    if (offer.isPromo) params['metadata[promo]'] = offer.label || 'markdown';
+
+    if (offer.stripePriceId) {
       // Use the configured catalog Price when present...
-      params['line_items[0][price]'] = tier.stripe_price_id;
+      params['line_items[0][price]'] = offer.stripePriceId;
     } else {
       // ...otherwise build the price inline from the amount in pricing_tiers.
+      // This is what lets a markdown go live before its Stripe Price exists.
       params['line_items[0][price_data][currency]'] = 'usd';
       params['line_items[0][price_data][product_data][name]'] = tier.name || 'NoBossly';
-      params['line_items[0][price_data][unit_amount]'] = String(tier.price_cents);
+      params['line_items[0][price_data][unit_amount]'] = String(offer.cents);
       if (!isPayment) {
         const r = recurringFor(tier.key);
         params['line_items[0][price_data][recurring][interval]'] = r.interval;
