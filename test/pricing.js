@@ -132,5 +132,102 @@ for (const [key, [list, want]] of Object.entries(WANT)) {
      `expected ${pricing.money(want)}`);
 }
 
-console.log(fail ? `\n${fail} failing` : '\nAll good');
-process.exit(fail ? 1 : 0);
+// ---------------------------------------------------------------------------
+console.log('\nThe Stripe Price IDs are real and both halves are filled in:');
+
+// The IDs live in the EnRoute Jobs, LLC account. Checked here so that a tier
+// silently losing its promo Price (the state that made the markdown depend on
+// the inline fallback) shows up as a failing test rather than as a full-price
+// charge.
+const idSql = read('migrations/2026-09-11_stripe_prices_enroute_account.sql');
+// One stanza per tier. Split on the statement boundary so a missing ID in one
+// tier cannot be covered by the IDs of the tier above it.
+const stanzas = idSql.split('update pricing_tiers set').slice(1);
+for (const key of Object.keys(WANT)) {
+  const stanza = stanzas.find(t => new RegExp("where key = '" + key + "'").test(t)) || '';
+  const ids = stanza.match(/\bprice_1[A-Za-z0-9]+/g) || [];
+  ok(`${key} has both a list and a markdown Price ID`, ids.length === 2, ids.join(', ') || 'none');
+  ok(`...and they are different Prices`, ids.length === 2 && ids[0] !== ids[1]);
+}
+const allIds = idSql.match(/\bprice_1[A-Za-z0-9]+/g) || [];
+ok('all eight Prices are accounted for', allIds.length === 8, allIds.length + ' found');
+ok('every Price ID belongs to the EnRoute Jobs, LLC account',
+   allIds.length > 0 && allIds.every(id => /GYCkHj7ufX/.test(id)),
+   'an ID from another Stripe account is rejected at checkout');
+ok('no Price is reused across tiers', new Set(allIds).size === allIds.length);
+ok('the migration says which amount each ID charges',
+   Object.values(WANT).flat().every(c => idSql.includes(pricing.money(c).replace('$', '$') + '.00') ||
+     idSql.includes('$' + (c / 100).toFixed(2))),
+   'every amount appears as a comment beside its ID');
+
+// ---------------------------------------------------------------------------
+console.log('\nA rejected Price ID does not cost the sale:');
+
+// The real failure this guards: pricing_tiers pointed at Prices from a Stripe
+// account we no longer charge on. Every checkout 400'd. Here we make Stripe
+// reject the Price for real and assert the member still reaches checkout, at
+// the markdown price.
+(function () {
+  const path = require('path');
+  const express = require('express');
+  const root = path.join(__dirname, '..');
+  const stub = (rel, exports) => {
+    const file = require.resolve(path.join(root, rel));
+    require.cache[file] = { id: file, filename: file, loaded: true, exports };
+  };
+
+  const TIER = { key: 'month', name: 'Escape Monthly', price_cents: 1200, interval_label: 'per month',
+    mode: 'subscription', is_active: true, stripe_price_id: 'price_fromTheWrongAccount',
+    promo_price_cents: 600, promo_stripe_price_id: 'price_alsoWrong',
+    promo_label: '2026/27 launch price', promo_ends_at: null };
+
+  const fakeSb = () => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({
+    maybeSingle: async () => ({ data: TIER }) }) }) }) }) });
+  stub('src/supabase.js', { anonClient: fakeSb, serviceClient: fakeSb });
+  stub('src/middleware/auth.js', {
+    requireAuth: (req, _res, nxt) => { req.user = { id: 'u1', email: 'm@x.test' }; req.profile = {}; nxt(); },
+    planOf: () => 'free'
+  });
+
+  delete require.cache[require.resolve(path.join(root, 'src/routes/billing.js'))];
+  process.env.STRIPE_SECRET_KEY = 'sk_test_stub';
+  const billing = require(path.join(root, 'src/routes/billing.js'));
+
+  const app = express();
+  app.use(express.urlencoded({ extended: false }));
+  app.use(billing.router || billing);
+
+  const calls = [];
+  const realFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    const body = Object.fromEntries(new URLSearchParams(opts.body || ''));
+    calls.push(body);
+    if (body['line_items[0][price]']) {
+      return { ok: false, json: async () => ({ error: { message: 'No such price: ' + body['line_items[0][price]'] } }) };
+    }
+    return { ok: true, json: async () => ({ url: 'https://checkout.stripe.test/ok' }) };
+  };
+
+  const server = app.listen(0, async () => {
+    let res;
+    try {
+      res = await realFetch('http://127.0.0.1:' + server.address().port + '/billing/checkout/month',
+        { method: 'POST', redirect: 'manual' });
+    } finally { global.fetch = realFetch; server.close(); }
+
+    const loc = res.headers.get('location') || '';
+    ok('Stripe was asked for the catalog Price first',
+       calls[0] && calls[0]['line_items[0][price]'] === 'price_alsoWrong', JSON.stringify(calls[0] || {}));
+    ok('...and when it was rejected, checkout was retried inline', calls.length === 2, calls.length + ' call(s)');
+    ok('...at the markdown price, not the list price',
+       calls[1] && calls[1]['line_items[0][price_data][unit_amount]'] === '600',
+       calls[1] && calls[1]['line_items[0][price_data][unit_amount]']);
+    ok('...with no stale Price ID left alongside it',
+       calls[1] && !calls[1]['line_items[0][price]']);
+    ok('the member reaches Stripe rather than an error',
+       loc === 'https://checkout.stripe.test/ok', loc);
+
+    console.log(fail ? `\n${fail} failing` : '\nAll good');
+    process.exit(fail ? 1 : 0);
+  });
+})();

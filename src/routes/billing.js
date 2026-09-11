@@ -137,12 +137,11 @@ router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
     const offer = pricing.offerFor(tier);
     if (offer.isPromo) params['metadata[promo]'] = offer.label || 'markdown';
 
-    if (offer.stripePriceId) {
-      // Use the configured catalog Price when present...
-      params['line_items[0][price]'] = offer.stripePriceId;
-    } else {
-      // ...otherwise build the price inline from the amount in pricing_tiers.
-      // This is what lets a markdown go live before its Stripe Price exists.
+    // Build the line item inline from the amount in pricing_tiers. This is what
+    // lets a markdown go live before its Stripe Price exists, and what catches a
+    // Price ID that belongs to a Stripe account we are no longer charging on.
+    const useInlineLineItem = () => {
+      delete params['line_items[0][price]'];
       params['line_items[0][price_data][currency]'] = 'usd';
       params['line_items[0][price_data][product_data][name]'] = tier.name || 'NoBossly';
       params['line_items[0][price_data][unit_amount]'] = String(offer.cents);
@@ -151,7 +150,11 @@ router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
         params['line_items[0][price_data][recurring][interval]'] = r.interval;
         params['line_items[0][price_data][recurring][interval_count]'] = String(r.interval_count);
       }
-    }
+    };
+
+    // Use the configured catalog Price when present, inline otherwise.
+    if (offer.stripePriceId) { params['line_items[0][price]'] = offer.stripePriceId; }
+    else { useInlineLineItem(); }
 
     if (req.profile.stripe_customer_id) { params.customer = req.profile.stripe_customer_id; }
     else { params.customer_email = req.user.email; }
@@ -160,7 +163,20 @@ router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
     try {
       session = await stripe('POST', 'checkout/sessions', params);
     } catch (err) {
-      return res.redirect('/pricing?msg=' + encodeURIComponent('Could not start checkout: ' + err.message));
+      // A Price ID that Stripe rejects — wrong account, archived, deleted — must
+      // never cost a sale. Fall back to the inline amount and charge the same
+      // money anyway; the rejected ID is logged loudly so it gets fixed.
+      if (!offer.stripePriceId) {
+        return res.redirect('/pricing?msg=' + encodeURIComponent('Could not start checkout: ' + err.message));
+      }
+      console.error('[billing] Stripe rejected price ' + offer.stripePriceId + ' for tier ' +
+        tier.key + ' (' + (offer.isPromo ? 'promo' : 'list') + ') — retrying inline: ' + err.message);
+      useInlineLineItem();
+      try {
+        session = await stripe('POST', 'checkout/sessions', params);
+      } catch (err2) {
+        return res.redirect('/pricing?msg=' + encodeURIComponent('Could not start checkout: ' + err2.message));
+      }
     }
     return res.redirect(303, session.url);
   } catch (e) { next(e); }
