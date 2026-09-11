@@ -2,16 +2,27 @@ const { anonClient, userClient, serviceClient } = require('../supabase');
 
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '';
 
-function cookieOpts(req) {
+// One source of truth for cookie scope, used by every cookie this app sets.
+// COOKIE_DOMAIN wins when set; otherwise cookies are host-only. Host-only is
+// right on nobossly.com — the OAuth round trip comes back to req.get('host'),
+// so a cookie set before the redirect is readable after it — and it is the only
+// thing that works on localhost or a staging host, where a browser rejects a
+// hardcoded .nobossly.com domain outright.
+const cookieDomainOpts = () => (COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {});
+
+// Secure is decided from the request, not NODE_ENV: behind a proxy that
+// terminates TLS, req.secure is false while x-forwarded-proto says https.
+function cookieOpts(req, overrides) {
   const proto = String((req && (req.headers['x-forwarded-proto'] || req.protocol)) || '').split(',')[0].trim();
-  const isHttps = proto === 'https' || (req && req.secure);
+  const isHttps = proto === 'https' || !!(req && req.secure);
   return {
     httpOnly: true,
     sameSite: 'lax',
     secure: isHttps,
     maxAge: 1000 * 60 * 60 * 24 * 30,
     path: '/',
-    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {})
+    ...cookieDomainOpts(),
+    ...(overrides || {})
   };
 }
 
@@ -175,4 +186,4 @@ function requirePaid(req, res, next) {
   require('../upgrade').gate(res, null);
 }
 
-module.exports = { attachUser, requireAuth, requireAdmin, requirePaid, planOf, setSessionCookies, clearSessionCookies, COOKIE_DOMAIN };
+module.exports = { attachUser, requireAuth, requireAdmin, requirePaid, planOf, setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts, COOKIE_DOMAIN };

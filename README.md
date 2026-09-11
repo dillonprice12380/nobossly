@@ -36,7 +36,7 @@ Optional — each has a working default, but the feature is degraded without it:
 | `SUB_SYNC_SECRET` | *(none)* | Must match the value in `app_secrets` for subscription sync |
 | `RESEND_API_KEY` | *(none)* | No outbound mail is sent at all |
 | `EMAIL_FROM` | `NoBossly <hello@nobossly.com>` | — |
-| `COOKIE_DOMAIN` | `.nobossly.com` | Only change when serving from another domain |
+| `COOKIE_DOMAIN` | *(none — cookies are host-only)* | Only set this to share a session across subdomains, e.g. `.nobossly.com` for apex + `www`. Host-only is correct otherwise, and is the only thing that works on localhost or staging |
 | `PORT` | `3000` | — |
 
 `ANTHROPIC_API_KEY` is **not** an app env var. Every model call goes through the

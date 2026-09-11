@@ -1,11 +1,9 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const { anonClient, userClient, serviceClient } = require('../supabase');
-const { setSessionCookies, clearSessionCookies } = require('../middleware/auth');
+const { setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts } = require('../middleware/auth');
 const mailer = require('../mailer');
 const pathsLib = require('../paths');
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || '.nobossly.com';
-const cookieDomainOpts = COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {};
 function callbackBase(req) {
   const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
   return proto + '://' + req.get('host');
@@ -157,7 +155,7 @@ router.get('/auth/oauth/:provider', (req, res) => {
   if (!provider) return res.redirect('/login');
   const verifier = b64url(crypto.randomBytes(48));
   const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
-  res.cookie('pkce_verifier', verifier, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 10 * 60 * 1000, ...cookieDomainOpts });
+  res.cookie('pkce_verifier', verifier, cookieOpts(req, { maxAge: 10 * 60 * 1000 }));
   const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const redirectTo = callbackBase(req) + '/auth/callback';
   res.redirect(base + '/auth/v1/authorize?provider=' + provider
@@ -177,7 +175,8 @@ router.get('/auth/callback', async (req, res) => {
       body: JSON.stringify({ auth_code: code, code_verifier: verifier })
     });
     const j = await r.json();
-    res.clearCookie('pkce_verifier', cookieDomainOpts);
+    res.clearCookie('pkce_verifier', { path: '/', ...cookieDomainOpts() });
+    res.clearCookie('pkce_verifier', { path: '/', domain: '.nobossly.com' });
     if (!r.ok || !j.access_token) {
       return res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed: ' + (j.error_description || j.msg || 'unknown error')));
     }
