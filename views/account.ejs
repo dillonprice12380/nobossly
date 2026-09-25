@@ -1,5 +1,5 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-setting"/></svg> Account settings</h1><p class="muted">Manage your login, privacy, and subscription.</p></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-setting"/></svg> Account settings</h1><p class="muted">Manage your login and privacy.</p></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 <% if (err) { %><p class="error"><%= err %></p><% } %>
 
@@ -33,21 +33,8 @@
 </div>
 
 <div class="card">
-  <h3>💳 Subscription</h3>
-  <% if (plan === 'paid' && p.is_lifetime) { %>
-    <p><span class="chip chip-success">Lifetime access</span> — you're set forever. 🎉</p>
-  <% } else if (plan === 'paid') { %>
-    <p><span class="chip chip-success">Active</span> <strong><%= tierName || 'Paid plan' %></strong>
-    <% if (p.subscription_period_end) { %><span class="muted small"> · <%= p.subscription_status === 'canceled' ? 'access ends' : 'renews' %> <%= new Date(p.subscription_period_end).toLocaleDateString() %></span><% } %></p>
-    <% if (p.subscription_status !== 'canceled') { %>
-      <form method="post" action="/billing/cancel" onsubmit="return confirm('End your subscription? You keep access until the end of the current period.')">
-        <button class="btn btn-ghost btn-sm">End subscription</button>
-      </form>
-    <% } else { %><p class="muted small">Your subscription is set to end — you keep access until the date above.</p><% } %>
-  <% } else { %>
-    <p><span class="chip">Free plan</span> — your Compass, drafting your idea with the advisor, forum access, and up to 8 manual tasks.</p>
-    <a class="btn btn-primary btn-sm" href="/pricing">See plans & upgrade</a>
-  <% } %>
+  <h3>🎉 Plan</h3>
+  <p><span class="chip chip-success">Free, forever</span> — every path, every quest, every sprint, the full ladder, no card needed.</p>
 </div>
 
 <div class="card" style="border-color:#fca5a5">
