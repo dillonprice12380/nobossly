@@ -12,13 +12,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Canonical host redirect, kept first so it runs ahead of every other
-// middleware and route. www.nobossly.com and nobossly.com were both live and
-// separately crawlable — Seobility flags this directly ("This website uses
-// both www and non-www URLs. This can result in duplicate content and
-// impact your rankings."), the same issue found and fixed on EnRoute Jobs.
-// Apex is canonical here too — sitemap.xml's own base URL below already
-// uses it. req.hostname reads the raw Host header (no trust-proxy config
-// needed for that), so this holds regardless of what's in front of the app.
+// middleware and route.
 app.use((req, res, next) => {
   if (req.hostname === 'www.nobossly.com') {
     return res.redirect(301, `https://nobossly.com${req.originalUrl}`);
@@ -26,25 +20,10 @@ app.use((req, res, next) => {
   next();
 });
 
-const billing = require('./src/routes/billing');
-app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Views need the current path to highlight the active dashboard section, and
-// every page needs a self-referencing canonical. There was none anywhere, so
-// for as long as www and apex were both live every page was indexable at two
-// hostnames, and the faceted guides listing (?q=, ?cat=, ?loc=) multiplied
-// that again into a large duplicate URL space with no consolidating signal.
-//
-// Canonical is built on the apex host from the clean path. Only `page` is
-// carried through, so paginated listings self-canonicalize while filter
-// combinations collapse onto the unfiltered listing — Google's documented
-// handling for faceted navigation. Deliberately no noindex alongside this:
-// a noindex on a URL that canonicalizes to a page we want indexed is a
-// conflicting signal and Google may apply it to the canonical target.
 const CANONICAL_HOST = 'https://nobossly.com';
 const CANONICAL_KEEP = ['page'];
 app.use((req, res, next) => {
@@ -90,10 +69,9 @@ app.use((req, res, next) => {
 });
 
 app.use('/', require('./src/routes/auth'));
-app.use('/questionnaire', requireAuth, require('./src/routes/questionnaire'));
-app.use('/compass', requireAuth, require('./src/routes/compass')); // the Compass + draft-your-idea advisor
-app.use('/ideas', requireAuth, require('./src/routes/ideas'));
-app.use('/blueprint', requireAuth, require('./src/routes/blueprint'));
+// Onboarding: pick a path, land straight in the product. Replaces the old
+// AI-driven questionnaire + Compass.
+app.use('/choose-path', requireAuth, require('./src/routes/choose_path'));
 app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
@@ -103,7 +81,6 @@ app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 // so that a POST to an old URL still works instead of silently becoming a GET.
 app.use('/quests', requireAuth, require('./src/routes/challenges'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));   // former name
-app.use('/coach', requireAuth, require('./src/routes/coach')); // the weekly plan, the coach chat, proof review, the reading list
 app.use('/feed', requireAuth, require('./src/routes/feed')); // what the people you follow have been doing
 app.use('/community', require('./src/routes/community'));
 app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
@@ -116,29 +93,18 @@ app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
-app.use('/', billing.router); // /pricing + /billing/*
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends, groups
 app.use('/upload', requireAuth, require('./src/routes/uploads'));
 app.get('/profile', requireAuth, (req, res) => res.redirect('/members/' + req.profile.username));
 app.use('/admin/sounds', requireAdmin, require('./src/routes/admin_sounds')); // game soundbite uploads — before /admin so its own routes win
 app.use('/admin', requireAdmin, require('./src/routes/admin'));
-// The Compass is the product's best asset and was invisible to anyone who
-// hadn't already finished the questionnaire. This is one worked example,
-// public and indexable, so a visitor can judge it before signing up.
-app.get('/sample-compass', (req, res) => {
-  res.render('compass_sample', {
-    title: 'A real Compass, worked through',
-    compass: require('./src/sample_compass'),
-    metaDescription: 'See exactly what a NoBossly Compass gives you: your archetype, your real strengths and constraints, the territories where you hold an edge, a 5-point fit test and an honest avoid list — worked through for one member, start to finish.'
-  });
-});
 
 app.use('/paths', require('./src/routes/paths_public')); // public path landing pages — before the CMS catch-all
 app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'Work Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly turns getting out of your job into a game you play in real life: pick one of nine paths, draw your Compass, and climb ten levels where every level-up is a real achievement — first feedback, first sale, first $1k month, handing in your notice.' });
+  res.render('home', { title: 'Work Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly is a free community for people working their way out of the 9 to 5: pick one of nine paths, take on real-world challenges, run sprints, and follow other members climbing the same ladder — trading feedback, testimonials and advice as you go.' });
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -160,8 +126,6 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/', pri: '1.0' },
       { loc: base + '/community', pri: '0.8' },
       { loc: base + '/blog', pri: '0.8' },
-      { loc: base + '/pricing', pri: '0.8' },
-      { loc: base + '/sample-compass', pri: '0.9' },
       // The path landing pages are the main organic entry points — someone
       // searching "how to start a bookkeeping business" should land on the
       // local service page, not the generic homepage.
@@ -183,15 +147,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Admin-only: this reports which secrets are configured and the Stripe key
-// prefix, which is not something to hand an anonymous visitor.
+// Admin-only: this reports which secrets are configured.
 app.get('/debug', requireAdmin, async (req, res) => {
   const steps = [];
   const log = m => { steps.push(m); console.log('DEBUG:', m); };
   try {
     log('node ' + process.version);
     log('env SUPABASE_URL set: ' + !!process.env.SUPABASE_URL + ', ANON set: ' + !!process.env.SUPABASE_ANON_KEY);
-    log('env STRIPE_SECRET_KEY set: ' + !!process.env.STRIPE_SECRET_KEY + ' (prefix ' + String(process.env.STRIPE_SECRET_KEY || '').slice(0, 7) + '), SUB_SYNC_SECRET set: ' + !!process.env.SUB_SYNC_SECRET + ', SITE_URL: ' + (process.env.SITE_URL || '(unset)'));
     const { createClient } = require('@supabase/supabase-js');
     log('supabase-js loaded v' + require('@supabase/supabase-js/package.json').version);
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -221,8 +183,6 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
-// Every nudge is once-per-user for life, so running this again after a restart
-// re-sends nothing. Inert unless RESEND_API_KEY and the service role key are set.
 const mailer = require('./src/mailer');
 const sweepEmail = () => mailer.runSweep().then(
   r => { if (r && (r.resume || r.comeback)) console.log('re-engagement emails sent:', r); },
@@ -232,17 +192,6 @@ setTimeout(sweepEmail, 2 * 60 * 1000);
 setInterval(sweepEmail, 12 * 60 * 60 * 1000);
 
 app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'Page not found.' }));
-// "Oops. Something went wrong." three times today, and no way to find out why:
-// the app is not on Supabase so its logs are not in that project, it wrote
-// nothing to the database, and console.error goes to a host that is not always
-// reachable from wherever the diagnosis is happening. Every failure had to be
-// inferred from Supabase's edge logs, which works for a bad query and not at
-// all for a TypeError in a route.
-//
-// So each error gets a short reference, goes to the console AND to app_errors
-// (admin-readable only — a stack trace is not for whoever tripped it), and the
-// page shows the reference so it can be quoted. Logging is best-effort and
-// never allowed to become the error itself.
 app.use((err, req, res, next) => {
   const ref = Math.random().toString(36).slice(2, 8).toUpperCase();
   console.error('[' + ref + ']', req.method, req.originalUrl, err);
