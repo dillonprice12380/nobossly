@@ -2,10 +2,10 @@
 <section class="home-hero">
   <div class="reveal reveal-left">
     <h1>Work your way out<br>of the <span class="accent-text">9 to 5.</span></h1>
-    <p class="lead" style="margin-left:0">NoBossly is built for people who still have a job and a couple of free hours a night. It turns the way out into ten levels you climb with real proof — first customer, first dollar that didn't come from your employer, first $1k month, the day you hand in your notice. The XP is a game. The exit isn't.</p>
+    <p class="lead" style="margin-left:0">NoBossly is a free community for people who still have a job and a couple of free hours a night. It turns the way out into ten levels you climb with real proof — first customer, first dollar that didn't come from your employer, first $1k month, the day you hand in your notice — alongside other people doing the same thing, trading feedback and advice as you go. The XP is a game. The exit isn't.</p>
     <div class="cta-row" style="justify-content:flex-start">
       <a class="btn btn-primary btn-lg" href="/paths">Find your path — it's free →</a>
-      <a class="btn btn-ghost btn-lg" href="/sample-compass">See a real Compass first</a>
+      <a class="btn btn-ghost btn-lg" href="/community">See the community</a>
     </div>
   </div>
   <img class="hero-img img-fade" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/light-bulb_p2diod.png" alt="A way out of the day job, lit up">
@@ -17,14 +17,12 @@
   </div>
 </div>
 
-<%# Guarded: the homepage is the last page that should 500 because a route
-    forgot a local. Missing paths means the section is skipped, not a blank page. %>
 <% if (typeof paths !== 'undefined' && paths && paths.length) { %>
 <section class="reveal reveal-up" id="paths">
   <div class="page-head">
     <div>
       <h2>Pick the way out that fits your life</h2>
-      <p class="muted">A plumber and a podcaster do not need the same advice, so they do not get the same questions. Your path changes what you are asked, the fit test your idea is held to, and the quests you get.</p>
+      <p class="muted">A plumber and a podcaster don't get the same quests. Your path changes what shows up on your board and who else you're climbing alongside.</p>
     </div>
     <a class="btn btn-ghost" href="/paths">Compare all paths →</a>
   </div>
@@ -36,7 +34,7 @@
       </a>
     <% }) %>
   </div>
-  <p class="muted small" style="margin-top:.7rem">Each path then asks what kind, specifically — a copywriter is not a developer, a TikTok account is not a blog — and climbs its own ten rungs, named for the work. Same ten stages underneath, same XP, and a first sale is still a first sale.</p>
+  <p class="muted small" style="margin-top:.7rem">Each path climbs its own ten rungs, named for the work — a copywriter's ladder reads differently from a plumber's. Same ten stages underneath, same XP, and a first sale is still a first sale.</p>
 </section>
 <% } %>
 
@@ -73,17 +71,17 @@
     </div>
     <p class="muted">of the people who want to do it have gone past basic research this year</p>
   </div>
-  <p class="stats-kicker muted small">Almost everyone stays in the first circle until they retire. The gap is not desire. It's that nobody hands you the next step on a Tuesday night.</p>
+  <p class="stats-kicker muted small">Almost everyone stays in the first circle until they retire. The gap is not desire. It's that nobody hands you the next step on a Tuesday night — or anyone to compare notes with.</p>
 </section>
 
 <section class="feature-row single reveal reveal-right">
   <div>
     <h2>🌙 Built for the hours you have left</h2>
-    <p class="muted">Most business advice is written as though you already quit. This one starts from the opposite assumption: you have a job, a commute, and maybe ten hours a week that are genuinely yours. Every plan NoBossly builds is sized to those hours and that budget, and anything that only works if you go full-time tomorrow gets flagged before you sink a year into it.</p>
+    <p class="muted">Most business advice is written as though you already quit. This one starts from the opposite assumption: you have a job, a commute, and maybe ten hours a week that are genuinely yours.</p>
     <ul class="feature-list">
-      <li>Your real hours, your real runway — asked up front, then held to</li>
       <li>Quests you can finish on a weeknight, not a 60-hour sprint</li>
       <li>A streak that survives one busy Tuesday — one freeze a month</li>
+      <li>Sprints you set yourself — a 7-day push toward one thing, your own tasks on it</li>
       <li>Nothing here needs you to quit first. That's the last step, not the first</li>
     </ul>
   </div>
@@ -91,13 +89,13 @@
 
 <section class="feature-row single reveal reveal-left">
   <div>
-    <h2>🧭 Roll your character: your Compass</h2>
-    <p class="muted">Every game starts with a character sheet. Ours is drawn from you — a short questionnaire becomes your archetype, your loadout of strengths and unfair advantages, the territories where you have a real edge, and a 5-point fit test built from your own constraints. Then the twist: <strong>you</strong> choose the idea. Your AI advisor stress-tests it against your own fit test and the live market — where it holds, where it strains, and the sharper wedge — but the call is always yours.</p>
+    <h2>🧭 Pick a path, start moving</h2>
+    <p class="muted">No quiz, no waiting on a report. Pick one of nine paths and you're straight into your quest board, your ladder, and the community of people climbing the same rungs. The proof you need — real feedback on your idea, a testimonial, a second opinion — comes from other members, not a model guessing at your situation.</p>
     <ul class="feature-list">
-      <li>Your archetype, loadout &amp; binding constraints — read back honestly</li>
-      <li>Territories worth exploring, with live market temperature</li>
-      <li>An avoid list: what's tempting but wrong for your situation</li>
-      <li>Draft YOUR idea — the advisor sharpens it, you decide</li>
+      <li>Nine paths, each with its own ladder and quest board</li>
+      <li>Real feedback from real members — the peer-review queue is built for it</li>
+      <li>An avoid list you build with people who've actually done it</li>
+      <li>You decide the idea. Always</li>
     </ul>
   </div>
 </section>
@@ -105,7 +103,7 @@
 <section class="feature-row reveal reveal-left">
   <div>
     <h2>🎮 Ten levels between here and your notice</h2>
-    <p class="muted">Nine ladders, one game. Your path names its own rungs — a plumber goes Odd Jobber to Signwritten to Own Boss, a creator goes Lurker to Sponsored to Institution — but the ten stages, the XP on each one, and the proof each demands are identical. XP and daily streaks pace you, but no rung can be bought with points — every level gates on something that happened in the real world. AI-planned 7-day sprints and daily check-ins move you rung to rung, and your wins post to a public wall with witnesses.</p>
+    <p class="muted">Nine ladders, one game. Your path names its own rungs — a plumber goes Odd Jobber to Signwritten to Own Boss, a creator goes Lurker to Sponsored to Institution — but the ten stages, the XP on each one, and the proof each demands are identical. XP and daily streaks pace you, but no rung can be bought with points — every level gates on something that happened in the real world. Self-directed 7-day sprints and daily check-ins move you rung to rung, and your wins post to a public wall with witnesses.</p>
     <ul class="feature-list">
       <li>🔍 Level 2 — idea validated, 3 real humans gave feedback</li>
       <li>🔨 Level 3 — you shipped something into the world</li>
@@ -120,17 +118,17 @@
 
 <section class="feature-row reveal reveal-right">
   <div>
-    <h2>💬 A coach that already knows where you are</h2>
-    <p class="muted">Most AI advice is generic because the thing giving it knows nothing about you. This one knows your path and what kind, the rung you are on, the exact quest blocking the next one, the hours you said you have after work, and what you did and did not finish last week. Every Monday it turns that into three things — dated, sized to your evenings, aimed at the rung.</p>
+    <h2>💬 Feedback from people actually doing it</h2>
+    <p class="muted">Generic advice is easy to ignore. A stranger on the same ladder telling you your landing page doesn't say what you sell isn't. The peer-review queue pairs you with other members for real feedback on your idea, your pitch, your pricing — give three, get three, and it counts toward your own ladder too.</p>
     <ul class="feature-list">
-      <li>📋 <strong>This week</strong> — three actions, each finishable in one sitting</li>
-      <li>💬 <strong>Stuck?</strong> — ask it anything; you never have to explain your situation</li>
-      <li>🔍 <strong>Proof review</strong> — does what you did actually clear the gate?</li>
-      <li>📚 <strong>Read this week</strong> — three of a hundred guides, picked for your rung. Free.</li>
+      <li>💬 <strong>Ask for feedback</strong> — post what you're working on, get real answers</li>
+      <li>🤝 <strong>Give a review</strong> — earns you XP and clears a quest of your own</li>
+      <li>🏆 <strong>Testimonials</strong> — collect proof from the people you've helped or sold to</li>
+      <li>📚 <strong>The guide library</strong> — a hundred-plus practical guides, free, no account needed</li>
     </ul>
-    <p class="muted small">A plumber and a podcaster do not get the same next step. If the advice would read the same for both, it is wrong.</p>
+    <p class="muted small">A plumber and a podcaster don't need the same next step. Someone on their own ladder is more likely to know which one you need than a generic script is.</p>
   </div>
-  <img class="img-corner-fade" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/light-bulb_2_mns1wm.png" alt="Three things to do this week" loading="lazy">
+  <img class="img-corner-fade" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/light-bulb_2_mns1wm.png" alt="Real feedback from real members" loading="lazy">
 </section>
 
 <section class="feature-row single reveal reveal-right">
@@ -138,7 +136,7 @@
     <h2>🌐 Multiplayer, not solo mode</h2>
     <p class="muted">Doing this alone, after work, is how it quietly stops. Cohort quests start everyone on the same day with one deadline and one leaderboard, the community gives you feedback between rungs, and the Wins wall keeps score in public — first dollars, first customers, resignation letters.</p>
     <ul class="feature-list">
-      <li>👥 Follow other members — their real wins land in your feed, named for their path</li>
+      <li>👥 Follow other members — see the quests and sprints they're working on, right in your feed</li>
       <li>🚩 Cohort quests — one start date, one deadline, one leaderboard</li>
       <li>🏆 The Wins wall — real achievements from real members, witnessed</li>
       <li>Daily streaks with a monthly freeze — one busy Tuesday won't reset you</li>
