@@ -8,8 +8,6 @@
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
-<%# Everything in play, pinned first. Core + cohort actives come from
-    accMap, personal actives (accepted electives + AI set) from custom. %>
 <% const activePinned = []
      .concat(challenges.concat(cohorts).filter(c => accMap[c.id] && accMap[c.id].status === 'active')
        .map(c => ({ kind: c.is_cohort ? 'cohort' : 'core', ch: c, acc: accMap[c.id], due: accMap[c.id].due_date })))
@@ -25,7 +23,7 @@
          const needsProof = p.kind !== 'custom' && p.ch.requires_proof; %>
       <div class="milestone-row">
         <div style="flex:1"><strong><%= p.ch.emoji || '🏁' %> <%= p.ch.title %></strong>
-        <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 tailored' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
+        <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
             <textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note to complete: who, what, result — a few honest sentences."></textarea>
@@ -43,7 +41,6 @@
   </div>
 <% } %>
 
-<%# The weekly sprint IS a quest — the repeating 7-day one. %>
 <div class="card" id="weekly-sprint" style="border-left:3px solid var(--accent)">
   <div class="page-head" style="margin:0 0 .4rem">
     <div><h2>🏃 Your weekly sprint</h2><p class="muted small">The repeating 7-day quest. Every quest below gets won one sprint at a time.</p></div>
@@ -55,8 +52,8 @@
     <div class="progress"><div class="progress-bar" style="width:<%= sprint.velocity_pct || 0 %>%"></div></div>
     <a class="btn btn-primary btn-sm" style="margin-top:.7rem;display:inline-block" href="/dashboard#sprint-card">Open the task board</a>
   <% } else { %>
-    <p class="muted">No sprint running. Pick an idea, build its blueprint, and launch a 7-day sprint — that's the engine behind every quest on this page.</p>
-    <a class="btn btn-primary btn-sm" href="/compass">Start a sprint</a>
+    <p class="muted">No sprint running. Name one and add your own tasks — that's the engine behind every quest on this page.</p>
+    <a class="btn btn-primary btn-sm" href="/dashboard">Start a sprint</a>
   <% } %>
 </div>
 
@@ -76,7 +73,7 @@
           <h3><%= c.title %></h3>
           <p class="muted"><%= c.description %></p>
           <p>
-            <% if (state === 'upcoming') { %><span class="chip">🗓 Starts in <%= daysTo(st) %> day<%= daysTo(st) === 1 ? '' : 's' %> — <%= new Date(c.starts_at).toLocaleDateString() %></span>
+            <% if (state === 'upcoming') { %><span class="chip">🗝 Starts in <%= daysTo(st) %> day<%= daysTo(st) === 1 ? '' : 's' %> — <%= new Date(c.starts_at).toLocaleDateString() %></span>
             <% } else if (state === 'live') { %><span class="chip chip-success">🔴 Live now<%= en ? ' — ' + daysTo(en) + ' day' + (daysTo(en) === 1 ? '' : 's') + ' left' : '' %></span>
             <% } else { %><span class="chip">Ended<%= c.ends_at ? ' ' + new Date(c.ends_at).toLocaleDateString() : '' %></span><% } %>
           </p>
@@ -130,19 +127,18 @@
 <div class="card">
   <h2>🎯 Electives for your business</h2>
   <% if (unclassified) { %>
-    <p class="muted">Electives are quests matched to your exact kind of business — its type, industry, customers, and what it promises them. Draw your Compass and pick an idea, and this section fills itself in.</p>
-    <a class="btn btn-primary btn-sm" href="/compass">Draw your Compass</a>
+    <p class="muted">Electives are quests matched to your path and business — pick your path and they'll fill in here.</p>
+    <a class="btn btn-primary btn-sm" href="/choose-path">Choose your path</a>
   <% } else if (!electives.length) { %>
-    <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up<%= paid ? ' and as the AI writes more for your profile' : '' %>.</p>
+    <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up.</p>
   <% } else { %>
-    <p class="muted small">Matched to your business type, industry, and customers. Accept the ones that move your needle.</p>
+    <p class="muted small">Matched to your path and business. Accept the ones that move your needle.</p>
     <div class="grid">
       <% electives.forEach(t => { %>
         <div class="card">
           <div class="idea-top"><span style="font-size:1.6rem"><%= t.emoji || '🏁' %></span><span class="chip">⚡ <%= t.xp_reward %> XP</span></div>
           <h3><%= t.title %></h3>
           <p class="muted"><%= t.description %></p>
-          <% if (t.source === 'ai') { %><p class="muted small">✨ Written for your exact business profile.</p><% } %>
           <form method="post" action="/quests/tailored/<%= t.id %>/accept">
             <label class="small">Timeline
               <select name="duration_days">
@@ -160,46 +156,35 @@
 </div>
 
 <% const nonActiveCustom = custom.filter(c => c.status !== 'active'); %>
-<% if (nonActiveCustom.length || paid) { %>
+<% if (nonActiveCustom.length) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2>🛡️ Your personal quests</h2><p class="muted small">Electives you've taken and your AI-generated set. Active ones are pinned at the top of the page.</p></div>
-      <% if (paid) { %><form method="post" action="/quests/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate AI set' : 'Generate AI set' %></button></form><% } %>
+      <div><h2>🛡️ Your personal quests</h2><p class="muted small">Electives you've taken on. Active ones are pinned at the top of the page.</p></div>
     </div>
-    <% if (!nonActiveCustom.length) { %>
-      <p class="muted"><%= custom.length ? 'Everything here is active and pinned above.' : 'Nothing here yet. Accept an elective above' + (paid ? ', or click Generate to build a set from your blueprint.' : '.') %></p>
-    <% } else { %>
-      <div class="grid">
-        <% nonActiveCustom.forEach(c => { %>
-          <div class="card">
-            <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
-            <h3><%= c.title %></h3>
-            <p class="muted"><%= c.description %></p>
-            <% if (c.status === 'completed') { %>
-              <span class="chip chip-success">✅ Completed</span>
-            <% } else { %>
-              <form method="post" action="/quests/custom/<%= c.id %>/accept">
-                <% if (c.status === 'abandoned') { %><span class="chip">Abandoned</span><% } %>
-                <label class="small">Timeline
-                  <select name="duration_days">
-                    <option value="30" <%= c.suggested_days === 30 ? 'selected' : '' %>>30 days</option>
-                    <option value="60" <%= c.suggested_days === 60 ? 'selected' : '' %>>60 days</option>
-                    <option value="90" <%= c.suggested_days === 90 ? 'selected' : '' %>>90 days</option>
-                  </select>
-                </label>
-                <button class="btn btn-primary btn-sm"><%= c.status === 'abandoned' ? 'Re-accept' : 'Accept quest' %></button>
-              </form>
-            <% } %>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-  </div>
-<% } else { %>
-  <div class="card" style="border:1px dashed var(--border)">
-    <h2>✨ Want an AI quest set built for YOUR business?</h2>
-    <p class="muted">Upgrade to get a full AI-generated quest set drawn from your launch blueprint — plus badges and awards pinned to your public profile when you complete them.</p>
-    <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+    <div class="grid">
+      <% nonActiveCustom.forEach(c => { %>
+        <div class="card">
+          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+          <h3><%= c.title %></h3>
+          <p class="muted"><%= c.description %></p>
+          <% if (c.status === 'completed') { %>
+            <span class="chip chip-success">✅ Completed</span>
+          <% } else { %>
+            <form method="post" action="/quests/custom/<%= c.id %>/accept">
+              <% if (c.status === 'abandoned') { %><span class="chip">Abandoned</span><% } %>
+              <label class="small">Timeline
+                <select name="duration_days">
+                  <option value="30" <%= c.suggested_days === 30 ? 'selected' : '' %>>30 days</option>
+                  <option value="60" <%= c.suggested_days === 60 ? 'selected' : '' %>>60 days</option>
+                  <option value="90" <%= c.suggested_days === 90 ? 'selected' : '' %>>90 days</option>
+                </select>
+              </label>
+              <button class="btn btn-primary btn-sm"><%= c.status === 'abandoned' ? 'Re-accept' : 'Accept quest' %></button>
+            </form>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
   </div>
 <% } %>
 <%- include('partials/foot') %>
