@@ -1,0 +1,95 @@
+<%- include('../partials/head') %>
+<% const $ = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+   const s = service.inputs, p = product.inputs; %>
+<div class="page-head"><div>
+  <h1>🏷️ Pricing & Margin Calculator</h1>
+  <p class="muted">Work out the rate you need for the income you want, or the true margin on a product after every fee.</p>
+</div><a class="btn btn-ghost btn-sm" href="/tools">All tools</a></div>
+<% if (m) { %><p class="notice"><%= m %></p><% } %>
+
+<div class="cta-row" style="justify-content:flex-start;margin-bottom:1rem">
+  <a class="chip <%= mode === 'service' ? 'chip-active' : '' %>" href="/tools/pricing?mode=service">🧑‍💼 I sell my time</a>
+  <a class="chip <%= mode === 'product' ? 'chip-active' : '' %>" href="/tools/pricing?mode=product">📦 I sell products</a>
+</div>
+
+<% if (mode === 'service') { %>
+  <div class="grid-2">
+    <div class="card">
+      <form method="post" action="/tools/pricing/service">
+        <label>Take-home income you want per year ($)<input name="income" inputmode="decimal" value="<%= s.income || '' %>" required></label>
+        <label>Business costs per month ($)<input name="expenses" inputmode="decimal" value="<%= s.expenses || '' %>" placeholder="Software, insurance, equipment…"></label>
+        <div class="grid-2" style="gap:.6rem">
+          <label>Tax (%)<input name="tax" inputmode="decimal" value="<%= s.tax %>"></label>
+          <label>Billable hours / week<input name="hours" inputmode="decimal" value="<%= s.hours %>"></label>
+          <label>Working weeks / year<input name="weeks" inputmode="decimal" value="<%= s.weeks %>"></label>
+          <label>Hours in a typical project<input name="project_hours" inputmode="decimal" value="<%= s.project_hours %>"></label>
+        </div>
+        <label>Save as scenario (optional)<input name="save_as" maxlength="60" placeholder="e.g. Full-time freelance"></label>
+        <button class="btn btn-primary btn-sm">Calculate</button>
+      </form>
+    </div>
+    <div class="card">
+      <% if (hasService) { %>
+        <h3 style="margin-top:0">Your minimum rates</h3>
+        <div class="stat-row" style="margin-bottom:.6rem">
+          <div class="stat"><span class="stat-num"><%= $(service.hourly) %></span><span class="muted small">per hour</span></div>
+          <div class="stat"><span class="stat-num"><%= $(service.day) %></span><span class="muted small">per 8-hour day</span></div>
+          <div class="stat"><span class="stat-num"><%= $(service.project) %></span><span class="muted small">per <%= s.project_hours %>-hour project</span></div>
+        </div>
+        <p class="muted small">You need to bill <strong><%= $(service.revenue) %> a year</strong> (<%= $(service.monthly) %> a month) to take home <%= $(s.income) %> after <%= s.tax %>% tax and <%= $(s.expenses * 12) %> of yearly costs, across <%= s.hours %> billable hours a week for <%= s.weeks %> weeks.</p>
+        <p class="muted small">These are floors, not targets. Most people underestimate the unbilled time that goes into admin, sales and revisions, so quote above this.</p>
+      <% } else { %>
+        <p class="muted">Fill in the form to see the hourly, day and project rates you need.</p>
+      <% } %>
+    </div>
+  </div>
+<% } else { %>
+  <div class="grid-2">
+    <div class="card">
+      <form method="post" action="/tools/pricing/product">
+        <div class="grid-2" style="gap:.6rem">
+          <label>Selling price ($)<input name="price" inputmode="decimal" value="<%= p.price || '' %>" required></label>
+          <label>Cost to make or buy ($)<input name="unit_cost" inputmode="decimal" value="<%= p.unit_cost || '' %>"></label>
+          <label>Shipping you pay ($)<input name="shipping" inputmode="decimal" value="<%= p.shipping || '' %>"></label>
+          <label>Packaging ($)<input name="packaging" inputmode="decimal" value="<%= p.packaging || '' %>"></label>
+          <label>Marketplace fee (%)<input name="platform_pct" inputmode="decimal" value="<%= p.platform_pct || '' %>"></label>
+          <label>Payment fee (%)<input name="payment_pct" inputmode="decimal" value="<%= p.payment_pct %>"></label>
+          <label>Payment fee per order ($)<input name="payment_fixed" inputmode="decimal" value="<%= p.payment_fixed %>"></label>
+          <label>Ad spend per sale ($)<input name="ad_cost" inputmode="decimal" value="<%= p.ad_cost || '' %>"></label>
+        </div>
+        <label>Monthly profit goal ($)<input name="target" inputmode="decimal" value="<%= p.target || '' %>"></label>
+        <label>Save as scenario (optional)<input name="save_as" maxlength="60" placeholder="e.g. Large candle"></label>
+        <button class="btn btn-primary btn-sm">Calculate</button>
+      </form>
+    </div>
+    <div class="card">
+      <% if (hasProduct) { %>
+        <h3 style="margin-top:0">Per sale</h3>
+        <div class="stat-row" style="margin-bottom:.6rem">
+          <div class="stat"><span class="stat-num" style="color:<%= product.profit >= 0 ? 'var(--accent-2)' : 'var(--danger)' %>"><%= $(product.profit) %></span><span class="muted small">profit</span></div>
+          <div class="stat"><span class="stat-num"><%= product.margin %>%</span><span class="muted small">margin</span></div>
+          <div class="stat"><span class="stat-num"><%= $(product.fees) %></span><span class="muted small">in fees</span></div>
+        </div>
+        <% if (product.unitsForTarget) { %><p class="muted small">To make <%= $(p.target) %> a month you need <strong><%= product.unitsForTarget %> sales a month</strong> (about <%= Math.ceil(product.unitsForTarget / 30) %> a day).</p><% } %>
+        <% if (product.profit <= 0) { %><p class="error small">You lose money on every sale at this price.</p><% } %>
+        <% if (product.priceFor30) { %><p class="muted small">For a healthy 30% margin after everything, price it at <strong><%= $(product.priceFor30) %></strong> or more.</p><% } %>
+      <% } else { %>
+        <p class="muted">Fill in the form to see your profit and margin per sale.</p>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<% if (scenarios.length) { %>
+  <div class="card">
+    <h3 style="margin-top:0">Saved scenarios</h3>
+    <% scenarios.forEach(sc => { %>
+      <div class="milestone-row" style="align-items:center">
+        <div style="flex:1"><strong><%= sc.name %></strong> <span class="chip"><%= sc.mode === 'product' ? '📦 product' : '🧑‍💼 service' %></span> <span class="muted small">saved <%= sc.saved_at %></span></div>
+        <form method="post" action="/tools/pricing/scenario/<%= sc.id %>/load"><button class="btn btn-ghost btn-sm">Load</button></form>
+        <form method="post" action="/tools/pricing/scenario/<%= sc.id %>/delete" onsubmit="return confirm('Delete this scenario?')"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

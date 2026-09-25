@@ -33,8 +33,26 @@
 </div>
 
 <div class="card">
-  <h3>🎉 Plan</h3>
-  <p><span class="chip chip-success">Free, forever</span> — every path, every quest, every sprint, the full ladder, no card needed.</p>
+  <h3>⭐ Plan</h3>
+  <% if (p.is_lifetime) { %>
+    <p><span class="chip chip-success">Premium Lifetime</span> — every Premium tool, for good. <a href="/tools">Open your tools</a></p>
+  <% } else if (isPremium && p.subscription_status === 'canceled') { %>
+    <p><span class="chip">Premium — cancelled</span> You keep access until <strong><%= new Date(p.subscription_period_end).toLocaleDateString() %></strong>, then your account goes back to free.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">Renew Premium</a>
+  <% } else if (isPremium && !p.is_admin) { %>
+    <p><span class="chip chip-success"><%= tierName || 'Premium' %></span><% if (p.subscription_period_end) { %> — renews <%= new Date(p.subscription_period_end).toLocaleDateString() %><% } %>. <a href="/tools">Open your tools</a></p>
+    <div class="cta-row" style="justify-content:flex-start">
+      <% if (p.stripe_customer_id) { %><form method="post" action="/billing/portal"><button class="btn btn-ghost btn-sm">Update card &amp; invoices</button></form><% } %>
+      <a class="btn btn-ghost btn-sm" href="/pricing">Switch to lifetime</a>
+      <form method="post" action="/billing/cancel" onsubmit="return confirm('Cancel Premium? You keep it until the end of this billing period.')"><button class="btn btn-ghost btn-sm">Cancel Premium</button></form>
+    </div>
+  <% } else if (isPremium) { %>
+    <p><span class="chip chip-success">Premium (admin)</span> Admins have every Premium tool. <a href="/tools">Open your tools</a></p>
+  <% } else { %>
+    <p><span class="chip">Free</span> — every path, quest, sprint and rung, free for good.</p>
+    <p class="muted small">Premium adds five planning tools for leaving your job — from $3.99 a month.</p>
+    <a class="btn btn-primary btn-sm" href="/pricing">See Premium</a>
+  <% } %>
 </div>
 
 <div class="card" style="border-color:#fca5a5">

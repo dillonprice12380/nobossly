@@ -24,7 +24,7 @@ function blocksToHtml(blocks) {
     }
   }).join('\n');
 }
-const RESERVED_SLUGS = ['dashboard','tasks','challenges','milestones','community','collaborations','messages','notifications','members','admin','ideas','blueprint','questionnaire','login','signup','logout','blog','auth','debug','sitemap','robots','p','css','js','api','account','pricing','billing','profile','guides','help','resources','groups','report','follow','unfollow','friends','sidebars','go','toolkit','affiliate-disclosure'];
+const RESERVED_SLUGS = ['dashboard','tasks','challenges','milestones','community','collaborations','messages','notifications','members','admin','ideas','blueprint','questionnaire','login','signup','logout','blog','auth','debug','sitemap','robots','p','css','js','api','account','pricing','billing','profile','guides','help','resources','groups','report','follow','unfollow','friends','sidebars','go','toolkit','affiliate-disclosure','tools','proof','premium'];
 
 
 const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || ('item-' + Date.now());

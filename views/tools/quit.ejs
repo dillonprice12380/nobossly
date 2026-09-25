@@ -1,0 +1,81 @@
+<%- include('../partials/head') %>
+<% const $ = n => '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }); %>
+<div class="page-head"><div>
+  <h1>🗓️ Quit-Date Planner</h1>
+  <p class="muted">What your life costs, what you have saved, and what the side business brings in — turned into the month you can hand in your notice.</p>
+</div><a class="btn btn-ghost btn-sm" href="/tools">All tools</a></div>
+<% if (m) { %><p class="notice"><%= m %></p><% } %>
+
+<% if (plan) { %>
+  <div class="stat-row">
+    <div class="card stat"><span class="stat-num"><%= plan.safe ? plan.safe.label : 'Beyond 10 years' %></span><span class="muted small">Safe quit date</span></div>
+    <div class="card stat"><span class="stat-num"><%= plan.leap ? plan.leap.label : 'Not yet' %></span><span class="muted small">Earliest leap date</span></div>
+    <div class="card stat"><span class="stat-num"><%= plan.coverPct %>%</span><span class="muted small">of your costs the business covers today</span></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">What the dates mean</h3>
+    <p class="muted small"><strong>Safe quit date:</strong> the first month your side business covers all <%= $(plan.need) %> a month of costs on its own (after tax), and your savings hold your <%= inputs.buffer %>-month buffer of <%= $(plan.bufferTarget) %>.</p>
+    <p class="muted small"><strong>Earliest leap date:</strong> the first month you could quit and let savings cover the gap while the business keeps growing, without savings ever dropping below three months of costs over the next five years. Riskier — it depends on your growth rate holding.</p>
+    <p class="muted small">To cover your costs on its own, the business needs to bring in about <strong><%= $(plan.sideNeeded) %> a month</strong> before tax. Today it nets <%= $(plan.netNow) %> after tax.</p>
+    <% const maxV = Math.max.apply(null, plan.points.map(p => Math.max(p.net, p.need))) || 1; %>
+    <div style="display:flex;align-items:flex-end;gap:3px;height:140px;margin-top:1rem;border-bottom:1px solid var(--border)" aria-label="Side income after tax versus monthly costs">
+      <% plan.points.forEach(p => { %>
+        <div title="<%= p.month %>: nets <%= $(p.net) %> vs costs <%= $(p.need) %>" style="flex:1;height:<%= Math.max(2, Math.round(100 * p.net / maxV)) %>%;background:<%= p.net >= p.need ? 'var(--accent-2)' : 'var(--accent)' %>;border-radius:3px 3px 0 0;opacity:.85"></div>
+      <% }) %>
+    </div>
+    <p class="muted small" style="display:flex;justify-content:space-between;margin:.3rem 0 0"><span><%= plan.points[0].month %></span><span>Bars: side income after tax · green once it covers your costs</span><span><%= plan.points[plan.points.length - 1].month %></span></p>
+  </div>
+<% } %>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-top:0"><%= hasPlan ? 'Your numbers' : 'Start with your numbers' %></h3>
+    <form method="post" action="/tools/quit-date">
+      <label>Monthly living costs ($)<input name="living" inputmode="decimal" value="<%= hasPlan ? inputs.living : '' %>" placeholder="Rent, food, bills, debt payments" required></label>
+      <label>Benefits your job pays for, per month ($)<input name="benefits" inputmode="decimal" value="<%= hasPlan ? inputs.benefits : '' %>" placeholder="Health insurance, retirement match…"></label>
+      <label>Savings today ($)<input name="savings" inputmode="decimal" value="<%= hasPlan ? inputs.savings : '' %>"></label>
+      <label>Saved from your paycheck each month ($)<input name="save_rate" inputmode="decimal" value="<%= hasPlan ? inputs.save_rate : '' %>"></label>
+      <label>Side-business profit per month today ($)<input name="side" inputmode="decimal" value="<%= hasPlan ? inputs.side : '' %>" placeholder="After business costs, before tax"></label>
+      <div class="grid-2" style="gap:.6rem">
+        <label>Monthly growth (%)<input name="growth" inputmode="decimal" value="<%= inputs.growth %>"></label>
+        <label>Tax set aside (%)<input name="tax" inputmode="decimal" value="<%= inputs.tax %>"></label>
+        <label>Safety buffer (months)<input name="buffer" inputmode="decimal" value="<%= inputs.buffer %>"></label>
+        <label>Plan starts<input name="start" type="month" value="<%= inputs.start %>"></label>
+      </div>
+      <button class="btn btn-primary btn-sm">Save and calculate</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Monthly check-in</h3>
+    <% if (!hasPlan) { %>
+      <p class="muted small">Once your plan is set up, log what actually happened each month. The plan restarts from your real numbers, and you can see how your dates moved.</p>
+    <% } else { %>
+      <form method="post" action="/tools/quit-date/checkin">
+        <div class="grid-2" style="gap:.6rem">
+          <label>Month<input name="month" type="month" value="<%= new Date().toISOString().slice(0, 7) %>" required></label>
+          <label>Side profit that month ($)<input name="side" inputmode="decimal" required></label>
+        </div>
+        <label>Savings now ($)<input name="savings" inputmode="decimal" value="<%= inputs.savings %>" required></label>
+        <label>Note<input name="note" maxlength="300" placeholder="Optional — what moved the number?"></label>
+        <button class="btn btn-primary btn-sm">Log this month</button>
+      </form>
+      <% if (checkins.length) { %>
+        <div class="table-wrap" style="padding:0;margin-top:1rem">
+          <table class="table">
+            <tr><th>Month</th><th>Side profit</th><th>Savings</th><th>Safe date then</th><th></th></tr>
+            <% checkins.forEach(c => { %>
+              <tr>
+                <td><%= c.month %><% if (c.note) { %><br><span class="muted small"><%= c.note %></span><% } %></td>
+                <td><%= $(c.side) %></td><td><%= $(c.savings) %></td>
+                <td><%= c.safe ? monthLabel(c.safe) : '—' %></td>
+                <td><form method="post" action="/tools/quit-date/checkin/<%= c.month %>/delete" onsubmit="return confirm('Delete this check-in?')"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form></td>
+              </tr>
+            <% }) %>
+          </table>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+</div>
+<p class="muted small">A planning estimate, not financial advice. It assumes your side income is saved while you are employed and grows at a steady rate — real months are lumpier, which is what the check-ins are for.</p>
+<%- include('../partials/foot') %>

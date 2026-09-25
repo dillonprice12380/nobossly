@@ -81,6 +81,7 @@
         <div class="avatar-dropdown" id="avatar-dropdown">
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
+          <a href="/tools"><svg class="icon"><use href="#i-upgrade"/></svg> Premium tools</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
@@ -89,6 +90,7 @@
       <a href="/paths">Paths</a>
       <a href="/community">Community</a>
       <a href="/how-it-works">How it works</a>
+      <a href="/pricing">Premium</a>
       <div class="nav-dropdown" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
         <div class="nav-dd-menu">

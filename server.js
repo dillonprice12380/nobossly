@@ -20,6 +20,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Stripe posts the raw body; it must be read before the JSON parser below.
+const billing = require('./src/routes/billing');
+app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -58,6 +62,7 @@ app.use(require('./src/middleware/ogPrerender')); // crawler OG tags for /blog/:
 app.use(attachUser);
 app.use(require('./src/settings').attachSettings);
 app.use(require('./src/affiliates').attach); // live affiliate picks for any view
+app.use(require('./src/premium').attach);    // isPremium + the tool list for any view
 
 // First-time social (Google/LinkedIn/GitHub) sign-ups must choose a username
 // before using the rest of the app. Skip the chooser itself, auth, and logout.
@@ -73,7 +78,7 @@ app.use((req, res, next) => {
 // are still in sent emails, bookmarks and search results, so send them
 // somewhere useful instead of a 404.
 const RETIRED = [
-  [/^\/(pricing|billing|checkout|upgrade)(\/.*)?$/, '/how-it-works'],
+  [/^\/(checkout|upgrade)(\/.*)?$/, '/pricing'],
   [/^\/questionnaire(\/.*)?$/, '/choose-path'],
   [/^\/(compass|ideas|blueprint|coach|weekly-plan)(\/.*)?$/, '/dashboard']
 ];
@@ -83,6 +88,9 @@ app.get(RETIRED.map(r => r[0]), (req, res) => {
 });
 
 app.use('/', require('./src/routes/auth'));
+app.use('/', billing.router); // /pricing + /billing/* (Premium checkout)
+app.use('/tools', requireAuth, require('./src/routes/tools')); // the five Premium tools
+app.get('/proof/:username', require('./src/routes/tools').publicProof); // a member's public Proof Page
 // Onboarding: pick a path, land straight in the product. Replaces the old
 // AI-driven questionnaire + Compass.
 app.use('/choose-path', requireAuth, require('./src/routes/choose_path'));
@@ -150,6 +158,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },
       { loc: base + '/help', pri: '0.6' },
+      { loc: base + '/pricing', pri: '0.6' },
       ...(pages || []).map(p => ({ loc: base + '/' + p.slug, mod: p.updated_at, pri: '0.5' })),
       ...(posts || []).map(p => ({ loc: base + '/blog/' + p.slug, mod: p.updated_at, pri: '0.7' })),
       ...(guides || []).map(g => ({ loc: base + '/guides/' + g.slug, mod: g.updated_at, pri: '0.7' })),

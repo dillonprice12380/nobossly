@@ -155,8 +155,8 @@
 </section>
 
 <section style="margin:3rem 0">
-  <h2 style="text-align:center;margin-bottom:.5rem">Completely free.</h2>
-  <p class="muted" style="text-align:center;margin-bottom:2rem">No credit card, no upgrade prompt, no catch. Every quest, every sprint, every rung.</p>
+  <h2 style="text-align:center;margin-bottom:.5rem">Free to climb. Premium if you want the toolkit.</h2>
+  <p class="muted" style="text-align:center;margin-bottom:2rem">Every quest, every sprint and every rung is free, with no card needed. Premium is optional: five planning tools for the practical side of leaving, from $3.99 a month.</p>
   <div class="pricing-grid">
     <div class="card price-card" style="max-width:26rem;margin:0 auto">
       <h3>Free, forever</h3>
@@ -171,6 +171,15 @@
         <li>&#10003; A weekly reading list picked from 100+ guides</li>
       </ul>
       <a class="btn btn-primary btn-block" href="/paths">Find your path</a>
+    </div>
+    <div class="card price-card" style="max-width:26rem;margin:0 auto">
+      <h3>⭐ Premium</h3>
+      <p class="price">$3.99<span class="muted small"> a month</span></p>
+      <p class="muted small" style="margin:0">or $38.30 a year, or $191.50 once for lifetime access</p>
+      <ul class="feature-list">
+        <% premiumTools.forEach(t => { %><li>&#10003; <%= t.name %></li><% }) %>
+      </ul>
+      <a class="btn btn-ghost btn-block" href="/pricing">See Premium</a>
     </div>
   </div>
 </section>

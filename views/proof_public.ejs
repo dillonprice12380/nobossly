@@ -1,0 +1,47 @@
+<%- include('partials/head') %>
+<% const pg = p.page || {}; const name = p.display_name || p.username; %>
+<div style="max-width:760px;margin:0 auto">
+  <div class="card center">
+    <% if (p.avatar_url) { %><img src="<%= p.avatar_url %>" alt="" style="width:88px;height:88px;border-radius:50%;object-fit:cover"><% } %>
+    <h1 style="margin:.5rem 0 .2rem"><%= name %></h1>
+    <% if (pg.headline) { %><p class="lead" style="margin:0"><%= pg.headline %></p><% } %>
+    <p style="margin:.6rem 0 0">
+      <% if (pathLabel) { %><span class="chip"><%= pathLabel %></span><% } %>
+      <% if (pg.show_level !== false && p.current_level) { %><span class="chip">NoBossly Level <%= p.current_level %></span><% } %>
+      <% if (pg.show_level !== false && p.verified_level > 1) { %><span class="chip chip-success">✓ Verified Level <%= p.verified_level %></span><% } %>
+    </p>
+    <% if (pg.contact_url) { %><a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= pg.contact_url %>" rel="noopener nofollow" target="_blank"><%= pg.contact_label || 'Get in touch' %></a><% } %>
+  </div>
+
+  <% if (pg.about) { %>
+    <div class="card"><h3 style="margin-top:0">About</h3><p style="white-space:pre-line;margin:0"><%= pg.about %></p></div>
+  <% } %>
+
+  <% if ((pg.services || []).length) { %>
+    <div class="card"><h3 style="margin-top:0">What I offer</h3><ul class="feature-list"><% pg.services.forEach(s => { %><li><%= s %></li><% }) %></ul></div>
+  <% } %>
+
+  <% if ((pg.testimonials || []).length) { %>
+    <div class="card">
+      <h3 style="margin-top:0">What people say</h3>
+      <% pg.testimonials.slice().reverse().forEach(t => { %>
+        <blockquote style="margin:0 0 1rem;padding-left:1rem;border-left:3px solid var(--accent)">
+          <p style="margin:0">“<%= t.quote %>”</p>
+          <p class="muted small" style="margin:.3rem 0 0">— <%= t.name || 'A customer' %><%= t.context ? ', ' + t.context : '' %></p>
+        </blockquote>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if ((p.wins || []).length) { %>
+    <div class="card">
+      <h3 style="margin-top:0">🏆 Wins</h3>
+      <% p.wins.forEach(w => { %>
+        <div class="milestone-row"><div><strong><%= w.title %></strong><% if (w.amount_usd) { %> <span class="chip chip-success">$<%= Number(w.amount_usd).toLocaleString('en-US') %></span><% } %><p class="muted small" style="margin:.2rem 0 0"><%= new Date(w.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %></p></div></div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <p class="muted small center">Built on <a href="/">NoBossly</a> — the free community for working your way out of the 9 to 5.</p>
+</div>
+<%- include('partials/foot') %>

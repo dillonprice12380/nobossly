@@ -1,0 +1,52 @@
+<%- include('partials/head') %>
+<% var tools = locals.premiumTools || [], isPremium = !!locals.isPremium; %>
+<div class="page-head center" style="justify-content:center;text-align:center;display:block">
+  <h1>NoBossly is free. Premium is the toolkit for leaving.</h1>
+  <p class="lead">The paths, the ladder, every quest and the whole community stay free forever. Premium adds five tools for the practical side of getting out: when you can quit, what you owe, what to charge, proof people trust, and what customers actually want.</p>
+</div>
+<% if (msg) { %><p class="error center"><%= msg %></p><% } %>
+
+<div class="grid" style="margin-top:1.2rem">
+  <% tools.forEach(t => { %>
+    <div class="card">
+      <h3 style="margin:0"><%= t.emoji %> <%= t.name %></h3>
+      <p class="muted small" style="margin:.35rem 0 0"><%= t.blurb %></p>
+    </div>
+  <% }) %>
+</div>
+
+<div class="pricing-grid" style="max-width:1000px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+  <div class="card price-card">
+    <h3>Free</h3>
+    <p class="price">$0<span class="muted small"> forever</span></p>
+    <ul class="feature-list"><% freeFeatures.forEach(f => { %><li><%= f %></li><% }) %></ul>
+    <% if (!user) { %><a class="btn btn-ghost btn-block" href="/signup">Join free</a>
+    <% } else if (!isPremium) { %><span class="chip">Your current plan</span><% } %>
+  </div>
+  <% tiers.forEach(t => {
+       var o = t.offer || { cents: t.price_cents, listCents: t.price_cents, isPromo: false, label: null };
+       var fmt = c => '$' + (c / 100).toFixed(c % 100 ? 2 : 0); %>
+    <div class="card price-card <%= t.key === 'year' ? 'price-featured' : '' %>">
+      <% if (t.key === 'year') { %><span class="chip chip-success" style="align-self:flex-start">Best value</span><% } %>
+      <% if (t.key === 'lifetime') { %><span class="chip" style="align-self:flex-start">Pay once</span><% } %>
+      <h3><%= t.name %></h3>
+      <p class="price">
+        <% if (o.isPromo) { %><span class="was"><%= fmt(o.listCents) %></span> <% } %>
+        <%= fmt(o.cents) %><span class="muted small"> <%= t.interval_label %></span>
+      </p>
+      <% if (t.key === 'year') { %><p class="muted small" style="margin:0">That's <%= fmt(Math.round(o.cents / 12)) %> a month.</p><% } %>
+      <% if (o.isPromo && o.label) { %><p><span class="chip chip-success"><%= o.label %></span></p><% } %>
+      <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
+      <ul class="feature-list"><li>All five Premium tools</li><li>Everything in Free</li><% if (t.key === 'lifetime') { %><li>Every tool added later</li><% } %></ul>
+      <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Join free, then upgrade</a>
+      <% } else if (locals.profile && profile.is_lifetime) { %><span class="chip chip-success">You have lifetime access</span>
+      <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>
+      <% } else { %>
+        <form method="post" action="/billing/checkout/<%= t.key %>"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime' : 'Choose ' + t.name.replace(/^Premium\s+/, '') %></button></form>
+      <% } %>
+    </div>
+  <% }) %>
+</div>
+<p class="muted small center">Payments are handled securely by Stripe. Cancel any time from Account settings — you keep Premium until the end of the period you paid for.</p>
+<p class="muted small center">The tools give planning estimates, not financial, tax or legal advice.</p>
+<%- include('partials/foot') %>
