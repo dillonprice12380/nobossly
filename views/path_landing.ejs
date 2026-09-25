@@ -11,13 +11,12 @@
     <p class="lead" style="margin-left:0"><%= mk.subhead %></p>
     <div class="cta-row" style="justify-content:flex-start">
       <a class="btn btn-primary btn-lg" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
-      <a class="btn btn-ghost btn-lg" href="/sample-compass">See a real Compass first</a>
+      <a class="btn btn-ghost btn-lg" href="/community">See the community</a>
     </div>
-    <p class="muted small" style="margin-top:.7rem">Free. About a dozen questions, all written for this path. No card. Keep your job while you do it.</p>
+    <p class="muted small" style="margin-top:.7rem">Free, forever. Pick this path and you're straight into your quest board. No card, no waiting on a report.</p>
   </div>
 </section>
 
-<%# The reader's own situation, said back to them. Three lines, no hedging. %>
 <section class="card">
   <h2>Sound familiar?</h2>
   <ul class="pain-list">
@@ -26,75 +25,28 @@
   <p class="pl-truth"><%= mk.truth %></p>
 </section>
 
-<%# The subpaths, straight from the definition the questionnaire renders. It is
-    the most concrete "this was written for me" signal on the page. %>
 <% if (subpaths && subpaths.length) { %>
 <section>
   <h2>Which kind of <%= def.label.toLowerCase() %>?</h2>
-  <p class="muted">Your answer narrows the quests to your actual work, not your category. Nobody is forced into a box — the last option opens a text field.</p>
+  <p class="muted">This path covers all of it &mdash; nobody is forced into a box.</p>
   <div class="sub-row">
     <% subpaths.forEach(function (sp) { %><span class="sub-chip"><%= sp.label %></span><% }) %>
   </div>
 </section>
 <% } %>
 
-<%# The questions this path actually asks. Pulled from the same definition the
-    product renders, so the page cannot promise a form that does not exist. %>
-<section>
-  <h2>Questions written for <%= def.label.toLowerCase() %>s, not for businesses in general</h2>
-  <p class="muted">Most tools ask everyone the same thing. These are the ones your path asks — alongside the six everyone answers: the hours left after work, the money you can risk, how long you could last without a paycheck, and what you will not do.</p>
-  <div class="q-grid">
-    <% questions.forEach(function (q) { %>
-      <div class="q-card">
-        <strong><%= q.label %></strong>
-        <% if (q.options && q.options.length) { %>
-          <span class="muted small"><%= q.options.slice(0, 4).join(' · ') %><%= q.options.length > 4 ? ' · …' : '' %></span>
-        <% } else if (q.placeholder) { %>
-          <span class="muted small"><%= q.placeholder %></span>
-        <% } %>
-      </div>
-    <% }) %>
-  </div>
-</section>
-
-<%# The one number this path turns on. Stated plainly, before the criteria,
-    because it is the most concrete thing on the page. %>
 <% if (mk.bar) { %>
 <section class="card bar-card">
   <h2>📐 The number this path turns on</h2>
   <p class="pl-bar"><%= mk.bar %></p>
-  <p class="muted small" style="margin:.6rem 0 0">Rules of thumb, not laws — but a plan with no number in it is not a plan you can tell you are winning.</p>
+  <p class="muted small" style="margin:.6rem 0 0">Rules of thumb, not laws &mdash; but a plan with no number in it is not a plan you can tell you are winning.</p>
 </section>
 <% } %>
 
-<%# The real fit test, live from the library. %>
-<% if (criteria.length) { %>
-<section>
-  <h2>🎯 The fit test you would be held to</h2>
-  <p class="muted">Five criteria drawn from your own answers — your hours, your runway, your deal breakers. Your idea has to pass them before Level 1 is done, and some are checked by arithmetic against your own numbers rather than by opinion.</p>
-  <ul class="crit-list">
-    <% criteria.forEach(function (c) { %>
-      <li class="crit-row">
-        <span class="crit-mark" aria-hidden="true">✓</span>
-        <div>
-          <strong><%= c.criterion %></strong>
-          <% if (c.why) { %><p class="muted small" style="margin:.15rem 0 0"><%= c.why %></p><% } %>
-        </div>
-        <% if ((c.paths || []).indexOf(def.slug) >= 0) { %>
-          <span class="crit-tag"><%= def.label %> only</span>
-        <% } %>
-      </li>
-    <% }) %>
-  </ul>
-  <p class="muted small">Yours are written from your answers, so the thresholds are your budget and your runway — not these numbers.</p>
-</section>
-<% } %>
-
-<%# The real electives, live from the pool. %>
 <% if (challenges.length) { %>
 <section>
   <h2>⚔️ Quests built for this path</h2>
-  <p class="muted">Alongside the ten shared rungs everyone climbs. More are written for you by the advisor as it learns your answers.</p>
+  <p class="muted">Alongside the ten shared rungs everyone climbs.</p>
   <div class="grid">
     <% challenges.forEach(function (c) { %>
       <div class="card ch-card">
@@ -107,11 +59,9 @@
 </section>
 <% } %>
 
-<%# This path's own ten rungs, in its own words. Same ten stages and the same
-    XP on every path — only the language changes, so the ladder stays one game. %>
 <section class="card">
   <h2>🎮 Your ten rungs, named for this path</h2>
-  <p class="muted">Every path climbs the same ten stages for the same XP, but a plumber's fifth rung is not a podcaster's. XP alone can never buy one — each gates on something that happened in the real world.</p>
+  <p class="muted">Every path climbs the same ten stages for the same XP, but a plumber's fifth rung is not a podcaster's. XP alone can never buy one &mdash; each gates on something that happened in the real world.</p>
   <div class="rung-row">
     <% rungs.forEach(function (r) { %>
       <span class="rung-pill<%= (r.level === 5 || r.level === 9) ? ' is-key' : '' %>"><%= r.emoji %> <%= r.title %><%= r.level === 5 ? ' — first money' : (r.level === 9 ? ' — the job ends' : '') %></span>
@@ -122,7 +72,7 @@
 
 <section class="cta-band">
   <h2>Start as a <%= def.label.toLowerCase() %>.</h2>
-  <p class="muted">About a dozen questions written for this path, about two minutes, and your Compass is drawn from them. Tonight, after work. You can change path later by answering again.</p>
+  <p class="muted">One choice, and you're straight into the quest board and the ladder. Tonight, after work. You can switch paths any time from your dashboard.</p>
   <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
 </section>
 
@@ -153,27 +103,6 @@
     background: var(--panel-2); border: 1px solid var(--border);
   }
   .sub-chip:last-child { border-style: dashed; color: var(--muted); }
-  .q-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .7rem; margin-top: .9rem; }
-  .q-card {
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
-    padding: .85rem 1rem; display: flex; flex-direction: column; gap: .25rem;
-  }
-  .crit-list { list-style: none; padding: 0; margin: .9rem 0 .6rem; }
-  .crit-row {
-    display: flex; gap: .7rem; align-items: flex-start; flex-wrap: wrap;
-    padding: .7rem 0; border-top: 1px solid var(--border);
-  }
-  .crit-row:first-child { border-top: 0; }
-  .crit-mark {
-    flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; display: grid; place-items: center;
-    background: var(--accent); color: #fff; font-size: .78rem; font-weight: 700;
-  }
-  .crit-row > div { flex: 1; min-width: 12rem; }
-  .crit-tag {
-    font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
-    color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: .1rem .45rem;
-    align-self: center;
-  }
   .ch-card { display: flex; flex-direction: column; gap: .3rem; }
   .ch-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
   .ch-emoji { font-size: 1.5rem; }
