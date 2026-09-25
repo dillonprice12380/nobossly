@@ -131,21 +131,8 @@ async function attachUser(req, res, next) {
         res.locals.unreadMsgs = typeof msgCount === 'number' ? msgCount : 0;
       } catch (_) { res.locals.unreadCount = 0; res.locals.unreadMsgs = 0; }
 
-      // The AI balance, fetched only for free members — they are the only ones
-      // who are ever shown it. A paying member's ceiling exists to stop abuse,
-      // and the pricing page promises no per-report fees, so putting a meter in
-      // front of them would both break that promise and teach them to ration
-      // something they already bought. Skipping them also halves the cost of
-      // this lookup across the site.
+      // No AI left in the product, so there is nothing left to meter.
       res.locals.credits = null;
-      if (res.locals.plan === 'free') {
-        try {
-          const { data: c } = await sb.rpc('ai_credit_status');
-          if (c && c.visible !== false) {
-            res.locals.credits = { balance: c.balance || 0, cap: c.cap || 0 };
-          }
-        } catch (_) { /* the header is not worth a 500 */ }
-      }
     } else {
       clearSessionCookies(res);
     }
@@ -168,22 +155,16 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function planOf(profile) {
-  if (!profile) return 'free';
-  if (profile.is_admin || profile.is_lifetime) return 'paid';
-  const status = profile.subscription_status;
-  const end = profile.subscription_period_end ? new Date(profile.subscription_period_end) : null;
-  if ((status === 'active' || status === 'canceled' || status === 'trialing') && end && end > new Date()) return 'paid';
-  if (status === 'active' && !end) return 'paid';
-  return 'free';
+// Pricing is gone — NoBossly is free for everyone. planOf() is kept as a
+// function, always returning 'paid', rather than ripping out every
+// isPaid()/planOf(...)==='paid' check spread across the route files: those
+// checks now just always succeed, which is exactly the point.
+function planOf() {
+  return 'paid';
 }
 
-// Generic guard. Prefer gate(res, '<feature>') from src/upgrade.js, which tells
-// the founder what is actually behind the gate instead of dumping them on the
-// price list; this stays as the catch-all for routes with no specific copy.
-function requirePaid(req, res, next) {
-  if (planOf(req.profile) === 'paid') return next();
-  require('../upgrade').gate(res, null);
-}
+// Nothing is paywalled any more. Kept as a name so any route still mounted
+// behind it (there are none left on purpose) doesn't need to change.
+function requirePaid(req, res, next) { next(); }
 
 module.exports = { attachUser, requireAuth, requireAdmin, requirePaid, planOf, setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts, COOKIE_DOMAIN };
