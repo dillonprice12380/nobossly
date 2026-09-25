@@ -13,8 +13,6 @@
       <button class="btn btn-primary">Create group</button>
     </form>
   </div>
-<% } else { %>
-  <p class="notice">Creating groups is an <strong>Escape plan</strong> feature. <a href="/pricing">Upgrade to start your own group</a> — joining groups is free for everyone.</p>
 <% } %>
 <% if (!groups.length) { %>
   <div class="card center"><p class="muted">No groups yet. <%= canCreate ? 'Start the first one!' : 'Check back soon.' %></p></div>

@@ -631,10 +631,10 @@ const PATHS = [
     slug: 'exploring',
     label: 'Still figuring it out',
     emoji: '🧭',
-    blurb: 'You know you want to build something, but not what yet. Start here and the Compass narrows it down.',
+    blurb: 'You know you want to build something, but not what yet. Start here, take on the early quests, and let real conversations narrow it down.',
     marketing: {
       headline: 'Knowing you want out is enough to start. You do not need the idea yet.',
-      subhead: 'Answer about a dozen questions and NoBossly draws your Compass — your archetype, the hours and runway you genuinely have, and the territories where you actually hold an edge. It never picks for you.',
+      subhead: 'Start on the exploring path: small real-world quests, feedback from people on the same climb, and conversations that rule ideas in or out fast. It never picks for you — it helps you find out.',
       pains: [
         'You want out of your job and every list of business ideas feels written for someone else.',
         'You have skills your employer profits from and no obvious way to sell them yourself.',

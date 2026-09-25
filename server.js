@@ -68,6 +68,19 @@ app.use((req, res, next) => {
   return res.redirect('/choose-username');
 });
 
+// Pages from before NoBossly went free and dropped the AI features. Their URLs
+// are still in sent emails, bookmarks and search results, so send them
+// somewhere useful instead of a 404.
+const RETIRED = [
+  [/^\/(pricing|billing|checkout|upgrade)(\/.*)?$/, '/how-it-works'],
+  [/^\/questionnaire(\/.*)?$/, '/choose-path'],
+  [/^\/(compass|ideas|blueprint|coach|weekly-plan)(\/.*)?$/, '/dashboard']
+];
+app.get(RETIRED.map(r => r[0]), (req, res) => {
+  const hit = RETIRED.find(r => r[0].test(req.path));
+  res.redirect(301, hit[1]);
+});
+
 app.use('/', require('./src/routes/auth'));
 // Onboarding: pick a path, land straight in the product. Replaces the old
 // AI-driven questionnaire + Compass.

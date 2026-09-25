@@ -1,5 +1,5 @@
 // Outbound email. There was none at all: no welcome, no reminder that a
-// half-finished questionnaire was waiting, nothing to bring a founder back once
+// path was still unpicked, nothing to bring a founder back once
 // they closed the tab. Every drop-off was permanent by construction.
 //
 // Sending is gated on RESEND_API_KEY. With the key unset the module is inert —
@@ -52,25 +52,25 @@ const TEMPLATES = {
     subject: 'Your way out starts with a path',
     html: shell(
       `Welcome, ${esc(name)}.`,
-      p('You have an account. The next thing that happens is your <strong>Compass</strong> &mdash; your archetype, the strengths you actually have, the hours and runway you genuinely have outside your job, and an honest list of what to avoid.')
-      + p('It takes about a dozen questions, all written for the path you picked. About two minutes, tonight, after work. You can go deeper later if you want a sharper read, but you do not have to.'),
-      'Draw my Compass', SITE + '/questionnaire')
+      p('You have an account, and NoBossly is free &mdash; every path, every quest, every rung.')
+      + p('Your dashboard has your first quests waiting, matched to the path you picked. Take one on tonight, after work, and check in to start your streak. When you have something to show, the peer-review queue will get you real feedback from people on the same climb.'),
+      'Open my dashboard', SITE + '/dashboard')
   }),
 
   resume_questionnaire: name => ({
-    subject: 'You were two minutes from your Compass',
+    subject: 'One choice left: pick your path',
     html: shell(
       `Pick up where you left off, ${esc(name)}.`,
-      p('Your answers are saved. Nothing was lost &mdash; the questionnaire opens exactly where you stopped.')
-      + p('It is about a dozen questions in total, and the Compass is drawn the moment you finish the last one.'),
-      'Finish and see my Compass', SITE + '/questionnaire')
+      p('Your account is ready. The only thing left is choosing your path &mdash; creator, freelancer, local service, online store and more. It takes a few seconds, and you can change it later.')
+      + p('Once it is picked, your quest board and your ladder are waiting.'),
+      'Pick my path', SITE + '/choose-path')
   }),
 
   comeback: name => ({
-    subject: 'Your Compass is still waiting',
+    subject: 'Your quests are still waiting',
     html: shell(
       `Still here when you are, ${esc(name)}.`,
-      p('Your Compass, your ideas and your board are exactly where you left them.')
+      p('Your path, your quests and your board are exactly where you left them.')
       + p('The fastest way back in is a single daily check-in &mdash; it takes a minute, keeps your streak alive, and puts the next concrete step in front of you.'),
       'Open my dashboard', SITE + '/dashboard')
   })
