@@ -4,14 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><%= title %> &middot; NoBossly</title>
-<meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly is how people with a job build their way out of it — a Compass drawn from your real hours and runway, a fit test your idea has to pass, and ten levels from first customer to handing in your notice.' %>">
+<meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly is a free community for people building their way out of a 9 to 5 — real quests, self-directed sprints, and ten levels from first customer to handing in your notice.' %>">
 <link rel="canonical" href="<%= typeof canonicalUrl !== 'undefined' && canonicalUrl ? canonicalUrl : 'https://nobossly.com' %>">
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
-<%# Sora carries display type, Manrope the body. Replaces Segoe UI, which
-    ships on Windows only — every other visitor silently got a fallback, so the
-    brand had no typographic identity on most traffic. %>
-<%# The media bucket serves the logo, the hero art and the celebration clip.
-    Opening the connection early takes DNS and TLS off the critical path. %>
 <link rel="preconnect" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,16 +15,8 @@
 <link rel="stylesheet" href="/css/list.css?v=2">
 <link rel="stylesheet" href="/css/motion.css?v=11">
 <link rel="stylesheet" href="/css/interaction.css?v=2">
-<%# Marks that scripting is live, so entrance animations are only ever allowed
-    to hide content when something is guaranteed to bring it back. %>
 <script>document.documentElement.classList.add('js');</script>
-<!-- Turbo Drive: intercepts link clicks and form submits, swaps the <body> in
-     place instead of reloading. No route changes needed — pages still render
-     server-side exactly as before. Add data-turbo="false" to any link, form or
-     container that must fall back to a real page load. -->
 <meta name="turbo-cache-control" content="no-preview">
-<%# Turbo 8 wraps each body swap in a View Transition when this is present.
-    Browsers without support ignore it and navigate exactly as before. %>
 <meta name="view-transition" content="same-origin">
 <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"></script>
 <!-- Google tag (gtag.js) -->
@@ -39,9 +26,6 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-8973F7WW8N');
-  // Turbo navigations don't reload the document, so gtag's automatic page_view
-  // only ever fires once. Send one per visit instead, skipping the first (the
-  // config call above already counted it).
   (function () {
     var first = true;
     document.addEventListener('turbo:load', function () {
@@ -62,10 +46,6 @@
   <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   <div class="nav-links" id="nav-links">
     <% if (user) { %>
-      <%# One rule: this bar is global — the way back into the app, the
-          library, and the things waiting for you. Everywhere you actually
-          work is a tab in the section nav, so Coach, Feed and Community are
-          not repeated here. %>
       <a href="/dashboard">Dashboard</a>
       <div class="nav-dropdown" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
@@ -102,10 +82,6 @@
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
-          <% if (typeof credits !== 'undefined' && credits) { %>
-            <span class="muted small" style="padding:.1rem .9rem .4rem;display:block">⚡ <%= credits.balance %> of <%= credits.cap %> AI credits left this month</span>
-          <% } %>
-          <% if (typeof plan !== 'undefined' && plan === 'free') { %><a href="/pricing"><svg class="icon"><use href="#i-upgrade"/></svg> Upgrade</a><% } %>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
       </div>
@@ -122,7 +98,6 @@
           <a href="/help"><svg class="icon"><use href="#i-help"/></svg> Help Center</a>
         </div>
       </div>
-      <a href="/pricing">Pricing</a>
       <a href="/login">Log in</a>
       <a class="btn btn-primary" href="/paths">Find your path</a>
     <% } %>
@@ -130,8 +105,6 @@
 </nav>
 <% if (user) { %>
 <style>
-  /* Bell dropdown. A <details> so it opens without JavaScript; the contents are
-     fetched on first open, and the no-JS fallback is a plain link to the page. */
   .notif-menu { position: relative; }
   .notif-menu > summary { list-style: none; cursor: pointer; }
   .notif-menu > summary::-webkit-details-marker { display: none; }
@@ -148,10 +121,6 @@
     background: none; border: 1px solid var(--border); border-radius: 8px; padding: .25rem .5rem; width: auto; }
   .notif-readall:hover { color: var(--text); }
   .notif-list { max-height: min(60vh, 24rem); overflow-y: auto; }
-  /* These are <a> elements inside .nav-links, so they are in reach of the
-     light theme's near-white nav-link colour. The panel is a light card, so
-     that made them invisible. Stated here explicitly, and again on :hover,
-     so this panel reads correctly whatever the nav around it does. */
   .notif-item { display: flex; flex-direction: column; gap: .15rem; padding: .7rem .85rem;
     border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
   .notif-item:hover { background: rgba(16,185,129,.06); color: var(--text); }
@@ -161,8 +130,6 @@
   .notif-msg { padding: 1.1rem .85rem; margin: 0; text-align: center; }
   .notif-all { display: block; padding: .7rem; text-align: center; font-size: .9rem;
     color: var(--accent); text-decoration: none; font-weight: 600; }
-  /* On a phone the nav collapses into the hamburger panel, where an absolutely
-     positioned popover would be clipped; let it sit inline instead. */
   @media (max-width: 820px) {
     .notif-panel { position: static; width: 100%; box-shadow: none; margin: .4rem 0; }
   }
