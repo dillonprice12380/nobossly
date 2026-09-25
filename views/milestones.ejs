@@ -11,8 +11,6 @@
   </div>
 <% } %>
 
-<%# The self-attested set. These gate levels 5, 6, 8, 9 and 10 — no metric
-    inside the app can see them, so you log them with a proof note. %>
 <% if (typeof claimable !== 'undefined' && claimable.length) { %>
   <div class="card">
     <h2>🌍 Real-world trophies</h2>
@@ -48,10 +46,10 @@
     <% cats[cat].forEach(m => { const got = earned[m.id]; const have = Math.min(metrics[m.auto_kind] || 0, m.auto_target || 1); const pct = Math.round(100 * have / (m.auto_target || 1)); %>
       <div class="milestone-row" style="<%= got ? '' : 'opacity:.82' %>">
         <div style="flex:1;min-width:0">
-          <strong><%= got ? m.emoji : '\ud83d\udd12' %> <%= m.title %></strong>
+          <strong><%= got ? m.emoji : '🔒' %> <%= m.title %></strong>
           <p class="muted small"><%= m.description %></p>
           <span class="chip">⚡ <%= m.xp_reward %> XP</span>
-          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '\ud83c\udfc5' : '\ud83d\udd12' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
+          <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '🏅' : '🔒' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
           <% if (!got) { %>
             <div style="display:flex;align-items:center;gap:.5rem;margin-top:.45rem;max-width:280px">
               <div style="flex:1;height:6px;border-radius:4px;background:var(--border,#e5e7eb);overflow:hidden"><div style="height:100%;width:<%= pct %>%;border-radius:4px;background:var(--accent,#10b981)"></div></div>
@@ -80,36 +78,24 @@
   </div>
 <% } %>
 
-<% if (paid) { %>
+<% if (custom && custom.length) { %>
   <div class="card">
-    <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2>✨ Your personal goals</h2><p class="muted small">AI-tailored to your launch blueprint. These are your own targets — you check them off yourself; trophies above are earned only by playing.</p></div>
-      <form method="post" action="/trophies/generate"><button class="btn btn-primary btn-sm"><%= custom.length ? '↻ Regenerate' : 'Generate' %></button></form>
-    </div>
-    <% if (!custom.length) { %>
-      <p class="muted">No tailored goals yet. Click Generate to build a set from your blueprint (you'll need a launch blueprint first).</p>
-    <% } else { %>
-      <% custom.forEach(m => { %>
-        <div class="milestone-row">
-          <div>
-            <strong><%= m.emoji %> <%= m.title %></strong>
-            <p class="muted small"><%= m.description %></p>
-            <span class="chip">⚡ <%= m.xp_reward %> XP</span> <span class="chip"><%= m.category %></span>
-          </div>
-          <% if (m.achieved) { %>
-            <span class="chip chip-success">✅ <%= m.date_achieved %></span>
-          <% } else { %>
-            <form method="post" action="/trophies/custom/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
-          <% } %>
+    <h2>🎯 Your personal goals</h2>
+    <p class="muted small">Your own targets — you check them off yourself; trophies above are earned only by playing.</p>
+    <% custom.forEach(m => { %>
+      <div class="milestone-row">
+        <div>
+          <strong><%= m.emoji %> <%= m.title %></strong>
+          <p class="muted small"><%= m.description %></p>
+          <span class="chip">⚡ <%= m.xp_reward %> XP</span> <span class="chip"><%= m.category %></span>
         </div>
-      <% }) %>
-    <% } %>
-  </div>
-<% } else { %>
-  <div class="card" style="border:1px dashed var(--border)">
-    <h2>✨ Want goals tailored to YOUR business?</h2>
-    <p class="muted">Upgrade to get an AI-built set of personal goals drawn from your launch blueprint — plus badges and awards pinned to your public profile as you earn trophies.</p>
-    <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
+        <% if (m.achieved) { %>
+          <span class="chip chip-success">✅ <%= m.date_achieved %></span>
+        <% } else { %>
+          <form method="post" action="/trophies/custom/<%= m.id %>/achieve"><button class="btn btn-primary btn-sm">I did this!</button></form>
+        <% } %>
+      </div>
+    <% }) %>
   </div>
 <% } %>
 <%- include('partials/foot') %>
