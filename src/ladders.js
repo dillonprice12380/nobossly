@@ -1,14 +1,7 @@
 // One ladder per path.
 //
-// There used to be a single ten-rung ladder with per-gate exceptions bolted on
-// — "except creator", "only brick_mortar". That worked, but it left every path
-// climbing toward the same nine words: Ideator, Explorer, Builder, Hustler,
-// Operator, Owner, Maker, Launcher, Operator Pro, Legend. None of them is what
-// a plumber calls the moment their van gets sign-written, or what a creator
-// calls their first sponsored post.
-//
-// So each path now has its own ten rungs, named in its own vernacular, with its
-// own gates. Three things are deliberately held constant across all nine:
+// Each path has its own ten rungs, named in its own vernacular, with its own
+// gates. Three things are held constant across all nine:
 //
 //   THE XP FLOORS. Identical everywhere, so the leaderboard, verified_level and
 //   any cross-path comparison still mean something, and so no path is a faster
@@ -21,10 +14,18 @@
 //
 // STAGES below is the spine — the meaning of each rung, which is what stops
 // nine ladders drifting into nine different games.
+//
+// Rungs 2 and 3 used to gate on Compass- and Blueprint-related milestones
+// ("Compass Questions Answered", "Passes Your Own Test", "Three Real Signals",
+// "Blueprint Built"). The Compass and the AI blueprint generator are gone, so
+// those milestones can never be earned again — left in place they would have
+// permanently capped every member at Level 1. They're removed from every gate
+// list below; the remaining gates on those rungs (real quests, not AI-authored
+// ones) are still earnable exactly as before.
 
 const STAGES = [
-  { level: 1,  xp: 0,    means: 'Arrived. A Compass drawn and a direction taken.' },
-  { level: 2,  xp: 100,  means: 'Validated. The idea passes your own fit test and three real people have responded to it.' },
+  { level: 1,  xp: 0,    means: 'Arrived. A path chosen and a direction taken.' },
+  { level: 2,  xp: 100,  means: 'Validated. You got real feedback and put the idea in front of people.' },
   { level: 3,  xp: 300,  means: 'Shipped. Something you made is in the world and the first sprint is done.' },
   { level: 4,  xp: 600,  means: 'Faced the market. Enough conversations and enough asking to know what the answer sounds like.' },
   { level: 5,  xp: 1000, means: 'First money. A stranger paid you, and you are set up to receive it.' },
@@ -42,9 +43,8 @@ const m = title => ({ type: 'milestone', title });
 
 const SPINE = {
   1:  [],
-  2:  [m('Compass Questions Answered'), m('Passes Your Own Test'), m('Three Real Signals'),
-       c('Get 3 Feedback Sessions'), c('Validate your idea')],
-  3:  [m('Blueprint Built'), c('Ship Something'), m('Sprint 1 Completed')],
+  2:  [c('Get 3 Feedback Sessions'), c('Validate your idea')],
+  3:  [c('Ship Something'), m('Sprint 1 Completed')],
   4:  [c('5 Customer Conversations'), c('Do 25 outreach touches')],
   5:  [c('Make your first sale'), m('Registered my business')],
   6:  [c('Earn Your First $100'), m('Opened a business bank account'), c('Collect 5 testimonials')],
@@ -69,7 +69,7 @@ const LADDERS = {
       ['Headliner', '🌟'], ['Full-Time Creator', '🎬'], ['Institution', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Publish 12 pieces in 30 days'), m('Sprint 1 Completed')],
+      3: [c('Publish 12 pieces in 30 days'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Pitch 25 brands or collaborators')],
       5: [c('Make your first sale'), m('Set up how you get paid')],
       6: [c('Earn Your First $100'), m('Separate your business money'), c('Collect 5 pieces of audience proof')]
@@ -83,7 +83,7 @@ const LADDERS = {
       ['In Demand', '🔥'], ['Independent', '🕊️'], ['Studio of One', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Publish a portfolio that wins work'), m('Sprint 1 Completed')]
+      3: [c('Publish a portfolio that wins work'), m('Sprint 1 Completed')]
     }
   },
   consultant: {
@@ -94,7 +94,7 @@ const LADDERS = {
       ['Sought Out', '📈'], ['Independent Consultant', '🕊️'], ['The Authority', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Price one offer by the outcome'), m('Sprint 1 Completed')],
+      3: [c('Price one offer by the outcome'), m('Sprint 1 Completed')],
       10: [m('$1K MRR'), c('Document your playbook')]
     }
   },
@@ -106,7 +106,7 @@ const LADDERS = {
       ['Full Round', '🗺️'], ['Own Boss', '🕊️'], ['The One They Call', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Get your Google Business Profile live and verified'), m('Sprint 1 Completed')],
+      3: [c('Get your Google Business Profile live and verified'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Quote 10 jobs in two weeks')]
     }
   },
@@ -118,7 +118,7 @@ const LADDERS = {
       ['Rent Covered', '🏦'], ['Owner-Operator', '🕊️'], ['Local Landmark', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Test the concept without the lease'), m('Sprint 1 Completed')],
+      3: [c('Test the concept without the lease'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Count footfall at three sites')],
       7: [c('Serve 100 paying customers'), c('Automate one process')],
       8: [c("Cover a month's rent from takings"), m('Built a pitch deck')],
@@ -133,7 +133,7 @@ const LADDERS = {
       ['Real Storefront', '🏬'], ['Full-Time Shop', '🕊️'], ['Brand', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('List your first product properly'), m('Sprint 1 Completed')],
+      3: [c('List your first product properly'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Work out your true unit margin')],
       7: [c('Reach 50 paying customers'), c('Automate one process')]
     }
@@ -146,7 +146,7 @@ const LADDERS = {
       ['On Shelves', '🏬'], ['Full-Time Maker', '🕊️'], ['A Product People Name', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Make one by hand and sell it'), m('Sprint 1 Completed')],
+      3: [c('Make one by hand and sell it'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Get three manufacturing quotes')],
       8: [c('Hit a $1k month'), m('Built a pitch deck')]
     }
@@ -159,7 +159,7 @@ const LADDERS = {
       ['Real Revenue', '📈'], ['Full-Time on It', '🕊️'], ['Depended On', '👑']
     ],
     gates: {
-      3: [m('Blueprint Built'), c('Ship something usable in 30 days'), m('Sprint 1 Completed')],
+      3: [c('Ship something usable in 30 days'), m('Sprint 1 Completed')],
       4: [c('5 Customer Conversations'), c('Watch 5 people use it without helping')],
       8: [c('Hit a $1k month'), m('Built a pitch deck')],
       10: [m('$1K MRR'), c('Document your playbook')]
