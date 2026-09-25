@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const ai = require('../ai');
 const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const ladders = require('../ladders');
 const paths = require('../paths');
@@ -7,53 +6,43 @@ const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
 const { claimFeedbackGate } = require('./reviews');
-const credits = require('../credits');
-const coachLib = require('../coach');
 const activity = require('../activity');
 
 router.get('/', async (req, res, next) => {
   try {
     const p = req.profile || {};
-    // The questionnaire used to stand between signup and the dashboard, and it
-    // is where the old onboarding lost everyone. It is a Level 1 quest now: the
-    // founder can look around first, but cannot leave Level 1 without it, and
-    // the card at the top of the dashboard keeps asking until they do.
-    const needsQuestionnaire = !p.onboarding_completed;
+    // Choosing a path is the only onboarding step left. Until it's done, the
+    // dashboard nudges toward /choose-path instead of hiding the rest of the
+    // app — a member can look around either way.
+    const needsPath = !p.path;
 
     // Three peers may have reviewed this founder's work while they were away.
-    // The completion has to be written by their own client under RLS, so it is
-    // claimed on the pages they actually land on rather than by the reviewer.
     try { await claimFeedbackGate(req); } catch (_) { /* self-heals on /reviews */ }
 
-    const [{ data: sprint }, { data: ideas }, { data: acc }, { data: customAcc }, compassCount] = await Promise.all([
+    const [{ data: sprint }, { data: acc }, { data: customAcc }] = await Promise.all([
       req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      req.sb.from('generated_ideas').select('id,name,tagline,status,is_favorited,success_likelihood').eq('user_id', req.user.id).order('position'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
-      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date'),
-      req.sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id)
+      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).eq('status', 'active').order('due_date')
     ]);
-    const hasCompass = (compassCount.count || 0) > 0;
     let pinned = [];
     if (acc && acc.length) {
       const { data: chs } = await req.sb.from('challenges').select('id, title, emoji, xp_reward, requires_proof').in('id', acc.map(a => a.challenge_id));
       const chMap = {}; (chs || []).forEach(c => chMap[c.id] = c);
       pinned = acc.map(a => ({ ...a, challenge: chMap[a.challenge_id] || {} }));
     }
-    // AI-tailored (custom) challenges pin alongside curated ones — an accepted
-    // commitment is an accepted commitment, whichever table it lives in.
+    // Accepted electives pin alongside curated quests — an accepted commitment
+    // is an accepted commitment, whichever table it lives in.
     (customAcc || []).forEach(c => {
       pinned.push({
         custom: true, id: c.id, challenge_id: c.id,
         duration_days: c.duration_days, due_date: c.due_date,
-        challenge: { title: c.title, emoji: c.emoji || '\ud83c\udfc1', xp_reward: c.xp_reward || 0 }
+        challenge: { title: c.title, emoji: c.emoji || '🏁', xp_reward: c.xp_reward || 0 }
       });
     });
     pinned.sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
 
-    // The check-in is the daily loop, and it used to be reachable only after a
-    // sprint existed — five gates deep from signup, which is why not one has ever
-    // been logged. It now stands on its own: anyone who has finished onboarding
-    // can check in, sprint or no sprint.
+    // The check-in is the daily loop, and it stands on its own: anyone who has
+    // finished onboarding can check in, sprint or no sprint.
     const { data: checkinRow } = await req.sb.from('daily_checkins')
       .select('id').eq('user_id', req.user.id)
       .eq('checkin_date', new Date().toISOString().slice(0, 10)).maybeSingle();
@@ -70,76 +59,54 @@ router.get('/', async (req, res, next) => {
     const allActive = (acc || []).concat(customAcc || []);
     const coach = await getGuidance(req.sb, req.user, p, {
       sprint, acceptances: allActive, checkinToday: !!checkinToday,
-      ideasCount: (ideas || []).length, plan: res.locals.plan
+      ideasCount: 0, plan: res.locals.plan
     });
 
-    // The rungs of THIS member's path — a creator's Level 6 is "Sponsored",
-    // a plumber's is "Regulars".
     const lvls = ladders.ladderFor(p.path);
-    // What this member actually chose, in words. Everything on this page is
-    // tailored to it, so it is worth saying out loud rather than leaving them
-    // to infer it from the quests.
     const pathDef = paths.get(p.path);
-    const yourPath = pathDef ? {
-      label: pathDef.label,
-      emoji: pathDef.emoji,
-      subpath: (paths.subpathsOf(p.path).find(s => s.slug === p.subpath) || {}).label || null
-    } : null;
-    const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '\ud83c\udf31' };
+    const yourPath = pathDef ? { label: pathDef.label, emoji: pathDef.emoji } : null;
+    const cur = lvls.find(l => l.level === (p.current_level || 1)) || { title: 'Dreamer', xp_required: 0, emoji: '🌱' };
     const next = lvls.find(l => l.level === (p.current_level || 1) + 1);
 
-    // The quest log. Levels gate on XP *and* completed real-world quests, but
-    // only the XP half was ever shown — so a founder blocked on a quest just saw
-    // a countdown to a level they couldn't reach.
     const ladder = await ladderStatus(req.sb, req.user.id, p);
     if (ladder) ladder.unlocks = forLevel(ladder.next.level);
 
-    // progress analytics (paid)
-    let analytics = null;
-    if (res.locals.plan === 'paid') {
-      const since = new Date(Date.now() - 8 * 7 * 86400000).toISOString();
-      const [{ data: doneTasks }, { data: xpEvents }, { count: openCount }] = await Promise.all([
-        req.sb.from('tasks').select('completed_at').eq('user_id', req.user.id).eq('status', 'done').gte('completed_at', since).limit(1000),
-        req.sb.from('xp_events').select('amount, created_at').eq('user_id', req.user.id).gte('created_at', since).limit(2000),
-        req.sb.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id).neq('status', 'done')
-      ]);
-      const weeks = [];
-      for (let i = 7; i >= 0; i--) {
-        const start = new Date(Date.now() - (i + 1) * 7 * 86400000);
-        const end = new Date(Date.now() - i * 7 * 86400000);
-        const label = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const tasksDone = (doneTasks || []).filter(t => t.completed_at && new Date(t.completed_at) >= start && new Date(t.completed_at) < end).length;
-        const xp = (xpEvents || []).reduce((s, e) => (new Date(e.created_at) >= start && new Date(e.created_at) < end) ? s + (e.amount || 0) : s, 0);
-        weeks.push({ label, tasksDone, xp });
-      }
-      analytics = {
-        weeks,
-        maxTasks: Math.max(1, ...weeks.map(w => w.tasksDone)),
-        maxXp: Math.max(1, ...weeks.map(w => w.xp)),
-        totalDone: (doneTasks || []).length,
-        totalXp: (xpEvents || []).reduce((s, e) => s + (e.amount || 0), 0),
-        openTasks: openCount || 0
-      };
-    }
-
-    // This week's plan and a peek at the feed. Both are cheap reads and both
-    // are things nobody would ever find if the only door to them were a nav
-    // link — the dashboard is where people actually land.
-    const [weekPlan, feed] = await Promise.all([
-      req.sb.from('weekly_plans').select('week_of, intro, items')
-        .eq('user_id', req.user.id).eq('week_of', coachLib.thisMonday())
-        .maybeSingle().then(r => r.data, () => null),
-      activity.feedFor(req.sb, req.user.id, { limit: 5 })
+    // Progress analytics — free for everyone.
+    const since = new Date(Date.now() - 8 * 7 * 86400000).toISOString();
+    const [{ data: doneTasks }, { data: xpEvents }, { count: openCount }] = await Promise.all([
+      req.sb.from('tasks').select('completed_at').eq('user_id', req.user.id).eq('status', 'done').gte('completed_at', since).limit(1000),
+      req.sb.from('xp_events').select('amount, created_at').eq('user_id', req.user.id).gte('created_at', since).limit(2000),
+      req.sb.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id).neq('status', 'done')
     ]);
+    const weeks = [];
+    for (let i = 7; i >= 0; i--) {
+      const start = new Date(Date.now() - (i + 1) * 7 * 86400000);
+      const end = new Date(Date.now() - i * 7 * 86400000);
+      const label = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const tasksDone = (doneTasks || []).filter(t => t.completed_at && new Date(t.completed_at) >= start && new Date(t.completed_at) < end).length;
+      const xp = (xpEvents || []).reduce((s, e) => (new Date(e.created_at) >= start && new Date(e.created_at) < end) ? s + (e.amount || 0) : s, 0);
+      weeks.push({ label, tasksDone, xp });
+    }
+    const analytics = {
+      weeks,
+      maxTasks: Math.max(1, ...weeks.map(w => w.tasksDone)),
+      maxXp: Math.max(1, ...weeks.map(w => w.xp)),
+      totalDone: (doneTasks || []).length,
+      totalXp: (xpEvents || []).reduce((s, e) => s + (e.amount || 0), 0),
+      openTasks: openCount || 0
+    };
+
+    // A peek at the feed — what people you follow are working on. Cheap to read
+    // and the reason the dashboard is where people actually land.
+    const feed = await activity.feedFor(req.sb, req.user.id, { limit: 5 });
 
     res.render('dashboard', {
-      title: 'Dashboard', sprint, tasks, ideas: ideas || [], checkinToday: !!checkinToday,
-      levelInfo: { current: cur, next }, ladder, yourPath, aiReady: ai.hasKey(), pinned, analytics, coach,
-      needsQuestionnaire, hasCompass,
-      weekPlan, feedPeek: feed.events, following: feed.following,
+      title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
+      levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
+      needsPath,
+      feedPeek: feed.events, following: feed.following,
       // A follower's rung has to come from THEIR ladder: Level 4 is "Regular"
-      // for a creator and "Quoting" for a plumber, and printing the viewer's
-      // word over someone else's achievement is the bug this prevents.
+      // for a creator and "Quoting" for a plumber.
       rungTitle: (path, level) => {
         const r = (ladders.ladderFor(path) || []).find(x => x.level === level);
         return r ? r.title : '';
@@ -148,51 +115,58 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Start a sprint from a blueprint
-router.get('/sprint/start/:blueprintId', async (req, res, next) => {
+// Start a sprint — manual now: name it, set a goal, add your own tasks. No
+// more AI planning from a blueprint (blueprints are gone).
+router.post('/sprint/start', async (req, res, next) => {
   try {
-    const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.blueprintId).eq('user_id', req.user.id).maybeSingle();
-    if (!bp) return res.redirect('/ideas');
-    res.render('generating', { title: 'Planning sprint', action: '/dashboard/sprint/start/' + bp.id, label: 'Planning your first 7-day sprint\u2026' });
-  } catch (e) { next(e); }
-});
-
-router.post('/sprint/start/:blueprintId', async (req, res) => {
-  try {
-    const { data: bp } = await req.sb.from('blueprints').select('*').eq('id', req.params.blueprintId).eq('user_id', req.user.id).maybeSingle();
-    if (!bp) return res.json({ redirect: '/ideas' });
-    
-
+    const { data: existing } = await req.sb.from('sprints').select('id').eq('user_id', req.user.id).eq('status', 'active').limit(1).maybeSingle();
+    if (existing) return res.redirect('/dashboard');
     const { count } = await req.sb.from('sprints').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id);
     const sprintNumber = (count || 0) + 1;
-    const plan = await credits.run(req.sb, 'sprint',
-      () => ai.generateSprintTasks(req.accessToken, bp, sprintNumber));
-
+    const theme = String(req.body.theme || '').trim().slice(0, 120) || 'Sprint ' + sprintNumber;
+    const goal = String(req.body.goal || '').trim().slice(0, 400);
     const start = new Date();
     const end = new Date(Date.now() + 6 * 86400000);
     const { data: sprint, error } = await req.sb.from('sprints').insert({
-      user_id: req.user.id, blueprint_id: bp.id, idea_id: bp.idea_id, sprint_number: sprintNumber,
-      theme: plan.theme || 'Launch sprint', days_label: 'Days ' + ((sprintNumber - 1) * 7 + 1) + '-' + (sprintNumber * 7),
-      goal: plan.goal || '', status: 'active',
+      user_id: req.user.id, sprint_number: sprintNumber,
+      theme, days_label: 'Days ' + ((sprintNumber - 1) * 7 + 1) + '-' + (sprintNumber * 7),
+      goal, status: 'active',
       start_date: start.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10),
-      tasks_total: (plan.tasks || []).length, tasks_done: 0, velocity_pct: 0
+      tasks_total: 0, tasks_done: 0, velocity_pct: 0
     }).select().maybeSingle();
     if (error) throw error;
-
-    const taskRows = (plan.tasks || []).map((t, i) => ({
-      user_id: req.user.id, sprint_id: sprint.id, title: t.title, description: t.description || '',
-      priority: ['high', 'medium', 'low'].includes(t.priority) ? t.priority : 'medium',
-      status: 'todo', position: i, ai_generated: true
-    }));
-    if (taskRows.length) await req.sb.from('sprint_tasks').insert(taskRows);
     await awardXP(req.sb, req.user.id, req.profile, 'sprint_started', 'Started a sprint', 'sprints', sprint.id);
-    // Sprint 1 Started (and friends) unlock the moment it happens.
     try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) { /* trophies self-heal on the milestones page */ }
-    res.json({ redirect: '/dashboard' });
-  } catch (e) {
-    console.error('sprint start', e);
-    res.json({ error: 'Sprint planning failed: ' + e.message });
-  }
+    res.redirect('/dashboard');
+  } catch (e) { next(e); }
+});
+
+// Add a task to the active sprint — manual.
+router.post('/sprint/task/add', async (req, res, next) => {
+  try {
+    const { data: sprint } = await req.sb.from('sprints').select('id').eq('user_id', req.user.id).eq('status', 'active').maybeSingle();
+    if (!sprint) return res.redirect('/dashboard');
+    const title = String(req.body.title || '').trim().slice(0, 200);
+    if (title) {
+      const { count } = await req.sb.from('sprint_tasks').select('id', { count: 'exact', head: true }).eq('sprint_id', sprint.id);
+      await req.sb.from('sprint_tasks').insert({
+        user_id: req.user.id, sprint_id: sprint.id, title,
+        priority: ['high', 'medium', 'low'].includes(req.body.priority) ? req.body.priority : 'medium',
+        status: 'todo', position: count || 0
+      });
+      const { data: all } = await req.sb.from('sprint_tasks').select('status').eq('sprint_id', sprint.id);
+      await req.sb.from('sprints').update({ tasks_total: (all || []).length }).eq('id', sprint.id);
+    }
+    res.redirect('/dashboard');
+  } catch (e) { next(e); }
+});
+
+// End the active sprint early, or once its week is up.
+router.post('/sprint/end', async (req, res, next) => {
+  try {
+    await req.sb.from('sprints').update({ status: 'completed' }).eq('user_id', req.user.id).eq('status', 'active');
+    res.redirect('/dashboard');
+  } catch (e) { next(e); }
 });
 
 // Toggle task done
@@ -219,8 +193,6 @@ router.post('/task/:id/toggle', async (req, res) => {
     if (done) {
       await req.sb.from('profiles').update({ tasks_completed: (req.profile.tasks_completed || 0) + 1 }).eq('id', req.user.id);
       xp = await awardXP(req.sb, req.user.id, req.profile, 'sprint_task_done', 'Completed task: ' + task.title, 'sprint_tasks', task.id);
-      // Trophy sweep: task-count milestones (and a full sprint's worth of tasks
-      // finishing a sprint) unlock right here, and the client gets to celebrate.
       try {
         const { fresh } = await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid');
         trophies = fresh.map(d => ({ emoji: d.emoji, title: d.title }));
@@ -254,8 +226,6 @@ router.post('/checkin', async (req, res, next) => {
     });
     const streak = await bumpStreak(req.sb, req.user.id, req.profile);
     await awardXP(req.sb, req.user.id, req.profile, 'daily_checkin', 'Daily check-in (streak ' + streak + ')', 'daily_checkins', null);
-    // Streak + check-in trophies unlock the moment the streak ticks over. The
-    // fresh streak value hasn't landed on req.profile, so pass it along.
     try {
       await sweepMilestones(req.sb, req.user.id, { ...req.profile, streak_days: Math.max(streak || 0, req.profile.streak_days || 0) }, res.locals.plan === 'paid');
     } catch (_) { /* trophies self-heal on the milestones page */ }
