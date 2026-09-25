@@ -1,36 +1,8 @@
 <%
-  // Section nav for the logged-in workspace. Renders as a tab row on desktop and
-  // a fixed bottom bar on mobile. Only appears inside the app itself, never on
-  // marketing or article pages.
-  //
-  // Teams (/collaborations) is deliberately absent: the collab hub has no
-  // members yet, and an empty team surface reads as a ghost town to a new
-  // signup. The route stays mounted; re-add the tab once there are people.
-  //
-  // This row is also what decides whether the section nav renders at all
-  // (_inApp, below). Coach and Feed were reachable from the top nav and from a
-  // dashboard tile but were not in here, so opening either one made the entire
-  // section nav disappear — the two newest surfaces were the two places you
-  // lost your bearings. The Wins wall was worse: named all over the marketing
-  // copy, linked from no navigation anywhere.
   var _p = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
   var APP_NAV = [
     { href: '/dashboard',      label: 'Home',       short: 'Home',   icon: 'i-suitcase',  match: ['/dashboard'] },
-    // Second, because it is the one surface meant to be opened every week.
-    { href: '/coach',          label: 'Coach',      short: 'Coach',  icon: 'i-idea',      match: ['/coach'] },
-    // The Compass is where the product starts, and it had no tab at all — it was
-    // reachable only from a tile buried below the fold on the dashboard.
-    // My ideas was a tab of its own until the list moved onto the Compass. A
-    // single draft still has its own page at /ideas/:id, and the blueprint hangs
-    // off it, so both match here — otherwise opening a draft would drop the tab
-    // row, which is the bug that put Coach and Feed out in the cold.
-    { href: '/compass',        label: 'Compass',    short: 'Compass', icon: 'i-compass',  match: ['/compass', '/questionnaire', '/ideas', '/blueprint'] },
     { href: '/tasks',          label: 'Tasks',      short: 'Tasks',  icon: 'i-task',      match: ['/tasks'] },
-    // One name per thing. The nav said "Challenges" and "Milestones" while the
-    // pages themselves, the upgrade panel and the ladder all said "quests" and
-    // "trophy case" — so the product had two words for each of its two loops
-    // and the phone bar's short names had already quietly switched to the
-    // second set. The routes answer to both spellings; these are the names.
     { href: '/quests',         label: 'Quests',     short: 'Quests', icon: 'i-challenge', match: ['/quests', '/challenges'] },
     { href: '/trophies',       label: 'Trophies',   short: 'Trophies', icon: 'i-milestone', match: ['/trophies', '/milestones'] },
     { href: '/budget',         label: 'Budget',     short: 'Budget', icon: 'i-market',    match: ['/budget'] },
@@ -47,7 +19,6 @@
     return false;
   };
   var _inApp = APP_NAV.some(_active);
-  // Four primary destinations on a phone; the rest live behind More.
   var _primary = APP_NAV.slice(0, 4);
   var _rest = APP_NAV.slice(4);
   var _restActive = _rest.some(_active);
@@ -85,9 +56,6 @@
 </nav>
 
 <style>
-  /* Desktop / tablet: a scrollable tab row directly under the site nav.
-     Deliberately not sticky: the site nav's own positioning lives in style.css
-     and two stacked sticky bars would fight each other. */
   .appnav { background: var(--panel-2); border-bottom: 1px solid var(--border); }
   .appnav-tabs { display: flex; gap: .15rem; overflow-x: auto; scrollbar-width: none;
     max-width: 1100px; margin: 0 auto; padding: 0 .5rem; }
@@ -99,7 +67,6 @@
   .appnav-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
   .appnav-ico { width: 18px; height: 18px; fill: currentColor; flex: none; }
 
-  /* Phone: fixed bottom bar. */
   .appbar { display: none; }
   @media (max-width: 820px) {
     .appnav { display: none; }
@@ -121,8 +88,6 @@
     .appbar-ico { width: 21px; height: 21px; fill: currentColor; }
     .appbar-more { flex: 1 1 0; min-width: 0; position: relative; }
     .appbar-more > summary { width: 100%; }
-    /* Absolute inside the fixed bar, so 100% means "above this button" rather
-       than "above the viewport". */
     .appbar-sheet {
       position: absolute; right: .25rem; bottom: 100%; margin-bottom: .45rem;
       background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px;
@@ -133,7 +98,6 @@
       color: var(--text); text-decoration: none; border-radius: 10px; font-size: .95rem;
     }
     .appbar-sheet a.is-active { color: var(--accent); font-weight: 600; background: rgba(16,185,129,.1); }
-    /* Keep the fixed bar from covering the end of the page. */
     body { padding-bottom: calc(4.2rem + env(safe-area-inset-bottom)); }
   }
 </style>

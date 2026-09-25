@@ -7,35 +7,28 @@
     <% } else if (!ladder.questsMet) { %> · XP ready for <%= ladder.next.title %> — <%= ladder.needMin - ladder.doneCount %> quest<%= (ladder.needMin - ladder.doneCount) === 1 ? '' : 's' %> to go
     <% } %>
   <% } else if (levelInfo.next) { %> · <%= Math.max(0, levelInfo.next.xp_required - (profile.xp_total||0)) %> XP to <%= levelInfo.next.title %><% } %></p>
-  <%# The rungs, quests and fit test on this page are all chosen by these two
-      answers, so name them rather than making someone infer it. %>
   <% if (typeof yourPath !== 'undefined' && yourPath) { %>
     <p class="muted small" style="margin:.15rem 0 0">
-      <%= yourPath.emoji %> <%= yourPath.label %><% if (yourPath.subpath) { %> · <%= yourPath.subpath %><% } %>
-      <a class="muted" style="margin-left:.4rem" href="/questionnaire/new">change</a>
+      <%= yourPath.emoji %> <%= yourPath.label %>
+      <a class="muted" style="margin-left:.4rem" href="/choose-path">change</a>
     </p>
   <% } %></div>
-  <%# The check-in no longer waits on a sprint — it is the daily loop for everyone. %>
   <% if (!checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
   <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
 </div>
 
-<%# The questionnaire is no longer a wall between signup and the product, so it
-    has to earn attention here instead. It sits above the stats because it is
-    the Level 1 quest: nothing else on this page can be finished without it. %>
-<% if (typeof needsQuestionnaire !== 'undefined' && needsQuestionnaire) { %>
+<%# Picking a path is the only onboarding step left. It sits above everything
+    else because the quests, the ladder and the electives are all matched to it. %>
+<% if (typeof needsPath !== 'undefined' && needsPath) { %>
   <div class="card" style="border-color:var(--accent);display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div style="flex:1;min-width:16rem">
-      <h2 style="margin:0 0 .2rem">🧭 Start here: answer your path questions</h2>
-      <p class="muted small" style="margin:0">They are what your Compass is drawn from — your archetype, the hours you actually have after work, and the territories where you hold an edge. Answering them is your Level 1 quest, so Level 2 stays locked until you do. About two minutes.</p>
+      <h2 style="margin:0 0 .2rem">🧭 Start here: pick your path</h2>
+      <p class="muted small" style="margin:0">This is what your quests, ladder and electives are matched to. Takes ten seconds.</p>
     </div>
-    <a class="btn btn-primary" style="flex:none" href="/questionnaire">Answer them →</a>
+    <a class="btn btn-primary" style="flex:none" href="/choose-path">Choose →</a>
   </div>
 <% } %>
 
-<%# data-count animates the number up from zero on load (app.js). The element
-    still contains the real value, so it is correct with JS off and for anything
-    reading the page rather than watching it. %>
 <div class="stat-row">
   <div class="stat card"><span class="stat-num" data-count="<%= profile.xp_total || 0 %>"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
   <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <span data-count="<%= profile.streak_days || 0 %>"><%= profile.streak_days || 0 %></span></span><span class="muted">day check-in streak</span></div>
@@ -43,9 +36,6 @@
   <% if (sprint) { %><div class="stat card"><span class="stat-num"><span data-count="<%= sprint.velocity_pct || 0 %>"><%= sprint.velocity_pct || 0 %></span>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
 
-<%# The Ladder. No view ever rendered a level's requirements or its unlock text,
-    so the spine of the whole game was invisible: players saw an XP bar implying
-    "fill this and advance" while the real gate stayed hidden. %>
 <% if (typeof ladder !== 'undefined' && ladder) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
@@ -77,9 +67,6 @@
       <% } %>
     <% } %>
 
-    <%# What the rung actually gives, and honestly how. Unlocks marked "arranged
-        with you" are real-world commitments a person fulfils — the app is not
-        pretending to have granted them. %>
     <% if ((ladder.unlocks || []).length || ladder.next.unlock_text) { %>
       <div style="border-top:1px solid var(--border);margin:.7rem 0 0;padding-top:.6rem">
         <% if ((ladder.unlocks || []).length) { %>
@@ -98,8 +85,6 @@
   </div>
 <% } %>
 
-<%# Active quests pinned first — the weekly sprint and every accepted
-    quest (curated AND tailored) in one card at the top of the board. %>
 <% if ((typeof pinned !== 'undefined' && pinned.length) || sprint) { %>
   <div class="card challenge-pin">
     <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active quests</h2>
@@ -113,7 +98,7 @@
     <% (typeof pinned !== 'undefined' ? pinned : []).forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/quests/custom/' + a.id : '/quests/' + a.challenge_id; const needsProof = !a.custom && a.challenge.requires_proof; %>
       <div class="milestone-row">
         <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Quest' %></strong>
-        <p class="muted small"><%= a.duration_days %>-day quest · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🎯 tailored' : '' %><%= needsProof ? ' · 🎮 proof needed' : '' %></p>
+        <p class="muted small"><%= a.duration_days %>-day quest · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 proof needed' : '' %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
             <input type="hidden" name="from" value="dashboard">
@@ -130,33 +115,6 @@
     <% }) %>
   </div>
 <% } %>
-
-<%# This week's plan, written by the coach from the rung you are on. The card
-    shows up even with nothing in it, because an empty one is the invitation. %>
-<div class="card" style="border-left:3px solid var(--accent)">
-  <div class="page-head" style="margin:0 0 .5rem">
-    <div><h2 style="margin:0">📋 This week</h2></div>
-    <% if (typeof weekPlan !== 'undefined' && weekPlan && weekPlan.items && weekPlan.items.length) { %>
-      <span class="chip"><%= weekPlan.items.filter(function (i) { return i.done; }).length %>/<%= weekPlan.items.length %> done</span>
-    <% } %>
-  </div>
-  <% if (typeof weekPlan !== 'undefined' && weekPlan && weekPlan.items && weekPlan.items.length) { %>
-    <ul class="task-list" style="margin:0">
-      <% weekPlan.items.forEach(function (it, i) { %>
-        <li class="task <%= it.done ? 'done' : '' %>">
-          <form method="post" action="/coach/plan/<%= i %>/toggle" style="display:inline">
-            <button class="task-check" type="submit" aria-label="Toggle"><%= it.done ? '✓' : '' %></button>
-          </form>
-          <div><strong><%= it.title %></strong><% if (it.day) { %> <span class="tag"><%= it.day %></span><% } %></div>
-        </li>
-      <% }) %>
-    </ul>
-    <a class="btn btn-ghost btn-sm" style="margin-top:.7rem;display:inline-block" href="/coach">Open the coach →</a>
-  <% } else { %>
-    <p class="muted" style="margin:0">Nothing written for this week yet. The coach reads the rung you are on, the quest blocking the next one, and the hours you said you have — then writes three things.</p>
-    <a class="btn btn-primary btn-sm" style="margin-top:.7rem;display:inline-block" href="/coach">Write this week →</a>
-  <% } %>
-</div>
 
 <%# What the people you follow have been doing. Five rows; the rest is /feed. %>
 <% if (typeof feedPeek !== 'undefined' && feedPeek && feedPeek.length) { %>
@@ -182,8 +140,8 @@
   </div>
 <% } %>
 
-<%# Rule-matched nudges for exactly where this member is right now. Distinct
-    from the coach above: these are matched by rule, that one is written. %>
+<%# Rule-matched nudges for exactly where this member is right now — no AI, just
+    rules matched to their rung, sprint and streak. %>
 <% if (typeof coach !== 'undefined' && coach && coach.length) { %>
   <div class="card coach-card" style="border-left:3px solid var(--accent)">
     <h2>🎙️ Nudges</h2>
@@ -195,12 +153,6 @@
     <% }) %>
   </div>
 <% } %>
-
-<%# The Workspace tile grid used to sit here. Every one of its nine tiles is a
-    tab in the section nav at the top of this page, so it was a third way to
-    reach the same nine places — on the screen a member sees most often. The
-    section nav is the one that survives, because it is on every page rather
-    than only this one. %>
 
 <% if (sprint) { %>
   <div class="card" id="sprint-card">
@@ -215,42 +167,35 @@
         <li class="task <%= t.status === 'done' ? 'done' : '' %>" data-id="<%= t.id %>">
           <button class="task-check" title="Toggle"><%= t.status === 'done' ? '✓' : '' %></button>
           <div><strong><%= t.title %></strong> <span class="tag tag-<%= t.priority %>"><%= t.priority %></span>
-          <p class="muted small"><%= t.description %></p></div>
+          <% if (t.description) { %><p class="muted small"><%= t.description %></p><% } %></div>
         </li>
       <% }) %>
     </ul>
+    <form method="post" action="/dashboard/sprint/task/add" style="margin-top:.7rem;display:flex;gap:.4rem">
+      <input type="text" name="title" maxlength="200" placeholder="Add a task to this sprint…" required style="flex:1">
+      <button class="btn btn-ghost btn-sm">Add</button>
+    </form>
+    <form method="post" action="/dashboard/sprint/end" style="margin-top:.5rem" onsubmit="return confirm('End this sprint?')">
+      <button class="btn btn-ghost btn-sm">End sprint</button>
+    </form>
   </div>
 <% } else { %>
   <div class="card center">
     <h2>No active sprint</h2>
-    <%# Three different states, three different next moves. Sending someone with
-        no Compass to a list of ideas they do not have was the old dead end. %>
-    <% if (ideas.length) { %>
-      <p>Build your idea's blueprint, then launch your first 7-day sprint.</p>
-      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">Open your Compass</a>
-    <% } else if (typeof hasCompass !== 'undefined' && hasCompass) { %>
-      <p>Your Compass is drawn. Now draft your idea in your own words and run it past your advisor — it stress-tests the idea against your own fit test before you spend a week on it.</p>
-      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">✍️ Draft my idea</a>
+    <% if (typeof needsPath !== 'undefined' && needsPath) { %>
+      <p>Pick your path first, then start your first 7-day sprint.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/choose-path">Choose your path</a>
     <% } else { %>
-      <p>It starts with your Compass — your archetype, your real constraints, and the territories where you hold an edge. Everything after it is built on what it tells you.</p>
-      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/compass">🧭 Draw my Compass</a>
+      <p>A sprint is a 7-day push toward one thing, with your own tasks on it. Name it and get moving.</p>
+      <form method="post" action="/dashboard/sprint/start" style="max-width:28rem;margin:.9rem auto 0;text-align:left">
+        <label>What's this sprint about?<input type="text" name="theme" maxlength="120" placeholder="e.g. Get my first 3 customer conversations" required></label>
+        <label>Goal (optional)<textarea name="goal" rows="2" maxlength="400" placeholder="What does done look like?"></textarea></label>
+        <button class="btn btn-primary" style="margin-top:.5rem">Start sprint</button>
+      </form>
     <% } %>
   </div>
 <% } %>
 
-<% if (ideas.length) { %>
-  <h2>Your ideas</h2>
-  <p class="muted small" style="margin:-.4rem 0 .6rem">Drafted by you, stress-tested by your Compass advisor.</p>
-  <div class="grid">
-    <% ideas.forEach(i => { %>
-      <a class="card idea-card" href="/ideas/<%= i.id %>">
-        <h3><%= i.is_favorited ? '⭐ ' : '' %><%= i.name %></h3>
-        <p class="muted"><%= i.tagline %></p>
-        <span class="chip">🎯 <%= i.success_likelihood %>%</span>
-      </a>
-    <% }) %>
-  </div>
-<% } %>
 <% if (typeof analytics !== 'undefined' && analytics) { %>
 <section class="card analytics">
   <h2>📈 Your progress <span class="muted small">last 8 weeks</span></h2>
