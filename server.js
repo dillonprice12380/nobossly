@@ -57,6 +57,7 @@ app.use(express.static(path.join(__dirname, 'public'), { etag: true, lastModifie
 app.use(require('./src/middleware/ogPrerender')); // crawler OG tags for /blog/:slug + /guides/:slug — must precede route handlers
 app.use(attachUser);
 app.use(require('./src/settings').attachSettings);
+app.use(require('./src/affiliates').attach); // live affiliate picks for any view
 
 // First-time social (Google/LinkedIn/GitHub) sign-ups must choose a username
 // before using the rest of the app. Skip the chooser itself, auth, and logout.
@@ -107,6 +108,7 @@ app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends, groups
+app.use('/', require('./src/routes/affiliates')); // /go/:key click-through, /toolkit, /affiliate-disclosure
 app.use('/upload', requireAuth, require('./src/routes/uploads'));
 app.get('/profile', requireAuth, (req, res) => res.redirect('/members/' + req.profile.username));
 app.use('/admin/sounds', requireAdmin, require('./src/routes/admin_sounds')); // game soundbite uploads — before /admin so its own routes win
@@ -121,7 +123,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /tasks\nDisallow: /messages\nSitemap: https://nobossly.com/sitemap.xml\n');
+  res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /tasks\nDisallow: /messages\nDisallow: /go/\nSitemap: https://nobossly.com/sitemap.xml\n');
 });
 
 app.get('/sitemap.xml', async (req, res, next) => {

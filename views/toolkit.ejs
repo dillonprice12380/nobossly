@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<div class="page-head"><div>
+  <h1>🧰 Founder toolkit</h1>
+  <p class="muted">Tools for each step of the climb — registering, getting paid, selling online and growing. Everything on NoBossly stays free; some of these links earn the site a commission. <a href="/affiliate-disclosure">How this works</a></p>
+</div></div>
+<% const cats = Object.keys(groups || {}); %>
+<% if (!cats.length) { %>
+  <div class="card center">
+    <p class="muted">The toolkit is being put together. In the meantime, the <a href="/guides">guides</a> cover every step.</p>
+  </div>
+<% } %>
+<% cats.forEach(cat => { %>
+  <h2 style="margin-top:1.4rem"><%= cat %></h2>
+  <div class="grid">
+    <% groups[cat].forEach(o => { %>
+      <div class="card">
+        <h3 style="margin:0"><%= o.partner_name || o.label %></h3>
+        <% if (o.partner_name) { %><p class="muted small" style="margin:.2rem 0 0"><%= o.label %></p><% } %>
+        <p class="muted"><%= o.blurb %></p>
+        <a class="btn btn-ghost btn-sm" href="/go/<%= o.key %>?from=toolkit" target="_blank" rel="sponsored nofollow noopener"><%= o.cta_label || 'Take a look' %> ↗</a>
+      </div>
+    <% }) %>
+  </div>
+<% }) %>
+<%- include('partials/foot') %>

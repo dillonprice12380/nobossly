@@ -23,6 +23,7 @@
          const needsProof = p.kind !== 'custom' && p.ch.requires_proof; %>
       <div class="milestone-row">
         <div style="flex:1"><strong><%= p.ch.emoji || '🏁' %> <%= p.ch.title %></strong>
+        <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(p.ch.title), from: 'quest', compact: true }) %>
         <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
@@ -100,6 +101,7 @@
         <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
         <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
         <p class="muted"><%= c.description %></p>
+        <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(c.title), from: 'quest', compact: true }) %>
         <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
         <% if (!a) { %>
           <form method="post" action="/quests/<%= c.id %>/accept">

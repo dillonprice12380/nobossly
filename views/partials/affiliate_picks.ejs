@@ -1,0 +1,29 @@
+<%# Affiliate recommendations for one spot on a page. Renders nothing unless a
+    live offer matches, so it is safe to include anywhere. Pass `picks` (from
+    affiliates.forTitle / forPath / forText), `from` (where the click came from,
+    for the click log) and optionally `compact` for a one-line version inside a
+    quest card. %>
+<% if (typeof picks !== 'undefined' && picks && picks.length) {
+     const src = encodeURIComponent(typeof from !== 'undefined' ? from : ''); %>
+  <% if (typeof compact !== 'undefined' && compact) { %>
+    <p class="muted small aff-compact" style="margin:.4rem 0 0">🧰 Helpful:
+      <% picks.forEach((o, i) => { %><%= i ? ' · ' : '' %><a href="/go/<%= o.key %>?from=<%= src %>" target="_blank" rel="sponsored nofollow noopener"><%= o.partner_name || o.label %></a><% }) %>
+      <a class="aff-note" href="/affiliate-disclosure" title="How recommendations work">ⓘ</a>
+    </p>
+  <% } else { %>
+    <aside class="card aff-picks" style="border-left:3px solid var(--accent)">
+      <h3 style="margin:0 0 .5rem">🧰 Tools that help with this</h3>
+      <% picks.forEach(o => { %>
+        <div class="milestone-row" style="align-items:center">
+          <div style="flex:1">
+            <strong><%= o.partner_name || o.label %></strong>
+            <% if (o.partner_name) { %><span class="chip" style="margin-left:.35rem"><%= o.label %></span><% } %>
+            <p class="muted small" style="margin:.2rem 0 0"><%= o.blurb %></p>
+          </div>
+          <a class="btn btn-ghost btn-sm" href="/go/<%= o.key %>?from=<%= src %>" target="_blank" rel="sponsored nofollow noopener"><%= o.cta_label || 'Take a look' %> ↗</a>
+        </div>
+      <% }) %>
+      <p class="muted small" style="margin:.6rem 0 0">Some links are affiliate links — NoBossly may earn a commission, at no extra cost to you. It is how the site stays free. <a href="/affiliate-disclosure">How this works</a></p>
+    </aside>
+  <% } %>
+<% } %>
