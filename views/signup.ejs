@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <div class="auth-card card">
   <h2>Start your way out</h2>
-  <p class="muted small" style="margin-top:-.3rem">Free to play — about a dozen questions tonight, and your Compass is drawn.</p>
+  <p class="muted small" style="margin-top:-.3rem">Free for everyone — pick your path and you're straight into your first quests.</p>
   <% if (error) { %><p class="error"><%= error %></p><% } %>
   <div class="oauth-row">
     <a class="btn btn-ghost btn-oauth" href="/auth/oauth/google">
@@ -27,7 +27,7 @@
   <form method="post" action="/signup">
   <%# A landing page can send someone here already knowing what they build. The
       hidden field carries it through the POST so an error on this form does not
-      lose it, and the questionnaire still owns the actual choice. %>
+      lose it; the path picker still owns the actual choice. %>
   <% if (typeof path !== 'undefined' && path) { %>
     <input type="hidden" name="path" value="<%= path %>">
     <p class="chip" style="margin:0 0 .8rem;display:inline-block">Starting as <%= pathDef ? pathDef.emoji + ' ' + pathDef.label : path %> · <a href="/paths">change</a></p>

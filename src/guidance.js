@@ -1,5 +1,5 @@
 // The Coach: a rule-based guidance engine. Computes a real-time snapshot of
-// where the member is in their journey (Compass, sprint, streak, tasks,
+// where the member is in their journey (path, sprint, streak, tasks,
 // challenges, rung, recency) and matches it against guidance_rules in the
 // database. Deliberately ZERO AI calls — every tip is deterministic, instant,
 // and free. Rules live in SQL so the library can grow without a deploy.
@@ -94,14 +94,16 @@ async function computeState(sb, user, profile, pre = {}) {
     level: profile.current_level || 1,
     verified_level: profile.verified_level || 1,
     verification_pending: pendingVerifN > 0,
-    founder_path: (qrun && qrun.founder_path) || 'exploring',
-    path: (qrun && qrun.founder_path) || 'exploring',
+    // The path is picked on /choose-path and lives on the profile now; an old
+    // questionnaire run is only a fallback for members who predate that.
+    founder_path: profile.path || (qrun && qrun.founder_path) || 'exploring',
+    path: profile.path || (qrun && qrun.founder_path) || 'exploring',
     subpath: pathsLib.subpathOf(qrun) || null,
     // The readable version, for {subpath} in a rule's message.
-    subpath_label: (pathsLib.subpathsOf((qrun && qrun.founder_path) || '')
+    subpath_label: (pathsLib.subpathsOf(profile.path || (qrun && qrun.founder_path) || '')
       .find(s => s.slug === pathsLib.subpathOf(qrun)) || {}).label || null,
-    // The questionnaire is the Level 1 quest now, so the Coach needs to know
-    // whether it is still outstanding — it is the first thing to nudge.
+    // Picking a path is the only onboarding step left — the first thing to nudge.
+    has_path: !!profile.path,
     has_questionnaire: !!qrun,
     has_compass: compassN > 0,
     // Live ideas only — a cut idea should not keep nagging the member to

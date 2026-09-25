@@ -29,12 +29,6 @@
     <button class="btn btn-primary">Create project</button>
   </form>
 </div>
-<% } else { %>
-<div class="card" style="border:1px dashed var(--border)">
-  <h2>✨ Want to lead your own team?</h2>
-  <p class="muted">You can accept invites and collaborate on any project you're added to. Creating your own projects and inviting members is part of the paid plan.</p>
-  <a class="btn btn-primary btn-sm" href="/pricing">See plans</a>
-</div>
 <% } %>
 
 <% function renderProject(p, isOwner) { const members = membersByProject[p.id] || []; %>

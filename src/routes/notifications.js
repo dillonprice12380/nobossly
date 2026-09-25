@@ -7,10 +7,6 @@ const LINKS = {
   messages: () => '/messages',
   tasks: () => '/tasks',
   task: () => '/tasks',
-  ideas: () => '/compass',
-  generated_ideas: id => '/ideas/' + id,
-  blueprints: id => '/blueprint/' + id,
-  blueprint: id => '/blueprint/' + id,
   forum_threads: id => '/community/t/' + id,
   threads: id => '/community/t/' + id,
   thread: id => '/community/t/' + id,
@@ -35,7 +31,6 @@ function hrefFor(n) {
     case 'task_due':
     case 'task_assigned':
     case 'tasks': return '/tasks';
-    case 'ideas': return '/compass';
     default: return '/notifications';
   }
 }
