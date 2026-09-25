@@ -1,30 +1,25 @@
 const router = require('express').Router();
 const paths = require('../paths');
-const lib = require('../fit_library');
 const ladders = require('../ladders');
 
 // Public landing pages, one per path.
 //
 // The fit criteria and the challenges on these pages are pulled LIVE from the
-// same tables the product uses, filtered by the same path tag. Retyping them
-// into marketing copy would guarantee the page and the product drift apart
-// within a month; this way a criterion edited in the library changes the
-// landing page too.
+// same tables the product uses, filtered by the same path tag.
 //
-// Both tables are readable with the publishable key: fit_criteria_library is
-// catalog content, and tailored_challenges exposes only its curated rows to
-// anon (AI-written ones have not been read by a human).
+// fit_criteria_library is catalog content, readable with the publishable key.
 
 const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
 
-// The criteria this path would be tested against. Path-tagged first — those are
-// the ones that make the page feel written for the reader — then the universal
-// ones that fill out a real five-point test.
-// Library wording carries placeholders — "{budget}", "{hours}", "{traction}" —
-// which are filled from a member's own answers when the criterion is pinned.
-// A visitor has no answers, so the page has to bind them to the generic phrase
-// instead. Printing the row unbound put a literal "{budget}" on the page.
-//
+// Library wording carries placeholders — "{budget}", "{hours}", "{traction}"
+// — which used to be filled from a member's own answers when a criterion was
+// pinned to their idea. A visitor has no answers, so the page binds them to a
+// generic phrase instead; anything still holding an unbound placeholder after
+// that gets dropped rather than shown broken.
+function bind(str, facts) {
+  return String(str || '').replace(/\{([a-z_]+)\}/g, (m, key) => (facts && facts[key] != null) ? String(facts[key]) : m);
+}
+
 // The one exception is the audience bar, which is a real constant rather than a
 // personal number: on the creator page it should read as the actual figure.
 function visitorFacts(slug) {
@@ -40,8 +35,6 @@ async function criteriaFor(sb, slug) {
   const rows = data || [];
   const tagged = rows.filter(r => (r.paths || []).includes(slug));
   const general = rows.filter(r => !r.paths || !r.paths.length);
-  // Bind and drop the unusable BEFORE slicing, or dropping one leaves a page
-  // with four criteria where the copy promises five.
   return bindForVisitor(tagged.concat(general), slug).slice(0, 5);
 }
 
@@ -50,11 +43,7 @@ async function criteriaFor(sb, slug) {
 function bindForVisitor(rows, slug) {
   const facts = visitorFacts(slug);
   return (rows || [])
-    .map(r => ({ ...r, criterion: lib.bind(r.criterion, facts), why: lib.bind(r.why, facts) }))
-    // A criterion whose wording only makes sense with a member's own numbers —
-    // the money bar reads "the number this path turns on" to a stranger — is
-    // dropped rather than shown vague. The page states that bar in its own
-    // words instead, in the marketing block.
+    .map(r => ({ ...r, criterion: bind(r.criterion, facts), why: bind(r.why, facts) }))
     .filter(r => !/\{[a-z_]+\}/.test(r.criterion + r.why) && !/the number this path turns on/i.test(r.criterion));
 }
 
@@ -77,8 +66,6 @@ router.get('/', (req, res) => {
 router.get('/:slug', async (req, res, next) => {
   try {
     const def = paths.get(req.params.slug);
-    // A path with no marketing block is live in the product but not on the
-    // public site, so it must not resolve to a half-empty page.
     if (!def || !def.marketing) return res.redirect('/paths');
 
     const [criteria, challenges] = await Promise.all([
@@ -91,11 +78,7 @@ router.get('/:slug', async (req, res, next) => {
       metaDescription: def.marketing.subhead.slice(0, 300),
       canonicalUrl: canonical(req, def.slug),
       def,
-      // The founder sees the actual questions their path asks, not a summary of
-      // them — it is the most convincing thing on the page and it costs nothing
-      // to keep true.
       questions: paths.ownQuestions(def.slug),
-      // The rungs this path actually climbs, named in its own vernacular.
       rungs: ladders.ladderFor(def.slug),
       subpaths: paths.subpathsOf(def.slug),
       criteria,
