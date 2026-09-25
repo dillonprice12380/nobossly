@@ -113,10 +113,6 @@ function buildToc(html) {
 
 const stripLeadH1 = html => String(html || '').replace(/<h1[^>]*>[\s\S]*?<\/h1>\s*/i, '');
 
-// For a guide tagged at country level, "Keep reading" is scoped to neighboring countries
-// first, then other countries on the same continent (see similar_location_guides in the
-// DB). State guides and blog posts don't have that geography, so they fall back to the
-// simple "most recent" pool, same as before.
 async function loadSidebarFor(req, post, table) {
   const sb = client(req);
   let config = { show_similar: true, html_top: null, html_middle: null, html_bottom: null };
@@ -285,14 +281,14 @@ router.get('/locations', async (req, res, next) => {
 
 // Help center
 router.get('/help', (req, res) => {
-  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 your Compass, sprints, plans, billing, and your account.' });
+  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 quests, sprints, your ladder, and your account.' });
 });
 
 // How it works
 router.get('/how-it-works', (req, res) => {
   res.render('how_it_works', {
     title: 'How It Works',
-    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 AI-matched ideas, launch blueprints, 7-day sprints, milestones, challenges, and a founder community.'
+    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 quests, self-directed sprints, milestones, and a founder community that gives you real feedback.'
   });
 });
 
