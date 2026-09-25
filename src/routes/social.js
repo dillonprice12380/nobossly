@@ -1,7 +1,6 @@
 const router = require('express').Router();
-const { requireAuth, planOf } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const { safeBack, relativePath } = require('../safe_back');
-const { gate } = require('../upgrade');
 
 const { quiet } = require('../db');
 const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || ('group-' + Date.now());
@@ -116,6 +115,7 @@ router.post('/friends/:id/remove', requireAuth, async (req, res, next) => {
 });
 
 // ---------------- Groups ----------------
+// Anyone can create a group now — this used to be paid-only.
 router.get('/groups', requireAuth, async (req, res, next) => {
   try {
     const { data: groups } = await req.sb.from('groups').select('*').order('created_at', { ascending: false }).limit(100);
@@ -125,11 +125,11 @@ router.get('/groups', requireAuth, async (req, res, next) => {
       const { data: members } = await req.sb.from('group_members').select('group_id, user_id').in('group_id', ids);
       (members || []).forEach(m => { counts[m.group_id] = (counts[m.group_id] || 0) + 1; if (m.user_id === req.user.id) mine.add(m.group_id); });
     }
-    res.render('groups/index', { title: 'Groups', groups: groups || [], counts, mine, canCreate: res.locals.plan === 'paid' });
+    res.render('groups/index', { title: 'Groups', groups: groups || [], counts, mine, canCreate: true });
   } catch (e) { next(e); }
 });
 
-router.post('/groups', requireAuth, (req, res, next) => (planOf(req.profile) === 'paid' ? next() : gate(res, 'groups')), async (req, res, next) => {
+router.post('/groups', requireAuth, async (req, res, next) => {
   try {
     const name = (req.body.name || '').trim().slice(0, 80);
     if (!name) return res.redirect('/groups');
