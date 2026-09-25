@@ -1,0 +1,12 @@
+<%- include('../partials/head') %>
+<div class="card center" style="max-width:640px;margin:1.5rem auto">
+  <p style="font-size:2.4rem;margin:0"><%= tool ? tool.emoji : '⭐' %></p>
+  <h1 style="margin:.3rem 0"><%= tool ? tool.name : 'Premium' %></h1>
+  <% if (tool) { %><p class="lead"><%= tool.blurb %></p><% } %>
+  <p class="muted">This tool is part of <strong>NoBossly Premium</strong>, along with four others. Everything else on NoBossly stays free.</p>
+  <div class="cta-row" style="justify-content:center">
+    <a class="btn btn-primary" href="/pricing">See Premium — from $3.99/mo</a>
+    <a class="btn btn-ghost" href="/tools">All five tools</a>
+  </div>
+</div>
+<%- include('../partials/foot') %>

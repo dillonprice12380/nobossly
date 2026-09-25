@@ -70,6 +70,8 @@
   <a class="btn btn-ghost" style="margin-top:1rem;display:inline-block" href="/how-it-works">How the whole thing works →</a>
 </section>
 
+<%- include('partials/affiliate_picks', { picks: affiliates.forPath(def.slug), from: 'path:' + def.slug }) %>
+
 <section class="cta-band">
   <h2>Start as a <%= def.label.toLowerCase() %>.</h2>
   <p class="muted">One choice, and you're straight into the quest board and the ladder. Tonight, after work. You can switch paths any time from your dashboard.</p>

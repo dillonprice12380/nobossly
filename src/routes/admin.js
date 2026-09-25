@@ -24,7 +24,7 @@ function blocksToHtml(blocks) {
     }
   }).join('\n');
 }
-const RESERVED_SLUGS = ['dashboard','tasks','challenges','milestones','community','collaborations','messages','notifications','members','admin','ideas','blueprint','questionnaire','login','signup','logout','blog','auth','debug','sitemap','robots','p','css','js','api','account','pricing','billing','profile','guides','help','resources','groups','report','follow','unfollow','friends','sidebars'];
+const RESERVED_SLUGS = ['dashboard','tasks','challenges','milestones','community','collaborations','messages','notifications','members','admin','ideas','blueprint','questionnaire','login','signup','logout','blog','auth','debug','sitemap','robots','p','css','js','api','account','pricing','billing','profile','guides','help','resources','groups','report','follow','unfollow','friends','sidebars','go','toolkit','affiliate-disclosure','tools','proof','premium'];
 
 
 const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || ('item-' + Date.now());
@@ -219,6 +219,47 @@ router.post('/content/:id/delete', async (req, res, next) => {
   try {
     await req.sb.from('cms_contents').delete().eq('id', req.params.id);
     res.redirect('/admin/content');
+  } catch (e) { next(e); }
+});
+
+// ---------- Affiliate slots ----------
+// Each slot is a generic recommendation (e.g. "Invoicing tool") already tagged
+// to the quests, trophies, paths and guides it fits. Pasting a partner link and
+// switching it on is all it takes to show it in those places.
+router.get('/affiliates', async (req, res, next) => {
+  try {
+    const [{ data: offers, error }, { data: clicks }] = await Promise.all([
+      req.sb.from('affiliate_offers').select('*').order('sort'),
+      req.sb.rpc('admin_affiliate_clicks')
+    ]);
+    if (error) throw error;
+    const clickMap = {};
+    (clicks || []).forEach(c => { clickMap[c.offer_key] = c; });
+    const groups = {};
+    (offers || []).forEach(o => (groups[o.category] = groups[o.category] || []).push(o));
+    res.render('admin/affiliates', {
+      title: 'Affiliates', groups, clickMap,
+      liveCount: (offers || []).filter(o => o.active && o.url).length,
+      total: (offers || []).length,
+      saved: req.query.saved || null, err: req.query.err || null
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/affiliates/:key', async (req, res, next) => {
+  try {
+    const b = req.body;
+    const { error } = await req.sb.rpc('admin_save_affiliate', {
+      p_key: req.params.key,
+      p_partner: b.partner_name || '',
+      p_url: b.url || '',
+      p_cta: b.cta_label || '',
+      p_active: b.active === 'on'
+    });
+    const anchor = '#aff-' + encodeURIComponent(req.params.key);
+    if (error) return res.redirect('/admin/affiliates?err=' + encodeURIComponent(error.message) + anchor);
+    require('../affiliates').invalidate();
+    res.redirect('/admin/affiliates?saved=' + encodeURIComponent(req.params.key) + anchor);
   } catch (e) { next(e); }
 });
 

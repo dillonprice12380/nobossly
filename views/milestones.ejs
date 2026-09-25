@@ -25,6 +25,7 @@
           <span class="chip">⚡ <%= m.xp_reward %> XP</span>
           <% if (gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
           <% if (!got) { %>
+            <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(m.title), from: 'trophy', compact: true }) %>
             <form method="post" action="/trophies/claim/<%= m.id %>" style="margin:.5rem 0 0">
               <textarea name="proof_note" rows="2" required minlength="30"
                 placeholder="What actually happened? A few sentences — when, where, the specifics."></textarea>

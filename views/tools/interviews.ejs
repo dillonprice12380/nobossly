@@ -1,0 +1,64 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🎙️ Customer Interview Tracker</h1>
+  <p class="muted">Log every conversation with a potential customer. Tag the problems they bring up, and the patterns show up on their own.</p>
+</div><a class="btn btn-ghost btn-sm" href="/tools">All tools</a></div>
+<% if (m) { %><p class="notice"><%= m %></p><% } %>
+
+<div class="stat-row">
+  <div class="card stat"><span class="stat-num"><%= sum.n %></span><span class="muted small">conversations logged</span></div>
+  <div class="card stat"><span class="stat-num"><%= sum.payPct %>%</span><span class="muted small">said they would pay</span></div>
+  <div class="card stat"><span class="stat-num"><%= sum.pay.maybe %></span><span class="muted small">maybes to follow up</span></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-top:0">Log a conversation</h3>
+    <form method="post" action="/tools/interviews">
+      <div class="grid-2" style="gap:.6rem">
+        <label>Date<input type="date" name="date" value="<%= today %>" required></label>
+        <label>How<input name="channel" maxlength="60" list="iv-channels" placeholder="Call, coffee, DM…"></label>
+      </div>
+      <datalist id="iv-channels"><option>Phone call</option><option>Video call</option><option>In person</option><option>DM</option><option>Email</option><option>Survey</option></datalist>
+      <label>Who <span class="muted small">(role or type, not their name)</span><input name="who" maxlength="120" placeholder="e.g. Salon owner, 2 staff"></label>
+      <label>Problems they mentioned <span class="muted small">(comma-separated tags)</span><input name="tags" maxlength="400" placeholder="no-shows, booking by text, late payments"></label>
+      <label>Would they pay for a fix?
+        <select name="pay"><option value="yes">Yes — said so clearly</option><option value="maybe" selected>Maybe</option><option value="no">No</option></select>
+      </label>
+      <label>Best quote<input name="quote" maxlength="600" placeholder="Their words, as close as you can remember"></label>
+      <label>Notes<textarea name="notes" rows="3" maxlength="1500"></textarea></label>
+      <button class="btn btn-primary btn-sm">Save conversation</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">What keeps coming up</h3>
+    <% if (!sum.tags.length) { %>
+      <p class="muted small">Tag the problems people mention and they'll be ranked here, with how many of those people said they'd pay.</p>
+    <% } %>
+    <% sum.tags.slice(0, 15).forEach(t => { %>
+      <div style="margin-bottom:.6rem">
+        <div style="display:flex;justify-content:space-between;gap:.5rem"><a href="/tools/interviews?tag=<%= encodeURIComponent(t.tag) %>"><strong><%= t.tag %></strong></a><span class="muted small"><%= t.count %> of <%= sum.n %> · <%= t.yes %> would pay</span></div>
+        <div class="progress" style="margin:.25rem 0 0"><div class="progress-bar" style="width:<%= t.pct %>%"></div></div>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0"><%= tag ? 'Conversations tagged “' + tag + '”' : 'All conversations' %> <% if (tag) { %><a class="chip" href="/tools/interviews">show all</a><% } %></h3>
+  <% if (!list.length) { %><p class="muted small">Nothing logged yet.</p><% } %>
+  <% list.forEach(iv => { %>
+    <div class="milestone-row">
+      <div style="flex:1">
+        <strong><%= iv.who || 'Someone' %></strong>
+        <span class="chip <%= iv.pay === 'yes' ? 'chip-success' : iv.pay === 'no' ? 'chip-danger' : '' %>"><%= iv.pay === 'yes' ? 'Would pay' : iv.pay === 'no' ? 'Would not pay' : 'Maybe' %></span>
+        <span class="muted small"><%= iv.date %><%= iv.channel ? ' · ' + iv.channel : '' %></span>
+        <% if (iv.quote) { %><p style="margin:.3rem 0 0">“<%= iv.quote %>”</p><% } %>
+        <% if ((iv.tags || []).length) { %><p style="margin:.3rem 0 0"><% iv.tags.forEach(t => { %><a class="chip" href="/tools/interviews?tag=<%= encodeURIComponent(t) %>"><%= t %></a> <% }) %></p><% } %>
+        <% if (iv.notes) { %><p class="muted small" style="margin:.3rem 0 0;white-space:pre-line"><%= iv.notes %></p><% } %>
+      </div>
+      <form method="post" action="/tools/interviews/<%= iv.id %>/delete" onsubmit="return confirm('Delete this conversation?')"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form>
+    </div>
+  <% }) %>
+</div>
+<%- include('../partials/foot') %>

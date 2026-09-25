@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<% const t = page.testimonials || []; %>
+<div class="page-head"><div>
+  <h1>🌟 Proof Page</h1>
+  <p class="muted">A public page for your business: what you do, what people say about it, and the wins you have posted. Link it from your bio, proposals and emails.</p>
+</div><a class="btn btn-ghost btn-sm" href="/tools">All tools</a></div>
+<% if (m) { %><p class="notice"><%= m %></p><% } %>
+
+<div class="card" style="border-left:3px solid <%= page.published ? 'var(--accent-2)' : 'var(--border)' %>">
+  <% if (page.published) { %>
+    <p style="margin:0">🟢 Live at <a href="/proof/<%= username %>" target="_blank" rel="noopener"><strong><%= publicUrl %></strong></a></p>
+  <% } else { %>
+    <p style="margin:0" class="muted">⚪ Not published yet. Fill in the details, tick “Publish”, and save.</p>
+  <% } %>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-top:0">Your page</h3>
+    <form method="post" action="/tools/proof">
+      <label>Headline<input name="headline" maxlength="120" value="<%= page.headline || '' %>" placeholder="e.g. Bookkeeping for local trades businesses"></label>
+      <label>About<textarea name="about" rows="5" maxlength="1500" placeholder="Who you help, what you do for them, and why you."><%= page.about || '' %></textarea></label>
+      <label>What you offer <span class="muted small">(one per line)</span><textarea name="services" rows="4" maxlength="1500"><%= (page.services || []).join('\n') %></textarea></label>
+      <div class="grid-2" style="gap:.6rem">
+        <label>Contact link or email<input name="contact_url" maxlength="300" value="<%= (page.contact_url || '').replace(/^mailto:/, '') %>" placeholder="https://… or you@…"></label>
+        <label>Button text<input name="contact_label" maxlength="40" value="<%= page.contact_label || '' %>" placeholder="Book a call"></label>
+      </div>
+      <label class="check"><input type="checkbox" name="show_wins" <%= page.show_wins !== false ? 'checked' : '' %>> Show my approved wins from the Wins wall</label>
+      <label class="check"><input type="checkbox" name="show_level" <%= page.show_level !== false ? 'checked' : '' %>> Show my NoBossly level</label>
+      <label class="check"><input type="checkbox" name="published" <%= page.published ? 'checked' : '' %>> Publish my page</label>
+      <button class="btn btn-primary btn-sm">Save page</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Testimonials (<%= t.length %>)</h3>
+    <form method="post" action="/tools/proof/testimonial">
+      <label>What they said<textarea name="quote" rows="3" maxlength="800" required></textarea></label>
+      <div class="grid-2" style="gap:.6rem">
+        <label>Name<input name="name" maxlength="80" placeholder="Sam R."></label>
+        <label>Context<input name="context" maxlength="120" placeholder="Owner, Sam's Plumbing"></label>
+      </div>
+      <button class="btn btn-primary btn-sm">Add testimonial</button>
+    </form>
+    <p class="muted small">Only add testimonials people have agreed you can share.</p>
+    <% t.slice().reverse().forEach(x => { %>
+      <div class="milestone-row">
+        <div style="flex:1"><p style="margin:0">“<%= x.quote %>”</p><p class="muted small" style="margin:.2rem 0 0">— <%= x.name || 'Anonymous' %><%= x.context ? ', ' + x.context : '' %></p></div>
+        <form method="post" action="/tools/proof/testimonial/<%= x.id %>/delete" onsubmit="return confirm('Remove this testimonial?')"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form>
+      </div>
+    <% }) %>
+  </div>
+</div>
+<%- include('../partials/foot') %>

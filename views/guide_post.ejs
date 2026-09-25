@@ -2,4 +2,7 @@
 <% if (typeof sidebar === 'undefined') { var sidebar = null; } %>
 <% if (typeof toc === 'undefined') { var toc = []; } %>
 <%- include('partials/post_body', { post, toc, sidebar }) %>
+<div style="max-width:860px;margin:0 auto">
+  <%- include('partials/affiliate_picks', { picks: affiliates.forText(post.title), from: 'guide:' + post.slug }) %>
+</div>
 <%- include('partials/foot') %>

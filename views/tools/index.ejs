@@ -1,0 +1,19 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>⭐ Premium tools</h1>
+  <p class="muted"><%= isPremium ? 'Your toolkit for the practical side of leaving.' : 'Five tools for the practical side of leaving — part of NoBossly Premium.' %></p>
+</div>
+<% if (!isPremium) { %><a class="btn btn-primary" href="/pricing">Get Premium — $3.99/mo</a><% } %>
+</div>
+<% if (welcome) { %><p class="notice">🎉 Welcome to Premium — everything below is unlocked. It can take a minute for a payment to confirm; if a tool still shows as locked, refresh shortly.</p><% } %>
+<div class="grid">
+  <% premiumTools.forEach(t => { %>
+    <a class="card" href="<%= t.href %>" style="display:block;color:inherit;text-decoration:none">
+      <div class="idea-top"><span style="font-size:1.8rem"><%= t.emoji %></span><span class="chip <%= isPremium ? 'chip-success' : '' %>"><%= isPremium ? 'Open' : '🔒 Premium' %></span></div>
+      <h3 style="margin:.4rem 0 .2rem"><%= t.name %></h3>
+      <p class="muted small" style="margin:0"><%= t.blurb %></p>
+    </a>
+  <% }) %>
+</div>
+<p class="muted small">These tools give planning estimates, not financial, tax or legal advice.</p>
+<%- include('../partials/foot') %>

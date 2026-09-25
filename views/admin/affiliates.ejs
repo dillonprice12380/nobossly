@@ -1,0 +1,42 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🧰 Affiliates</h1>
+  <p class="muted"><%= liveCount %> of <%= total %> slots live. A slot shows to members only once it has a link and is switched on — then it appears next to the quests, trophies, path pages and guides listed under it, and on <a href="/toolkit">/toolkit</a>.</p>
+</div></div>
+<%- include('nav') %>
+<% if (saved) { %><p class="notice">Saved <strong><%= saved %></strong>.</p><% } %>
+<% if (err) { %><p class="error"><%= err %></p><% } %>
+<p class="muted small">Links must start with <code>https://</code>. Members click through <code>/go/&lt;slot&gt;</code>, which counts the click and forwards to your link — so you can swap partners here without editing any page.</p>
+
+<% Object.keys(groups).forEach(cat => { %>
+  <h2 style="margin-top:1.4rem"><%= cat %></h2>
+  <% groups[cat].forEach(o => { const c = clickMap[o.key] || {}; const live = o.active && o.url; %>
+    <div class="card" id="aff-<%= o.key %>" style="<%= live ? 'border-left:3px solid var(--accent)' : '' %>">
+      <form method="post" action="/admin/affiliates/<%= o.key %>">
+        <div class="page-head" style="margin:0 0 .4rem">
+          <div>
+            <h3 style="margin:0"><%= o.label %> <span class="chip"><%= live ? '🟢 live' : '⚪ not live' %></span> <span class="chip"><%= o.key %></span></h3>
+            <p class="muted small" style="margin:.2rem 0 0"><%= o.blurb %></p>
+          </div>
+          <label class="check"><input type="checkbox" name="active" <%= o.active ? 'checked' : '' %>> Live</label>
+        </div>
+        <div class="grid-2">
+          <label>Partner name<input name="partner_name" maxlength="80" value="<%= o.partner_name || '' %>" placeholder="Shown instead of the generic label"></label>
+          <label>Affiliate link<input name="url" type="url" value="<%= o.url || '' %>" placeholder="https://..."></label>
+          <label>Button text<input name="cta_label" maxlength="40" value="<%= o.cta_label || '' %>" placeholder="Take a look"></label>
+          <div class="muted small" style="align-self:end">Clicks: <strong><%= c.clicks_30d || 0 %></strong> in 30 days · <%= c.clicks_total || 0 %> total</div>
+        </div>
+        <details style="margin:.5rem 0">
+          <summary class="muted small">Where it shows</summary>
+          <p class="muted small" style="margin:.3rem 0 0">
+            <% if ((o.match_titles || []).length) { %><strong>Quests & trophies:</strong> <%= o.match_titles.join(' · ') %><br><% } %>
+            <% if ((o.match_paths || []).length) { %><strong>Path pages:</strong> <%= o.match_paths.join(' · ') %><br><% } %>
+            <% if ((o.match_keywords || []).length) { %><strong>Guides mentioning:</strong> <%= o.match_keywords.join(' · ') %><% } %>
+          </p>
+        </details>
+        <button class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+  <% }) %>
+<% }) %>
+<%- include('../partials/foot') %>
