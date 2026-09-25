@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<div class="card" style="max-width:820px;margin:0 auto">
+  <h2><%= current ? 'Change your path' : 'What are you working toward?' %></h2>
+  <p class="muted">Pick the one that fits best. You can change it any time — this just decides which challenges and quests show up for you.</p>
+  <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+  <form method="post" action="/choose-path">
+    <div class="path-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin:1rem 0">
+      <% paths.forEach(function(p) { %>
+        <label class="card path-option" style="cursor:pointer;display:block;padding:1rem;<%= current === p.slug ? 'outline:2px solid var(--accent)' : '' %>">
+          <input type="radio" name="path" value="<%= p.slug %>" <%= current === p.slug ? 'checked' : '' %> required style="margin-right:.5rem">
+          <span style="font-size:1.4rem"><%= p.emoji %></span>
+          <strong><%= p.label %></strong>
+          <% if (p.blurb) { %><p class="muted small" style="margin:.35rem 0 0"><%= p.blurb %></p><% } %>
+        </label>
+      <% }) %>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit"><%= current ? 'Switch path' : "Let's go" %></button>
+  </form>
+</div>
+<%- include('partials/foot') %>
