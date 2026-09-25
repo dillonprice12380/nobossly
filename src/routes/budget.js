@@ -1,23 +1,20 @@
 const router = require('express').Router();
-const ai = require('../ai');
 const { planOf } = require('../middleware/auth');
-const { gate, gateCredits } = require('../upgrade');
-const credits = require('../credits');
 const starter = require('../starter_budget');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
-// Load the budget view payload (shared by GET and the AI-insights render).
+// Load the budget view payload.
 async function loadBudget(req, extra = {}) {
   const monthStart = new Date(); monthStart.setDate(1);
   const ms = monthStart.toISOString().slice(0, 10);
-  // The launch budget the member declared on the questionnaire. This tab is
-  // about money and it used to ignore the one money number they had already
-  // been made to give us — see src/starter_budget.js.
+  // The launch budget the member declared when they picked their path. This
+  // tab is about money and it should not ignore the one money number they
+  // already gave us — see src/starter_budget.js.
   const [{ data: budgets }, { data: expenses }, { data: q }] = await Promise.all([
     req.sb.from('budgets').select('*').eq('user_id', req.user.id).order('category'),
     req.sb.from('expenses').select('*').eq('user_id', req.user.id).gte('spent_at', ms).order('spent_at', { ascending: false }).limit(200),
-    req.sb.from('questionnaire_responses').select('launch_budget').eq('user_id', req.user.id).maybeSingle()
+    req.sb.from('questionnaire_responses').select('launch_budget').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
   ]);
   const spentByCat = {};
   let totalSpent = 0;
@@ -53,7 +50,7 @@ router.post('/start', async (req, res, next) => {
     const { data: existing } = await req.sb.from('budgets').select('id').eq('user_id', req.user.id).limit(1);
     if (existing && existing.length) return res.redirect('/budget');
     const { data: q } = await req.sb.from('questionnaire_responses')
-      .select('launch_budget').eq('user_id', req.user.id).maybeSingle();
+      .select('launch_budget').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
     const rows = starter.suggest(q && q.launch_budget, req.profile.path);
     if (!rows.length) return res.redirect('/budget');
     await req.sb.from('budgets').insert(rows.map(r => ({ user_id: req.user.id, ...r })));
@@ -102,54 +99,6 @@ router.post('/expense/:id/delete', async (req, res, next) => {
   try {
     await req.sb.from('expenses').delete().eq('id', req.params.id).eq('user_id', req.user.id);
     res.redirect('/budget');
-  } catch (e) { next(e); }
-});
-
-// ---------- AI budget (paid) ----------
-// Suggest a lean startup budget tailored to the founder's active blueprint.
-router.post('/ai/suggest', async (req, res, next) => {
-  try {
-    if (!isPaid(req)) return gate(res, 'ai_budget');
-    const { data: bp } = await req.sb.from('blueprints').select('*').eq('user_id', req.user.id).eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (!bp) return res.redirect('/budget?msg=' + encodeURIComponent('Create a launch blueprint first, then I can tailor a startup budget to it.'));
-    let items;
-    try { items = await credits.run(req.sb, 'budget', () => ai.generateBudget(req.accessToken, bp)); }
-    catch (err) {
-      if (err.outOfCredits) return gateCredits(res, err.credits, '/budget');
-      return res.redirect('/budget?msg=' + encodeURIComponent('Could not generate a budget: ' + err.message));
-    }
-    if (!Array.isArray(items) || !items.length) return res.redirect('/budget?msg=' + encodeURIComponent('No budget was generated — please try again.'));
-    for (const it of items.slice(0, 12)) {
-      const category = String(it.category || '').trim().slice(0, 40);
-      const limit = Math.max(0, Math.round(Number(it.monthly_limit) || 0));
-      if (category) await req.sb.from('budgets').upsert({ user_id: req.user.id, category, monthly_limit: limit }, { onConflict: 'user_id,category' });
-    }
-    res.redirect('/budget?msg=' + encodeURIComponent('Added an AI-tailored starter budget — adjust any limits to fit you.'));
-  } catch (e) { next(e); }
-});
-
-// AI read on current spending vs. budget (paid). Rendered inline, no redirect.
-router.post('/ai/insights', async (req, res, next) => {
-  try {
-    if (!isPaid(req)) return gate(res, 'ai_budget');
-    const payload = await loadBudget(req);
-    const summary = {
-      month: payload.monthLabel,
-      totalBudget: payload.totalBudget,
-      totalSpent: payload.totalSpent,
-      categories: payload.cats.map(c => ({
-        category: c,
-        limit: (payload.budgets.find(b => b.category === c) || {}).monthly_limit || 0,
-        spent: Math.round((payload.spentByCat[c] || 0) * 100) / 100
-      }))
-    };
-    let insights = null;
-    try { insights = await credits.run(req.sb, 'budget', () => ai.budgetInsights(req.accessToken, summary)); }
-    catch (err) {
-      if (err.outOfCredits) return gateCredits(res, err.credits, '/budget');
-      payload.msg = 'Could not generate insights: ' + err.message;
-    }
-    res.render('budget', Object.assign(payload, { insights }));
   } catch (e) { next(e); }
 });
 
