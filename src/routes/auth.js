@@ -49,36 +49,34 @@ router.post('/signup', async (req, res) => {
   }
   const sb = anonClient();
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
-  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken \u2014 try another.', path: keepPath(req), pathDef: pathDefOf(req) });
+  if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken — try another.', path: keepPath(req), pathDef: pathDefOf(req) });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message, path: keepPath(req), pathDef: pathDefOf(req) });
   // Fire-and-forget: a mail failure must never block a signup.
   if (data.user) mailer.send('welcome', email, username, { userId: data.user.id }).catch(() => {});
   if (data.session) {
     setSessionCookies(res, data.session);
-    // Straight into the product. The questionnaire used to stand between signup
-    // and everything else, which is where the old onboarding lost people; it is
-    // now the Level 1 quest, prompted on the dashboard instead of enforced here.
-    // Straight into their own questions when a landing page sent them; the
-    // questionnaire still owns the choice, this only pre-selects it.
-    return res.redirect(chosenPath ? '/questionnaire?path=' + chosenPath : '/dashboard');
+    // Straight into the product. If a path landing page already chose a path,
+    // save it and go straight to the dashboard; otherwise send them to pick one.
+    if (chosenPath) {
+      try {
+        await userClient(data.session.access_token).from('profiles')
+          .update({ path: chosenPath, onboarding_completed: true }).eq('id', data.user.id);
+      } catch (_) { /* /choose-path is a fine fallback if this write fails */ }
+      return res.redirect('/dashboard');
+    }
+    return res.redirect('/choose-path');
   }
   res.redirect('/login?m=' + encodeURIComponent('Check your email to confirm your account, then log in.'));
 });
 
 // ---------- Password reset ----------
-// Supabase mails a recovery link that lands on /reset with the session in the
-// URL fragment. Fragments never reach the server, so the page hands them to
-// /reset/session, which validates them and sets the normal session cookies.
-
 router.get('/forgot', (req, res) => {
   res.render('forgot', { title: 'Reset your password', error: null, message: null });
 });
 
 router.post('/forgot', async (req, res) => {
   const email = String(req.body.email || '').trim();
-  // The reply is identical whether or not the address has an account — telling
-  // a stranger which emails are registered is an account-enumeration leak.
   const sent = 'If an account exists for that address, a reset link is on its way. Check your inbox and spam folder.';
   if (!email) return res.render('forgot', { title: 'Reset your password', error: 'Enter your email address.', message: null });
   try {
@@ -93,14 +91,11 @@ router.get('/reset', (req, res) => {
   res.render('reset', { title: 'Choose a new password' });
 });
 
-// Exchanges the recovery tokens from the email link for session cookies. The
-// tokens must already be valid — this grants nothing the caller didn't hold.
 router.post('/reset/session', async (req, res) => {
   try {
     const access = String((req.body && req.body.access_token) || '');
     const refresh = String((req.body && req.body.refresh_token) || '');
     if (!access || !refresh) {
-      // No fragment supplied: only report ok if a session is already established.
       return res.json({ ok: !!req.user });
     }
     const { data, error } = await userClient(access).auth.getUser(access);
@@ -182,12 +177,8 @@ router.get('/auth/callback', async (req, res) => {
     }
     setSessionCookies(res, j);
 
-    // Immediately seed the profile using the service role key so it bypasses RLS
-    // entirely. This guarantees the user appears in the member directory from their
-    // very first login, regardless of RLS policy timing on brand-new OAuth tokens.
     if (j.user) {
       try {
-        // Prefer service role (bypasses RLS); fall back to user-scoped client.
         let sc;
         try { sc = serviceClient(); } catch (_) { sc = userClient(j.access_token); }
 
@@ -223,7 +214,6 @@ router.get('/auth/callback', async (req, res) => {
           if (existing) {
             await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
           } else {
-            // Insert; if trigger already created the row (race), fall back to update
             const { error: insErr } = await sc.from('profiles').insert({ id: j.user.id, ...patch });
             if (insErr) await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
           }
@@ -258,14 +248,16 @@ router.post('/choose-username', async (req, res) => {
   const displayName = String(req.body.display_name || '').trim().slice(0, 60);
   const rerender = (error) => res.render('choose-username', { title: 'Choose your username', error, suggestedUser: username, suggestedName: displayName });
   if (!USERNAME_RE.test(username)) {
-    return rerender('Username must be 3\u201324 characters: letters, numbers, or underscores.');
+    return rerender('Username must be 3–24 characters: letters, numbers, or underscores.');
   }
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).neq('id', req.user.id).maybeSingle();
-  if (taken) return rerender('That username is taken \u2014 try another.');
+  if (taken) return rerender('That username is taken — try another.');
   const { error } = await sb.from('profiles')
     .update({ username, display_name: displayName || username, needs_username: false })
     .eq('id', req.user.id);
   if (error) return rerender('Could not save that username: ' + error.message);
+  // After a first-time OAuth sign-up, send them to pick a path if they haven't.
+  if (req.profile && !req.profile.path) return res.redirect('/choose-path');
   res.redirect('/dashboard');
 });
 

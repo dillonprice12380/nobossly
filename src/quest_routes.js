@@ -1,34 +1,12 @@
 // Where a quest is actually done.
 //
-// The Ladder names what is blocking your next rung, and until now every one of
-// those quests linked to the same two pages: /quests or /trophies,
-// decided by a single ternary on the gate's type. For a challenge that is
-// usually right — you take quests on on the quest board. For a trophy it was
-// usually wrong.
-//
-// Twelve of the seventeen milestone gates are self-claimed, and /milestones is
-// genuinely where you claim them: the proof form is on that page. But five are
-// awarded automatically by sweepMilestones() from something you did somewhere
-// else entirely. Clicking "Go" on "Passes Your Own Test" took you to a list
-// where the row sits un-ticked with no button, and nothing said the actual
-// answer is "go back to your idea and revise it until your own fit test
-// passes".
-//
-// So the destination is derived from the SAME field the engine awards on —
-// predefined_milestones.auto_kind — rather than from a second list that would
-// drift away from it. Add an auto milestone and it inherits the right
-// destination; add a new auto_kind and this map is the one place to say where
-// that fact is created.
-
-// auto_kind -> where the member creates that fact. Every kind computeMetrics()
-// knows how to count appears here, not only the five that currently gate a rung.
+// auto_kind -> where the member creates that fact. 'ideas', 'idea_fit_pct',
+// 'signals', 'ideas_cut' and 'blueprints' pointed at the Compass, which no
+// longer exists — the milestones that used those kinds were removed from
+// every ladder (see src/ladders.js), so those entries are gone here too
+// rather than pointing at a dead page.
 const BY_AUTO_KIND = {
-  questionnaire:   { href: '/questionnaire', cta: 'Answer' },
-  ideas:           { href: '/compass',       cta: 'Draft it' },
-  idea_fit_pct:    { href: '/compass',       cta: 'Revise it' },
-  signals:         { href: '/compass',       cta: 'Add evidence' },
-  ideas_cut:       { href: '/compass',       cta: 'Review' },
-  blueprints:      { href: '/compass',       cta: 'Build one' },
+  questionnaire:   { href: '/choose-path',   cta: 'Pick a path' },
   sprints_started: { href: '/dashboard',     cta: 'Start one' },
   sprints_done:    { href: '/dashboard',     cta: 'Open sprint' },
   tasks:           { href: '/tasks',         cta: 'Open board' },
@@ -59,7 +37,6 @@ function destinationFor(gate, def) {
     return CHALLENGE_ROUTES[gate.title] || CHALLENGE;
   }
   if (def && def.auto_kind && BY_AUTO_KIND[def.auto_kind]) return BY_AUTO_KIND[def.auto_kind];
-  // Self-claimed, or unknown: /milestones is right — the proof form is there.
   return CLAIM;
 }
 
