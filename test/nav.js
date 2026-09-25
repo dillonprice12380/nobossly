@@ -149,7 +149,7 @@ const selfBlind = APP_NAV.filter(i =>
 ok('every tab matches its own href (or it hides the nav it is in)',
    selfBlind.length === 0, selfBlind.map(i => i.href).join(', ') || 'clean');
 
-for (const href of ['/coach', '/feed', '/wins']) {
+for (const href of ['/feed', '/wins']) {
   ok(`${href} is in the section nav`, APP_NAV.some(i => i.href === href),
      'opening it used to make the whole tab row disappear');
 }

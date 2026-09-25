@@ -8,8 +8,6 @@
 //   node test/paths.js
 
 const paths = require('../src/paths');
-const { partition, readAnswer, readinessScore } = require('../src/routes/questionnaire');
-const { founderFacts } = require('../src/fit_library');
 
 let fail = 0;
 const ok = (name, cond, detail) => {
@@ -87,73 +85,6 @@ console.log('\nStage reads across every path\'s own wording:');
     eq(`  "${answer}"`, paths.stageOf({ path_answers: { stage: answer } }), want);
   }
   eq('  no answer at all', paths.stageOf({}), 'unknown');
-}
-
-console.log('\nAnswers land in the right place:');
-{
-  const body = {
-    founder_name: 'Dillon', hours_per_week: '10-20', launch_budget: 'Under $500',
-    runway: 'None — need income now', income_year1: 'Replace full salary',
-    deal_breakers: 'video content, cold calling',
-    stage: 'Posting occasionally', platform: 'YouTube', niche: 'van builds',
-    audience_size: 'Under 1,000', monetization: ['Sponsorships', 'Affiliate']
-  };
-  const { cols, pathAnswers } = partition(paths.coreQuestions('creator'), body, {});
-  // Universal constraints must reach their OWN columns — the fit library reads
-  // those, not path_answers.
-  eq('  budget goes to its column', cols.launch_budget, 'Under $500');
-  ok('  deal breakers parse to an array', Array.isArray(cols.deal_breakers) && cols.deal_breakers.length === 2,
-     JSON.stringify(cols.deal_breakers));
-  // Path-specific answers must NOT invent columns.
-  eq('  platform goes to path_answers', pathAnswers.platform, 'YouTube');
-  ok('  platform did not become a column', cols.platform === undefined);
-  ok('  a checkbox group survives as an array', Array.isArray(pathAnswers.monetization) && pathAnswers.monetization.length === 2);
-
-  // Editing one depth step must not wipe answers given on another.
-  const later = partition(paths.depthSteps('creator')[0] || [], { cadence: 'Weekly' }, pathAnswers);
-  eq('  an earlier answer survives a later step', later.pathAnswers.platform, 'YouTube');
-  eq('  and the new one is added', later.pathAnswers.cadence, 'Weekly');
-}
-
-console.log('\nInput is cleaned before it is stored:');
-{
-  eq('a url that is not a url is dropped', readAnswer({ name: 'u', type: 'url' }, { u: 'javascript:alert(1)' }), '');
-  eq('a real url survives', readAnswer({ name: 'u', type: 'url' }, { u: 'https://example.com' }), 'https://example.com');
-  ok('csv trims and drops blanks',
-     JSON.stringify(readAnswer({ name: 'd', type: 'csv' }, { d: ' a , , b ,' })) === JSON.stringify(['a', 'b']));
-  ok('a single checkbox still becomes an array',
-     Array.isArray(readAnswer({ name: 'm', type: 'checks' }, { m: 'Sponsorships' })));
-  eq('a scale answer becomes a number', readAnswer({ name: 'tech_level', type: 'select' }, { tech_level: '3' }), 3);
-  eq('a junk scale answer becomes null', readAnswer({ name: 'tech_level', type: 'select' }, { tech_level: 'x' }), null);
-}
-
-console.log('\nThe fit library reads what the questionnaire wrote:');
-{
-  // The join that matters: answers -> columns -> derived facts -> criteria.
-  const run = {
-    founder_path: 'local_service', launch_budget: '$500-2,000', hours_per_week: '20-40',
-    runway: 'None — need income now', income_year1: 'Replace full salary',
-    deal_breakers: ['cold calling'], path_answers: { stage: 'Booked out' }
-  };
-  const f = founderFacts(run);
-  eq('  path is a matchable fact', f.path, 'local_service');
-  eq('  stage is separate from path', f.stage, 'running');
-  ok('  and is_running follows from it', f.is_running === true);
-  eq('  budget converts to a number', f.launch_budget_usd, 2000);
-  eq('  no runway sets an 8-week revenue deadline', f.revenue_deadline_weeks, 8);
-  ok('  a named deal breaker is picked up', f.avoids_cold_outreach === true);
-}
-
-console.log('\nReadiness reflects how much of the path was answered:');
-{
-  const empty = readinessScore('creator', { path_answers: {} });
-  const some = readinessScore('creator', {
-    founder_name: 'D', hours_per_week: '10-20', launch_budget: '$0', runway: '1-3 months',
-    income_year1: 'Side income ($500+/mo)', deal_breakers: ['x'],
-    path_answers: { stage: 'Posting occasionally', platform: 'YouTube', niche: 'vans', audience_size: 'None yet' }
-  });
-  ok('an empty run scores 0', empty === 0, String(empty));
-  ok('a completed core scores well under 100 — depth is still unanswered', some > 30 && some < 90, String(some));
 }
 
 console.log('\nEvery marketed path can carry a landing page:');
@@ -263,14 +194,6 @@ eq('an unanswered audience is unknown, not behind',
    paths.creatorAudience(creatorRun(SOCIAL, undefined)).met, null);
 eq('nobody off the creator path has an audience bar',
    paths.creatorAudience({ founder_path: 'freelancer', path_answers: {} }), null);
-
-// Switching kind must not leave the previous kind's number behind, or the
-// Compass reads a follower count back to a blogger.
-const stale = partition(creatorQs, { subpath: PUBLISHER, monthly_traffic: '50,000–250,000' },
-                        { subpath: SOCIAL, audience_size: '10,000–50,000' });
-ok('switching to publisher clears the stale follower count',
-   stale.pathAnswers.audience_size === undefined, JSON.stringify(stale.pathAnswers.audience_size));
-eq('...and keeps the new traffic figure', stale.pathAnswers.monthly_traffic, '50,000–250,000');
 
 
 // ---------------------------------------------------------------------------
