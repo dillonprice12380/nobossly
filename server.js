@@ -28,6 +28,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// Supabase sends a sign-in back to its Site URL instead of /auth/callback when
+// the callback isn't on its redirect allow-list. Forward that code to the real
+// callback rather than silently dropping the member on the homepage.
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path === '/auth/callback' || !req.cookies.pkce_verifier) return next();
+  if (typeof req.query.code !== 'string' && typeof req.query.error !== 'string') return next();
+  const qs = new URLSearchParams();
+  for (const k of ['code', 'error', 'error_code', 'error_description']) {
+    if (typeof req.query[k] === 'string') qs.set(k, req.query[k]);
+  }
+  return res.redirect('/auth/callback?' + qs.toString());
+});
+
 const CANONICAL_HOST = 'https://nobossly.com';
 const CANONICAL_KEEP = ['page'];
 app.use((req, res, next) => {
