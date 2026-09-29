@@ -4,7 +4,14 @@ const premium = require('../premium');
 const { anonClient, serviceClient } = require('../supabase');
 const pricing = require('../pricing');
 
+const crypto = require('crypto');
+
 const STRIPE_KEY = () => process.env.STRIPE_SECRET_KEY || '';
+const WEBHOOK_SECRET = () => process.env.STRIPE_WEBHOOK_SECRET || '';
+// The Stripe account is shared with EnRoute Jobs, so its webhooks deliver
+// EnRoute's events here too. Every NoBossly checkout is tagged with this, and
+// the webhook ignores sessions that are not.
+const APP_TAG = 'nobossly';
 const SUB_SECRET = () => process.env.SUB_SYNC_SECRET || '';
 const SITE = () => (process.env.SITE_URL || 'https://nobossly.com').replace(/\/$/, '');
 
@@ -96,7 +103,7 @@ router.get('/pricing', async (req, res, next) => {
     const { data: tiers } = await sb.from('pricing_tiers').select('*').eq('is_active', true).order('sort');
     res.render('pricing', {
       title: 'Premium',
-      metaDescription: 'NoBossly is free. Premium adds five tools for getting out of your job — a quit-date planner, tax set-aside, pricing calculator, proof page and interview tracker — for $3.99 a month.',
+      metaDescription: 'NoBossly is free. Premium adds five tools for getting out of your job — a quit-date planner, tax set-aside, pricing calculator, proof page and interview tracker — for $5 a month.',
       // Each tier carries what it costs TODAY and what it normally costs. Both
       // the page and the checkout below read that from src/pricing.js, because
       // a page advertising one number while checkout charges another is the
@@ -138,9 +145,14 @@ router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
       allow_promotion_codes: 'true',
       cancel_url: SITE() + '/pricing',
       client_reference_id: req.user.id,
+      'metadata[app]': APP_TAG,
       'metadata[tier]': tier.key,
       'metadata[user_id]': req.user.id
     };
+    if (!isPayment) {
+      params['subscription_data[metadata][app]'] = APP_TAG;
+      params['subscription_data[metadata][user_id]'] = req.user.id;
+    }
 
     // What this tier costs today — the markdown when one is running, the list
     // price otherwise. Never tier.price_cents directly: during a promotion that
@@ -257,21 +269,51 @@ router.post('/billing/portal', requireAuth, async (req, res) => {
   }
 });
 
-// Stripe webhook (mounted with raw body in server.js). We never trust the
-// payload: we re-fetch the referenced object from Stripe before acting.
+// Stripe's signature header is "t=<unix>,v1=<hex>[,v1=<hex>...]", where each
+// v1 is HMAC-SHA256(secret, "<t>.<raw body>"). Checked by hand so billing
+// needs no Stripe SDK. Five minutes of clock skew, as Stripe's libraries allow.
+function verifySignature(raw, header, secret, now) {
+  if (!header || !secret) return false;
+  let t = null; const sigs = [];
+  for (const part of String(header).split(',')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim(), v = part.slice(i + 1).trim();
+    if (k === 't') t = v; else if (k === 'v1') sigs.push(v);
+  }
+  if (!t || !sigs.length || !/^\d+$/.test(t)) return false;
+  if (Math.abs((now || Date.now()) / 1000 - Number(t)) > 300) return false;
+  const expected = crypto.createHmac('sha256', secret).update(t + '.').update(raw).digest();
+  return sigs.some(s => {
+    const got = Buffer.from(s, 'hex');
+    return got.length === expected.length && crypto.timingSafeEqual(got, expected);
+  });
+}
+
+// Stripe webhook (mounted with raw body in server.js). The signature is checked
+// when STRIPE_WEBHOOK_SECRET is set, and we never trust the payload either way:
+// the referenced object is re-fetched from Stripe before acting on it.
 async function webhook(req, res) {
+  if (!STRIPE_KEY()) return res.status(200).send('ignored');
+  const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body || ''));
+  if (WEBHOOK_SECRET()) {
+    if (!verifySignature(raw, req.get('stripe-signature'), WEBHOOK_SECRET())) {
+      return res.status(400).send('bad signature');
+    }
+  }
   try {
-    if (!STRIPE_KEY()) return res.status(200).send('ignored');
-    const event = JSON.parse(req.body.toString('utf8'));
+    const event = JSON.parse(raw.toString('utf8'));
     const type = event.type || '';
     const obj = (event.data && event.data.object) || {};
-    const sb = anonClient();
 
     if (type === 'checkout.session.completed' && obj.id) {
+      // EnRoute's checkouts arrive here too; skip anything that isn't ours
+      // before spending an API call on it.
+      if (!obj.metadata || obj.metadata.app !== APP_TAG) return res.status(200).send('not-nobossly');
       const session = await stripe('GET', 'checkout/sessions/' + encodeURIComponent(obj.id) + '?expand[]=subscription');
       const uid = session.client_reference_id;
-      if (uid && session.payment_status === 'paid') {
-        const tier = (session.metadata && session.metadata.tier) || 'month';
+      if (uid && session.payment_status === 'paid' && session.metadata && session.metadata.app === APP_TAG) {
+        const tier = session.metadata.tier || 'month';
         if (session.mode === 'payment') {
           await applySub(uid, { tier: 'lifetime', status: 'active', customer: session.customer, lifetime: true });
           await endSubscriptionsFor(session.customer);
@@ -283,9 +325,12 @@ async function webhook(req, res) {
     } else if ((type === 'customer.subscription.updated' || type === 'customer.subscription.deleted' || type === 'invoice.paid') && obj.id) {
       const subId = type === 'invoice.paid' ? invoiceSubId(obj) : obj.id;
       if (subId) {
-        const sub = await stripe('GET', 'subscriptions/' + encodeURIComponent(subId));
-        const { data: uid } = await sb.rpc('find_user_by_stripe_sub', { p_secret: SUB_SECRET(), p_sub_id: sub.id });
+        // find_user_by_stripe_sub only knows NoBossly members' subscriptions,
+        // so an EnRoute subscription resolves to no one and is left alone.
+        const { data: uid, error } = await subClient().rpc('find_user_by_stripe_sub', { p_secret: SUB_SECRET(), p_sub_id: subId });
+        if (error) throw new Error('find_user_by_stripe_sub: ' + error.message);
         if (uid) {
+          const sub = await stripe('GET', 'subscriptions/' + encodeURIComponent(subId));
           const status = sub.status === 'active' && sub.cancel_at_period_end ? 'canceled'
             : (sub.status === 'active' || sub.status === 'trialing') ? 'active'
             : sub.status === 'canceled' ? 'expired' : sub.status;
@@ -295,9 +340,11 @@ async function webhook(req, res) {
     }
     res.status(200).send('ok');
   } catch (e) {
+    // A 5xx makes Stripe retry (for up to three days), so a brief Supabase or
+    // Stripe outage doesn't leave a paying member locked out.
     console.error('stripe webhook', e.message);
-    res.status(200).send('error-logged');
+    res.status(500).send('error');
   }
 }
 
-module.exports = { router, webhook };
+module.exports = { router, webhook, verifySignature };
