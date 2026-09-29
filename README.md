@@ -46,8 +46,9 @@ NoBossly has no AI features, so no Anthropic key is needed.
 1. Set `STRIPE_SECRET_KEY` and `SUB_SYNC_SECRET` on the host (see above) and restart.
 2. In Stripe → Developers → Webhooks, add an endpoint `https://nobossly.com/billing/webhook` sending
    `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`.
-   Copy its signing secret into `STRIPE_WEBHOOK_SECRET` and restart. The Stripe account is shared with EnRoute Jobs;
-   NoBossly checkouts carry `metadata.app = nobossly` and the webhook ignores everything else.
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET` and restart. NoBossly checkouts carry
+   `metadata.app = nobossly` and the webhook ignores everything else.
+   Use the **NoBossly** Stripe account (`acct_1UKfmqHBPaeWu07O`) — its secret key, its webhook, its Prices.
 3. Optional: Stripe → Settings → Billing → Customer portal → activate it, so members can update their card from Account settings.
 4. Prices live in the `pricing_tiers` table (edit them at `/admin/pricing`). Stripe Price IDs are optional — checkout charges the amount in the table directly when none is set.
 5. Test: buy the monthly plan with a Stripe test key and card `4242 4242 4242 4242`; `/tools` should unlock straight after checkout.

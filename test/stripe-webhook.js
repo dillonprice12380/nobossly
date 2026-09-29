@@ -1,7 +1,6 @@
 // The Stripe webhook is the one route that grants paid access without a
-// logged-in member in front of it, and the Stripe account it listens on is
-// shared with EnRoute Jobs. So: a forged or replayed body must be refused, and
-// an EnRoute checkout must never be mistaken for a NoBossly one.
+// logged-in member in front of it. So: a forged or replayed body must be
+// refused, and a checkout NoBossly didn't start must never unlock Premium.
 //
 //   node test/stripe-webhook.js
 

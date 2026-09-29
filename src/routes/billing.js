@@ -8,9 +8,9 @@ const crypto = require('crypto');
 
 const STRIPE_KEY = () => process.env.STRIPE_SECRET_KEY || '';
 const WEBHOOK_SECRET = () => process.env.STRIPE_WEBHOOK_SECRET || '';
-// The Stripe account is shared with EnRoute Jobs, so its webhooks deliver
-// EnRoute's events here too. Every NoBossly checkout is tagged with this, and
-// the webhook ignores sessions that are not.
+// Every NoBossly checkout is tagged with this, and the webhook ignores sessions
+// that are not — so anything else sold on the same Stripe account (a payment
+// link, another app) can never unlock Premium by accident.
 const APP_TAG = 'nobossly';
 const SUB_SECRET = () => process.env.SUB_SYNC_SECRET || '';
 const SITE = () => (process.env.SITE_URL || 'https://nobossly.com').replace(/\/$/, '');
@@ -307,8 +307,7 @@ async function webhook(req, res) {
     const obj = (event.data && event.data.object) || {};
 
     if (type === 'checkout.session.completed' && obj.id) {
-      // EnRoute's checkouts arrive here too; skip anything that isn't ours
-      // before spending an API call on it.
+      // Skip anything that isn't ours before spending an API call on it.
       if (!obj.metadata || obj.metadata.app !== APP_TAG) return res.status(200).send('not-nobossly');
       const session = await stripe('GET', 'checkout/sessions/' + encodeURIComponent(obj.id) + '?expand[]=subscription');
       const uid = session.client_reference_id;
@@ -326,7 +325,7 @@ async function webhook(req, res) {
       const subId = type === 'invoice.paid' ? invoiceSubId(obj) : obj.id;
       if (subId) {
         // find_user_by_stripe_sub only knows NoBossly members' subscriptions,
-        // so an EnRoute subscription resolves to no one and is left alone.
+        // so any other subscription resolves to no one and is left alone.
         const { data: uid, error } = await subClient().rpc('find_user_by_stripe_sub', { p_secret: SUB_SECRET(), p_sub_id: subId });
         if (error) throw new Error('find_user_by_stripe_sub: ' + error.message);
         if (uid) {
