@@ -42,7 +42,7 @@
   <% } else if (isPremium && !p.is_admin) { %>
     <p><span class="chip chip-success"><%= tierName || 'Premium' %></span><% if (p.subscription_period_end) { %> — renews <%= new Date(p.subscription_period_end).toLocaleDateString() %><% } %>. <a href="/tools">Open your tools</a></p>
     <div class="cta-row" style="justify-content:flex-start">
-      <% if (p.stripe_customer_id) { %><form method="post" action="/billing/portal"><button class="btn btn-ghost btn-sm">Update card &amp; invoices</button></form><% } %>
+      <% if (p.stripe_customer_id) { %><form method="post" action="/billing/portal" data-turbo="false"><button class="btn btn-ghost btn-sm">Update card &amp; invoices</button></form><% } %>
       <a class="btn btn-ghost btn-sm" href="/pricing">Switch to lifetime</a>
       <form method="post" action="/billing/cancel" onsubmit="return confirm('Cancel Premium? You keep it until the end of this billing period.')"><button class="btn btn-ghost btn-sm">Cancel Premium</button></form>
     </div>

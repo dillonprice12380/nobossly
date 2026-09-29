@@ -34,5 +34,15 @@ ok('...and the subscription', /subscription_data\[metadata\]\[app\]/.test(src));
 ok('the webhook skips untagged sessions', /metadata\.app !== APP_TAG/.test(src));
 ok('a failure answers 5xx so Stripe retries', /res\.status\(500\)/.test(src));
 
+console.log('\nButtons that leave for Stripe bypass Turbo:');
+// Turbo submits forms with fetch(), and fetch() cannot follow the 303 to
+// checkout.stripe.com / billing.stripe.com — the click silently does nothing.
+const view = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+// Whole lines, since the checkout form's action holds an EJS tag with a '>'.
+const forms = [...view('views/pricing.ejs').match(/<form[^\n]*\/billing\/checkout[^\n]*/g) || [],
+               ...view('views/account.ejs').match(/<form[^\n]*\/billing\/portal[^\n]*/g) || []];
+ok('the checkout and billing-portal forms are all found', forms.length === 2);
+ok('...and every one has data-turbo="false"', forms.length && forms.every(f => /data-turbo="false"/.test(f)));
+
 if (fail) { console.log(`\n${fail} failed`); process.exit(1); }
 console.log('\nall passed');

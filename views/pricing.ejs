@@ -42,7 +42,7 @@
       <% } else if (locals.profile && profile.is_lifetime) { %><span class="chip chip-success">You have lifetime access</span>
       <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>
       <% } else { %>
-        <form method="post" action="/billing/checkout/<%= t.key %>"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime' : 'Choose ' + t.name.replace(/^Premium\s+/, '') %></button></form>
+        <form method="post" action="/billing/checkout/<%= t.key %>" data-turbo="false"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime' : 'Choose ' + t.name.replace(/^Premium\s+/, '') %></button></form>
       <% } %>
     </div>
   <% }) %>
