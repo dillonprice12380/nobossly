@@ -145,9 +145,17 @@ router.post('/logout', (req, res) => {
 const OAUTH_PROVIDERS = { google: 'google', linkedin: 'linkedin_oidc', github: 'github' };
 const b64url = buf => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+// A prefetch (Turbo on hover, the browser's speculation rules) must not start a
+// sign-in: each one mints a new verifier and overwrites the cookie of the
+// sign-in the member actually clicked, so the code Supabase hands back can
+// never be exchanged.
+const isPrefetch = req => /prefetch|prerender/i.test(
+  (req.get('sec-purpose') || '') + ' ' + (req.get('x-sec-purpose') || '') + ' ' + (req.get('purpose') || ''));
+
 router.get('/auth/oauth/:provider', (req, res) => {
   const provider = OAUTH_PROVIDERS[req.params.provider];
   if (!provider) return res.redirect('/login');
+  if (isPrefetch(req)) return res.status(204).end();
   const verifier = b64url(crypto.randomBytes(48));
   const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
   res.cookie('pkce_verifier', verifier, cookieOpts(req, { maxAge: 10 * 60 * 1000 }));
@@ -162,14 +170,21 @@ router.get('/auth/callback', async (req, res) => {
   try {
     const code = req.query.code;
     const verifier = req.cookies.pkce_verifier;
-    if (!code || !verifier) return res.redirect('/login?m=' + encodeURIComponent('Sign-in was cancelled or expired. Please try again.'));
+    if (req.query.error) console.error('[auth] OAuth provider error:', req.query.error, req.query.error_description || '');
+    if (!code || !verifier) {
+      if (code) console.error('[auth] OAuth callback had a code but no pkce_verifier cookie (host ' + req.hostname + ')');
+      const why = req.query.error_description ? 'Social sign-in failed: ' + req.query.error_description
+        : 'Sign-in was cancelled or expired. Please try again.';
+      return res.redirect('/login?m=' + encodeURIComponent(why));
+    }
     const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
     const r = await fetch(base + '/auth/v1/token?grant_type=pkce', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: process.env.SUPABASE_ANON_KEY },
       body: JSON.stringify({ auth_code: code, code_verifier: verifier })
     });
-    const j = await r.json();
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) console.error('[auth] PKCE exchange failed:', r.status, j.error_code || j.error || '', j.msg || j.error_description || '');
     res.clearCookie('pkce_verifier', { path: '/', ...cookieDomainOpts() });
     res.clearCookie('pkce_verifier', { path: '/', domain: '.nobossly.com' });
     if (!r.ok || !j.access_token) {
