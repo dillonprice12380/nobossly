@@ -45,6 +45,10 @@ const CANONICAL_HOST = 'https://nobossly.com';
 const CANONICAL_KEEP = ['page'];
 app.use((req, res, next) => {
   res.locals.currentPath = req.path;
+  // The NoBossly mobile app shows these pages inside its own native shell and
+  // tab bar, and says so in its user agent. Pages then drop the site's header,
+  // footer and bottom bar so the two navigations don't stack.
+  res.locals.inApp = /\bNoBosslyApp\//.test(req.get('user-agent') || '');
   const clean = req.path.length > 1 ? (req.path.replace(/\/+$/, '') || '/') : '/';
   const keep = new URLSearchParams();
   for (const k of CANONICAL_KEEP) {
@@ -140,6 +144,9 @@ app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
+  // The marketing page is for visitors deciding whether to join; someone in
+  // the app already has, and lands here after logging out.
+  if (res.locals.inApp) return res.redirect('/login');
   res.render('home', { title: 'Work Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly is a free community for people working their way out of the 9 to 5: pick one of nine paths, take on real-world challenges, run sprints, and follow other members climbing the same ladder — trading feedback, testimonials and advice as you go.' });
 });
 

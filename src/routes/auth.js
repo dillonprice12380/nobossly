@@ -166,6 +166,72 @@ router.get('/auth/oauth/:provider', (req, res) => {
     + '&code_challenge=' + challenge + '&code_challenge_method=s256');
 });
 
+// Trade a Supabase PKCE code for a session, set the session cookies and make
+// sure a first-time social sign-up has a profile. Shared by the website's
+// callback and the mobile app's, which differ only in where the verifier lives.
+async function finishOAuth(req, res, code, verifier) {
+  const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+  const r = await fetch(base + '/auth/v1/token?grant_type=pkce', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: process.env.SUPABASE_ANON_KEY },
+    body: JSON.stringify({ auth_code: code, code_verifier: verifier })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) console.error('[auth] PKCE exchange failed:', r.status, j.error_code || j.error || '', j.msg || j.error_description || '');
+  if (!r.ok || !j.access_token) {
+    return res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed: ' + (j.error_description || j.msg || 'unknown error')));
+  }
+  setSessionCookies(res, j);
+  if (j.user) await seedOAuthProfile(j);
+  res.redirect('/dashboard');
+}
+
+async function seedOAuthProfile(j) {
+  try {
+    let sc;
+    try { sc = serviceClient(); } catch (_) { sc = userClient(j.access_token); }
+
+    const meta = j.user.user_metadata || {};
+    const fullName = meta.full_name || meta.name || meta.display_name || '';
+    const { data: existing } = await sc.from('profiles')
+      .select('id, username, display_name')
+      .eq('id', j.user.id)
+      .maybeSingle();
+
+    if (!existing || !existing.username || !existing.display_name) {
+      const emailBase = ((j.user.email || 'founder').split('@')[0]
+        .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
+      let finalUsername = (existing && existing.username) || null;
+      if (!finalUsername) {
+        for (let attempt = 0; attempt < 3 && !finalUsername; attempt++) {
+          const tryName = attempt === 0
+            ? emailBase
+            : (emailBase.slice(0, 18) + '_' + j.user.id.slice(0, 3 + attempt));
+          const { data: clash } = await sc.from('profiles')
+            .select('id').eq('username', tryName)
+            .neq('id', j.user.id).maybeSingle();
+          if (!clash) finalUsername = tryName;
+        }
+        if (!finalUsername) finalUsername = emailBase.slice(0, 12) + '_' + j.user.id.slice(0, 8);
+      }
+      const patch = {
+        username: finalUsername,
+        display_name: (existing && existing.display_name) || fullName || finalUsername,
+        needs_username: true,
+        account_status: 'active',
+      };
+      if (existing) {
+        await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
+      } else {
+        const { error: insErr } = await sc.from('profiles').insert({ id: j.user.id, ...patch });
+        if (insErr) await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
+      }
+    }
+  } catch (seedErr) {
+    console.error('OAuth callback profile seed error:', seedErr.message);
+  }
+}
+
 router.get('/auth/callback', async (req, res) => {
   try {
     const code = req.query.code;
@@ -177,68 +243,35 @@ router.get('/auth/callback', async (req, res) => {
         : 'Sign-in was cancelled or expired. Please try again.';
       return res.redirect('/login?m=' + encodeURIComponent(why));
     }
-    const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-    const r = await fetch(base + '/auth/v1/token?grant_type=pkce', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: process.env.SUPABASE_ANON_KEY },
-      body: JSON.stringify({ auth_code: code, code_verifier: verifier })
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) console.error('[auth] PKCE exchange failed:', r.status, j.error_code || j.error || '', j.msg || j.error_description || '');
     res.clearCookie('pkce_verifier', { path: '/', ...cookieDomainOpts() });
     res.clearCookie('pkce_verifier', { path: '/', domain: '.nobossly.com' });
-    if (!r.ok || !j.access_token) {
-      return res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed: ' + (j.error_description || j.msg || 'unknown error')));
+    await finishOAuth(req, res, String(code), verifier);
+  } catch (e) {
+    res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed.'));
+  }
+});
+
+// ---------- Mobile app sign-in ----------
+// Google refuses sign-in inside an embedded web view, so the app runs the
+// provider round trip in the system browser (ASWebAuthenticationSession /
+// Custom Tabs), holding the PKCE verifier itself, and gets the code back on
+// nobossly://auth/callback. It then opens this URL in its web view, whose
+// cookie jar is the one that needs the session.
+//
+// The X-NoBossly-App header is the login-CSRF guard: a cross-site link or
+// form cannot set a custom header, so another site can't sign a visitor in
+// to an attacker's account through here. The code is single-use and worthless
+// without its verifier, and the verifier without its code.
+router.get('/auth/app/finish', async (req, res) => {
+  try {
+    if (req.get('x-nobossly-app') !== '1') return res.redirect('/login');
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const verifier = typeof req.query.verifier === 'string' ? req.query.verifier : '';
+    if (!/^[\w-]{8,512}$/.test(code) || !/^[\w-]{43,128}$/.test(verifier)) {
+      return res.redirect('/login?m=' + encodeURIComponent('Sign-in was cancelled or expired. Please try again.'));
     }
-    setSessionCookies(res, j);
-
-    if (j.user) {
-      try {
-        let sc;
-        try { sc = serviceClient(); } catch (_) { sc = userClient(j.access_token); }
-
-        const meta = j.user.user_metadata || {};
-        const fullName = meta.full_name || meta.name || meta.display_name || '';
-        const { data: existing } = await sc.from('profiles')
-          .select('id, username, display_name')
-          .eq('id', j.user.id)
-          .maybeSingle();
-
-        if (!existing || !existing.username || !existing.display_name) {
-          const emailBase = ((j.user.email || 'founder').split('@')[0]
-            .replace(/[^a-z0-9_]/gi, '').toLowerCase().slice(0, 20)) || 'founder';
-          let finalUsername = (existing && existing.username) || null;
-          if (!finalUsername) {
-            for (let attempt = 0; attempt < 3 && !finalUsername; attempt++) {
-              const tryName = attempt === 0
-                ? emailBase
-                : (emailBase.slice(0, 18) + '_' + j.user.id.slice(0, 3 + attempt));
-              const { data: clash } = await sc.from('profiles')
-                .select('id').eq('username', tryName)
-                .neq('id', j.user.id).maybeSingle();
-              if (!clash) finalUsername = tryName;
-            }
-            if (!finalUsername) finalUsername = emailBase.slice(0, 12) + '_' + j.user.id.slice(0, 8);
-          }
-          const patch = {
-            username: finalUsername,
-            display_name: (existing && existing.display_name) || fullName || finalUsername,
-            needs_username: true,
-            account_status: 'active',
-          };
-          if (existing) {
-            await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
-          } else {
-            const { error: insErr } = await sc.from('profiles').insert({ id: j.user.id, ...patch });
-            if (insErr) await sc.from('profiles').update(patch).eq('id', j.user.id).is('username', null);
-          }
-        }
-      } catch (seedErr) {
-        console.error('OAuth callback profile seed error:', seedErr.message);
-      }
-    }
-
-    res.redirect('/dashboard');
+    res.set('Cache-Control', 'no-store');
+    await finishOAuth(req, res, code, verifier);
   } catch (e) {
     res.redirect('/login?m=' + encodeURIComponent('Social sign-in failed.'));
   }

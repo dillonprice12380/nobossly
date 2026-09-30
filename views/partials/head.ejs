@@ -39,7 +39,14 @@
   })();
 </script>
 </head>
-<body class="<%= typeof bodyTheme !== 'undefined' ? bodyTheme : 'theme-light' %>">
+<body class="<%= typeof bodyTheme !== 'undefined' ? bodyTheme : 'theme-light' %><%= typeof inApp !== 'undefined' && inApp ? ' in-app' : '' %>">
+<% if (typeof inApp !== 'undefined' && inApp) { %>
+<style>
+  /* Inside the mobile app the native tab bar replaces all of these. */
+  body.in-app > .nav, body.in-app .footer, body.in-app .appnav, body.in-app .appbar { display: none !important; }
+  body.in-app { padding-bottom: env(safe-area-inset-bottom, 0) !important; }
+</style>
+<% } %>
 <%- include('icons') %>
 <nav class="nav">
   <a class="brand" href="/"><img class="logo-img" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/nobossly-logo_a5ew2x.png" alt="NoBossly"></a>

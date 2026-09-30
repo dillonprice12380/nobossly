@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "NoBossly",
+    "slug": "nobossly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "nobossly",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nobossly.app"
+    },
+    "android": {
+      "package": "com.nobossly.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0d1117",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "dark": {
+            "backgroundColor": "#0d1117",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "siteUrl": "https://nobossly.com",
+      "supabaseUrl": "https://wzuptydjilpqafhwtbwq.supabase.co"
+    }
+  }
+}
