@@ -21,16 +21,18 @@ router.get('/', async (req, res, next) => {
   try {
     const { events, following } = await activity.feedFor(req.sb, req.user.id, { limit: 60 });
 
-    // Someone following nobody gets a directory, not an empty page.
+    // An empty feed gets people to follow, not an empty page — never the
+    // member themselves, and never someone they already follow.
     let suggestions = [];
-    if (!following) {
+    if (!following || !events.length) {
+      const { data: mine } = await req.sb.from('follows').select('following_id').eq('follower_id', req.user.id);
+      const skip = new Set([req.user.id].concat((mine || []).map(f => f.following_id)));
       const { data } = await req.sb.from('profiles')
         .select('id, username, display_name, avatar_url, current_level, path')
         .eq('account_status', 'active').eq('profile_is_public', true)
-        .neq('id', req.user.id)
         .order('xp_total', { ascending: false })
-        .limit(6);
-      suggestions = data || [];
+        .limit(6 + skip.size);
+      suggestions = (data || []).filter(p => !skip.has(p.id)).slice(0, 6);
     }
 
     res.render('feed', {

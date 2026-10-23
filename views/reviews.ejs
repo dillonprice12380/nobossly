@@ -8,6 +8,10 @@
 </div>
 
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<div class="card" style="border-left:3px solid var(--accent-2)">
+  <p style="margin:0"><strong>👋 Founder-reviewed while we grow.</strong> NoBossly is new, so the queue is thin. Until there are enough members to keep it moving, the founder personally reviews every request posted here — usually within two days.</p>
+</div>
 <% if (typeof claimed !== 'undefined' && claimed) { %>
   <p class="notice">🎯 Quest complete: <strong><%= claimed.title %></strong> — +<%= claimed.xp_reward %> XP. Three peers reviewed your work.</p>
 <% } %>
@@ -45,6 +49,41 @@
     </ul>
   <% } %>
 </div>
+
+<% if (typeof trophyClaims !== 'undefined' && trophyClaims.length) { %>
+  <div class="card" id="confirm" style="margin-top:1rem">
+    <h2 style="margin-top:0">🏆 Trophies waiting for confirmation</h2>
+    <p class="muted small">The biggest real-world trophies unlock top rungs, so another member checks the proof first. Open the link, read the account, and confirm only if it holds up.<% if (!canConfirm) { %> Confirming opens at Level 3.<% } %></p>
+    <% trophyClaims.forEach(function (c) { %>
+      <div class="milestone-row">
+        <div style="flex:1;min-width:12rem">
+          <strong><%= c.trophy.emoji || '🏆' %> <%= c.trophy.title %></strong> <span class="muted small">— <%= c.who %> · <%= c.trophy.xp_reward %> XP</span>
+          <p class="small" style="margin:.3rem 0;white-space:pre-line"><%= c.note.replace(/\n\nProof: \S+$/, '') %></p>
+          <a class="small" href="<%= c.proof_url %>" target="_blank" rel="noopener nofollow ugc">Open proof ↗</a>
+        </div>
+        <% if (canConfirm) { %>
+          <div class="cta-row" style="margin:0">
+            <form method="post" action="/trophies/claims/<%= c.id %>/confirm" class="inline"><button class="btn btn-primary btn-sm">Confirm</button></form>
+            <form method="post" action="/trophies/claims/<%= c.id %>/decline" class="inline" onsubmit="return confirm('Decline this claim? They will be asked for clearer proof.')"><button class="btn btn-ghost btn-sm">Not convinced</button></form>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
+<% if (typeof gate !== 'undefined' && gate && gateStatus !== 'completed') { %>
+  <div class="card" style="margin-top:1rem">
+    <h2 style="margin-top:0">🗣️ Or do it off-site — it counts the same</h2>
+    <p class="muted">“Get 3 Feedback Sessions” doesn't have to happen here. Talk to three real people about your idea — a potential customer, someone already doing what you want to do, and someone who will be honest with you. A call, a coffee or a long message thread all count.</p>
+    <p class="muted small">Then mark the quest complete with a short proof note: who you spoke to (role, not name), what they said, and what you'll change.</p>
+    <% if (gateStatus === 'active') { %>
+      <a class="btn btn-primary btn-sm" href="/quests">Log it on the quest →</a>
+    <% } else { %>
+      <form method="post" action="/quests/<%= gate.id %>/accept" class="inline"><input type="hidden" name="duration_days" value="30"><button class="btn btn-primary btn-sm">Take on the quest</button></form>
+    <% } %>
+  </div>
+<% } %>
 
 <div class="grid" style="margin-top:1rem">
 

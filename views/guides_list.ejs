@@ -15,10 +15,18 @@
       <% }) %>
     </select>
     <label class="sr-only" for="filter-loc">Location</label>
+    <%# Typing a place picks it in the dropdown — 140 locations is too many to scroll. %>
+    <label class="sr-only" for="filter-loc-find">Find a location</label>
+    <input id="filter-loc-find" list="loc-names" placeholder="Type a country or state…" autocomplete="off" style="max-width:14rem">
+    <datalist id="loc-names"><% facets.locations.forEach(l => { %><option value="<%= l.name %>"><% }) %></datalist>
     <select id="filter-loc" name="loc" data-facet="location">
       <option value="">All locations</option>
-      <% facets.locations.forEach(l => { %>
-        <option value="<%= l.slug %>"<%= loc === l.slug ? ' selected' : '' %>><%= l.name %> (<%= l.n %>)</option>
+      <% (facets.locationGroups || [{ label: 'Locations', items: facets.locations }]).forEach(g => { %>
+        <optgroup label="<%= g.label %>">
+          <% g.items.forEach(l => { %>
+            <option value="<%= l.slug %>"<%= loc === l.slug ? ' selected' : '' %>><%= l.name %> (<%= l.n %>)</option>
+          <% }) %>
+        </optgroup>
       <% }) %>
     </select>
     <a class="filter-clear" href="/guides" id="filter-clear"<%= (q || cat || loc) ? '' : ' hidden' %>>Clear</a>
@@ -31,4 +39,18 @@
 </div>
 
 <script src="/js/list-search.js?v=2"></script>
+<script>
+  (function () {
+    var find = document.getElementById('filter-loc-find');
+    var sel = document.getElementById('filter-loc');
+    if (!find || !sel) return;
+    find.addEventListener('change', function () {
+      var want = find.value.trim().toLowerCase();
+      if (!want) return;
+      var hit = Array.from(sel.options).find(function (o) { return o.value && o.textContent.toLowerCase().replace(/\s*\(\d+\)$/, '') === want; })
+        || Array.from(sel.options).find(function (o) { return o.value && o.textContent.toLowerCase().indexOf(want) === 0; });
+      if (hit) { sel.value = hit.value; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+  })();
+</script>
 <%- include('partials/foot') %>

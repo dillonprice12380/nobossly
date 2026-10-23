@@ -114,7 +114,31 @@ router.get('/', async (req, res, next) => {
     }
 
     const received = mineList.reduce((n, r) => n + (counts[r.id] || 0), 0);
-    const names = await namesFor(req, openList.map(r => r.submitter_id));
+
+    // The off-site route to the same quest: talk to three people and log it on
+    // the quest itself. Shown here because the queue is thin while we grow.
+    const { data: gate } = await req.sb.from('challenges').select('id, title')
+      .eq('title', 'Get 3 Feedback Sessions').eq('is_active', true).maybeSingle();
+    let gateStatus = null;
+    if (gate) {
+      const { data: acc } = await req.sb.from('challenge_acceptances').select('status')
+        .eq('user_id', req.user.id).eq('challenge_id', gate.id).maybeSingle();
+      gateStatus = acc ? acc.status : null;
+    }
+    // Big real-world trophies waiting for someone to check the proof.
+    const canConfirm = !!(req.profile.is_admin || (req.profile.current_level || 1) >= 3);
+    const { data: claimRows } = await req.sb.from('trophy_claims')
+      .select('id, user_id, milestone_id, note, proof_url, created_at')
+      .eq('status', 'pending').neq('user_id', req.user.id).order('created_at').limit(20);
+    const claimList = claimRows || [];
+    let trophyTitles = {};
+    if (claimList.length) {
+      const { data: defs } = await req.sb.from('predefined_milestones').select('id, title, emoji, xp_reward')
+        .in('id', [...new Set(claimList.map(c => c.milestone_id))]);
+      (defs || []).forEach(d => { trophyTitles[d.id] = d; });
+    }
+
+    const names = await namesFor(req, openList.map(r => r.submitter_id).concat(claimList.map(c => c.user_id)));
 
     res.render('reviews', {
       title: 'Peer review',
@@ -123,7 +147,8 @@ router.get('/', async (req, res, next) => {
       given: given || [],
       received, needed: SESSIONS_NEEDED,
       minFeedback: MIN_FEEDBACK,
-      claimed,
+      claimed, gate, gateStatus, canConfirm,
+      trophyClaims: claimList.map(c => ({ ...c, who: names[c.user_id] || 'A member', trophy: trophyTitles[c.milestone_id] || {} })),
       msg: req.query.msg || null
     });
   } catch (e) { next(e); }
@@ -148,6 +173,9 @@ router.post('/new', async (req, res, next) => {
       status: 'pending'
     }).select('id').maybeSingle();
     if (error || !created) throw (error || new Error('could not post your request'));
+    // While the community is small the founder reviews requests personally;
+    // this tells them a new one is waiting.
+    await req.sb.rpc('notify_admins_review', { p_request: created.id }).then(...quiet('notify_admins_review'));
     res.redirect('/reviews/' + created.id);
   } catch (e) { next(e); }
 });

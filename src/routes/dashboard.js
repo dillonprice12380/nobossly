@@ -7,6 +7,8 @@ const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
 const { claimFeedbackGate } = require('./reviews');
 const activity = require('../activity');
+const { firstWeek } = require('../first_week');
+const starter = require('../starter_tasks');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -99,11 +101,14 @@ router.get('/', async (req, res, next) => {
     // A peek at the feed — what people you follow are working on. Cheap to read
     // and the reason the dashboard is where people actually land.
     const feed = await activity.feedFor(req.sb, req.user.id, { limit: 5 });
+    const checklist = await firstWeek(req.sb, req.user, p).catch(() => null);
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
       levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
-      needsPath,
+      needsPath, checklist,
+      // Suggested first tasks for a new sprint, matched to the member's path.
+      sprintSuggestions: sprint ? [] : starter.forPath(p.path).slice(0, 5),
       feedPeek: feed.events, following: feed.following,
       // A follower's rung has to come from THEIR ladder: Level 4 is "Regular"
       // for a creator and "Quoting" for a plumber.
@@ -135,6 +140,16 @@ router.post('/sprint/start', async (req, res, next) => {
       tasks_total: 0, tasks_done: 0, velocity_pct: 0
     }).select().maybeSingle();
     if (error) throw error;
+    // Any suggested tasks the member kept ticked go straight onto the sprint.
+    const offered = starter.forPath(req.profile.path);
+    const picked = [].concat(req.body.task || []).map(String).filter(t => offered.includes(t)).slice(0, 7);
+    for (let i = 0; i < picked.length; i++) {
+      await req.sb.from('sprint_tasks').insert({
+        user_id: req.user.id, sprint_id: sprint.id, title: picked[i],
+        priority: 'medium', status: 'todo', position: i
+      });
+    }
+    if (picked.length) await req.sb.from('sprints').update({ tasks_total: picked.length }).eq('id', sprint.id);
     await awardXP(req.sb, req.user.id, req.profile, 'sprint_started', 'Started a sprint', 'sprints', sprint.id);
     try { await sweepMilestones(req.sb, req.user.id, req.profile, res.locals.plan === 'paid'); } catch (_) { /* trophies self-heal on the milestones page */ }
     res.redirect('/dashboard');

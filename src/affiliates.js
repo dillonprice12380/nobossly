@@ -19,7 +19,9 @@ let loading = null;
 
 function refresh() {
   if (loading) return loading;
-  loading = anonClient().from('affiliate_offers')
+  let sb;
+  try { sb = anonClient(); } catch (_) { return Promise.resolve(); } // no Supabase configured
+  loading = sb.from('affiliate_offers')
     .select('key, category, label, blurb, cta_label, partner_name, match_titles, match_paths, match_keywords, sort')
     .order('sort')
     .then(({ data, error }) => {
@@ -65,7 +67,7 @@ function forText(text, limit = 3) {
     .map(x => x.o);
 }
 
-// Every live offer, grouped by category, for the toolkit page.
+// Every live offer, grouped by category, for the /recommended page.
 function grouped() {
   const out = {};
   current().forEach(o => (out[o.category] = out[o.category] || []).push(o));

@@ -37,43 +37,43 @@ const BUDGET_USD = {
 // line for "content tools" and a creator is not handed one for stock.
 const SPLITS = {
   creator: [
-    ['Design & Creative', 0.20], ['Software & SaaS', 0.25], ['Equipment & Hardware', 0.30],
-    ['Advertising', 0.15], ['Buffer', 0.10]
+    ['Contractors & Help', 0.20], ['Software & Subscriptions', 0.25], ['Equipment & Supplies', 0.30],
+    ['Marketing & Advertising', 0.15], ['Buffer', 0.10]
   ],
   freelancer: [
-    ['Software & SaaS', 0.25], ['Web Hosting & Domains', 0.10], ['Legal Fees', 0.20],
-    ['Marketing', 0.25], ['Buffer', 0.20]
+    ['Software & Subscriptions', 0.25], ['Website & Hosting', 0.10], ['Legal, Licenses & Insurance', 0.20],
+    ['Marketing & Advertising', 0.25], ['Buffer', 0.20]
   ],
   consultant: [
-    ['Software & SaaS', 0.20], ['Legal Fees', 0.20], ['Marketing', 0.25],
-    ['Events & Conferences', 0.20], ['Buffer', 0.15]
+    ['Software & Subscriptions', 0.20], ['Legal, Licenses & Insurance', 0.20], ['Marketing & Advertising', 0.25],
+    ['Travel & Vehicle', 0.20], ['Buffer', 0.15]
   ],
   local_service: [
-    ['Equipment & Hardware', 0.30], ['Vehicle & Fuel', 0.20], ['Insurance', 0.15],
-    ['Advertising', 0.20], ['Buffer', 0.15]
+    ['Equipment & Supplies', 0.30], ['Travel & Vehicle', 0.20], ['Legal, Licenses & Insurance', 0.15],
+    ['Marketing & Advertising', 0.20], ['Buffer', 0.15]
   ],
   brick_mortar: [
-    ['Rent & Workspace', 0.30], ['Inventory & Materials', 0.25], ['Equipment & Hardware', 0.15],
-    ['Taxes & Licenses', 0.15], ['Buffer', 0.15]
+    ['Workspace & Rent', 0.30], ['Inventory & Materials', 0.25], ['Equipment & Supplies', 0.15],
+    ['Legal, Licenses & Insurance', 0.15], ['Buffer', 0.15]
   ],
   online_store: [
-    ['Inventory & Materials', 0.35], ['Advertising', 0.25], ['Software & SaaS', 0.15],
-    ['Shipping & Postage', 0.10], ['Buffer', 0.15]
+    ['Inventory & Materials', 0.35], ['Marketing & Advertising', 0.25], ['Software & Subscriptions', 0.15],
+    ['Shipping & Packaging', 0.10], ['Buffer', 0.15]
   ],
   physical_product: [
-    ['Manufacturing', 0.35], ['Packaging', 0.15], ['Shipping & Postage', 0.10],
-    ['Advertising', 0.25], ['Buffer', 0.15]
+    ['Inventory & Materials', 0.35], ['Shipping & Packaging', 0.25],
+    ['Marketing & Advertising', 0.25], ['Buffer', 0.15]
   ],
   software: [
-    ['Software & SaaS', 0.30], ['Web Hosting & Domains', 0.15], ['Design & Creative', 0.15],
-    ['Marketing', 0.25], ['Buffer', 0.15]
+    ['Software & Subscriptions', 0.30], ['Website & Hosting', 0.15], ['Contractors & Help', 0.15],
+    ['Marketing & Advertising', 0.25], ['Buffer', 0.15]
   ]
 };
 
 // Everyone else, including 'exploring' and anyone who has not picked a path.
 const DEFAULT_SPLIT = [
-  ['Software & SaaS', 0.25], ['Marketing', 0.25], ['Legal Fees', 0.15],
-  ['Equipment & Hardware', 0.20], ['Buffer', 0.15]
+  ['Software & Subscriptions', 0.25], ['Marketing & Advertising', 0.25], ['Legal, Licenses & Insurance', 0.15],
+  ['Equipment & Supplies', 0.20], ['Buffer', 0.15]
 ];
 
 const norm = v => String(v == null ? '' : v).trim().toLowerCase();

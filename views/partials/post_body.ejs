@@ -10,9 +10,12 @@
         <% if (typeof shareUrl !== 'undefined' && shareUrl) { %><%- include('share_buttons', { shareUrl, shareTitle: post.title }) %><% } %>
       </div>
     <% } else if (isGuide) { %>
+      <% var reviewed = post.reviewed_at || post.updated_at || post.published_at; %>
       <div class="post-meta-row">
+        <% if (reviewed) { %><span class="muted small"><%= post.reviewed_at ? 'Last reviewed' : 'Last updated' %> <%= new Date(reviewed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span><% } %>
         <% if (typeof shareUrl !== 'undefined' && shareUrl) { %><%- include('share_buttons', { shareUrl, shareTitle: post.title }) %><% } %>
       </div>
+      <p class="guide-disclaimer small">ℹ️ General information, not legal, tax or financial advice. Rules change and differ by place — check the official source linked in the guide, or ask a professional, before you act on it.</p>
     <% } %>
     <% if (hasToc) { %>
       <details class="toc toc-accordion toc-inline-mobile">

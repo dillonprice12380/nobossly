@@ -4,6 +4,19 @@
   <button class="btn btn-primary" onclick="document.getElementById('new-task-modal').classList.remove('hidden')">+ New task</button>
 </div>
 
+<% if (typeof starterTasks !== 'undefined' && starterTasks.length) { %>
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <h2 style="margin-top:0">🚀 Start with a few first moves</h2>
+    <p class="muted small">Picked for your path. Untick anything that doesn't fit, then add the rest — you can edit or delete them any time.</p>
+    <form method="post" action="/tasks/starter">
+      <% starterTasks.forEach(function (t) { %>
+        <label class="check" style="display:flex;gap:.5rem;align-items:flex-start;margin:.3rem 0"><input type="checkbox" name="task" value="<%= t %>" checked> <span><%= t %></span></label>
+      <% }) %>
+      <button class="btn btn-primary btn-sm" style="margin-top:.5rem">Add these tasks</button>
+    </form>
+  </div>
+<% } %>
+
 <% var counts = (typeof listCounts !== 'undefined' && listCounts) ? listCounts : {}; %>
 <div class="toolbar">
   <a class="chip <%= !listFilter ? 'chip-active' : '' %>" href="/tasks">All lists</a>

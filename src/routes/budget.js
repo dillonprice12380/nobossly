@@ -32,7 +32,8 @@ async function loadBudget(req, extra = {}) {
     // Offered only while there is nothing to overwrite. Seeding on top of
     // categories someone has already set would be the app editing their budget.
     suggestion: (budgets || []).length ? [] : starter.suggest(launchBudget, req.profile.path),
-    starterMonths: starter.MONTHS
+    starterMonths: starter.MONTHS,
+    budgetCategories: require('../budget_categories').STANDARD
   }, extra);
 }
 

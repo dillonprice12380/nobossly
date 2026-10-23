@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { quiet } = require('../db');
 const { awardXP } = require('../xp');
 const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
@@ -18,6 +19,20 @@ router.get('/', async (req, res, next) => {
     let fresh = [], metrics = {};
     try { ({ fresh, metrics } = await sweepMilestones(req.sb, req.user.id, req.profile, paid)); }
     catch (e) { console.error('milestone sweep', e); }
+
+    // Big trophies wait for a peer to confirm them. Once one has been
+    // confirmed, its XP is awarded here, by the member's own client.
+    const { data: claims } = await req.sb.from('trophy_claims')
+      .select('id, milestone_id, status, xp_awarded').eq('user_id', req.user.id);
+    const claimState = {};
+    for (const c of claims || []) {
+      claimState[c.milestone_id] = c.status;
+      if (c.status === 'confirmed' && !c.xp_awarded) {
+        const { data: def } = await req.sb.from('predefined_milestones').select('title').eq('id', c.milestone_id).maybeSingle();
+        await awardXP(req.sb, req.user.id, req.profile, 'milestone_claim', 'Trophy: ' + ((def && def.title) || ''), 'predefined_milestones', c.milestone_id);
+        await req.sb.rpc('trophy_claim_mark_awarded', { p_claim: c.id }).then(...quiet('trophy_claim_mark_awarded'));
+      }
+    }
 
     const [{ data: defs }, { data: mine }, { data: badges }, { data: custom }, { data: levels }] = await Promise.all([
       req.sb.from('predefined_milestones').select('*').order('position'),
@@ -54,8 +69,8 @@ router.get('/', async (req, res, next) => {
     });
 
     res.render('milestones', {
-      title: 'Milestones', cats, earned, badgeMap, metrics, fresh, legacy, earnedCount,
-      claimable, gatesLevel, paid, custom: custom || [], msg: req.query.msg || null
+      title: 'Trophies', cats, earned, badgeMap, metrics, fresh, legacy, earnedCount,
+      claimable, gatesLevel, paid, claimState, custom: custom || [], msg: req.query.msg || null
     });
   } catch (e) { next(e); }
 });
@@ -65,7 +80,13 @@ router.post('/:id/achieve', (req, res) => res.redirect('/trophies'));
 router.post('/claim/:id', async (req, res, next) => {
   const back = m => res.redirect('/trophies?msg=' + encodeURIComponent(m));
   try {
-    const note = String(req.body.proof_note || '').trim().slice(0, 2000);
+    // A proof link someone else could check is required for every real-world
+    // trophy. It travels inside the note, where claim_trophy_for() looks for it.
+    const proofUrl = String(req.body.proof_url || '').trim().slice(0, 500);
+    if (!/^https?:\/\/\S+\.\S+/i.test(proofUrl)) {
+      return back('Add a proof link — something another member could check: your live site, a public listing, a registry lookup, or a shared screenshot.');
+    }
+    const note = (String(req.body.proof_note || '').trim().slice(0, 1400) + '\n\nProof: ' + proofUrl).slice(0, 2000);
     const { data: def, error: claimErr } = await req.sb.rpc('claim_trophy_for', {
       p_milestone_id: req.params.id, p_note: note
     });
@@ -75,6 +96,10 @@ router.post('/claim/:id', async (req, res, next) => {
         return back('Add a bit more detail to “' + def.title + '” — a few honest sentences on what you actually did.');
       }
       if (def && def.reason === 'already') return back('You have already logged “' + def.title + '”.');
+      if (def && def.reason === 'needs_proof_link') return back('Add a proof link for “' + def.title + '” — something another member could check.');
+      if (def && def.reason === 'pending_confirmation') {
+        return back('“' + def.title + '” is waiting for another member to confirm it. Big trophies unlock once someone has checked your proof — you will get a notification.');
+      }
       return res.redirect('/trophies');
     }
 
@@ -87,6 +112,19 @@ router.post('/claim/:id', async (req, res, next) => {
 
 // Achieve a self-added personal goal. Distinct from trophies, which only the
 // engine awards.
+// Confirm (or decline) another member's big-trophy claim. Level 3+ or admin.
+router.post('/claims/:id/:verdict', async (req, res, next) => {
+  try {
+    const confirm = req.params.verdict === 'confirm';
+    const { data: r, error } = await req.sb.rpc('confirm_trophy_claim', { p_claim: req.params.id, p_confirm: confirm });
+    if (error) console.error('[db] confirm_trophy_claim failed:', error.message);
+    const msg = r && r.ok ? (confirm ? 'Confirmed “' + r.title + '”. Thanks for keeping the ladder honest.' : 'Declined — they will be asked for clearer proof.')
+      : r && r.reason === 'level_too_low' ? 'Confirming trophies opens at Level 3.'
+      : 'That claim has already been handled.';
+    res.redirect('/reviews?msg=' + encodeURIComponent(msg) + '#confirm');
+  } catch (e) { next(e); }
+});
+
 router.post('/custom/:id/achieve', async (req, res, next) => {
   try {
     const { data: m } = await req.sb.from('user_custom_milestones').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
