@@ -17,6 +17,21 @@
   <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
 </div>
 
+<% if (typeof checklist !== 'undefined' && checklist) { %>
+  <div class="card" style="border-left:3px solid var(--accent-2)">
+    <div class="page-head" style="margin:0 0 .4rem">
+      <div><h2 style="margin:0">✅ Your first week</h2><p class="muted small" style="margin:.15rem 0 0">Five small moves to get going — <%= checklist.done %> of <%= checklist.total %> done.</p></div>
+    </div>
+    <div class="progress"><div class="progress-bar" style="width:<%= Math.round(100 * checklist.done / checklist.total) %>%"></div></div>
+    <% checklist.steps.forEach(function (s) { %>
+      <div class="milestone-row" style="align-items:center">
+        <div style="flex:1"><%= s.done ? '✅' : '⬜' %> <span style="<%= s.done ? 'text-decoration:line-through;opacity:.7' : '' %>"><%= s.label %></span><% if (!s.done && s.note) { %> <span class="muted small">(<%= s.note %>)</span><% } %></div>
+        <% if (!s.done) { %><a class="btn btn-ghost btn-sm" href="<%= s.href %>"><%= s.cta %></a><% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+
 <%# Picking a path is the only onboarding step left. It sits above everything
     else because the quests, the ladder and the electives are all matched to it. %>
 <% if (typeof needsPath !== 'undefined' && needsPath) { %>
@@ -154,6 +169,7 @@
   </div>
 <% } %>
 
+<a id="sprint"></a>
 <% if (sprint) { %>
   <div class="card" id="sprint-card">
     <div class="page-head">
@@ -190,6 +206,12 @@
       <form method="post" action="/dashboard/sprint/start" style="max-width:28rem;margin:.9rem auto 0;text-align:left">
         <label>What's this sprint about?<input type="text" name="theme" maxlength="120" placeholder="e.g. Get my first 3 customer conversations" required></label>
         <label>Goal (optional)<textarea name="goal" rows="2" maxlength="400" placeholder="What does done look like?"></textarea></label>
+        <% if (typeof sprintSuggestions !== 'undefined' && sprintSuggestions.length) { %>
+          <p class="small" style="margin:.6rem 0 .2rem"><strong>Start with these tasks?</strong> <span class="muted">Picked for your path — untick any that don't fit.</span></p>
+          <% sprintSuggestions.forEach(function (t) { %>
+            <label class="check" style="display:flex;gap:.5rem;align-items:flex-start;margin:.2rem 0"><input type="checkbox" name="task" value="<%= t %>" checked> <span class="small"><%= t %></span></label>
+          <% }) %>
+        <% } %>
         <button class="btn btn-primary" style="margin-top:.5rem">Start sprint</button>
       </form>
     <% } %>

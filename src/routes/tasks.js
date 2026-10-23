@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
+const starter = require('../starter_tasks');
 
 const { quiet } = require('../db');
 const STATUSES = ['todo', 'in_progress', 'blocked', 'done'];
@@ -48,8 +49,11 @@ router.get('/', async (req, res, next) => {
     STATUSES.forEach(st => byStatus[st] = (tasks || []).filter(t => t.status === st));
     const pmap = { [req.user.id]: req.profile };
     team.forEach(p => pmap[p.id] = p);
+    // A brand-new board offers first moves for the member's path instead of
+    // four empty columns.
+    const starterTasks = (listed || []).length ? [] : starter.forPath(req.profile.path);
     res.render('tasks', {
-      title: 'Tasks', lists: lists || [], byStatus, subs, listCounts,
+      title: 'Tasks', lists: lists || [], byStatus, subs, listCounts, starterTasks,
       statuses: STATUSES, priorities: PRIORITIES, listFilter, team, pmap, me: req.user.id
     });
   } catch (e) { next(e); }
@@ -90,6 +94,21 @@ router.post('/lists/prune-empty', async (req, res, next) => {
     const empty = (lists || []).filter(l => !used.has(l.id)).map(l => l.id);
     if (empty.length) {
       await req.sb.from('task_lists').delete().in('id', empty).eq('user_id', req.user.id);
+    }
+    res.redirect('/tasks');
+  } catch (e) { next(e); }
+});
+
+// Add the ticked starter tasks to an empty board in one go.
+router.post('/starter', async (req, res, next) => {
+  try {
+    const offered = starter.forPath(req.profile.path);
+    const picked = [].concat(req.body.task || []).map(String).filter(t => offered.includes(t));
+    for (let i = 0; i < picked.length; i++) {
+      await req.sb.from('tasks').insert({
+        user_id: req.user.id, assigned_to: req.user.id, title: picked[i],
+        priority: 'medium', status: 'todo', position: i
+      }).then(...quiet('tasks.insert:starter'));
     }
     res.redirect('/tasks');
   } catch (e) { next(e); }

@@ -66,6 +66,37 @@ async function listContext(req, cfg) {
   return { ...result, q, amap, baseParams: { q }, showImage: cfg.showImage !== false, base: cfg.base, listUrl: cfg.listUrl, emptyIcon: cfg.emptyIcon, emptyMsg: cfg.emptyMsg, showMeta: cfg.showMeta };
 }
 
+// The visitor's country, as one of the guide location slugs ("united-states"),
+// from the CDN's country header when there is one, else the browser language
+// ("en-GB" -> United Kingdom). Used only to put their country first.
+const regionName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch (_) { return null; } })();
+const REGION_FIXUPS = { czechia: 'czech-republic', 'hong-kong-sar-china': 'hong-kong', turkiye: 'turkey' };
+function visitorCountry(req) {
+  let code = String(req.headers['cf-ipcountry'] || '').toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code) || code === 'XX' || code === 'T1') {
+    const m = String(req.headers['accept-language'] || '').match(/^[a-z]{2,3}-([A-Za-z]{2})\b/);
+    code = m ? m[1].toUpperCase() : '';
+  }
+  if (!code || !regionName) return null;
+  const slug = String(regionName.of(code) || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return REGION_FIXUPS[slug] || slug || null;
+}
+
+// Location options, grouped: the visitor's own country (and, for the US, its
+// states) first, then everywhere else.
+function groupLocations(locations, home) {
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  const homeRow = home && locations.find(l => l.slug === home);
+  const states = locations.filter(l => l.kind === 'state').sort(byName);
+  const groups = [];
+  if (homeRow) groups.push({ label: 'Your country', items: [homeRow] });
+  if (home === 'united-states' && states.length) groups.push({ label: 'US states and territories', items: states });
+  groups.push({ label: 'Worldwide', items: locations.filter(l => l.kind === 'global' || l.kind === 'bloc').sort(byName) });
+  groups.push({ label: 'Countries', items: locations.filter(l => l.kind === 'country' && l !== homeRow).sort(byName) });
+  if (home !== 'united-states' && states.length) groups.push({ label: 'US states and territories', items: states });
+  return groups.filter(g => g.items.length);
+}
+
 async function guidesContext(req) {
   const sb = client(req);
   const q = cleanQ(req.query.q);
@@ -89,6 +120,8 @@ async function guidesContext(req) {
     categories: facetRows.filter(f => f.facet === 'category').map(f => ({ slug: f.slug, name: f.name, n: Number(f.n) })),
     locations: facetRows.filter(f => f.facet === 'location').map(f => ({ slug: f.slug, name: f.name, kind: f.kind, n: Number(f.n) }))
   };
+
+  facets.locationGroups = groupLocations(facets.locations, visitorCountry(req));
 
   return {
     posts: rows || [], total, pages, page, pager: buildPager(page, pages),

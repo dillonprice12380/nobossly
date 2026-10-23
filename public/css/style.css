@@ -303,6 +303,13 @@ body.theme-light .footer { background: #0b3d2e; border-top: none; color: #9fc5b2
 body.theme-light .footer a { color: #c9e9d8; }
 body.theme-light .footer a:hover { color: #6ee7b7; }
 body.theme-light .footer h4 { color: #6ee7b7; }
+/* Guides carry a visible disclaimer under the title. */
+.guide-disclaimer { margin: .3rem 0 1rem; padding: .6rem .8rem; border: 1px solid var(--border); border-left: 3px solid #f59e0b; border-radius: 8px; background: var(--panel-2); color: var(--text); }
+/* The footer is dark green in the light theme, so the page's muted grey-green
+   (#5e7a6c) nearly vanished on it. These keep footer text above 4.5:1. */
+body.theme-light .footer .muted, body.theme-light .footer p { color: #c9e9d8; }
+body.theme-light .footer-grid a { color: #c9e9d8; }
+.footer .muted, .footer p { color: #b4bccb; }
 body.theme-light .error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
 body.theme-light .notice { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
 body.theme-light .hero h1 { background: linear-gradient(90deg, #047857, #10b981); -webkit-background-clip: text; background-clip: text; }

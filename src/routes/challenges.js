@@ -52,10 +52,19 @@ router.get('/', async (req, res, next) => {
     try { ({ electives, unclassified } = await getElectives(req.sb, { ...req.profile, id: req.user.id }, level)); }
     catch (e) { console.error('electives', e); }
 
+    // Cohorts: an ended one is only worth showing to someone who took part.
+    // Everyone else sees what is live or coming up next.
+    const now = Date.now();
+    const ended = c => c.ends_at && new Date(c.ends_at).getTime() < now;
+    const cohorts = all.filter(c => c.is_cohort && (!ended(c) || accMap[c.id]))
+      .sort((x, y) => rank(x) - rank(y) || String(x.starts_at || '').localeCompare(String(y.starts_at || '')));
+    const { data: waits } = await req.sb.from('cohort_waitlist').select('cohort_id').eq('user_id', req.user.id);
+    const waiting = new Set((waits || []).map(w => w.cohort_id));
+
     res.render('challenges', {
-      title: 'Challenges',
+      title: 'Quests',
       challenges: sorted(all.filter(c => !c.is_cohort)),
-      cohorts: sorted(all.filter(c => c.is_cohort)),
+      cohorts, waiting,
       accMap, paid, custom: custom || [], sprint: sprint || null,
       electives, unclassified, level,
       msg: req.query.msg || null,
@@ -152,6 +161,15 @@ router.post('/:id/accept', async (req, res, next) => {
       await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest “' + ch.title + '”', 'challenges', ch.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
+  } catch (e) { next(e); }
+});
+
+// "Remind me": a notification when an upcoming cohort starts, without joining yet.
+router.post('/cohort/:id/remind', async (req, res, next) => {
+  try {
+    const { error } = await req.sb.rpc(req.body.off ? 'cohort_waitlist_leave' : 'cohort_waitlist_join', { p_cohort: req.params.id });
+    if (error) console.error('[db] cohort waitlist failed:', error.message);
+    res.redirect('/quests?msg=' + encodeURIComponent(req.body.off ? 'Reminder cancelled.' : 'Done — we will let you know when the cohort starts.'));
   } catch (e) { next(e); }
 });
 

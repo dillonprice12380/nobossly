@@ -4,24 +4,26 @@ const affiliates = require('../affiliates');
 
 // Outbound affiliate link. affiliate_go() logs the click and returns the
 // partner URL, or null for a slot with no live link — which lands on the
-// toolkit instead of a dead end.
+// recommended-tools page instead of a dead end.
 router.get('/go/:key', async (req, res, next) => {
   try {
     const key = String(req.params.key || '').toLowerCase();
-    if (!/^[a-z0-9_]{2,60}$/.test(key)) return res.redirect('/toolkit');
+    if (!/^[a-z0-9_]{2,60}$/.test(key)) return res.redirect('/recommended');
     const from = typeof req.query.from === 'string' ? req.query.from.slice(0, 200) : null;
     const { data: url, error } = await (req.sb || anonClient()).rpc('affiliate_go', { p_key: key, p_source: from });
     if (error) console.error('[db] affiliate_go failed:', error.message);
-    if (!url || !/^https:\/\//i.test(url)) return res.redirect('/toolkit');
+    if (!url || !/^https:\/\//i.test(url)) return res.redirect('/recommended');
     res.set('X-Robots-Tag', 'noindex, nofollow');
     res.redirect(302, url);
   } catch (e) { next(e); }
 });
 
 // Every live recommendation in one place.
-router.get('/toolkit', (req, res) => {
+// Was /toolkit; that name now belongs to the Premium Toolkit at /tools.
+router.get('/toolkit', (req, res) => res.redirect(301, '/recommended'));
+router.get('/recommended', (req, res) => {
   res.render('toolkit', {
-    title: 'Founder toolkit',
+    title: 'Recommended tools',
     metaDescription: 'The tools NoBossly members use to register, get paid, sell online and grow — picked for each step of the climb.',
     groups: affiliates.grouped()
   });

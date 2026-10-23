@@ -50,7 +50,8 @@
       </div>
     <% }) %>
     <form method="post" action="/budget/category" class="inline-form" style="margin-top:.8rem">
-      <input name="category" placeholder="Category (e.g. Marketing)" required maxlength="40">
+      <input name="category" placeholder="Category (e.g. Marketing & Advertising)" required maxlength="40" list="std-cats">
+      <datalist id="std-cats"><% budgetCategories.forEach(c => { %><option value="<%= c %>"><% }) %></datalist>
       <input name="monthly_limit" type="number" step="0.01" min="0" placeholder="Monthly limit $">
       <button class="btn btn-ghost btn-sm">Set budget</button>
     </form>
@@ -68,7 +69,7 @@
           <option value="" disabled selected>Choose a category…</option>
           <% if (cats.length) { %><optgroup label="Your categories"><% cats.forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %></optgroup><% } %>
           <optgroup label="Common categories">
-            <% const stdCats = ['Advertising','Marketing','Software & SaaS','Web Hosting & Domains','Office Supplies','Equipment & Hardware','Rent & Workspace','Utilities','Phone & Internet','Travel','Meals & Entertainment','Shipping & Postage','Inventory & Materials','Manufacturing','Packaging','Legal Fees','Accounting & Bookkeeping','Consulting & Contractors','Salaries & Payroll','Employee Benefits','Insurance','Taxes & Licenses','Bank Fees','Payment Processing Fees','Interest & Loans','Education & Courses','Books & Subscriptions','Memberships & Dues','Research & Development','Design & Creative','Photography & Video','Printing','Events & Conferences','Networking','Customer Support Tools','Maintenance & Repairs','Cleaning','Security','Vehicle & Fuel','Parking & Tolls','Health & Wellness','Charity & Donations','Gifts','Groceries','Personal Care','Entertainment','Streaming & Subscriptions','Miscellaneous']; %>
+            <% const stdCats = budgetCategories; %>
             <% stdCats.filter(c => !cats.includes(c)).forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %>
           </optgroup>
           <option value="__other">Other…</option>

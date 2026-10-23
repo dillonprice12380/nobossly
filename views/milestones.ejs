@@ -14,7 +14,7 @@
 <% if (typeof claimable !== 'undefined' && claimable.length) { %>
   <div class="card">
     <h2>🌍 Real-world trophies</h2>
-    <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account of what happened. They carry the top rungs of the Ladder.</p>
+    <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account and a proof link. The biggest ones are confirmed by another member before they unlock, because they carry the top rungs of the Ladder.</p>
     <% claimable.forEach(function (m) {
          var got = earned[m.id];
          var gate = gatesLevel[String(m.title).trim().toLowerCase()]; %>
@@ -24,11 +24,18 @@
           <p class="muted small"><%= m.description %></p>
           <span class="chip">⚡ <%= m.xp_reward %> XP</span>
           <% if (gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
-          <% if (!got) { %>
+          <% var cs = (typeof claimState !== 'undefined' && claimState) ? claimState[m.id] : null; %>
+          <% if (!got && cs === 'pending') { %>
+            <p class="small" style="margin:.4rem 0 0"><span class="chip">⏳ Waiting for a member to confirm your proof</span></p>
+          <% } else if (!got) { %>
             <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(m.title), from: 'trophy', compact: true }) %>
+            <% if (cs === 'declined') { %><p class="error small" style="margin:.4rem 0 0">Your last claim wasn't confirmed — add clearer proof and try again.</p><% } %>
             <form method="post" action="/trophies/claim/<%= m.id %>" style="margin:.5rem 0 0">
               <textarea name="proof_note" rows="2" required minlength="30"
                 placeholder="What actually happened? A few sentences — when, where, the specifics."></textarea>
+              <label class="small" style="margin-top:.35rem">Proof link <span class="muted">— something another member could check: your live site, a public listing, a registry lookup, a shared screenshot</span>
+                <input name="proof_url" type="url" required maxlength="500" placeholder="https://"></label>
+              <% if (m.xp_reward >= 300) { %><p class="muted small" style="margin:.3rem 0 0">Worth <%= m.xp_reward %> XP, so another member checks your proof before it unlocks.</p><% } %>
               <button class="btn btn-primary btn-sm" style="margin-top:.35rem">I did this</button>
             </form>
           <% } %>

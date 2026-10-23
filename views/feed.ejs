@@ -21,25 +21,13 @@
   <div class="card center">
     <h2>You are not following anyone yet</h2>
     <p class="muted">Follow a few members and their real wins show up here — first customer, first non-salary dollar, the day they hand in their notice.</p>
-    <% if (suggestions.length) { %>
-      <div class="grid" style="margin-top:1rem;text-align:left">
-        <% suggestions.forEach(function (p) { %>
-          <div class="card" style="display:flex;gap:.7rem;align-items:center">
-            <div class="avatar-circle"><% if (p.avatar_url) { %><img src="<%= p.avatar_url %>" alt=""><% } else { %><%= (p.display_name || p.username || '?').slice(0,1).toUpperCase() %><% } %></div>
-            <div style="flex:1;min-width:0">
-              <a href="/members/<%= p.username %>"><strong><%= p.display_name || p.username %></strong></a>
-              <p class="muted small" style="margin:.15rem 0 0">Level <%= p.current_level || 1 %><% if (pathLabel(p.path)) { %> · <%= pathLabel(p.path) %><% } %></p>
-            </div>
-            <form method="post" action="/follow/<%= p.id %>"><button class="btn btn-ghost btn-sm">Follow</button></form>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
+    <%- include('partials/follow_suggestions', { suggestions, pathLabel }) %>
   </div>
 <% } else if (!events.length) { %>
   <div class="card center">
     <h2>Nothing yet</h2>
     <p class="muted">You follow <%= following %> <%= following === 1 ? 'member' : 'members' %>. When one of them clears a quest or reaches a rung, it lands here.</p>
+    <%- include('partials/follow_suggestions', { suggestions, pathLabel }) %>
     <a class="btn btn-ghost" style="margin-top:.9rem;display:inline-block" href="/members">Follow a few more</a>
   </div>
 <% } else { %>

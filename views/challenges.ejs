@@ -61,20 +61,21 @@
 <% if (cohorts && cohorts.length) { %>
   <div class="card">
     <h2>🚩 Cohort quests</h2>
-    <p class="muted small">Everyone starts together, finishes together, and climbs the same leaderboard.</p>
+    <p class="muted small">A new cohort starts every Monday: everyone runs a 7-day sprint together and climbs the same leaderboard.</p>
     <div class="grid">
       <% cohorts.forEach(c => { const a = accMap[c.id];
          const now = Date.now();
          const st = c.starts_at ? new Date(c.starts_at).getTime() : null;
          const en = c.ends_at ? new Date(c.ends_at).getTime() : null;
          const state = (st && now < st) ? 'upcoming' : ((en && now > en) ? 'ended' : 'live');
-         const daysTo = ms => Math.max(0, Math.ceil((ms - now) / 86400000)); %>
+         const daysTo = ms => Math.max(0, Math.ceil((ms - now) / 86400000));
+         const onList = typeof waiting !== 'undefined' && waiting.has(c.id); %>
         <div class="card">
           <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🚩' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
           <h3><%= c.title %></h3>
           <p class="muted"><%= c.description %></p>
           <p>
-            <% if (state === 'upcoming') { %><span class="chip">🗝 Starts in <%= daysTo(st) %> day<%= daysTo(st) === 1 ? '' : 's' %> — <%= new Date(c.starts_at).toLocaleDateString() %></span>
+            <% if (state === 'upcoming') { %><span class="chip">🗓 Next cohort starts <%= new Date(c.starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) %> (in <%= daysTo(st) %> day<%= daysTo(st) === 1 ? '' : 's' %>)</span>
             <% } else if (state === 'live') { %><span class="chip chip-success">🔴 Live now<%= en ? ' — ' + daysTo(en) + ' day' + (daysTo(en) === 1 ? '' : 's') + ' left' : '' %></span>
             <% } else { %><span class="chip">Ended<%= c.ends_at ? ' ' + new Date(c.ends_at).toLocaleDateString() : '' %></span><% } %>
           </p>
@@ -83,9 +84,17 @@
           <% } else if (a && a.status === 'active') { %>
             <span class="chip">🎯 You're in — manage it from the top of the page ⤴</span>
           <% } else if (state !== 'ended') { %>
-            <form method="post" action="/quests/<%= c.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Join the cohort</button></form>
+            <div class="cta-row" style="justify-content:flex-start">
+              <form method="post" action="/quests/<%= c.id %>/accept" class="inline"><button class="btn btn-primary btn-sm"><%= state === 'upcoming' ? 'Join this cohort' : 'Join the cohort' %></button></form>
+              <% if (state === 'upcoming') { %>
+                <form method="post" action="/quests/cohort/<%= c.id %>/remind" class="inline">
+                  <% if (onList) { %><input type="hidden" name="off" value="1"><button class="btn btn-ghost btn-sm">✓ Reminder set — cancel</button>
+                  <% } else { %><button class="btn btn-ghost btn-sm">🔔 Remind me when it starts</button><% } %>
+                </form>
+              <% } %>
+            </div>
           <% } %>
-          <p style="margin-top:.5rem"><a class="btn btn-ghost btn-sm" href="/quests/<%= c.id %>/leaderboard">🏆 View leaderboard</a></p>
+          <% if (state !== 'upcoming') { %><p style="margin-top:.5rem"><a class="btn btn-ghost btn-sm" href="/quests/<%= c.id %>/leaderboard">🏆 View leaderboard</a></p><% } %>
         </div>
       <% }) %>
     </div>
@@ -103,6 +112,7 @@
         <p class="muted"><%= c.description %></p>
         <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(c.title), from: 'quest', compact: true }) %>
         <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
+        <% if (c.title === 'Get 3 Feedback Sessions') { %><p class="small" style="margin:.3rem 0">Two ways to clear it: <a href="/reviews">get 3 reviews in Peer review</a>, or talk to three people off-site and log them here with a proof note.</p><% } %>
         <% if (!a) { %>
           <form method="post" action="/quests/<%= c.id %>/accept">
             <label class="small">Timeline
@@ -131,8 +141,10 @@
   <% if (unclassified) { %>
     <p class="muted">Electives are quests matched to your path and business — pick your path and they'll fill in here.</p>
     <a class="btn btn-primary btn-sm" href="/choose-path">Choose your path</a>
-  <% } else if (!electives.length) { %>
+  <% } else if (!electives.length && custom.length) { %>
     <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up.</p>
+  <% } else if (!electives.length) { %>
+    <p class="muted">Electives unlock as you level up. Clear a core quest or two and the first ones for your path appear here.</p>
   <% } else { %>
     <p class="muted small">Matched to your path and business. Accept the ones that move your needle.</p>
     <div class="grid">

@@ -37,7 +37,7 @@
       <% if (t.key === 'year') { %><p class="muted small" style="margin:0">That's <%= fmt(Math.round(o.cents / 12)) %> a month.</p><% } %>
       <% if (o.isPromo && o.label) { %><p><span class="chip chip-success"><%= o.label %></span></p><% } %>
       <% if (t.tagline) { %><p class="muted small"><%= t.tagline %></p><% } %>
-      <ul class="feature-list"><li>All five Premium tools</li><li>Everything in Free</li><% if (t.key === 'lifetime') { %><li>Every tool added later</li><% } %></ul>
+      <ul class="feature-list"><li>The full Toolkit — all five tools</li><li>Everything in Free</li><% if (t.key === 'lifetime') { %><li>Every tool added later</li><% } %></ul>
       <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Join free, then upgrade</a>
       <% } else if (locals.profile && profile.is_lifetime) { %><span class="chip chip-success">You have lifetime access</span>
       <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>

@@ -14,7 +14,8 @@ const LINKS = {
   milestones: () => '/trophies',
   collab_projects: () => '/collaborations',
   collaborations: () => '/collaborations',
-  wins: () => '/wins'
+  wins: () => '/wins',
+  peer_reviews: id => '/reviews/' + id
 };
 
 function hrefFor(n) {

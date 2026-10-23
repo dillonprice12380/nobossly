@@ -14,7 +14,7 @@ const back = (res, to, m) => res.redirect(to + (m ? (to.includes('?') ? '&' : '?
 // Hub: every member sees the five tools; without Premium each links to its
 // sales page instead of the tool.
 router.get('/', (req, res) => {
-  res.render('tools/index', { title: 'Premium tools', welcome: !!req.query.welcome });
+  res.render('tools/index', { title: 'Toolkit', welcome: !!req.query.welcome });
 });
 
 // ---------------------------------------------------------------- Quit date
