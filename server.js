@@ -136,6 +136,7 @@ app.use('/admin/sounds', requireAdmin, require('./src/routes/admin_sounds')); //
 app.use('/admin', requireAdmin, require('./src/routes/admin'));
 
 app.use('/paths', require('./src/routes/paths_public')); // public path landing pages — before the CMS catch-all
+app.use('/', require('./src/routes/legal')); // /privacy and /terms — before the CMS catch-all, which still holds the old short pages
 app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
