@@ -1,0 +1,163 @@
+<%- include('partials/head') %>
+<style>
+  .legal { max-width: 780px; margin: 0 auto; line-height: 1.65; }
+  .legal h1 { margin-bottom: .2rem; }
+  .legal h2 { margin: 2rem 0 .5rem; font-size: 1.25rem; scroll-margin-top: 5rem; }
+  .legal h3 { margin: 1.2rem 0 .3rem; font-size: 1.02rem; }
+  .legal ul { padding-left: 1.2rem; }
+  .legal li { margin: .3rem 0; }
+  .legal .toc { background: var(--panel-2); border-radius: 10px; padding: .9rem 1.2rem; margin: 1.2rem 0; }
+  .legal .toc ol { margin: .3rem 0 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
+  .legal .toc li { margin: .15rem 0; break-inside: avoid; }
+  .legal .summary { border-left: 3px solid var(--accent, #6c5ce7); padding: .2rem 0 .2rem 1rem; margin: 1rem 0; }
+  .legal .caps { text-transform: uppercase; font-size: .88rem; letter-spacing: .01em; }
+  @media (max-width: 640px) { .legal .toc ol { columns: 1; } }
+</style>
+<div class="card legal">
+  <h1>Terms &amp; Conditions</h1>
+  <p class="muted small">Last updated: <%= updated %></p>
+
+  <div class="summary">
+    <p><strong>The short version.</strong> NoBossly is a free community and set of tools for people building a business alongside a job. Be honest, be kind, and do not post things that harm others. What you create stays yours. We give you education and tools, not legal, tax or financial advice, and we cannot promise you will earn money. Premium is optional and cancelable at any time. The full terms are below.</p>
+  </div>
+
+  <div class="toc">
+    <strong>On this page</strong>
+    <ol>
+      <li><a href="#agreement">Agreement and who can use NoBossly</a></li>
+      <li><a href="#service">What NoBossly is</a></li>
+      <li><a href="#account">Your account</a></li>
+      <li><a href="#advice">Not professional advice, and no guarantees</a></li>
+      <li><a href="#conduct">Community rules</a></li>
+      <li><a href="#content">Your content</a></li>
+      <li><a href="#moderation">Reports, moderation and enforcement</a></li>
+      <li><a href="#progress">XP, levels and verification</a></li>
+      <li><a href="#members">Dealing with other members</a></li>
+      <li><a href="#premium">Premium and payments</a></li>
+      <li><a href="#affiliate">Recommendations and third-party services</a></li>
+      <li><a href="#ip">Our content and your license to use it</a></li>
+      <li><a href="#copyright">Copyright complaints</a></li>
+      <li><a href="#disclaimer">Disclaimers</a></li>
+      <li><a href="#liability">Limit of liability</a></li>
+      <li><a href="#indemnity">Your responsibility for your use</a></li>
+      <li><a href="#termination">Ending your use</a></li>
+      <li><a href="#law">Governing law and disputes</a></li>
+      <li><a href="#changes">Changes to these terms</a></li>
+      <li><a href="#general">General</a></li>
+      <li><a href="#contact">Contact us</a></li>
+    </ol>
+  </div>
+
+  <h2 id="agreement">1. Agreement and who can use NoBossly</h2>
+  <p>These Terms &amp; Conditions ("Terms") are an agreement between you and <%= operator %> ("NoBossly", "we", "us") about your use of nobossly.com and everything on it, including the community, quests, sprints, guides, blog, tools and any paid features (together, the "Service"). By creating an account or using the Service you agree to these Terms and to our <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the Service.</p>
+  <p>You must be at least 18 years old, and able to form a binding contract where you live, to use NoBossly. If you use the Service on behalf of a business, you confirm you have the authority to accept these Terms for it.</p>
+
+  <h2 id="service">2. What NoBossly is</h2>
+  <p>NoBossly is a free community and a set of tools for people working their way out of the 9 to 5. You choose a path, take on quests, run sprints, earn XP and climb a ladder, give and get feedback from other members, and read our guides and blog. Some extra tools are part of an optional paid plan called Premium (section 10).</p>
+  <p>We are always changing the Service. We may add, change, limit or remove features, content or levels of access at any time. We will try to give notice of changes that significantly affect paid members.</p>
+
+  <h2 id="account">3. Your account</h2>
+  <ul>
+    <li>Give us accurate information and keep it up to date. Have one account per person.</li>
+    <li>Choose a username that does not impersonate someone else or infringe anyone's rights, and that is not offensive. We may change or reclaim a username that breaks this rule.</li>
+    <li>Keep your password and your sign-in methods secure. You are responsible for what happens under your account. Tell us promptly at <a href="mailto:<%= contact %>"><%= contact %></a> if you suspect unauthorized use.</li>
+    <li>Do not sell, rent or transfer your account.</li>
+    <li>You can deactivate your account (log in again to reactivate it) or delete it from Account settings. Deletion is scheduled for seven days after you request it, and you can cancel during that time.</li>
+  </ul>
+
+  <h2 id="advice">4. Not professional advice, and no guarantees</h2>
+  <p><strong>NoBossly provides business education and productivity tools. Nothing on the Service is legal, tax, financial, accounting, insurance, investment or other professional advice.</strong> This covers our guides, blog posts, quests, calculators and budgeting tools, templates, recommendations, any automated or AI-assisted content, and everything members say in the community. Using NoBossly does not create an attorney-client, accountant-client, advisor-client or any other professional relationship.</p>
+  <p>Laws, tax rates, licensing rules and filing requirements differ by country, state and city and change over time. We try to be useful but make no promise that anything on the Service is accurate, complete or current. Check specifics with a licensed attorney, accountant or other qualified professional in your jurisdiction before you act on anything you read here. Calculators and tools give estimates based on what you enter and are not a substitute for professional advice.</p>
+  <p><strong>No promise of results.</strong> Starting a business is risky and many do not succeed. We do not promise that you will make money, replace your income, reach any level, or achieve any outcome. Stories, wins and numbers shared by members or by us are examples, not typical results, and they are not a guarantee of what you will achieve. You are responsible for your own decisions, including whether to leave or keep your job. Do not risk money or income you cannot afford to lose.</p>
+
+  <h2 id="conduct">5. Community rules</h2>
+  <p>NoBossly works because people are honest and supportive. When you use the Service you agree not to:</p>
+  <ul>
+    <li>break any law, or use NoBossly for illegal activity;</li>
+    <li>harass, threaten, bully, stalk or demean anyone, or post hate speech or content that attacks people for who they are;</li>
+    <li>post sexual content, graphic violence, or anything that exploits or endangers children;</li>
+    <li>spam, run scams or deceptive schemes (including pyramid schemes and get-rich-quick offers), or send unsolicited promotions in messages, comments or groups;</li>
+    <li>pretend to be another person or organization, or misstate your affiliation, experience or results;</li>
+    <li>submit fake wins, fake feedback, or false or doctored evidence for level verification;</li>
+    <li>post other people's private information, such as addresses, phone numbers or financial details, without their permission;</li>
+    <li>upload malware, or try to probe, disrupt, overload or break into the Service or other members' accounts;</li>
+    <li>scrape, crawl or copy the Service or its members' information by automated means, or collect member information for marketing, without our written permission;</li>
+    <li>get around limits, paywalls, rate limits or security features, or manipulate XP, streaks, levels or feedback systems;</li>
+    <li>post content that infringes someone else's copyright, trademark or other rights;</li>
+    <li>use the Service to build or train a competing product, or resell access to it.</li>
+  </ul>
+  <p>Give feedback in good faith. When you review a fellow member's work, be specific, honest and kind.</p>
+
+  <h2 id="content">6. Your content</h2>
+  <p><strong>You own it.</strong> You keep ownership of what you create and post on NoBossly: your profile, posts, comments, replies, wins, messages, uploads and the information you enter into the tools ("Your Content").</p>
+  <p><strong>What you let us do with it.</strong> To run the Service, you give us a worldwide, non-exclusive, royalty-free license to host, store, copy, display, reproduce, adapt (for example resize an image or format text) and distribute Your Content, but only as needed to operate, secure, improve and promote the Service. For content you post publicly, this includes showing it to other visitors and members, and, for approved wins, featuring it on the wins wall. We will not sell Your Content or use your private information (such as questionnaire answers, budgets or messages) in promotion. This license lasts as long as Your Content is on the Service, and ends when you delete it or your account, except that copies that others have shared, quoted or reposted may remain, and backups are overwritten over time.</p>
+  <p><strong>Your promises.</strong> You confirm that you have the right to post Your Content and to give us this license, and that it does not break the law, these Terms or anyone's rights.</p>
+  <p><strong>Public means public.</strong> Content you post in public areas, public Proof Pages and images you upload can be seen, copied and shared by others, and we cannot control that. Do not post anything confidential.</p>
+  <p><strong>Feedback about NoBossly.</strong> If you send us ideas or suggestions about the Service, we may use them without owing you anything.</p>
+
+  <h2 id="moderation">7. Reports, moderation and enforcement</h2>
+  <p>You can report content or members, and you can block members. We may review reports and may, at our discretion, remove content, limit features, issue warnings, or suspend or end accounts that break these Terms or that we reasonably believe put the community or the Service at risk. We do not have to monitor the Service, and we are not responsible for content that members post, but we may act on it. Where we can, we will tell you why we took action. If you think we got it wrong, email <a href="mailto:<%= contact %>"><%= contact %></a> and we will take another look.</p>
+
+  <h2 id="progress">8. XP, levels and verification</h2>
+  <p>XP, levels, streaks, trophies, badges and ladder rungs are part of the game. They have no cash value, cannot be transferred, and are not property you own. Some levels open after a quick human review of what you tell us. We decide in good faith whether the evidence is sufficient. We may adjust, reset or remove progress that was earned through a bug, cheating, false evidence or any other breach of these Terms. Verification evidence is visible only to NoBossly administrators and is handled as described in the <a href="/privacy">Privacy Policy</a>.</p>
+
+  <h2 id="members">9. Dealing with other members</h2>
+  <p>NoBossly lets members follow each other, exchange feedback, join groups, pair up as accountability partners, make collaboration requests, and offer to mentor. We do not vet members, verify their claims, or endorse their advice, businesses or offers. Anything you agree with another member, including any collaboration, partnership, sale or payment, is between you and them and is at your own risk. We are not a party to it and are not responsible for it. Use your own judgment, be careful about sharing personal or financial information, and do not send money to someone you have only met here without checking them out first.</p>
+
+  <h2 id="premium">10. Premium and payments</h2>
+  <p>Most of NoBossly is free. Premium is an optional paid plan that unlocks extra tools. The plans and prices are shown at checkout, before you pay.</p>
+  <ul>
+    <li><strong>Payment processing.</strong> Payments are handled by Stripe. By buying, you also agree to Stripe's terms for payers. We do not see or store your full card number.</li>
+    <li><strong>Subscriptions renew automatically.</strong> Monthly and annual plans renew at the end of each period at the then-current price until you cancel. By subscribing you authorize us, through Stripe, to charge your payment method each period.</li>
+    <li><strong>Cancel any time.</strong> Cancel from Account settings (or through the billing portal when it is available). If you cancel, you keep Premium until the end of the period you have already paid for, and you will not be charged again. If you cannot cancel for any reason, email <a href="mailto:<%= contact %>"><%= contact %></a>.</li>
+    <li><strong>Lifetime plan.</strong> A lifetime purchase is a one-time payment that gives you Premium for as long as we offer Premium. It is not a promise to run the Service forever. If we ever discontinue Premium, we will tell you in advance and will consider in good faith a fair remedy, such as a partial refund.</li>
+    <li><strong>Price changes.</strong> We may change prices or plans. A price change applies to renewals starting at least 30 days after we tell you, and you may cancel before it takes effect. It does not change what you have already paid.</li>
+    <li><strong>Refunds.</strong> Except where the law gives you a right to a refund, payments are non-refundable and we do not refund part-used periods. That said, if something went wrong, such as a duplicate charge, a billing error or a purchase you did not mean to make, email us within 14 days of the charge and we will review it fairly.</li>
+    <li><strong>Taxes.</strong> Prices may not include taxes, which are added where required.</li>
+    <li><strong>Failed payments.</strong> If a payment fails, we may retry it, and we may suspend Premium access until it is paid.</li>
+  </ul>
+
+  <h2 id="affiliate">11. Recommendations and third-party services</h2>
+  <p>Some of the tools, products and services we recommend are affiliate links, which means NoBossly may earn a commission if you sign up or buy through them, at no extra cost to you. We explain how recommendations work on <a href="/affiliate-disclosure">this page</a>. The Service may also link to or integrate with sites and services that are not ours, including sign-in providers, payment processors and partners. We do not control them and are not responsible for their content, terms, privacy practices, prices or availability. Your dealings with them are between you and them. A recommendation is not a guarantee that a product will suit you or work as described.</p>
+
+  <h2 id="ip">12. Our content and your license to use it</h2>
+  <p>The Service, including its design, software, text, guides, blog posts, quests, ladder structure, tools, graphics, logos and the NoBossly name, belongs to us or our licensors and is protected by copyright, trademark and other laws. Subject to these Terms, we give you a limited, personal, non-exclusive, non-transferable, revocable license to use the Service and its content for your own personal, non-commercial learning and for running your own business. You may not copy, republish, sell, sublicense, reverse engineer or create derivative works from the Service or its content, except as the law allows or with our written permission. You may share links to our pages and quote short excerpts with credit and a link back.</p>
+
+  <h2 id="copyright">13. Copyright complaints</h2>
+  <p>We respect intellectual property rights. If you believe content on NoBossly infringes your copyright, send a notice to <a href="mailto:<%= contact %>"><%= contact %></a> with: your name and contact details; a description of the work you say was infringed; the web address (URL) of the content you say infringes it; a statement that you believe in good faith that the use is not authorized by you, your agent or the law; a statement, under penalty of perjury, that the information is accurate and that you are the owner or authorized to act for the owner; and your physical or electronic signature. We may remove the content and tell the member who posted it. If you believe your content was removed by mistake, you may send us a counter-notice with similar details, and we will handle it as the law requires. We may end the accounts of members who repeatedly infringe.</p>
+
+  <h2 id="disclaimer">14. Disclaimers</h2>
+  <p class="caps">The Service and everything on it are provided "as is" and "as available". To the fullest extent the law allows, we disclaim all warranties, whether express or implied, including warranties of merchantability, fitness for a particular purpose, accuracy, non-infringement, and that the Service will be uninterrupted, secure or error-free. We do not warrant that any content, tool output, member advice or recommendation is accurate, complete or suitable for you. Some places do not allow certain disclaimers, so some of these may not apply to you.</p>
+
+  <h2 id="liability">15. Limit of liability</h2>
+  <p class="caps">To the fullest extent the law allows, NoBossly and its owners, officers, employees and contractors will not be liable for any indirect, incidental, special, consequential, exemplary or punitive damages, or for lost profits, lost revenue, lost data, loss of goodwill, or business decisions you make, arising out of or related to your use of (or inability to use) the Service, even if we were told it could happen. Our total liability for any claim relating to the Service will not exceed the greater of (a) the amount you paid us in the 12 months before the event giving rise to the claim, and (b) US$100.</p>
+  <p>Nothing in these Terms limits liability that cannot legally be limited, including liability for fraud, for death or personal injury caused by negligence, or any rights you have as a consumer under mandatory local law.</p>
+
+  <h2 id="indemnity">16. Your responsibility for your use</h2>
+  <p>You agree to cover the costs of claims, losses and expenses (including reasonable legal fees) that come from your breach of these Terms, Your Content, or your misuse of the Service, to the extent allowed by law. We will tell you about any such claim and let you help respond to it where reasonable.</p>
+
+  <h2 id="termination">17. Ending your use</h2>
+  <p>You can stop using NoBossly at any time and delete your account. We may suspend or end your access immediately, with or without notice, if you break these Terms, if we must for legal or security reasons, or if we stop offering the Service. If we end your access without a breach on your part and you have a paid plan, we will refund the unused part of your current paid period (not applicable to the lifetime plan except as described in section 10). Sections that by their nature should survive will survive, including those on Your Content, ownership, disclaimers, liability, your responsibility, and governing law.</p>
+
+  <h2 id="law">18. Governing law and disputes</h2>
+  <p>These Terms are governed by the laws of the Commonwealth of Massachusetts, USA, without regard to its conflict of laws rules. If you have a complaint, please email us first at <a href="mailto:<%= contact %>"><%= contact %></a> and give us 30 days to try to resolve it informally. If we cannot, any dispute will be brought in the state or federal courts located in Massachusetts, and you and we consent to their jurisdiction, except that either of us may go to a small claims court in a place where it can proceed. If you are a consumer outside the United States, you also keep the benefit of any mandatory consumer protection laws of the country where you live, and you may be able to bring a claim in your local courts.</p>
+
+  <h2 id="changes">19. Changes to these terms</h2>
+  <p>We may update these Terms from time to time. The date at the top shows when they were last updated. If a change is material, we will give you notice by email or on the site at least 14 days before it takes effect, unless a change is needed sooner for legal or security reasons. If you keep using the Service after a change takes effect, you accept the updated Terms. If you do not agree, you should stop using the Service and delete your account.</p>
+
+  <h2 id="general">20. General</h2>
+  <ul>
+    <li><strong>Whole agreement.</strong> These Terms and the Privacy Policy are the entire agreement between you and us about the Service and replace any earlier version.</li>
+    <li><strong>If part is unenforceable.</strong> If a court finds a part of these Terms unenforceable, the rest stays in effect.</li>
+    <li><strong>No waiver.</strong> If we do not enforce a right right away, that does not mean we have given it up.</li>
+    <li><strong>Assignment.</strong> You may not transfer your rights under these Terms. We may transfer ours as part of a merger, acquisition or sale of assets.</li>
+    <li><strong>Events beyond our control.</strong> We are not responsible for failures caused by things outside our reasonable control, such as outages of internet, hosting or payment providers, natural disasters or acts of government.</li>
+    <li><strong>Notices.</strong> We may notify you by email to the address on your account or by posting a notice on the Service.</li>
+    <li><strong>No third-party rights.</strong> These Terms do not give rights to anyone who is not a party to them.</li>
+  </ul>
+
+  <h2 id="contact">21. Contact us</h2>
+  <p>Questions about these Terms, or need to report a problem: <a href="mailto:<%= contact %>"><%= contact %></a>.</p>
+  <p class="muted small">See also our <a href="/privacy">Privacy Policy</a> and <a href="/affiliate-disclosure">how recommendations work</a>.</p>
+</div>
+<%- include('partials/foot') %>

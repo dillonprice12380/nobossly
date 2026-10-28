@@ -1,0 +1,185 @@
+<%- include('partials/head') %>
+<style>
+  .legal { max-width: 780px; margin: 0 auto; line-height: 1.65; }
+  .legal h1 { margin-bottom: .2rem; }
+  .legal h2 { margin: 2rem 0 .5rem; font-size: 1.25rem; scroll-margin-top: 5rem; }
+  .legal h3 { margin: 1.2rem 0 .3rem; font-size: 1.02rem; }
+  .legal ul { padding-left: 1.2rem; }
+  .legal li { margin: .3rem 0; }
+  .legal .toc { background: var(--panel-2); border-radius: 10px; padding: .9rem 1.2rem; margin: 1.2rem 0; }
+  .legal .toc ol { margin: .3rem 0 0; padding-left: 1.2rem; columns: 2; column-gap: 2rem; }
+  .legal .toc li { margin: .15rem 0; break-inside: avoid; }
+  .legal .summary { border-left: 3px solid var(--accent, #6c5ce7); padding: .2rem 0 .2rem 1rem; margin: 1rem 0; }
+  .legal table { width: 100%; border-collapse: collapse; margin: .8rem 0; font-size: .92rem; }
+  .legal th, .legal td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-bottom: 1px solid var(--border, rgba(128,128,128,.25)); }
+  .legal th { font-weight: 600; }
+  @media (max-width: 640px) { .legal .toc ol { columns: 1; } }
+</style>
+<div class="card legal">
+  <h1>Privacy Policy</h1>
+  <p class="muted small">Last updated: <%= updated %></p>
+
+  <div class="summary">
+    <p><strong>The short version.</strong> NoBossly is free to use. We collect what we need to run your account and the community, we do not sell your personal information, and we do not use it for targeted advertising. Questionnaire answers and private messages are not shown to other members. You can change what is public, switch off emails, and delete your account at any time. The details are below.</p>
+  </div>
+
+  <div class="toc">
+    <strong>On this page</strong>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#collect">What we collect</a></li>
+      <li><a href="#use">How we use it</a></li>
+      <li><a href="#visible">What other people can see</a></li>
+      <li><a href="#share">Who we share it with</a></li>
+      <li><a href="#cookies">Cookies and analytics</a></li>
+      <li><a href="#retention">How long we keep it</a></li>
+      <li><a href="#rights">Your choices and rights</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#transfers">Where data is processed</a></li>
+      <li><a href="#children">Age limit</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+      <li><a href="#contact">Contact us</a></li>
+    </ol>
+  </div>
+
+  <h2 id="who">1. Who we are</h2>
+  <p><%= operator %> runs NoBossly at nobossly.com, a free community for people building their way out of the 9 to 5. In this policy, "NoBossly", "we" and "us" mean <%= operator %>. This policy explains what personal information we collect through the website, why we collect it, and what you can do about it. It should be read together with our <a href="/terms">Terms &amp; Conditions</a>.</p>
+
+  <h2 id="collect">2. What we collect</h2>
+
+  <h3>Information you give us</h3>
+  <ul>
+    <li><strong>Account details.</strong> Your email address, a password, and your community username. If you sign up with email, your password is handled by our authentication provider and stored as a one-way hash. We never see or store it in readable form.</li>
+    <li><strong>Sign-in with Google, LinkedIn or GitHub.</strong> If you use one of these, the provider sends us your name, email address and profile picture, plus a unique account identifier. We do not receive your provider password, and we do not post to your account or read your contacts.</li>
+    <li><strong>Your profile.</strong> Display name, bio, photo, location, website, social handles or LinkedIn link, occupation, industry, years of experience, and your founder stage. All of this is optional apart from your email and username.</li>
+    <li><strong>Your path and questionnaire answers.</strong> The path you choose and the answers you give to the questions that shape your quests, such as your hours, runway, skills and the kind of business you are considering. Questionnaire answers are private to you.</li>
+    <li><strong>Your business details and work.</strong> Things you enter to use the tools: your business type, industry and value proposition, tasks, sprints, daily check-ins, weekly plans, budgets, expenses and revenue figures, and anything you save in the Premium tools.</li>
+    <li><strong>Community content.</strong> Posts, comments, forum threads and replies, wins you submit, group posts, peer feedback, collaboration requests, and direct messages you send to other members.</li>
+    <li><strong>Level verification evidence.</strong> If you ask us to verify a level, you describe what you achieved and may attach a link or a redacted screenshot. Please do not send bank statements or full financial documents.</li>
+    <li><strong>Images you upload.</strong> Such as an avatar or a screenshot. See section 4 for how uploaded images are served.</li>
+    <li><strong>Messages to us.</strong> Emails to support, reports you file about other members or content, and anything you tell us when you ask for help.</li>
+    <li><strong>Email preferences.</strong> Which kinds of email you want (notifications, milestone emails, weekly digest, marketing), or that you have unsubscribed from all.</li>
+  </ul>
+
+  <h3>Information created as you use NoBossly</h3>
+  <ul>
+    <li><strong>Progress and activity.</strong> XP, level, streaks, completed quests and tasks, trophies and badges, who you follow, and when you were last active. This powers the ladder, your dashboard and the feed of people you follow.</li>
+    <li><strong>Technical data.</strong> Our hosting and database providers log standard technical information when you connect, such as your IP address, browser and device type, pages requested, and the time. We keep error logs so we can fix bugs.</li>
+    <li><strong>Analytics.</strong> We use Google Analytics to count visits and page views and see which pages are useful. See section 6.</li>
+    <li><strong>Recommendation clicks.</strong> When you click a recommended tool, we record which tool, the page you clicked it from, and your account if you are logged in. See our <a href="/affiliate-disclosure">recommendations page</a>.</li>
+    <li><strong>Rough location.</strong> We may use your country, taken from your connection or browser language, to show relevant guides first. We do not collect precise location from your device.</li>
+  </ul>
+
+  <h3>Payment information</h3>
+  <p>If you buy Premium, payment is handled by Stripe. Your card details go to Stripe and never touch our servers. We keep your Stripe customer and subscription identifiers, your plan, its status, and when the current period ends.</p>
+
+  <h2 id="use">3. How we use it</h2>
+  <ul>
+    <li>To create and run your account, sign you in, and keep you signed in.</li>
+    <li>To provide the features you use: your path and quests, sprints, the ladder, tools, the community, messaging and the feed.</li>
+    <li>To tailor what you see, such as the quests and guides that fit your path and answers.</li>
+    <li>To send service emails you need (confirmation, password reset, receipts, security notices) and, unless you switch them off, notification, milestone, digest and marketing emails.</li>
+    <li>To process Premium payments and keep your subscription status accurate.</li>
+    <li>To keep the community safe: reviewing reports, enforcing our <a href="/terms">Terms</a>, and preventing spam, fraud and abuse.</li>
+    <li>To understand how NoBossly is used and improve it, including which recommendations are useful.</li>
+    <li>To meet legal obligations, such as tax records, and to respond to lawful requests.</li>
+  </ul>
+  <p>If the law of your country requires a legal basis, ours are: performing our contract with you (running your account and the features you ask for), our legitimate interests (security, preventing abuse, understanding and improving the service), your consent (for example marketing email and any analytics cookies where consent is required), and legal obligation.</p>
+  <p>We do not sell your personal information. We do not use it for targeted advertising or share it with advertisers. We do not make decisions about you that have legal or similarly significant effects by automated means.</p>
+
+  <h2 id="visible">4. What other people can see</h2>
+  <ul>
+    <li><strong>Your profile.</strong> Your username and the profile details you choose to fill in can be seen by other members. Your profile has a public or private setting that you control. Your email address is never shown to other members.</li>
+    <li><strong>Things you post.</strong> Community posts, comments, forum replies, wins and group posts are visible to the audience they are posted to. Wins you submit may appear on the public wins wall once approved. Anything you post in a public area can be copied, shared or indexed by search engines beyond our control, so please do not post anything you would not want to be public.</li>
+    <li><strong>Proof pages.</strong> If you publish a public Proof Page, anyone with the link can see it.</li>
+    <li><strong>Activity.</strong> People who follow you can see achievements in their feed, such as completing a quest or reaching a level.</li>
+    <li><strong>Direct messages.</strong> Visible only to the people in the conversation. We do not read them as a matter of routine. We may access them if a message is reported, if we need to investigate abuse or a security problem, or if the law requires it.</li>
+    <li><strong>Questionnaire answers, budgets, revenue figures and tool data.</strong> Private to you.</li>
+    <li><strong>Verification evidence.</strong> Visible only to NoBossly administrators reviewing your request, never to other members. Any evidence link is removed when the review is decided.</li>
+    <li><strong>Uploaded images.</strong> Images you upload are stored in a public storage bucket. Anyone who has an image's address can open it, even if they are not logged in. Do not upload anything private or sensitive.</li>
+  </ul>
+
+  <h2 id="share">5. Who we share it with</h2>
+  <p>We share personal information only with the companies that help us run NoBossly, and only as far as they need it to do that job.</p>
+  <table>
+    <thead><tr><th>Provider</th><th>What it does for us</th></tr></thead>
+    <tbody>
+      <tr><td>Supabase</td><td>Database, sign-in (authentication) and file storage. Holds your account and the content described above.</td></tr>
+      <tr><td>Hostinger</td><td>Hosts the website and application servers.</td></tr>
+      <tr><td>Stripe</td><td>Takes and manages Premium payments and subscriptions.</td></tr>
+      <tr><td>Resend</td><td>Delivers the emails we send you.</td></tr>
+      <tr><td>Google</td><td>Google Analytics for site statistics, and Google Sign-In if you choose it.</td></tr>
+      <tr><td>LinkedIn and GitHub</td><td>Sign-in, if you choose to use them.</td></tr>
+      <tr><td>Cloudflare</td><td>Hosts site images and speeds up delivery of pages and files.</td></tr>
+    </tbody>
+  </table>
+  <p>We may also disclose information:</p>
+  <ul>
+    <li><strong>To comply with the law</strong>, such as a valid court order or legal process, or to protect the rights, safety or property of NoBossly, our members or the public.</li>
+    <li><strong>In a business change.</strong> If NoBossly is involved in a merger, acquisition or sale of assets, personal information may be transferred as part of it. We would tell you before it became subject to a different privacy policy.</li>
+    <li><strong>With your direction.</strong> For example, when you make something public or choose to share it.</li>
+  </ul>
+  <p><strong>Recommended tools.</strong> Some recommendations are affiliate links. When you click one you leave NoBossly and the partner's own privacy policy applies. We tell the partner nothing about you beyond what your browser sends when it opens the link. We do not share your profile, answers or email address with partners.</p>
+  <p><strong>Share buttons.</strong> Buttons that share a page to Facebook, X, LinkedIn and similar sites are plain links. They send nothing to those sites until you click.</p>
+
+  <h2 id="cookies">6. Cookies and analytics</h2>
+  <p>We use a small number of cookies and similar technologies.</p>
+  <table>
+    <thead><tr><th>Name or type</th><th>Purpose</th><th>How long</th></tr></thead>
+    <tbody>
+      <tr><td><code>sb_access</code>, <code>sb_refresh</code></td><td>Keep you signed in. Strictly necessary.</td><td>Up to 30 days</td></tr>
+      <tr><td><code>pkce_verifier</code></td><td>Secures the hand-off when you sign in with Google, LinkedIn or GitHub. Strictly necessary.</td><td>10 minutes</td></tr>
+      <tr><td>Google Analytics cookies (such as <code>_ga</code>)</td><td>Tell us how many people visit and which pages they view, so we can improve the site.</td><td>Set by Google, typically up to two years</td></tr>
+    </tbody>
+  </table>
+  <p>We do not use advertising or cross-site tracking cookies. You can block or delete cookies in your browser settings. Blocking the sign-in cookies will stop you from staying logged in. To opt out of Google Analytics on every site, you can install Google's <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener nofollow" target="_blank">browser add-on</a>. Many browsers also honor the "Do Not Track" and Global Privacy Control signals, and you can turn those on there.</p>
+
+  <h2 id="retention">7. How long we keep it</h2>
+  <ul>
+    <li><strong>Account and profile data:</strong> for as long as your account exists.</li>
+    <li><strong>Deactivated accounts:</strong> kept so that you can come back. Logging in reactivates the account.</li>
+    <li><strong>Deleted accounts:</strong> when you ask us to delete your account, it is scheduled for permanent deletion after seven days. You can cancel during that time by logging in. After that your account data is removed. Copies may remain in our providers' encrypted backups for a limited time before they are overwritten.</li>
+    <li><strong>Verification evidence links:</strong> removed when the review is decided.</li>
+    <li><strong>Payment records:</strong> invoices and transaction records are kept for as long as tax and accounting law requires, even after you delete your account.</li>
+    <li><strong>Messages and posts you sent to others:</strong> when you delete your account we delete or anonymize your content, but a copy that someone else has already quoted, shared or screenshotted is outside our control.</li>
+    <li><strong>Logs and analytics:</strong> kept for a limited period for security, debugging and statistics, then deleted or aggregated.</li>
+    <li><strong>Reports and moderation records:</strong> kept as long as needed to enforce our Terms and prevent repeat abuse.</li>
+  </ul>
+
+  <h2 id="rights">8. Your choices and rights</h2>
+  <p>You can do most of this yourself under <strong>Account settings</strong>:</p>
+  <ul>
+    <li>Edit or remove profile details, and set your profile to public or private.</li>
+    <li>Turn email notifications, milestone emails, the weekly digest and marketing email on or off, or unsubscribe from all email. Every marketing email also has an unsubscribe link. We will still send essential service messages, such as password resets and receipts.</li>
+    <li>Cancel Premium at any time.</li>
+    <li>Deactivate or delete your account.</li>
+  </ul>
+  <p>Depending on where you live, you may also have the right to ask us to:</p>
+  <ul>
+    <li>tell you what personal information we hold about you and give you a copy, in a portable format where that applies;</li>
+    <li>correct information that is wrong or out of date;</li>
+    <li>delete your information;</li>
+    <li>restrict or stop certain uses, including objecting to processing based on our legitimate interests;</li>
+    <li>withdraw consent you gave us, without affecting what we did before you withdrew it.</li>
+  </ul>
+  <p>To use any of these rights, email <a href="mailto:<%= contact %>"><%= contact %></a> from the address on your account. We may need to confirm it is really you. We will respond within the time the law allows, which is usually 30 to 45 days. We will not treat you differently for using your rights.</p>
+  <p><strong>California.</strong> California residents have the rights above under the California Consumer Privacy Act, including the right to know what we collect and to opt out of the "sale" or "sharing" of personal information. We do not sell or share personal information as those terms are defined there. You may use an authorized agent to make a request on your behalf.</p>
+  <p><strong>EU, EEA, UK and Switzerland.</strong> You have the rights above under data protection law, including the right to lodge a complaint with your local data protection authority.</p>
+
+  <h2 id="security">9. Security</h2>
+  <p>We use measures that suit the size of the service: encrypted connections (HTTPS), hashed passwords, row-level access rules in our database so that members can only read what they are allowed to, restricted administrator access, and payment handling by Stripe. No system is completely secure, and we cannot guarantee the safety of information sent to us. Choose a strong, unique password, and tell us right away at <a href="mailto:<%= contact %>"><%= contact %></a> if you think your account has been accessed by someone else.</p>
+
+  <h2 id="transfers">10. Where data is processed</h2>
+  <p>NoBossly is run from the United States, and our database is hosted in the United States. If you use NoBossly from another country, your information will be transferred to and processed in the United States and in other countries where our providers operate, which may have different data protection laws from yours. Where the law requires it, we rely on safeguards such as standard contractual clauses with our providers.</p>
+
+  <h2 id="children">11. Age limit</h2>
+  <p>NoBossly is for adults. You must be at least 18 to create an account. We do not knowingly collect personal information from anyone under 18. If you believe a child has given us personal information, email <a href="mailto:<%= contact %>"><%= contact %></a> and we will delete it.</p>
+
+  <h2 id="changes">12. Changes to this policy</h2>
+  <p>We may update this policy as NoBossly changes or as the law requires. The date at the top shows when it was last updated. If a change is significant, we will tell you by email or with a notice on the site before it takes effect. Using NoBossly after a change means you accept the updated policy.</p>
+
+  <h2 id="contact">13. Contact us</h2>
+  <p>Questions, requests or concerns about your privacy: <a href="mailto:<%= contact %>"><%= contact %></a>.</p>
+  <p class="muted small">You can also read how our recommendations work on the <a href="/affiliate-disclosure">recommendations page</a>, and the rules of the community in our <a href="/terms">Terms &amp; Conditions</a>.</p>
+</div>
+<%- include('partials/foot') %>
