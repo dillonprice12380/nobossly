@@ -23,6 +23,9 @@ app.use((req, res, next) => {
 // Stripe posts the raw body; it must be read before the JSON parser below.
 const billing = require('./src/routes/billing');
 app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
+// PayPal's webhook needs the raw body too (its signature covers the exact bytes).
+const paypalBilling = require('./src/routes/paypal_billing');
+app.post('/billing/paypal/webhook', express.raw({ type: '*/*' }), paypalBilling.webhook);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -102,6 +105,7 @@ app.get(RETIRED.map(r => r[0]), (req, res) => {
 
 app.use('/', require('./src/routes/auth'));
 app.use('/', billing.router); // /pricing + /billing/* (Premium checkout)
+app.use('/', paypalBilling.router); // /billing/paypal/* (PayPal checkout + return)
 app.use('/tools', requireAuth, require('./src/routes/tools')); // the five Premium tools
 app.get('/proof/:username', require('./src/routes/tools').publicProof); // a member's public Proof Page
 // Onboarding: pick a path, land straight in the product. Replaces the old
