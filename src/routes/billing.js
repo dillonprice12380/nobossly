@@ -587,7 +587,23 @@ router.post('/billing/cancel', requireAuth, async (req, res, next) => {
       if (!stopped) return res.redirect('/account?e=' + encodeURIComponent('Could not cancel with PayPal just now — please try again, or cancel it in your PayPal account under Automatic payments.'));
       await applySub(req.user.id, { status: 'canceled' });
     } else if (subId && STRIPE_KEY()) {
-      const sub = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), { cancel_at_period_end: 'true' });
+      let sub;
+      try {
+        sub = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), { cancel_at_period_end: 'true' });
+      } catch (e) {
+        // Stripe refuses to change a subscription that has already ended (cancelled
+        // or refunded in the dashboard, say) while we still show it as active — a
+        // missed webhook. Believe Stripe: close it here, and access ends now.
+        let live = null;
+        try { live = await stripe('GET', 'subscriptions/' + encodeURIComponent(subId)); }
+        catch (e2) { live = /no such subscription/i.test(e2.message) ? { status: 'canceled' } : null; }
+        if (live && (live.status === 'canceled' || live.status === 'incomplete_expired')) {
+          await applySub(req.user.id, { status: 'canceled', periodEnd: new Date().toISOString() });
+          return res.redirect('/account?sub=canceled');
+        }
+        console.error('[billing] cancel', e.message);
+        return res.redirect('/account?e=' + encodeURIComponent('Could not cancel with Stripe just now — please try again, or use Update card & invoices to cancel there.'));
+      }
       await applySub(req.user.id, {
         status: 'canceled',
         periodEnd: periodEnd(sub)
