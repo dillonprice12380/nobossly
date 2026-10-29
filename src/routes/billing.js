@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const premium = require('../premium');
 const { anonClient, serviceClient } = require('../supabase');
 const pricing = require('../pricing');
+const paypalBilling = require('./paypal_billing');
 
 const crypto = require('crypto');
 
@@ -111,6 +112,8 @@ router.get('/pricing', async (req, res, next) => {
       tiers: pricing.withOffer(tiers),
       freeFeatures: FREE_FEATURES, paidFeatures: PAID_FEATURES,
       isPremium: premium.hasPremium(req.profile),
+      // A PayPal button shows only where PayPal can actually take the payment.
+      paypalEnabled: paypalBilling.ready(),
       upgrade: req.query.upgrade, msg: req.query.msg || null
     });
   } catch (e) { next(e); }
@@ -222,6 +225,7 @@ router.get('/billing/confirm', requireAuth, async (req, res, next) => {
       if (session.mode === 'payment') {
         await applySub(req.user.id, { tier: 'lifetime', status: 'active', customer: session.customer, lifetime: true });
         await endSubscriptionsFor(session.customer);
+        await paypalBilling.endPaypalFor(req.user.id);
       } else {
         const sub = session.subscription;
         await applySub(req.user.id, {
@@ -239,6 +243,14 @@ router.get('/billing/confirm', requireAuth, async (req, res, next) => {
 // Cancel at period end
 router.post('/billing/cancel', requireAuth, async (req, res, next) => {
   try {
+    // A PayPal subscription is cancelled with PayPal; billing stops now and the
+    // member keeps Premium until the period they paid for ends.
+    if (req.profile.paypal_subscription_id) {
+      if (!await paypalBilling.cancelFor(req.profile)) {
+        return res.redirect('/account?e=' + encodeURIComponent('Could not cancel with PayPal just now — please try again, or cancel under Settings → Payments → Manage automatic payments in your PayPal account.'));
+      }
+      return res.redirect('/account?sub=canceled');
+    }
     const subId = req.profile.stripe_subscription_id;
     if (subId && STRIPE_KEY()) {
       const sub = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), { cancel_at_period_end: 'true' });
@@ -316,6 +328,7 @@ async function webhook(req, res) {
         if (session.mode === 'payment') {
           await applySub(uid, { tier: 'lifetime', status: 'active', customer: session.customer, lifetime: true });
           await endSubscriptionsFor(session.customer);
+          await paypalBilling.endPaypalFor(uid);
         } else {
           const sub = session.subscription;
           await applySub(uid, { tier, status: 'active', customer: session.customer, subId: sub && sub.id, periodEnd: periodEnd(sub) });
@@ -346,4 +359,4 @@ async function webhook(req, res) {
   }
 }
 
-module.exports = { router, webhook, verifySignature };
+module.exports = { router, webhook, verifySignature, endSubscriptionsFor };

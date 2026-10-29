@@ -43,10 +43,13 @@
       <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>
       <% } else { %>
         <form method="post" action="/billing/checkout/<%= t.key %>" data-turbo="false"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime' : 'Choose ' + t.name.replace(/^Premium\s+/, '') %></button></form>
+        <% if (locals.paypalEnabled && (t.mode === 'payment' || t.paypal_plan_id)) { %>
+        <form method="post" action="/billing/paypal/checkout/<%= t.key %>" data-turbo="false" style="margin-top:.5rem"><button class="btn btn-ghost btn-block">Pay with PayPal</button></form>
+        <% } %>
       <% } %>
     </div>
   <% }) %>
 </div>
-<p class="muted small center">Payments are handled securely by Stripe. Cancel any time from Account settings — you keep Premium until the end of the period you paid for.</p>
+<p class="muted small center">Payments are handled securely by Stripe (cards) or PayPal. Cancel any time from Account settings — you keep Premium until the end of the period you paid for.</p>
 <p class="muted small center">The tools give planning estimates, not financial, tax or legal advice.</p>
 <%- include('partials/foot') %>
