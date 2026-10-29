@@ -73,7 +73,7 @@ ok('...and uses the offer\'s Stripe Price', /params\['line_items\[0\]\[price\]'\
 ok('checkout never reads tier.price_cents directly', !/String\(tier\.price_cents\)/.test(billing),
    'during a markdown that is the crossed-out number');
 ok('checkout never reads tier.stripe_price_id directly', !/= tier\.stripe_price_id/.test(billing));
-ok('the pricing page is given offers, not raw rows', /tiers: pricing\.withOffer\(tiers\)/.test(billing));
+ok('the pricing page is given offers, not raw rows', /const withOffers = pricing\.withOffer\(tiers\)[\s\S]*?tiers: withOffers/.test(billing));
 ok('a markdown sale is marked on the Stripe session', /metadata\[promo\]/.test(billing),
    'so a refund or a dispute can tell which price was in force');
 

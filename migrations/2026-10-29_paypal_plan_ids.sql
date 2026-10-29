@@ -1,0 +1,11 @@
+-- PayPal checkout: a subscription tier needs the PayPal billing plan it is sold
+-- through. Lifetime is a one-time PayPal order and needs no plan.
+--
+-- Create the plans in PayPal (Pay & Get Paid > Subscriptions > Create plan) at
+-- the same price as the tier, then paste each plan id (P-...) at /admin/pricing.
+-- A tier with no plan id simply shows no PayPal button.
+--
+-- PayPal subscription ids (I-...) are stored in profiles.stripe_subscription_id,
+-- the same column Stripe uses: apply_subscription and find_user_by_stripe_sub
+-- already work on any text id, and the two kinds can never collide.
+alter table pricing_tiers add column if not exists paypal_plan_id text;

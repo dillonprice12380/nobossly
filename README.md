@@ -33,6 +33,9 @@ Optional — each has a working default, but the feature is degraded without it:
 | `SITE_URL` | `https://nobossly.com` | Email links point at the wrong host |
 | `STRIPE_SECRET_KEY` | *(none)* | Premium checkout. Unset, checkout says payments are being set up. Use the key for the Stripe account you want paid into |
 | `STRIPE_WEBHOOK_SECRET` | *(none)* | Webhook signature check (`whsec_…` from the endpoint in Stripe). Unset, events are still re-fetched from Stripe before use, but unsigned ones aren't rejected |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | *(none)* | PayPal checkout. Unset, no PayPal buttons are shown. From the REST app at developer.paypal.com |
+| `PAYPAL_WEBHOOK_ID` | *(none)* | PayPal webhook verification. Unset, the PayPal webhook answers 503 and nothing is granted from it (the return page still works) |
+| `PAYPAL_ENV` | live | Set to `sandbox` to use PayPal's sandbox (separate credentials, plans and webhook) |
 | `SUB_SYNC_SECRET` | *(none)* | Required for Premium to unlock after payment. Must equal `app_secrets.sub_sync` in the database |
 | `SUPABASE_SERVICE_ROLE_KEY` | *(none)* | The re-engagement email sweep can't read across users, and subscriptions are applied over the anon client. Keep secret |
 | `RESEND_API_KEY` | *(none)* | No outbound mail is sent at all |
@@ -48,7 +51,16 @@ NoBossly has no AI features, so no Anthropic key is needed.
    `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`.
    Copy its signing secret into `STRIPE_WEBHOOK_SECRET` and restart. NoBossly checkouts carry
    `metadata.app = nobossly` and the webhook ignores everything else.
-   Use the **NoBossly** Stripe account (`acct_1UKfmqHBPaeWu07O`) — its secret key, its webhook, its Prices.
+   Use the **EnRoute Jobs, LLC** Stripe account (`acct_1UVXYsEbskpSXY6Z`) — its secret key, its webhook, its Prices. (Premium billing moved there in Oct 2026; the old NoBossly account is no longer charged on.)
 3. Optional: Stripe → Settings → Billing → Customer portal → activate it, so members can update their card from Account settings.
 4. Prices live in the `pricing_tiers` table (edit them at `/admin/pricing`). Stripe Price IDs are optional — checkout charges the amount in the table directly when none is set.
 5. Test: buy the monthly plan with a Stripe test key and card `4242 4242 4242 4242`; `/tools` should unlock straight after checkout.
+
+### Premium (PayPal) setup
+PayPal sits beside Stripe: each pricing card has **Pay with Stripe** and **Pay with PayPal**. A member who pays with one is kept on it (the other's button is hidden and refused), so nobody is billed twice. Lifetime is a one-time PayPal order and needs no plan; Monthly and Annual are PayPal subscriptions and each needs a plan.
+1. Set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and `PAYPAL_WEBHOOK_ID` on the host (and `PAYPAL_ENV=sandbox` only if testing in the sandbox), then restart.
+2. In PayPal, create two billing plans on a product for NoBossly Premium: **$5.00 USD every 1 month** and **$48.00 USD every 1 year**, both with unlimited cycles and no trial, set to Active.
+3. At `/admin/pricing`, paste each plan id (`P-…`) into the matching tier's **PayPal plan ID**. Checkout re-reads the plan from PayPal and refuses to sell it if its price, currency or interval differs from the tier, so a wrong plan can never charge the wrong amount.
+4. In the PayPal developer dashboard, add a webhook for the same app pointing at `https://nobossly.com/billing/paypal/webhook`, sending `BILLING.SUBSCRIPTION.ACTIVATED`, `.UPDATED`, `.CANCELLED`, `.SUSPENDED`, `.EXPIRED`, `.PAYMENT.FAILED`, `PAYMENT.SALE.COMPLETED`, `CHECKOUT.ORDER.APPROVED` and `PAYMENT.CAPTURE.COMPLETED`. Its id is `PAYPAL_WEBHOOK_ID`.
+5. Notes: PayPal charges the listed price with no sales tax added (Stripe adds tax automatically). While a markdown/promo is running on a tier the PayPal button for it is hidden, because a plan has one fixed price. PayPal subscription ids (`I-…`) are stored in `profiles.stripe_subscription_id` beside Stripe's (`sub_…`); the column name is historical. Webhooks and the return page both re-read everything from PayPal and only act on payments whose `custom_id` is `nobossly:<member id>`.
+

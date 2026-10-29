@@ -279,6 +279,8 @@ router.post('/pricing/:key', async (req, res, next) => {
       tagline: (b.tagline || '').slice(0, 120),
       price_cents: Math.max(0, Math.round(parseFloat(b.price || '0') * 100)),
       stripe_price_id: (b.stripe_price_id || '').trim() || null,
+      // A PayPal billing plan id (P-...); blank turns PayPal off for the tier.
+      paypal_plan_id: /^P-[A-Z0-9]+$/i.test((b.paypal_plan_id || '').trim()) ? b.paypal_plan_id.trim() : null,
       is_active: b.is_active === 'on'
     }).eq('key', req.params.key);
     if (error) throw error;
