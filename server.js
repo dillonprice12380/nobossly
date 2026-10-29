@@ -23,6 +23,8 @@ app.use((req, res, next) => {
 // Stripe posts the raw body; it must be read before the JSON parser below.
 const billing = require('./src/routes/billing');
 app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
+// PayPal's signature also covers the exact bytes, so it needs the raw body too.
+app.post('/billing/paypal/webhook', express.raw({ type: '*/*' }), billing.paypalWebhook);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const premium = require('../premium');
 const { anonClient, serviceClient } = require('../supabase');
 const pricing = require('../pricing');
+const paypal = require('../paypal');
 
 const crypto = require('crypto');
 
@@ -85,6 +86,148 @@ async function applySub(userId, { tier, status, customer, subId, periodEnd, life
   if (error) throw new Error('apply_subscription: ' + error.message);
 }
 
+// ── PayPal ──────────────────────────────────────────────────────────────────
+// A PayPal subscription id (I-...) lives in profiles.stripe_subscription_id next
+// to Stripe's (sub_...): apply_subscription and find_user_by_stripe_sub take any
+// text id and the two kinds cannot collide, so no schema change was needed.
+// Whoever pays with one processor is kept on it: the other one's buttons are
+// hidden and refused, so nobody is billed twice for the same Premium.
+const isPaypalSubId = id => typeof id === 'string' && id.startsWith('I-');
+function processorOf(profile) {
+  const id = profile && profile.stripe_subscription_id;
+  if (!id) return null;
+  return isPaypalSubId(id) ? 'paypal' : 'stripe';
+}
+// PayPal's custom_id comes back on every subscription, order and capture, which
+// is how a payment is tied to a member and how anything that isn't NoBossly's
+// (another app on the same PayPal account) is told apart and ignored.
+const CUSTOM_PREFIX = 'nobossly:';
+const customIdFor = userId => CUSTOM_PREFIX + userId;
+function parseCustom(customId) {
+  const m = /^nobossly:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(String(customId || ''));
+  return m ? m[1].toLowerCase() : null;
+}
+
+// May this member start a purchase with this processor? Lifetime members buy
+// nothing. Premium members can only step up to Lifetime, and only with the
+// processor that already bills them.
+function purchaseBlock(profile, key, processor) {
+  if (profile.is_lifetime) return 'You already have lifetime access.';
+  const premiumNow = premium.hasPremium(profile);
+  if (premiumNow && key !== 'lifetime') return 'You already have Premium.';
+  const current = processorOf(profile);
+  if (premiumNow && current && current !== processor) {
+    return 'Your Premium is billed through ' + (current === 'paypal' ? 'PayPal' : 'Stripe') +
+      ', so switch to Lifetime with ' + (current === 'paypal' ? 'PayPal' : 'Stripe') + '.';
+  }
+  return null;
+}
+
+// Members who already have what the button sells go to their tools; a member
+// on the other processor is told why that button is refused.
+function blockedRedirect(profile, key, message) {
+  const hasIt = profile.is_lifetime || (premium.hasPremium(profile) && key !== 'lifetime');
+  return hasIt ? '/tools' : '/pricing?msg=' + encodeURIComponent(message);
+}
+
+async function profileIdForSub(subId) {
+  const { data, error } = await subClient().rpc('find_user_by_stripe_sub', { p_secret: SUB_SECRET(), p_sub_id: subId });
+  if (error) throw new Error('find_user_by_stripe_sub: ' + error.message);
+  return data || null;
+}
+
+async function tierForPlan(planId) {
+  if (!planId) return null;
+  const { data } = await anonClient().from('pricing_tiers').select('*').eq('paypal_plan_id', planId).eq('mode', 'subscription').maybeSingle();
+  return data || null;
+}
+
+// When the paid period ends: PayPal's next billing time while it is active,
+// otherwise the last payment plus one interval.
+function paypalPeriodEnd(sub, tierKey) {
+  const bi = (sub && sub.billing_info) || {};
+  if (bi.next_billing_time) return new Date(bi.next_billing_time).toISOString();
+  const last = bi.last_payment && bi.last_payment.time;
+  if (!last) return null;
+  const d = new Date(last);
+  if (tierKey === 'year') d.setUTCFullYear(d.getUTCFullYear() + 1); else d.setUTCMonth(d.getUTCMonth() + 1);
+  return d.toISOString();
+}
+
+// Bring a PayPal subscription and the member's Premium into line, from the
+// return page or a webhook. Everything is re-read from PayPal; nothing in the
+// request or the webhook body is trusted. Safe to run any number of times.
+async function settleSubscription(subId, { expectUser } = {}) {
+  const sub = await paypal.getSubscription(subId);
+  if (!sub) return { state: 'ignored' };
+  const owner = parseCustom(sub.custom_id);
+  if (!owner) return { state: 'ignored' };                       // not NoBossly's
+  if (expectUser && owner !== expectUser) return { state: 'refused' };
+  const tier = await tierForPlan(sub.plan_id);
+  if (!tier) {
+    console.error('[paypal] subscription ' + subId + ' is on plan ' + sub.plan_id + ', which no pricing tier uses');
+    return { state: 'ignored' };
+  }
+  switch (sub.status) {
+    case 'ACTIVE':
+      await applySub(owner, { tier: tier.key, status: 'active', subId, periodEnd: paypalPeriodEnd(sub, tier.key) });
+      return { state: 'activated' };
+    case 'APPROVAL_PENDING': case 'APPROVED':
+      return { state: 'pending' };
+    default: {
+      // Stopped by the member, by PayPal after failed payments, or at its end.
+      // Only a subscription already attached to a member can change anything.
+      const known = await profileIdForSub(subId);
+      if (!known) return { state: 'ignored' };
+      if (sub.status === 'CANCELLED') await applySub(known, { status: 'canceled' });      // keeps access to the paid period's end
+      else if (sub.status === 'SUSPENDED') await applySub(known, { status: 'past_due' });
+      else if (sub.status === 'EXPIRED') await applySub(known, { status: 'expired' });
+      return { state: 'ended' };
+    }
+  }
+}
+
+// Finish a one-time PayPal order for Lifetime: check it is ours and the right
+// amount BEFORE taking the money, capture it, then unlock. Safe to repeat.
+async function settleOrder(orderId, { expectUser, profile } = {}) {
+  const order = await paypal.getOrder(orderId);
+  if (!order) return { state: 'refused' };
+  const unit = (order.purchase_units || [])[0] || {};
+  const owner = parseCustom(unit.custom_id);
+  if (!owner) return { state: 'ignored' };
+  if (expectUser && owner !== expectUser) return { state: 'refused' };
+  const { data: tier } = await anonClient().from('pricing_tiers').select('*').eq('key', 'lifetime').eq('mode', 'payment').maybeSingle();
+  if (!tier) return { state: 'refused' };
+  const paid = unit.amount ? paypal.toCents(unit.amount.value) : NaN;
+  if (!unit.amount || unit.amount.currency_code !== 'USD' || (paid !== pricing.offerFor(tier).cents && paid !== tier.price_cents)) {
+    console.error('[paypal] order ' + orderId + ' is for ' + (unit.amount && unit.amount.value) + ' — not the Lifetime price; not capturing');
+    return { state: 'refused' };
+  }
+  let done = order;
+  if (order.status === 'APPROVED') {
+    const r = await paypal.captureOrder(orderId);
+    if (r.declined) return { state: 'declined' };
+    done = r.order;
+  }
+  const cap = done && done.status === 'COMPLETED' && ((done.purchase_units || [])[0] || {}).payments;
+  const capture = cap && (cap.captures || [])[0];
+  if (!capture || capture.status !== 'COMPLETED') return { state: 'pending' };
+  await applySub(owner, { tier: 'lifetime', status: 'active', lifetime: true });
+  // Whoever had a subscription must not keep being billed after buying Lifetime.
+  if (profile) await endBilling(profile);
+  return { state: 'activated' };
+}
+
+// Stop recurring billing on whichever processor holds it. Used after Lifetime.
+async function endBilling(profile) {
+  if (isPaypalSubId(profile.stripe_subscription_id) && paypal.isEnabled()) {
+    try { await paypal.cancelSubscription(profile.stripe_subscription_id, 'Upgraded to Lifetime'); }
+    catch (e) { console.error('[billing] could not cancel PayPal subscription after lifetime purchase:', e.message); }
+  } else if (profile.stripe_customer_id && STRIPE_KEY()) {
+    await endSubscriptionsFor(profile.stripe_customer_id);
+  }
+}
+
 // Premium is five tools on top of a site that is free. The free list is
 // deliberately the long one: the ladder, the quests and the community are the
 // product, and nothing a member needs to climb is ever behind the wall.
@@ -101,6 +244,15 @@ router.get('/pricing', async (req, res, next) => {
   try {
     const sb = req.sb || anonClient();
     const { data: tiers } = await sb.from('pricing_tiers').select('*').eq('is_active', true).order('sort');
+    const withOffers = pricing.withOffer(tiers);
+    // A PayPal button is shown only where PayPal can really charge what the page
+    // says: Lifetime is a one-off order; a subscription needs its PayPal plan,
+    // and a running markdown means the plan's fixed price would be the wrong one.
+    const paypalAvail = {};
+    for (const t of withOffers) {
+      paypalAvail[t.key] = paypal.isEnabled() &&
+        (t.mode === 'payment' || (!!t.paypal_plan_id && !(t.offer && t.offer.isPromo)));
+    }
     res.render('pricing', {
       title: 'Premium',
       metaDescription: 'NoBossly is free. Premium adds five tools for getting out of your job — a quit-date planner, tax set-aside, pricing calculator, proof page and interview tracker — for $5 a month.',
@@ -108,7 +260,11 @@ router.get('/pricing', async (req, res, next) => {
       // the page and the checkout below read that from src/pricing.js, because
       // a page advertising one number while checkout charges another is the
       // one bug this area must not have.
-      tiers: pricing.withOffer(tiers),
+      tiers: withOffers,
+      paypalAvail,
+      // Who already bills this member (null when nobody): their Lifetime
+      // step-up is offered only on that processor.
+      payer: req.profile && premium.hasPremium(req.profile) ? processorOf(req.profile) : null,
       freeFeatures: FREE_FEATURES, paidFeatures: PAID_FEATURES,
       isPremium: premium.hasPremium(req.profile),
       upgrade: req.query.upgrade, msg: req.query.msg || null
@@ -128,8 +284,10 @@ function recurringFor(key) {
 // Stripe Price ID can never stop a sale (a valid stripe_price_id is still used if present).
 router.post('/billing/checkout/:key', requireAuth, async (req, res, next) => {
   try {
-    // Already Premium: only the step up to Lifetime is on offer.
-    if (req.profile.is_lifetime || (premium.hasPremium(req.profile) && req.params.key !== 'lifetime')) return res.redirect('/tools');
+    // Already Premium: only the step up to Lifetime is on offer, and only on
+    // the processor that already bills the member.
+    const blocked = purchaseBlock(req.profile, req.params.key, 'stripe');
+    if (blocked) return res.redirect(blockedRedirect(req.profile, req.params.key, blocked));
     if (!STRIPE_KEY()) {
       return res.redirect('/pricing?msg=' + encodeURIComponent('Payments are being set up — please try again shortly.'));
     }
@@ -236,11 +394,91 @@ router.get('/billing/confirm', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Start a PayPal checkout: a subscription for Monthly / Annual, a one-time order
+// for Lifetime. The amount and plan always come from pricing_tiers, never from
+// the request, and a plan whose real price or interval differs from the tier is
+// refused rather than sold under the wrong number.
+router.post('/billing/paypal/checkout/:key', requireAuth, async (req, res, next) => {
+  try {
+    const key = req.params.key;
+    const blocked = purchaseBlock(req.profile, key, 'paypal');
+    if (blocked) return res.redirect(blockedRedirect(req.profile, key, blocked));
+    const unavailable = msg => res.redirect('/pricing?msg=' + encodeURIComponent(msg));
+    if (!paypal.isEnabled()) return unavailable('PayPal is not available right now — please pay by card instead.');
+
+    const { data: tier } = await anonClient().from('pricing_tiers').select('*').eq('key', key).eq('is_active', true).maybeSingle();
+    if (!tier) return res.redirect('/pricing');
+    const offer = pricing.offerFor(tier);
+    const approval = (tier.mode === 'payment')
+      ? await paypal.createOrder({
+          amountCents: offer.cents,
+          customId: customIdFor(req.user.id),
+          description: 'NoBossly ' + (tier.name || 'Premium Lifetime'),
+          returnUrl: SITE() + '/billing/paypal/return',
+          cancelUrl: SITE() + '/pricing'
+        })
+      : await (async () => {
+          if (!tier.paypal_plan_id || offer.isPromo) return null;
+          const terms = paypal.planTerms(await paypal.getPlan(tier.paypal_plan_id));
+          const want = tier.key === 'year' ? 'YEAR' : 'MONTH';
+          if (!terms || terms.status !== 'ACTIVE' || terms.cents !== offer.cents || terms.currency !== 'USD' ||
+              terms.unit !== want || terms.count !== 1 || (terms.totalCycles && terms.totalCycles !== 0)) {
+            console.error('[paypal] plan ' + tier.paypal_plan_id + ' does not match tier ' + tier.key +
+              ' (' + JSON.stringify(terms) + ' vs ' + offer.cents + ' cents per ' + want + ') — not selling it');
+            return null;
+          }
+          return paypal.createSubscription({
+            planId: tier.paypal_plan_id,
+            customId: customIdFor(req.user.id),
+            returnUrl: SITE() + '/billing/paypal/return',
+            cancelUrl: SITE() + '/pricing'
+          });
+        })();
+    if (!approval) return unavailable('Could not start PayPal checkout — please try again, or pay by card.');
+    return res.redirect(303, approval.approveUrl);
+  } catch (e) {
+    if (e instanceof paypal.Transient) {
+      console.error('[paypal] checkout:', e.message);
+      return res.redirect('/pricing?msg=' + encodeURIComponent('PayPal is not responding — please try again, or pay by card.'));
+    }
+    next(e);
+  }
+});
+
+// Return from PayPal's approval page. PayPal appends subscription_id for a
+// subscription and token (the order id) for an order; both are re-read from
+// PayPal and checked against this member before anything is granted.
+router.get('/billing/paypal/return', requireAuth, async (req, res, next) => {
+  try {
+    if (!paypal.isEnabled()) return res.redirect('/account');
+    let r;
+    if (req.query.subscription_id) r = await settleSubscription(String(req.query.subscription_id), { expectUser: req.user.id });
+    else if (req.query.token) r = await settleOrder(String(req.query.token), { expectUser: req.user.id, profile: req.profile });
+    else return res.redirect('/account');
+    if (r.state === 'activated') return res.redirect('/tools?welcome=1');
+    if (r.state === 'pending') return res.redirect('/account?sub=pending');
+    if (r.state === 'declined') return res.redirect('/pricing?msg=' + encodeURIComponent('PayPal declined that payment — try another way to pay.'));
+    return res.redirect('/pricing?msg=' + encodeURIComponent('We could not confirm that PayPal payment. If you were charged, write to us and we will sort it out.'));
+  } catch (e) {
+    if (e instanceof paypal.Transient) {
+      // PayPal is slow, not wrong: the webhook finishes the job when it answers.
+      console.error('[paypal] return:', e.message);
+      return res.redirect('/account?sub=pending');
+    }
+    next(e);
+  }
+});
+
 // Cancel at period end
 router.post('/billing/cancel', requireAuth, async (req, res, next) => {
   try {
     const subId = req.profile.stripe_subscription_id;
-    if (subId && STRIPE_KEY()) {
+    if (isPaypalSubId(subId)) {
+      // PayPal keeps the member's paid period; ours does too (status canceled).
+      const stopped = paypal.isEnabled() && await paypal.cancelSubscription(subId, 'Cancelled by the member');
+      if (!stopped) return res.redirect('/account?e=' + encodeURIComponent('Could not cancel with PayPal just now — please try again, or cancel it in your PayPal account under Automatic payments.'));
+      await applySub(req.user.id, { status: 'canceled' });
+    } else if (subId && STRIPE_KEY()) {
       const sub = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), { cancel_at_period_end: 'true' });
       await applySub(req.user.id, {
         status: 'canceled',
@@ -346,4 +584,39 @@ async function webhook(req, res) {
   }
 }
 
-module.exports = { router, webhook, verifySignature };
+// PayPal webhook (mounted with the raw body in server.js). PayPal is asked
+// whether each delivery is genuine, and the payload is then used only to learn
+// WHICH subscription or order to re-read from PayPal. Transient failures answer
+// 5xx so PayPal redelivers; anything permanently wrong answers 200 and is logged.
+async function paypalWebhook(req, res) {
+  if (!paypal.isEnabled()) return res.status(200).send('ignored');
+  if (!paypal.hasWebhookId()) return res.status(503).send('PAYPAL_WEBHOOK_ID is not set');
+  const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
+  try {
+    if (!(await paypal.verifyWebhook(name => req.get(name), raw))) return res.status(400).send('bad signature');
+    const event = JSON.parse(raw);
+    const type = event.event_type || '';
+    const r = event.resource || {};
+
+    if (type.startsWith('BILLING.SUBSCRIPTION.') && type !== 'BILLING.SUBSCRIPTION.CREATED' && r.id) {
+      await settleSubscription(String(r.id));
+    } else if (type === 'PAYMENT.SALE.COMPLETED' && r.billing_agreement_id) {
+      await settleSubscription(String(r.billing_agreement_id));        // a renewal
+    } else if (type === 'CHECKOUT.ORDER.APPROVED' && r.id) {
+      await settleOrder(String(r.id));                                 // Lifetime, if the buyer closed the tab
+    } else if (type === 'PAYMENT.CAPTURE.COMPLETED' && parseCustom(r.custom_id)) {
+      const ids = r.supplementary_data && r.supplementary_data.related_ids;
+      if (ids && ids.order_id) await settleOrder(String(ids.order_id));
+    }
+    res.status(200).send('ok');
+  } catch (e) {
+    console.error('paypal webhook', e.message);
+    res.status(500).send('error');
+  }
+}
+
+module.exports = {
+  router, webhook, verifySignature, paypalWebhook,
+  processorOf, purchaseBlock, parseCustom, customIdFor, isPaypalSubId, paypalPeriodEnd,
+  settleSubscription, settleOrder
+};

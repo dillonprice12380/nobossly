@@ -707,6 +707,7 @@
       "key",
       "mode",
       "name",
+      "paypal_plan_id",
       "price_cents",
       "sort",
       "stripe_price_id",

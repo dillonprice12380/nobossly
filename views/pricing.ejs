@@ -41,12 +41,23 @@
       <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Join free, then upgrade</a>
       <% } else if (locals.profile && profile.is_lifetime) { %><span class="chip chip-success">You have lifetime access</span>
       <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>
-      <% } else { %>
-        <form method="post" action="/billing/checkout/<%= t.key %>" data-turbo="false"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime' : 'Choose ' + t.name.replace(/^Premium\s+/, '') %></button></form>
+      <% } else {
+           // A member who already pays through one processor steps up to lifetime on that one only.
+           var payer = locals.payer || null;
+           var showStripe = !payer || payer === 'stripe';
+           var showPaypal = !!(locals.paypalAvail && paypalAvail[t.key]) && (!payer || payer === 'paypal'); %>
+        <div style="display:grid;gap:.5rem">
+          <% if (showStripe) { %>
+            <form method="post" action="/billing/checkout/<%= t.key %>" data-turbo="false"><button class="btn btn-primary btn-block"><%= isPremium ? 'Switch to lifetime with Stripe' : 'Pay with Stripe' %></button></form>
+          <% } %>
+          <% if (showPaypal) { %>
+            <form method="post" action="/billing/paypal/checkout/<%= t.key %>" data-turbo="false"><button class="btn btn-ghost btn-block"><%= isPremium ? 'Switch to lifetime with PayPal' : 'Pay with PayPal' %></button></form>
+          <% } %>
+        </div>
       <% } %>
     </div>
   <% }) %>
 </div>
-<p class="muted small center">Payments are handled securely by Stripe. Cancel any time from Account settings — you keep Premium until the end of the period you paid for.</p>
+<p class="muted small center">Pay by card with Stripe<% if (locals.paypalAvail && Object.values(paypalAvail).some(Boolean)) { %> or with PayPal<% } %>. Cancel any time from Account settings — you keep Premium until the end of the period you paid for.</p>
 <p class="muted small center">The tools give planning estimates, not financial, tax or legal advice.</p>
 <%- include('partials/foot') %>

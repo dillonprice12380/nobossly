@@ -3,7 +3,7 @@
 <%- include('nav') %>
 <% if (typeof saved !== 'undefined' && saved) { %><p class="notice">Saved.</p><% } %>
 <% if (!stripeConfigured) { %><p class="error">STRIPE_SECRET_KEY is not set in the server environment yet — checkout will show "payments not configured" until it's added (hPanel → your app → Environment variables).</p><% } %>
-<p class="muted small">Checkout charges the price shown here. A Stripe Price ID is optional — leave it blank and Stripe is charged this amount directly. If you do paste one (price_...), it must match this amount: lifetime needs a <strong>one-time</strong> price, monthly and annual need <strong>recurring</strong> prices (1 month / 1 year).</p>
+<p class="muted small">Checkout charges the price shown here. A Stripe Price ID is optional — leave it blank and Stripe is charged this amount directly. If you do paste one (price_...), it must match this amount: lifetime needs a <strong>one-time</strong> price, monthly and annual need <strong>recurring</strong> prices (1 month / 1 year). <strong>PayPal:</strong> Lifetime needs nothing extra. Monthly and Annual need a PayPal plan with the same price and interval; paste its plan ID (P-...) and the PayPal button appears. A plan whose price or interval differs from the tier is refused at checkout, and PayPal is hidden while a markdown is running.</p>
 <% tiers.forEach(t => { %>
   <div class="card">
     <form method="post" action="/admin/pricing/<%= t.key %>">
@@ -14,6 +14,9 @@
         <label>Price (USD)<input name="price" type="number" step="0.01" min="0" value="<%= (t.price_cents/100).toFixed(2) %>"></label>
         <label>Tagline<input name="tagline" value="<%= t.tagline || '' %>"></label>
         <label>Stripe Price ID<input name="stripe_price_id" value="<%= t.stripe_price_id || '' %>" placeholder="price_..."></label>
+        <% if (t.mode === 'subscription') { %>
+          <label>PayPal plan ID<input name="paypal_plan_id" value="<%= t.paypal_plan_id || '' %>" placeholder="P-..."></label>
+        <% } %>
       </div>
       <button class="btn btn-primary btn-sm">Save tier</button>
     </form>
