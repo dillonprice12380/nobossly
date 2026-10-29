@@ -152,6 +152,35 @@ async function createSubscription({ planId, customId, returnUrl, cancelUrl }) {
   return { id: r.data.id, approveUrl: link.href };
 }
 
+// Moves a subscription to another plan (Monthly -> Annual). PayPal does not
+// prorate and asks the member to approve the new price; it answers with an
+// approval link, or, when no approval is needed, applies the change at once
+// (approveUrl null). PayPal decides when the new plan takes effect.
+async function reviseSubscription({ id, planId, returnUrl, cancelUrl }) {
+  const r = await call('/v1/billing/subscriptions/' + encodeURIComponent(id) + '/revise', {
+    method: 'POST',
+    json: {
+      plan_id: planId,
+      application_context: {
+        brand_name: 'NoBossly',
+        locale: 'en-US',
+        shipping_preference: 'NO_SHIPPING',
+        payment_method: { payer_selected: 'PAYPAL', payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED' },
+        return_url: returnUrl,
+        cancel_url: cancelUrl
+      }
+    }
+  });
+  if (!r.ok) {
+    console.error('[paypal] could not revise subscription ' + id + ' (' + r.status + '): ' + r.raw.slice(0, 500));
+    return null;
+  }
+  const link = r.data && (r.data.links || []).find(l => l.rel === 'approve');
+  if (!link) return { approveUrl: null };
+  if (!isPaypalHost(link.href)) return null;
+  return { approveUrl: link.href };
+}
+
 // ── Orders (one-time payments: Lifetime) ────────────────────────────────────
 
 async function createOrder({ amountCents, customId, description, returnUrl, cancelUrl }) {
@@ -235,6 +264,6 @@ async function verifyWebhook(getHeader, rawBody) {
 
 module.exports = {
   isEnabled, hasWebhookId, Transient, isPaypalHost, moneyValue, toCents, planTerms,
-  getSubscription, getPlan, cancelSubscription, createSubscription,
+  getSubscription, getPlan, cancelSubscription, createSubscription, reviseSubscription,
   createOrder, getOrder, captureOrder, verifyWebhook
 };

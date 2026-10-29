@@ -13,6 +13,8 @@ router.get('/', async (req, res, next) => {
       p: req.profile, plan: planOf(req.profile), tierName,
       msg: req.query.m || (req.query.sub === 'success' ? 'Subscription activated — welcome aboard! 🎉'
         : req.query.sub === 'canceled' ? 'Your subscription will end at the close of the current billing period.'
+        : req.query.sub === 'switched' ? 'You are now on Annual. The unused part of this month was credited against the annual price.'
+        : req.query.sub === 'switchpending' ? 'Plan change sent to PayPal. Your account moves to Annual when PayPal applies it.'
         : req.query.sub === 'pending' ? 'Payment is still processing — your plan will activate shortly.' : null),
       err: req.query.e || null
     });
