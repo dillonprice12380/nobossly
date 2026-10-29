@@ -130,6 +130,22 @@ function blockedRedirect(profile, key, message) {
   return hasIt ? '/tools' : '/pricing?msg=' + encodeURIComponent(message);
 }
 
+// Is this tier's PayPal plan really what the page advertises? Reads the plan
+// from PayPal and compares price, currency, interval and status with the tier.
+// Returns null when it is safe to sell, otherwise a reason (already logged).
+async function planProblem(tier, offer) {
+  if (!tier.paypal_plan_id || offer.isPromo) return 'unavailable';
+  const terms = paypal.planTerms(await paypal.getPlan(tier.paypal_plan_id));
+  const want = tier.key === 'year' ? 'YEAR' : 'MONTH';
+  if (!terms || terms.status !== 'ACTIVE' || terms.cents !== offer.cents || terms.currency !== 'USD' ||
+      terms.unit !== want || terms.count !== 1 || terms.totalCycles) {
+    console.error('[paypal] plan ' + tier.paypal_plan_id + ' does not match tier ' + tier.key +
+      ' (' + JSON.stringify(terms) + ' vs ' + offer.cents + ' cents per ' + want + ') — not selling it');
+    return 'mismatch';
+  }
+  return null;
+}
+
 async function profileIdForSub(subId) {
   const { data, error } = await subClient().rpc('find_user_by_stripe_sub', { p_secret: SUB_SECRET(), p_sub_id: subId });
   if (error) throw new Error('find_user_by_stripe_sub: ' + error.message);
@@ -265,6 +281,12 @@ router.get('/pricing', async (req, res, next) => {
       // Who already bills this member (null when nobody): their Lifetime
       // step-up is offered only on that processor.
       payer: req.profile && premium.hasPremium(req.profile) ? processorOf(req.profile) : null,
+      // An active Monthly member may switch to Annual on the processor that bills them.
+      currentTier: req.profile && premium.hasPremium(req.profile) && !req.profile.is_lifetime ? req.profile.subscription_tier : null,
+      canSwitch: !!(req.profile && !req.profile.is_lifetime && premium.hasPremium(req.profile) &&
+        req.profile.subscription_tier === 'month' && req.profile.subscription_status === 'active' &&
+        req.profile.stripe_subscription_id &&
+        (isPaypalSubId(req.profile.stripe_subscription_id) ? paypalAvail.year : true)),
       freeFeatures: FREE_FEATURES, paidFeatures: PAID_FEATURES,
       isPremium: premium.hasPremium(req.profile),
       upgrade: req.query.upgrade, msg: req.query.msg || null
@@ -418,15 +440,7 @@ router.post('/billing/paypal/checkout/:key', requireAuth, async (req, res, next)
           cancelUrl: SITE() + '/pricing'
         })
       : await (async () => {
-          if (!tier.paypal_plan_id || offer.isPromo) return null;
-          const terms = paypal.planTerms(await paypal.getPlan(tier.paypal_plan_id));
-          const want = tier.key === 'year' ? 'YEAR' : 'MONTH';
-          if (!terms || terms.status !== 'ACTIVE' || terms.cents !== offer.cents || terms.currency !== 'USD' ||
-              terms.unit !== want || terms.count !== 1 || (terms.totalCycles && terms.totalCycles !== 0)) {
-            console.error('[paypal] plan ' + tier.paypal_plan_id + ' does not match tier ' + tier.key +
-              ' (' + JSON.stringify(terms) + ' vs ' + offer.cents + ' cents per ' + want + ') — not selling it');
-            return null;
-          }
+          if (await planProblem(tier, offer)) return null;
           return paypal.createSubscription({
             planId: tier.paypal_plan_id,
             customId: customIdFor(req.user.id),
@@ -465,6 +479,100 @@ router.get('/billing/paypal/return', requireAuth, async (req, res, next) => {
       console.error('[paypal] return:', e.message);
       return res.redirect('/account?sub=pending');
     }
+    next(e);
+  }
+});
+
+// Move an active Monthly member to Annual, on the processor that already bills
+// them. Stripe: the unused part of the month is credited and the annual price
+// is charged now, so the year starts today; if the charge fails nothing changes
+// (error_if_incomplete). PayPal: the member approves the new plan on PayPal,
+// which decides when it takes effect. Returns where to send the member.
+async function changePlan(profile, userId, key) {
+  const back = msg => ({ to: '/pricing?msg=' + encodeURIComponent(msg) });
+  if (key !== 'year') return { to: '/pricing' };
+  if (profile.is_lifetime) return { to: '/tools' };
+  const subId = profile.stripe_subscription_id;
+  if (profile.subscription_tier !== 'month' || profile.subscription_status !== 'active' || !subId) {
+    return back('Only an active Monthly plan can be switched to Annual.');
+  }
+  const { data: tier } = await anonClient().from('pricing_tiers').select('*').eq('key', 'year').eq('is_active', true).maybeSingle();
+  if (!tier) return { to: '/pricing' };
+  const offer = pricing.offerFor(tier);
+
+  if (isPaypalSubId(subId)) {
+    if (!paypal.isEnabled() || await planProblem(tier, offer)) return back('Switching plans with PayPal is not available right now — please try again later.');
+    const rev = await paypal.reviseSubscription({
+      id: subId, planId: tier.paypal_plan_id,
+      returnUrl: SITE() + '/billing/paypal/switched', cancelUrl: SITE() + '/pricing'
+    });
+    if (!rev) return back('Could not start the plan change with PayPal — please try again.');
+    return { to: rev.approveUrl || '/billing/paypal/switched', status: 303 };
+  }
+
+  if (!STRIPE_KEY()) return back('Payments are being set up — please try again shortly.');
+  const sub = await stripe('GET', 'subscriptions/' + encodeURIComponent(subId));
+  if (sub.status !== 'active' || sub.cancel_at_period_end) {
+    return back('Your subscription is not active, so it cannot be switched. Let it end, then choose Annual.');
+  }
+  const item = sub.items && sub.items.data && sub.items.data[0];
+  if (!item) return back('Could not read your subscription — please try again.');
+  if (item.price && item.price.recurring && item.price.recurring.interval === 'year') {
+    await applySub(userId, { tier: 'year', status: 'active', subId: sub.id, periodEnd: periodEnd(sub) });
+    return { to: '/account' };
+  }
+  const params = {
+    'items[0][id]': item.id,
+    proration_behavior: 'always_invoice',     // credit the unused month, charge the year, now
+    billing_cycle_anchor: 'now',
+    payment_behavior: 'error_if_incomplete'   // a declined card changes nothing
+  };
+  const useInline = () => {
+    delete params['items[0][price]'];
+    params['items[0][price_data][currency]'] = 'usd';
+    params['items[0][price_data][product]'] = typeof item.price.product === 'string' ? item.price.product : item.price.product.id;
+    params['items[0][price_data][unit_amount]'] = String(offer.cents);
+    params['items[0][price_data][recurring][interval]'] = 'year';
+  };
+  if (offer.stripePriceId) params['items[0][price]'] = offer.stripePriceId; else useInline();
+  let updated;
+  try {
+    updated = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), params);
+  } catch (err) {
+    if (!offer.stripePriceId) return back('Could not switch your plan: ' + err.message);
+    console.error('[billing] Stripe rejected price ' + offer.stripePriceId + ' for the switch to Annual — retrying inline: ' + err.message);
+    useInline();
+    try { updated = await stripe('POST', 'subscriptions/' + encodeURIComponent(subId), params); }
+    catch (err2) { return back('Could not switch your plan: ' + err2.message); }
+  }
+  await applySub(userId, { tier: 'year', status: 'active', subId: updated.id, periodEnd: periodEnd(updated) });
+  return { to: '/account?sub=switched' };
+}
+
+router.post('/billing/change/:key', requireAuth, async (req, res, next) => {
+  try {
+    const r = await changePlan(req.profile, req.user.id, req.params.key);
+    return res.redirect(r.status || 302, r.to);
+  } catch (e) {
+    if (e instanceof paypal.Transient) {
+      console.error('[paypal] plan change:', e.message);
+      return res.redirect('/pricing?msg=' + encodeURIComponent('PayPal is not responding — please try again.'));
+    }
+    next(e);
+  }
+});
+
+// Back from PayPal's approval page after a plan change. Re-reads the member's own
+// subscription (never an id from the request); the tier follows whichever plan
+// PayPal reports, so it flips to Annual only once PayPal says it has.
+router.get('/billing/paypal/switched', requireAuth, async (req, res, next) => {
+  try {
+    const id = req.profile.stripe_subscription_id;
+    if (!paypal.isEnabled() || !isPaypalSubId(id)) return res.redirect('/account');
+    await settleSubscription(id, { expectUser: req.user.id });
+    return res.redirect('/account?sub=switchpending');
+  } catch (e) {
+    if (e instanceof paypal.Transient) return res.redirect('/account?sub=switchpending');
     next(e);
   }
 });
@@ -618,5 +726,5 @@ async function paypalWebhook(req, res) {
 module.exports = {
   router, webhook, verifySignature, paypalWebhook,
   processorOf, purchaseBlock, parseCustom, customIdFor, isPaypalSubId, paypalPeriodEnd,
-  settleSubscription, settleOrder
+  settleSubscription, settleOrder, changePlan, planProblem
 };

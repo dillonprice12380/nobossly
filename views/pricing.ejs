@@ -40,6 +40,10 @@
       <ul class="feature-list"><li>The full Toolkit — all five tools</li><li>Everything in Free</li><% if (t.key === 'lifetime') { %><li>Every tool added later</li><% } %></ul>
       <% if (!user) { %><a class="btn btn-primary btn-block" href="/signup">Join free, then upgrade</a>
       <% } else if (locals.profile && profile.is_lifetime) { %><span class="chip chip-success">You have lifetime access</span>
+      <% } else if (isPremium && t.key !== 'lifetime' && locals.currentTier === t.key) { %><span class="chip chip-success">Your plan</span>
+      <% } else if (isPremium && t.key === 'year' && locals.canSwitch) { %>
+        <form method="post" action="/billing/change/year" data-turbo="false"><button class="btn btn-primary btn-block">Switch to Annual</button></form>
+        <p class="muted small" style="margin:.4rem 0 0"><%= locals.payer === 'paypal' ? 'You approve the change in PayPal.' : 'The unused part of this month is credited, and the year starts today.' %></p>
       <% } else if (isPremium && t.key !== 'lifetime') { %><span class="chip chip-success">You have Premium</span>
       <% } else {
            // A member who already pays through one processor steps up to lifetime on that one only.
