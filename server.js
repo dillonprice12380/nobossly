@@ -193,6 +193,21 @@ app.get('/debug', requireAdmin, async (req, res) => {
   try {
     log('node ' + process.version);
     log('env SUPABASE_URL set: ' + !!process.env.SUPABASE_URL + ', ANON set: ' + !!process.env.SUPABASE_ANON_KEY);
+    // Email: both keys are needed — Resend to send at all, the service role to
+    // log sends and run the reminder sweep.
+    const mail = require('./src/mailer').status();
+    log('email RESEND_API_KEY set: ' + mail.resendKey + ', SUPABASE_SERVICE_ROLE_KEY set: ' + mail.serviceRoleKey);
+    log('email from: ' + mail.from + ', links point at: ' + mail.site);
+    log('email last reminder sweep: ' + (mail.lastSweep ? JSON.stringify(mail.lastSweep) : 'not run yet (first run is 2 minutes after start, then every 12 hours)'));
+    if (mail.serviceRoleKey) {
+      try {
+        const { serviceClient } = require('./src/supabase');
+        const { data: last, count } = await serviceClient().from('email_log')
+          .select('email_type, status, created_at', { count: 'exact' }).order('created_at', { ascending: false }).limit(1);
+        log('email_log: ' + (count || 0) + ' rows' + (last && last[0] ? ', latest ' + last[0].email_type + ' ' + last[0].status + ' at ' + last[0].created_at : ''));
+      } catch (e) { log('email_log read FAILED: ' + (e && e.message)); }
+    }
+    log('env STRIPE_SECRET_KEY set: ' + !!process.env.STRIPE_SECRET_KEY + ', STRIPE_WEBHOOK_SECRET set: ' + !!process.env.STRIPE_WEBHOOK_SECRET);
     const { createClient } = require('@supabase/supabase-js');
     log('supabase-js loaded v' + require('@supabase/supabase-js/package.json').version);
     const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -224,7 +239,10 @@ setInterval(() => {
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
 const mailer = require('./src/mailer');
 const sweepEmail = () => mailer.runSweep().then(
-  r => { if (r && (r.resume || r.comeback)) console.log('re-engagement emails sent:', r); },
+  r => {
+    if (r && r.skipped) console.warn('[mailer] reminder sweep skipped: ' + r.skipped);
+    else if (r && (r.resume || r.comeback)) console.log('re-engagement emails sent:', r);
+  },
   e => console.error('email sweep', e && e.message)
 );
 setTimeout(sweepEmail, 2 * 60 * 1000);
