@@ -130,6 +130,17 @@ function blockedRedirect(profile, key, message) {
   return hasIt ? '/tools' : '/pricing?msg=' + encodeURIComponent(message);
 }
 
+// PayPal's sandbox has its own plans, so a test copy of the site (PAYPAL_ENV=sandbox)
+// takes them from PAYPAL_SANDBOX_PLAN_MONTH / PAYPAL_SANDBOX_PLAN_YEAR instead of the
+// live ids stored in pricing_tiers, which stay untouched. Live sites ignore all of this.
+const sandboxMode = () => process.env.PAYPAL_ENV === 'sandbox';
+const SANDBOX_PLAN_ENV = { month: 'PAYPAL_SANDBOX_PLAN_MONTH', year: 'PAYPAL_SANDBOX_PLAN_YEAR' };
+function withPlan(tier) {
+  if (!tier || !sandboxMode()) return tier;
+  const id = (process.env[SANDBOX_PLAN_ENV[tier.key]] || '').trim();
+  return Object.assign({}, tier, { paypal_plan_id: /^P-[A-Z0-9]+$/i.test(id) ? id : null });
+}
+
 // Is this tier's PayPal plan really what the page advertises? Reads the plan
 // from PayPal and compares price, currency, interval and status with the tier.
 // Returns null when it is safe to sell, otherwise a reason (already logged).
@@ -154,6 +165,12 @@ async function profileIdForSub(subId) {
 
 async function tierForPlan(planId) {
   if (!planId) return null;
+  if (sandboxMode()) {
+    const key = Object.keys(SANDBOX_PLAN_ENV).find(k => (process.env[SANDBOX_PLAN_ENV[k]] || '').trim() === planId);
+    if (!key) return null;
+    const { data } = await anonClient().from('pricing_tiers').select('*').eq('key', key).eq('mode', 'subscription').maybeSingle();
+    return withPlan(data) || null;
+  }
   const { data } = await anonClient().from('pricing_tiers').select('*').eq('paypal_plan_id', planId).eq('mode', 'subscription').maybeSingle();
   return data || null;
 }
@@ -260,7 +277,7 @@ router.get('/pricing', async (req, res, next) => {
   try {
     const sb = req.sb || anonClient();
     const { data: tiers } = await sb.from('pricing_tiers').select('*').eq('is_active', true).order('sort');
-    const withOffers = pricing.withOffer(tiers);
+    const withOffers = pricing.withOffer((tiers || []).map(withPlan));
     // A PayPal button is shown only where PayPal can really charge what the page
     // says: Lifetime is a one-off order; a subscription needs its PayPal plan,
     // and a running markdown means the plan's fixed price would be the wrong one.
@@ -428,7 +445,8 @@ router.post('/billing/paypal/checkout/:key', requireAuth, async (req, res, next)
     const unavailable = msg => res.redirect('/pricing?msg=' + encodeURIComponent(msg));
     if (!paypal.isEnabled()) return unavailable('PayPal is not available right now — please pay by card instead.');
 
-    const { data: tier } = await anonClient().from('pricing_tiers').select('*').eq('key', key).eq('is_active', true).maybeSingle();
+    const { data: tierRow } = await anonClient().from('pricing_tiers').select('*').eq('key', key).eq('is_active', true).maybeSingle();
+    const tier = withPlan(tierRow);
     if (!tier) return res.redirect('/pricing');
     const offer = pricing.offerFor(tier);
     const approval = (tier.mode === 'payment')
@@ -496,7 +514,8 @@ async function changePlan(profile, userId, key) {
   if (profile.subscription_tier !== 'month' || profile.subscription_status !== 'active' || !subId) {
     return back('Only an active Monthly plan can be switched to Annual.');
   }
-  const { data: tier } = await anonClient().from('pricing_tiers').select('*').eq('key', 'year').eq('is_active', true).maybeSingle();
+  const { data: yearRow } = await anonClient().from('pricing_tiers').select('*').eq('key', 'year').eq('is_active', true).maybeSingle();
+  const tier = withPlan(yearRow);
   if (!tier) return { to: '/pricing' };
   const offer = pricing.offerFor(tier);
 
@@ -742,5 +761,5 @@ async function paypalWebhook(req, res) {
 module.exports = {
   router, webhook, verifySignature, paypalWebhook,
   processorOf, purchaseBlock, parseCustom, customIdFor, isPaypalSubId, paypalPeriodEnd,
-  settleSubscription, settleOrder, changePlan, planProblem
+  settleSubscription, settleOrder, changePlan, planProblem, withPlan
 };
