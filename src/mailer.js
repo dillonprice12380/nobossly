@@ -76,9 +76,20 @@ const TEMPLATES = {
   })
 };
 
+// email_log is written with the service-role client. Without that key an email
+// still sends, but leaves no trace in the log — which once made a working
+// welcome email look like no email at all. Say so, once, in the server log.
+let warnedNoLog = false;
 async function record(sb, row) {
-  if (!sb) return;
-  try { await sb.from('email_log').insert(row); } catch (e) { console.error('email_log', e.message); }
+  if (!sb) {
+    if (!warnedNoLog) {
+      warnedNoLog = true;
+      console.warn('[mailer] SUPABASE_SERVICE_ROLE_KEY unset — emails still send, but are not recorded in email_log, and the reminder sweep is off.');
+    }
+    return;
+  }
+  const { error } = await sb.from('email_log').insert(row).then(r => r, e => ({ error: e }));
+  if (error) console.error('[mailer] email_log insert failed:', error.message);
 }
 
 // Sends one email and logs the outcome. Never throws — a failed send must never
@@ -127,7 +138,17 @@ async function alreadySent(sb, userId, type) {
  * Both are once-per-user for life. Needs the service role key; without it the
  * sweep is skipped rather than half-run.
  */
+// The last sweep's outcome, for /debug: when it ran and what it did or why it
+// did not run.
+let lastSweep = null;
+
 async function runSweep() {
+  const out = await sweep();
+  lastSweep = Object.assign({ at: new Date().toISOString() }, out);
+  return out;
+}
+
+async function sweep() {
   if (!enabled()) return { skipped: 'RESEND_API_KEY unset' };
   const sb = admin();
   if (!sb) return { skipped: 'SUPABASE_SERVICE_ROLE_KEY unset' };
@@ -175,4 +196,15 @@ async function emailOf(sb, userId) {
   } catch (_) { return null; }
 }
 
-module.exports = { send, runSweep, enabled };
+// What /debug shows about email: which keys are set and how the last sweep went.
+function status() {
+  return {
+    resendKey: enabled(),
+    serviceRoleKey: !!admin(),
+    from: FROM,
+    site: SITE,
+    lastSweep
+  };
+}
+
+module.exports = { send, runSweep, enabled, status };
