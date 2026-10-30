@@ -87,10 +87,11 @@
         </div>
       </div>
     <% } else { %>
-      <a href="/paths">Paths</a>
+      <%# The platform is free, so the public header leads with what it is — no
+          "Premium" link and no second path link beside the "Find your path"
+          button. Premium is reachable from How it works, Help and the footer. %>
       <a href="/community">Community</a>
       <a href="/how-it-works">How it works</a>
-      <a href="/pricing">Premium</a>
       <div class="nav-dropdown" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
         <div class="nav-dd-menu">
