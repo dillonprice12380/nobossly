@@ -104,12 +104,21 @@ ok('the refund still cannot push a balance past the plan cap',
 ok('...and is still logged as a negative row', /p_kind \|\| ':refund', -v_cost/.test(sql),
    'which is also what makes a second refund of one spend impossible');
 
-// src/credits.js is the only thing that should ever refund, and only after it
-// charged. If it ever refunds without charging first, the window check will
-// silently start failing in production instead of here.
-const credits = read('src/credits.js');
-ok('the rail charges before it runs and refunds only on a throw',
-   /spend/.test(credits) && /refund/.test(credits));
+// The credit rail (src/credits.js) went with the AI features on 2026-09-24.
+// The RPCs are still in the database, so nothing in the app may call them:
+// a refund with no charge in front of it is exactly what the window above is
+// there to refuse, and there is no longer any code path that charges.
+{
+  const callers = [];
+  (function walk(d) {
+    for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, f.name);
+      if (f.isDirectory()) walk(p);
+      else if (f.name.endsWith('.js') && /(spend|refund)_ai_credits/.test(fs.readFileSync(p, 'utf8'))) callers.push(path.relative(ROOT, p));
+    }
+  })(path.join(ROOT, 'src'));
+  ok('nothing in the app spends or refunds AI credits any more', callers.length === 0, callers.join(', ') || 'no callers');
+}
 
 // ---------------------------------------------------------------------------
 console.log('\nYou can only speak as yourself:');

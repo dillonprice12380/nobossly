@@ -42,17 +42,8 @@ ok('a made-up band yields no suggestion', starter.suggest('a squillion', 'softwa
 ok('$0 yields no suggestion', starter.suggest('$0', 'software').length === 0,
    'nothing to split is not the same as a budget of nothing');
 
-// The fit test converts the same answer to dollars to decide whether an idea is
-// affordable. Two different numbers for one answer would mean the app telling a
-// member they can afford $2,000 on one screen and $500 on another.
-const fitSrc = fs.readFileSync(path.join(ROOT, 'src/fit_library.js'), 'utf8');
-const fitBlock = fitSrc.slice(fitSrc.indexOf('const BUDGET_USD'));
-const fitMap = {};
-for (const m of fitBlock.slice(0, fitBlock.indexOf('};')).matchAll(/'([^']+)':\s*(\d+)/g)) fitMap[m[1]] = Number(m[2]);
-ok('the fit test\'s dollar bands were found', Object.keys(fitMap).length > 0, Object.keys(fitMap).length + ' bands');
-const disagree = Object.entries(fitMap).filter(([k, v]) => starter.BUDGET_USD[k] !== v);
-ok('the starting budget agrees with the fit test on every band', disagree.length === 0,
-   disagree.map(([k, v]) => `${k}: fit ${v} vs starter ${starter.BUDGET_USD[k]}`).join('; ') || 'identical');
+// The fit test this used to be compared with (src/fit_library.js) was removed
+// on 2026-09-24; starter_budget.js is now the only place a band becomes dollars.
 
 // ---------------------------------------------------------------------------
 console.log('\nEvery path gets a split that adds up:');
@@ -67,10 +58,15 @@ for (const p of allPaths) {
 
 // A seeded category the expense form does not offer would make the member type
 // it back in by hand the first time they logged a receipt against it.
+// The list lives in src/budget_categories.js (cut from about fifty mixed
+// business and household categories to ten business ones on 2026-10-23); the
+// route hands it to the form, so both are checked.
 const viewSrc = fs.readFileSync(path.join(ROOT, 'views/budget.ejs'), 'utf8');
-const stdLine = viewSrc.slice(viewSrc.indexOf('const stdCats = ['));
-const stdCats = new Set([...stdLine.slice(0, stdLine.indexOf(']')).matchAll(/'([^']+)'/g)].map(m => m[1]));
-ok('the expense form\'s category list was found', stdCats.size > 10, stdCats.size + ' categories');
+const routeCats = fs.readFileSync(path.join(ROOT, 'src/routes/budget.js'), 'utf8');
+const stdCats = new Set(require('../src/budget_categories').STANDARD);
+ok('the expense form\'s category list was found', stdCats.size >= 10
+   && /budgetCategories:\s*require\('\.\.\/budget_categories'\)\.STANDARD/.test(routeCats)
+   && /stdCats = budgetCategories/.test(viewSrc), stdCats.size + ' categories, wired to the form');
 const used = new Set(Object.values(starter.SPLITS).concat([starter.DEFAULT_SPLIT])
   .flat().map(([c]) => c));
 const unknown = [...used].filter(c => !stdCats.has(c) && c !== 'Buffer');

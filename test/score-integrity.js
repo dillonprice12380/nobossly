@@ -102,7 +102,21 @@ for (const f of srcFiles) {
     used.push({ code: m[1], file: path.relative(ROOT, f) });
   }
 }
-ok('found the award call sites', used.length >= 20, used.length + ' calls');
+// Named rather than counted: a count only says the scan found *something*, and
+// it had to be lowered by hand every time a feature was retired. The four codes
+// below went with the AI features (Compass, idea drafts, blueprints) on
+// 2026-09-24; every other code the call sites used to pass must still be found,
+// so a broken scan or a silently dropped award fails here by name.
+const RETIRED_CODES = ['compass_drawn', 'idea_drafted', 'blueprint_created', 'blueprint_dispersed'];
+const usedCodes = new Set(used.map(u => u.code));
+const STILL_AWARDED = ['quest_accepted', 'peer_review_given', 'win_featured', 'forum_thread',
+  'forum_reply', 'beta_joined', 'sprint_started', 'sprint_task_done', 'task_done', 'daily_checkin',
+  'quest_completed', 'custom_quest_completed', 'milestone_claim'];
+const lost = STILL_AWARDED.filter(c => !usedCodes.has(c));
+ok('found the award call sites', lost.length === 0,
+   lost.length ? 'no call site for: ' + lost.join(', ') : used.length + ' calls');
+const revived = RETIRED_CODES.filter(c => usedCodes.has(c));
+ok('...and none of the retired AI awards came back', revived.length === 0, revived.join(', ') || 'clean');
 const unknown = used.filter(u => !kinds[u.code]);
 ok('every code a route passes is in the price list', unknown.length === 0,
    unknown.map(u => `${u.code} (${u.file})`).join(', ') || `${new Set(used.map(u => u.code)).size} distinct codes`);

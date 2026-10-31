@@ -8,8 +8,7 @@
 // So this file checks two different things:
 //   1. no view can use a class the CSS hides at rest without loading the
 //      script that reveals it (derived from the CSS, not hardcoded), and
-//   2. the landing pages actually render their copy, questions, criteria and
-//      quests — with and without the live DB rows, since those come from
+//   2. the landing pages actually render their copy and quests — with and without the live DB rows, since those come from
 //      Supabase and the page has to hold up when the query returns nothing.
 //
 //   node test/views.js
@@ -69,7 +68,11 @@ const base = {
   title: 'T', user: null, profile: null, plan: 'free', currentPath: '/paths',
   canonicalUrl: 'https://nobossly.com/paths', unreadCount: 0, unreadMsgs: 0,
   metaDescription: '', bodyTheme: 'theme-light', settings: {}, pendingDeletion: null,
-  reactivated: false
+  reactivated: false,
+  // Set on every request by the affiliate and premium middleware, so every
+  // view can count on them. Built the same way here, with no offers loaded.
+  affiliates: (() => { const a = {}; require('../src/affiliates').attach({}, { locals: a }, () => {}); return a.affiliates; })(),
+  premiumTools: require('../src/premium').TOOLS, isPremium: false
 };
 
 const render = (file, data) =>
@@ -79,19 +82,11 @@ const render = (file, data) =>
 // Stand-ins for the two tables the route reads live. Both queries are wrapped
 // in .catch(() => []) in the route, so the empty case is a real production
 // state, not a hypothetical.
-const LIBRARY = require('./fit-library-snapshot.json');
-const { bindForVisitor } = require('../src/routes/paths_public');
+// The fit-test criteria these pages used to list were retired with the fit
+// test itself; the route no longer reads or passes any. Rendered empty, the
+// way the route renders them now.
+const criteriaForVisitor = () => [];
 
-// The rows a visitor to /paths/<slug> would actually be shown, bound the same
-// way the route binds them. Using an invented row here is how the page shipped
-// printing a literal "{budget}" at readers: the sandbox could not reach the
-// database, so the criteria list was always empty when I looked at it.
-const criteriaForVisitor = slug => bindForVisitor(
-  LIBRARY.filter(r => (r.paths || []).includes(slug))
-    .concat(LIBRARY.filter(r => !r.paths || !r.paths.length))
-    .slice(0, 5), slug);
-
-const CRITERIA = criteriaForVisitor('creator');
 const CHALLENGES = [{ title: 'Post three times this week', description: 'Same hook, three angles.',
   emoji: '🎥', xp_reward: 120, suggested_days: 7, paths: ['creator'] }];
 
@@ -130,12 +125,11 @@ for (const def of paths.MARKETED) {
     if (!html.includes(esc(def.marketing.truth))) missing.push('truth');
     for (const p of def.marketing.pains) if (!html.includes(esc(p))) missing.push('a pain line');
     if (!html.includes('/signup?path=' + def.slug)) missing.push('the signup CTA');
-    for (const q of questions) if (!html.includes(esc(q.label))) missing.push('question: ' + q.name);
     if (challenges.length && !html.includes(esc(challenges[0].title))) missing.push('the quest');
     if (!html.includes(esc(def.marketing.bar))) missing.push('the traction bar');
     if (criteria.length && !html.includes(esc(criteria[0].criterion))) missing.push('the criterion');
     ok(`${def.slug} ${label}: every block is in the HTML`, !missing.length,
-       missing.join(', ') || `${questions.length} questions`);
+       missing.join(', ') || 'all present');
 
     // Nothing a visitor reads may still be a template. Library wording carries
     // {budget}, {hours}, {traction} and the rest, filled from a member's own
@@ -151,9 +145,6 @@ for (const def of paths.MARKETED) {
       new RegExp(`class="[^"]*\\b${c}\\b[^"]*"`).test(html));
     ok(`${def.slug} ${label}: nothing is hidden at rest`, !hidden.length,
        hidden.join(', ') || 'visible');
-
-    ok(`${def.slug} ${label}: shows at least one question`, questions.length > 0,
-       `${questions.length}`);
   }
 }
 
@@ -326,30 +317,14 @@ console.log('\nThe feed reads each member from their own ladder:');
 
 console.log('\nAttributes survive the template:');
 
-const qHtml = render('questionnaire.ejs', {
-  paths: paths.PATHS, path: 'creator', pathDef: paths.get('creator'),
-  step: 2, totalSteps: paths.totalSteps('creator'), requiredSteps: 2, deepening: false,
-  questions: paths.coreQuestions('creator'), q: {}, pathAnswers: {}, run: 1,
-  canCancel: false, msg: null, profile: { username: 'x' }
+// The questionnaire this guard was written for is gone; the rule holds for
+// every page that is still rendered, so it runs over the public ones.
+const mangled = Object.entries(marketing).flatMap(([name, data]) => {
+  const html = render(name.split(':')[0], { title: 'T', metaDescription: '', canonicalUrl: 'https://nobossly.com/', ...data });
+  return (html.match(/\b[a-z-]+=&(#34|quot|amp);/g) || []).map(m => name + ' ' + m);
 });
-
-const mangled = (qHtml.match(/\b[a-z-]+=&(#34|quot|amp);/g) || []);
 ok('no attribute was escaped twice', mangled.length === 0,
    mangled.slice(0, 3).join(', ') || 'clean');
-ok('placeholders actually render as placeholders',
-   /placeholder="the narrower the better/.test(qHtml),
-   (qHtml.match(/placeholder="[^"]{0,40}/) || ['NONE'])[0]);
-
-// The conditional-question payload has to survive as parseable JSON, or the
-// browser silently shows every question at once.
-const conds = [...qHtml.matchAll(/data-show-if="([^"]*)"/g)].map(m => m[1]);
-// The count grows as conditional questions are added, so this asserts the
-// mechanism is live rather than pinning a number that changes with content.
-ok('conditional questions carry their condition', conds.length >= 2, conds.length + ' found');
-ok('...and each parses after HTML decoding', conds.every(c => {
-  try { return !!JSON.parse(c.replace(/&quot;/g, '"').replace(/&amp;/g, '&')); }
-  catch (e) { return false; }
-}), conds.length ? 'parsed' : 'none');
 
 console.log(fail ? `\n${fail} failing\n` : '\nAll good\n');
 process.exit(fail ? 1 : 0);
