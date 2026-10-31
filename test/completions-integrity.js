@@ -162,18 +162,19 @@ for (const fn of ['complete_quest_for', 'complete_review_quest_for', 'claim_trop
 ok('pinned is decided from the plan, not from the request',
    /v_paid := is_paid_member\(v_user\)/.test(sql) && !/pinned: isPaid\(req\)/.test(read('src/routes/milestones.js')));
 
-// is_paid_member mirrors planOf(). Both cases that are easy to miss are the
-// ones that matter: a cancelled subscription is paid until the period ends,
-// and an active one with no end date is paid.
-ok('is_paid_member treats a cancelled-but-unexpired plan as paid',
-   /subscription_status in \('active', 'canceled', 'trialing'\)/.test(sql));
-ok('...and an active plan with no end date as paid',
-   /subscription_status = 'active' and p\.subscription_period_end is null/.test(sql));
+// is_paid_member mirrors planOf(). NoBossly is free, so planOf() always says
+// 'paid' — and the database has to agree, or a trophy is saved unpinned for a
+// member the app treats as fully paid. The original rules (cancelled-but-
+// unexpired, active with no end date) are above in the 2026-09-09 migration;
+// the current definition replaces them.
+const paidNow = read('migrations/2026-10-31_is_paid_member_everyone_is_a_member.sql');
 const planOf = read('src/middleware/auth.js');
-ok('...the same three statuses planOf() accepts',
-   /'active' \|\| status === 'canceled' \|\| status === 'trialing'/.test(planOf));
-ok('...and lifetime and admin count in both',
-   /is_admin \|\| profile\.is_lifetime/.test(planOf) && /p\.is_admin or p\.is_lifetime/.test(sql));
+ok('planOf() treats every member as paid', /function planOf\(\)\s*\{\s*return 'paid';\s*\}/.test(planOf));
+ok('...and is_paid_member agrees: every existing member counts',
+   /select exists \(select 1 from profiles p where p\.id = p_user\)/.test(paidNow));
+ok('...and it is still granted to authenticated and nobody else',
+   /revoke all on function public\.is_paid_member[\s\S]*?from public, anon/.test(paidNow)
+   && /grant execute on function public\.is_paid_member[\s\S]*?to authenticated/.test(paidNow));
 
 console.log(fail ? `\n${fail} failing` : '\nAll good');
 process.exit(fail ? 1 : 0);

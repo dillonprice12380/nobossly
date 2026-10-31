@@ -132,59 +132,8 @@ console.log('\nAnd it does not nag about ideas that are gone or done:');
   ok('never asks to revise and to gather evidence at the same time', !anyDouble);
 }
 
-// ---------- 5. The page actually says what the score is ----------
-// Rendering without throwing proves nothing about the number on the screen.
-// These render the real template and read the output.
-const ejs = require('ejs');
-const path = require('path');
-const V = f => path.join(__dirname, '..', 'views', f);
-const prof = { display_name: 'Dillon', username: 'dillon', xp_total: 0, current_level: 1, streak_days: 0, tasks_completed: 0 };
-const crits = (n, passing) => Array.from({ length: n }, (_, i) => ({ criterion: 'Criterion ' + (i + 1), pass: i < passing, note: 'why' }));
-// The layout partials need the usual page locals; only the idea-specific ones
-// below are what this test is actually about.
-const LAYOUT = { title: 'Idea', user: {}, plan: 'free', currentPath: '/ideas',
-  canonicalUrl: 'https://nobossly.com/ideas', unreadCount: 0, unreadMsgs: 0,
-  metaDescription: '', bodyTheme: 'theme-light', settings: {}, pendingDeletion: null, reactivated: false };
-const render = over => ejs.render(require('fs').readFileSync(V('idea_detail.ejs'), 'utf8'), {
-  ...LAYOUT, profile: prof, msg: null, blueprintId: null,
-  versions: [], signals: [], founderSignals: 0,
-  idea: { id: 'i1', name: 'Test', tagline: 't', category: 'Your idea', is_favorited: false, ...over.idea },
-  ...over.locals
-}, { filename: V('idea_detail.ejs') });
-
-console.log('\nThe page reports the advisor\'s real score:');
-{
-  const five = render({ idea: { advisor: { fit_results: crits(5, 3) }, fit_passed: 3, fit_total: 5 } });
-  ok('five criteria renders 3/5', five.includes('3/5 passing') && !five.includes('3/4'));
-
-  // The bug this guards: hard-coding /5 when the advisor returned four.
-  const four = render({ idea: { advisor: { fit_results: crits(4, 2) }, fit_passed: 2, fit_total: 4 } });
-  ok('FOUR criteria renders 2/4, never 2/5', four.includes('2/4 passing') && !four.includes('2/5'),
-     (four.match(/\d\/\d passing/) || ['none'])[0]);
-
-  // A row written before fit_passed existed: the view falls back to the array.
-  const legacy = render({ idea: { advisor: { fit_results: crits(5, 4) } } });
-  ok('an unbacked row still scores from fit_results', legacy.includes('4/5 passing'),
-     (legacy.match(/\d\/\d passing/) || ['none'])[0]);
-
-  const unscored = render({ idea: {} });
-  ok('never advised -> no score at all, and no 0/5', !/\d\/\d passing/.test(unscored) && unscored.includes("hasn't scored"));
-
-  const done = render({ idea: { advisor: { fit_results: crits(5, 5) }, fit_passed: 5, fit_total: 5 } });
-  ok('all passing -> the completion line and the blueprint CTA',
-     done.includes('Every criterion that applies passes') && done.includes('Build my launch blueprint'));
-
-  // A cut idea is read-only: no revise form, no second cut form.
-  const cutPage = render({ idea: { advisor: { fit_results: crits(5, 1) }, fit_passed: 1, fit_total: 5,
-                                   cut_at: new Date().toISOString(), cut_reason: 'Buyers have someone in-house.' } });
-  ok('a cut idea shows the lesson and offers no revise form',
-     cutPage.includes('Buyers have someone in-house.') && !cutPage.includes('/revise') && !cutPage.includes('/cut'));
-
-  // An external link a founder pasted must not hand over a window.opener handle.
-  const withLink = render({ locals: { signals: [{ id: 's1', source: 'founder', claim: 'c', url: 'https://example.com/x', strength: 'strong' }], founderSignals: 1 },
-                            idea: { advisor: { fit_results: crits(5, 5) }, fit_passed: 5, fit_total: 5 } });
-  ok('a founder-pasted link carries noopener', withLink.includes('rel="noopener noreferrer nofollow"'));
-}
+// The idea page these render checks read (views/idea_detail.ejs) was removed
+// with Compass on 2026-09-24, so its checks went with it.
 
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nLevel 1 loop holds. All checks pass.');
 process.exit(fail ? 1 : 0);
