@@ -105,6 +105,7 @@ router.get('/', async (req, res, next) => {
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
+      msg: req.query.msg || null, today: new Date().toISOString().slice(0, 10),
       levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
       needsPath, checklist,
       // Suggested first tasks for a new sprint, matched to the member's path.

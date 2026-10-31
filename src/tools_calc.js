@@ -144,6 +144,18 @@ function taxSummary(data = {}, year) {
   };
 }
 
+// Which of the Budget page's expense categories count as deductions. The
+// standard business categories start on, except Travel & Vehicle: driving is
+// claimed as miles in this tool, and counting both would claim a trip twice.
+// A category the member typed themselves starts off, since it could be
+// anything. Their own ticks in the tool's settings always win.
+const DEDUCTIBLE_OFF_BY_DEFAULT = ['Travel & Vehicle'];
+function isDeductible(settings, category, standard = []) {
+  const set = (settings || {}).deductible || {};
+  if (Object.prototype.hasOwnProperty.call(set, category)) return !!set[category];
+  return standard.includes(category) && !DEDUCTIBLE_OFF_BY_DEFAULT.includes(category);
+}
+
 // ---------- Pricing & Margin ----------
 function serviceRate(src = {}) {
   const inp = {
@@ -223,7 +235,7 @@ function interviewSummary(list = []) {
 module.exports = {
   num, round2, addMonths, thisMonth, monthLabel,
   quitInputs, quitPlan,
-  FED_BRACKETS, QUARTERS, taxRate, quarterOf, taxSummary,
+  FED_BRACKETS, QUARTERS, taxRate, quarterOf, taxSummary, isDeductible,
   serviceRate, productMargin,
   tagList, interviewSummary
 };

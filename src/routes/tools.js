@@ -4,6 +4,8 @@ const premium = require('../premium');
 const calc = require('../tools_calc');
 const { anonClient } = require('../supabase');
 const paths = require('../paths');
+const income = require('../income');
+const { STANDARD: BUDGET_CATEGORIES } = require('../budget_categories');
 
 const id = () => crypto.randomBytes(6).toString('hex');
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -18,12 +20,35 @@ router.get('/', (req, res) => {
 });
 
 // ---------------------------------------------------------------- Quit date
+// What the income log says, in the planner's terms: profit after business
+// costs, and growth only when there are enough months to measure it.
+async function loggedPace(req) {
+  const log = await income.load(req);
+  const sum = income.summary(log.income, log.expenses);
+  return { sum, logged: sum.months && sum.avgProfit !== null ? sum : null };
+}
+
+// Typed numbers, with side income and growth replaced by the log's when the
+// member has chosen to plan from it.
+function effectiveInputs(data, logged) {
+  const inputs = calc.quitInputs(data.inputs || {});
+  if (logged && data.auto !== false) {
+    inputs.side = Math.max(0, logged.avgProfit);
+    if (logged.growth !== null) inputs.growth = Math.max(0, logged.growth);
+  }
+  return inputs;
+}
+
 router.get('/quit-date', premium.requirePremium('quit'), async (req, res, next) => {
   try {
     const data = await premium.load(req, 'quit');
-    const inputs = calc.quitInputs(data.inputs || {});
+    const { sum, logged } = await loggedPace(req);
+    const inputs = effectiveInputs(data, logged);
+    const cur = calc.thisMonth();
     res.render('tools/quit', {
-      title: 'Quit-Date Planner', data, inputs,
+      title: 'Quit-Date Planner', data, inputs, logged, auto: !!logged && data.auto !== false,
+      nextRung: income.nextMoneyRung(req.profile.path, req.profile.current_level, sum),
+      checkinSide: logged ? Math.max(0, sum.profitOf(cur)) : '',
       hasPlan: !!data.inputs, plan: data.inputs ? calc.quitPlan(inputs) : null,
       checkins: (data.checkins || []).slice().sort((a, b) => b.month.localeCompare(a.month)),
       monthLabel: calc.monthLabel, m: req.query.m || null
@@ -35,6 +60,9 @@ router.post('/quit-date', premium.requirePremium('quit'), async (req, res, next)
   try {
     const data = await premium.load(req, 'quit');
     data.inputs = calc.quitInputs(req.body);
+    // The switch is only on the form once there is a log to use; until then the
+    // choice stays unmade, so the first logged payment turns it on.
+    if (req.body.log_shown) data.auto = req.body.use_log === 'on'; else delete data.auto;
     await premium.save(req, 'quit', data);
     back(res, '/tools/quit-date', 'Plan saved.');
   } catch (e) { next(e); }
@@ -51,7 +79,10 @@ router.post('/quit-date/checkin', premium.requirePremium('quit'), async (req, re
     const inputs = calc.quitInputs(Object.assign({}, data.inputs, {
       side: req.body.side, savings: req.body.savings, start: month
     }));
-    const plan = calc.quitPlan(inputs);
+    // The dates recorded are the ones the planner shows: from the log, if the
+    // member plans from it.
+    const { logged } = await loggedPace(req);
+    const plan = calc.quitPlan(effectiveInputs(Object.assign({}, data, { inputs }), logged));
     data.inputs = inputs;
     data.checkins = (data.checkins || []).filter(c => c.month !== month);
     data.checkins.push({
@@ -82,9 +113,27 @@ const TAX_LISTS = {
 };
 const MAX_ENTRIES = 1000;
 
+// Tax reads the shared income log and the Budget page's expenses, so nothing
+// is typed twice. Entries typed into this tool before the log existed still
+// count.
+const isDeductible = (settings, cat) => calc.isDeductible(settings, cat, BUDGET_CATEGORIES);
+
+async function withLog(req, data) {
+  const log = await income.load(req);
+  const s = data.settings || {};
+  const merged = Object.assign({}, data, {
+    income: log.income.map(e => ({ id: e.id, date: e.entry_date, amount: Number(e.amount), source: e.source, fromLog: true }))
+      .concat(data.income || []),
+    deductions: (data.deductions || []).concat(log.expenses.filter(e => isDeductible(s, e.category))
+      .map(e => ({ date: e.spent_at, amount: Number(e.amount), category: e.category, fromBudget: true })))
+  });
+  const cats = [...new Set(BUDGET_CATEGORIES.concat(log.expenses.map(e => e.category)))];
+  return { merged, categories: cats.map(c => ({ name: c, on: isDeductible(s, c) })) };
+}
+
 router.get('/tax', premium.requirePremium('tax'), async (req, res, next) => {
   try {
-    const data = await premium.load(req, 'tax');
+    const { merged: data, categories } = await withLog(req, await premium.load(req, 'tax'));
     const thisYear = new Date().getFullYear();
     const year = /^\d{4}$/.test(req.query.year || '') ? Number(req.query.year) : thisYear;
     const sum = calc.taxSummary(data, year);
@@ -93,7 +142,7 @@ router.get('/tax', premium.requirePremium('tax'), async (req, res, next) => {
       title: 'Tax Set-Aside', data, year, thisYear, sum, settings: data.settings || {},
       income: inYear(data.income), deductions: inYear(data.deductions), miles: inYear(data.miles),
       payments: (data.payments || []).filter(p => String(p.tax_year) === String(year)).sort((a, b) => String(b.date).localeCompare(String(a.date))),
-      brackets: calc.FED_BRACKETS, today: today(), m: req.query.m || null
+      brackets: calc.FED_BRACKETS, today: today(), m: req.query.m || null, categories
     });
   } catch (e) { next(e); }
 });
@@ -104,8 +153,16 @@ router.post('/tax/settings', premium.requirePremium('tax'), async (req, res, nex
     data.settings = {
       fed: calc.FED_BRACKETS.includes(Number(req.body.fed)) ? Number(req.body.fed) : 12,
       state: calc.num(req.body.state, { max: 15 }),
-      mile_rate: calc.num(req.body.mile_rate, { max: 5, def: 0.70 })
+      mile_rate: calc.num(req.body.mile_rate, { max: 5, def: 0.70 }),
+      deductible: (data.settings || {}).deductible || {}
     };
+    // Only the categories the form showed are touched, so a category added to
+    // the budget later still starts from its default.
+    if (req.body.cats_shown) {
+      const shown = [].concat(req.body.cats_shown).map(c => str(c, 40)).slice(0, 60);
+      const on = new Set([].concat(req.body.deductible || []).map(c => str(c, 40)));
+      shown.forEach(c => { data.settings.deductible[c] = on.has(c); });
+    }
     await premium.save(req, 'tax', data);
     back(res, '/tools/tax', 'Rates saved.');
   } catch (e) { next(e); }
