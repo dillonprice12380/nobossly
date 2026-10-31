@@ -100,6 +100,20 @@
   </div>
 <% } %>
 
+<% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
+<div class="card">
+  <h2 style="margin-top:0">💵 Got paid?</h2>
+  <p class="muted small" style="margin:.1rem 0 .6rem">Log every payment your side business brings in. It shows you what to put aside for tax, and when you reach a money rung on your path.</p>
+  <form method="post" action="/budget/income" class="cta-row" style="justify-content:flex-start;align-items:flex-end;flex-wrap:wrap;gap:.5rem">
+    <input type="hidden" name="from" value="dashboard">
+    <label>Amount ($)<input name="amount" inputmode="decimal" required style="max-width:130px"></label>
+    <label>Date<input type="date" name="date" value="<%= today %>" max="<%= today %>"></label>
+    <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
+    <button class="btn btn-primary btn-sm">Log income</button>
+    <a class="muted small" href="/budget">See your income log</a>
+  </form>
+</div>
+
 <% if ((typeof pinned !== 'undefined' && pinned.length) || sprint) { %>
   <div class="card challenge-pin">
     <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active quests</h2>

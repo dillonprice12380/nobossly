@@ -1,10 +1,52 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1>💰 Budget & Expenses</h1><p class="muted"><%= monthLabel %> — plan your spend, track every dollar.</p></div>
+  <div><h1>💰 Income, Budget & Expenses</h1><p class="muted"><%= monthLabel %> — what came in, what went out, and what to keep aside.</p></div>
   <a class="btn btn-ghost" href="/dashboard">← Dashboard</a>
 </div>
 
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% const $m = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+<% claims.forEach(c => { %>
+  <div class="card" style="border-left:3px solid var(--accent-2)">
+    <p style="margin:0">🏆 Your income log shows <strong><%= c.title %></strong> — Level <%= c.level %>, <%= c.rung %> on your path. <a href="<%= c.href %>"><%= c.kind === 'quest' ? 'Complete the quest' : 'Claim the trophy' %></a>: <%= c.how %>.</p>
+  </div>
+<% }) %>
+
+<div class="card">
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <h3 style="margin-top:0">💵 Income</h3>
+      <div class="stat-row" style="margin:0 0 .6rem">
+        <div class="stat"><span class="stat-num"><%= $m(incomeSum.thisMonth) %></span><span class="muted small">this month</span></div>
+        <div class="stat"><span class="stat-num"><%= $m(incomeSum.lastMonth) %></span><span class="muted small">last month</span></div>
+        <div class="stat"><span class="stat-num"><%= $m(incomeSum.total) %></span><span class="muted small">logged in all</span></div>
+      </div>
+      <form method="post" action="/budget/income">
+        <div class="form-grid-2">
+          <label>Amount ($)<input name="amount" inputmode="decimal" required></label>
+          <label>Date<input name="date" type="date" value="<%= new Date().toISOString().slice(0,10) %>" max="<%= new Date().toISOString().slice(0,10) %>"></label>
+        </div>
+        <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
+        <button class="btn btn-primary">Log income</button>
+      </form>
+      <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else { %><a href="/pricing">Premium</a> turns this into quarterly estimates and a quit date.<% } %></p>
+    </div>
+    <div>
+      <h3 style="margin-top:0">Recent payments</h3>
+      <% if (!incomeLog.length) { %><p class="muted small">Nothing logged yet. Every payment counts — the first sale is a rung on every path.</p><% } %>
+      <table class="table small" style="width:100%">
+        <% incomeLog.forEach(e => { %>
+          <tr>
+            <td><%= new Date(e.entry_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+            <td><strong><%= $m(e.amount) %></strong><% if (e.source) { %><br><span class="muted small"><%= e.source %></span><% } %></td>
+            <td><form method="post" action="/budget/income/<%= e.id %>/delete" class="inline" onsubmit="return confirm('Delete this payment?')"><button class="btn-x" title="Delete">×</button></form></td>
+          </tr>
+        <% }) %>
+      </table>
+    </div>
+  </div>
+</div>
 
 <% if (typeof suggestion !== 'undefined' && suggestion.length) { %>
   <div class="card" style="border-left:3px solid var(--accent)">

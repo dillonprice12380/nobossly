@@ -2,9 +2,28 @@
 <% const $ = n => '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }); %>
 <div class="page-head"><div>
   <h1>🗓️ Quit-Date Planner</h1>
-  <p class="muted">What your life costs, what you have saved, and what the side business brings in — turned into the month you can hand in your notice.</p>
+  <p class="muted">What your life costs, what you have saved, and what your side business actually brings in — from your income log — turned into the month you can hand in your notice.</p>
 </div><a class="btn btn-ghost btn-sm" href="/tools">Toolkit</a></div>
 <% if (m) { %><p class="notice"><%= m %></p><% } %>
+
+<% if (logged) { %>
+  <div class="card" style="border-left:3px solid var(--accent-2)">
+    <p style="margin:0">📒 <strong>From your income log:</strong> <%= $(logged.avgProfit) %> a month profit after business costs<%= logged.window.count > 1 ? ', averaged over ' + monthLabel(logged.window.from) + ' – ' + monthLabel(logged.window.to) : ' in ' + monthLabel(logged.window.from) %><%= logged.growth !== null ? ', growing about ' + logged.growth + '% a month' : '' %>.
+      <%= auto ? 'Your plan uses these numbers.' : 'Your plan uses the numbers you typed instead.' %></p>
+    <% if (logged.growth === null) { %><p class="muted small" style="margin:.3rem 0 0">Growth is measured once there are three months of profit to compare; until then the plan uses the rate you set.</p><% } %>
+  </div>
+<% } else { %>
+  <div class="card"><p class="muted small" style="margin:0">📒 Log your payments on the <a href="/budget">Money</a> page and this plan fills in your side income and growth from what actually came in.</p></div>
+<% } %>
+
+<% if (nextRung) { %>
+  <div class="card">
+    <p style="margin:0">🪜 <strong>Your next money rung:</strong> <%= nextRung.title %> — Level <%= nextRung.level %>, <%= nextRung.rung %>.
+      <% if (nextRung.eta && nextRung.eta.months === 0) { %>Your logged pace is already there.
+      <% } else if (nextRung.eta) { %>At your logged pace, about <strong><%= monthLabel(nextRung.eta.month) %></strong>.
+      <% } else { %>Once your log shows a few months of growth, this shows when you will get there.<% } %></p>
+  </div>
+<% } %>
 
 <% if (plan) { %>
   <div class="stat-row">
@@ -35,9 +54,13 @@
       <label>Benefits your job pays for, per month ($)<input name="benefits" inputmode="decimal" value="<%= hasPlan ? inputs.benefits : '' %>" placeholder="Health insurance, retirement match…"></label>
       <label>Savings today ($)<input name="savings" inputmode="decimal" value="<%= hasPlan ? inputs.savings : '' %>"></label>
       <label>Saved from your paycheck each month ($)<input name="save_rate" inputmode="decimal" value="<%= hasPlan ? inputs.save_rate : '' %>"></label>
-      <label>Side-business profit per month today ($)<input name="side" inputmode="decimal" value="<%= hasPlan ? inputs.side : '' %>" placeholder="After business costs, before tax"></label>
+      <% if (logged) { %>
+        <input type="hidden" name="log_shown" value="1">
+        <label class="check"><input type="checkbox" name="use_log" <%= auto ? 'checked' : '' %>> Use my income log for side income and growth</label>
+      <% } %>
+      <label>Side-business profit per month today ($)<input name="side" inputmode="decimal" value="<%= hasPlan ? (data.inputs.side || '') : '' %>" placeholder="After business costs, before tax"></label>
       <div class="grid-2" style="gap:.6rem">
-        <label>Monthly growth (%)<input name="growth" inputmode="decimal" value="<%= inputs.growth %>"></label>
+        <label>Monthly growth (%)<input name="growth" inputmode="decimal" value="<%= hasPlan ? (data.inputs.growth || 0) : inputs.growth %>"></label>
         <label>Tax set aside (%)<input name="tax" inputmode="decimal" value="<%= inputs.tax %>"></label>
         <label>Safety buffer (months)<input name="buffer" inputmode="decimal" value="<%= inputs.buffer %>"></label>
         <label>Plan starts<input name="start" type="month" value="<%= inputs.start %>"></label>
@@ -53,7 +76,7 @@
       <form method="post" action="/tools/quit-date/checkin">
         <div class="grid-2" style="gap:.6rem">
           <label>Month<input name="month" type="month" value="<%= new Date().toISOString().slice(0, 7) %>" required></label>
-          <label>Side profit that month ($)<input name="side" inputmode="decimal" required></label>
+          <label>Side profit that month ($)<input name="side" inputmode="decimal" value="<%= checkinSide %>" required></label>
         </div>
         <label>Savings now ($)<input name="savings" inputmode="decimal" value="<%= inputs.savings %>" required></label>
         <label>Note<input name="note" maxlength="300" placeholder="Optional — what moved the number?"></label>

@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const { planOf } = require('../middleware/auth');
 const starter = require('../starter_budget');
+const income = require('../income');
+const calc = require('../tools_calc');
+const premium = require('../premium');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -22,8 +25,12 @@ async function loadBudget(req, extra = {}) {
   const totalBudget = (budgets || []).reduce((s, b) => s + (Number(b.monthly_limit) || 0), 0);
   const cats = [...new Set([...(budgets || []).map(b => b.category), ...Object.keys(spentByCat)])];
   const launchBudget = (q && q.launch_budget) || null;
+  const [log, done, rate] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req)]);
+  const sum = income.summary(log.income, log.expenses);
   return Object.assign({
-    title: 'Budget & Expenses', budgets: budgets || [], expenses: expenses || [],
+    title: 'Income, Budget & Expenses', budgets: budgets || [], expenses: expenses || [],
+    incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
+    claims: income.claimPrompts(req.profile.path, sum, done),
     spentByCat, totalSpent, totalBudget, cats,
     monthLabel: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
     paid: isPaid(req), msg: req.query.msg || null, insights: null,
@@ -35,6 +42,13 @@ async function loadBudget(req, extra = {}) {
     starterMonths: starter.MONTHS,
     budgetCategories: require('../budget_categories').STANDARD
   }, extra);
+}
+
+// The share of each payment to put aside for tax: the member's own rates if they
+// set them in Tax Set-Aside, otherwise self-employment tax plus the 12% bracket.
+async function setAsideRate(req) {
+  const tax = await premium.load(req, 'tax');
+  return calc.taxRate(tax.settings || {});
 }
 
 router.get('/', async (req, res, next) => {
@@ -99,6 +113,41 @@ router.post('/expense', async (req, res, next) => {
 router.post('/expense/:id/delete', async (req, res, next) => {
   try {
     await req.sb.from('expenses').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+    res.redirect('/budget');
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------------------------ Income
+const today = () => new Date().toISOString().slice(0, 10);
+const money = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const backTo = req => (req.body.from === 'dashboard' ? '/dashboard' : '/budget');
+
+router.post('/income', async (req, res, next) => {
+  try {
+    const amount = calc.num(req.body.amount, { max: 1e8 });
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') && req.body.date <= today() ? req.body.date : today();
+    const to = backTo(req);
+    if (!(amount > 0)) return res.redirect(to + '?msg=' + encodeURIComponent('Enter the amount you were paid.'));
+    const { error } = await req.sb.from('revenue_entries').insert({
+      user_id: req.user.id, entry_type: 'revenue', amount, entry_date: date,
+      source: String(req.body.source || '').trim().slice(0, 80) || null,
+      description: String(req.body.note || '').trim().slice(0, 200) || null
+    });
+    if (error) return res.redirect(to + '?msg=' + encodeURIComponent('Could not save that payment. Please try again.'));
+
+    // Say what to put aside, and whether that payment just reached a money
+    // rung the member has not recorded yet.
+    const [log, done, rate] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req)]);
+    const claims = income.claimPrompts(req.profile.path, income.summary(log.income, log.expenses), done);
+    let m = 'Logged ' + money(amount) + '. Put about ' + money(amount * rate / 100) + ' of it aside for tax.';
+    if (claims.length) m += ' Your income log shows “' + claims[0].title + '” — ' + claims[0].how + '.';
+    res.redirect(to + '?msg=' + encodeURIComponent(m));
+  } catch (e) { next(e); }
+});
+
+router.post('/income/:id/delete', async (req, res, next) => {
+  try {
+    await req.sb.from('revenue_entries').delete().eq('id', req.params.id).eq('user_id', req.user.id);
     res.redirect('/budget');
   } catch (e) { next(e); }
 });

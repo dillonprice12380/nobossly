@@ -3,7 +3,7 @@
    const del = (list, id) => '/tools/tax/' + list + '/' + id + '/delete?year=' + year; %>
 <div class="page-head"><div>
   <h1>🧾 Tax Set-Aside</h1>
-  <p class="muted">Log what comes in and what you spend on the business. It tells you how much to put aside from every payment and tracks your quarterly estimated taxes.</p>
+  <p class="muted">Built from your income log and the business expenses on your <a href="/budget">Money</a> page — nothing to type twice. It tells you how much to put aside from every payment and tracks your quarterly estimated taxes.</p>
 </div><a class="btn btn-ghost btn-sm" href="/tools">Toolkit</a></div>
 <% if (m) { %><p class="notice"><%= m %></p><% } %>
 
@@ -36,19 +36,16 @@
 <div class="grid-2">
   <div class="card">
     <h3 style="margin-top:0">💵 Money in</h3>
-    <form method="post" action="/tools/tax/income" class="grid-2" style="gap:.5rem">
-      <label>Date<input type="date" name="date" value="<%= today %>" required></label>
-      <label>Amount ($)<input name="amount" inputmode="decimal" required></label>
-      <label style="grid-column:1/-1">From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
-      <button class="btn btn-primary btn-sm">Add payment</button>
-    </form>
+    <p class="muted small" style="margin-top:0">From your income log. <a href="/budget">Log a payment →</a></p>
+    <% if (!income.length) { %><p class="muted small">No payments logged for <%= year %> yet.</p><% } %>
     <% income.slice(0, 25).forEach(e => { %>
       <div class="milestone-row"><div style="flex:1"><strong><%= $(e.amount) %></strong> <span class="muted small"><%= e.date %><%= e.source ? ' · ' + e.source : '' %></span><br><span class="muted small">Put aside <%= $(sum.setAsideFor(e.amount)) %></span></div>
-        <form method="post" action="<%= del('income', e.id) %>"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form></div>
+        <% if (!e.fromLog) { %><form method="post" action="<%= del('income', e.id) %>"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form><% } %></div>
     <% }) %>
   </div>
   <div class="card">
     <h3 style="margin-top:0">🧾 Business expenses</h3>
+    <p class="muted small" style="margin-top:0">Expenses on your <a href="/budget">Money</a> page count automatically in the categories ticked under Your rates. Add anything else here.</p>
     <form method="post" action="/tools/tax/deductions" class="grid-2" style="gap:.5rem">
       <label>Date<input type="date" name="date" value="<%= today %>" required></label>
       <label>Amount ($)<input name="amount" inputmode="decimal" required></label>
@@ -58,8 +55,8 @@
       <button class="btn btn-primary btn-sm">Add expense</button>
     </form>
     <% deductions.slice(0, 25).forEach(e => { %>
-      <div class="milestone-row"><div style="flex:1"><strong><%= $(e.amount) %></strong> <span class="muted small"><%= e.date %><%= e.category ? ' · ' + e.category : '' %><%= e.note ? ' · ' + e.note : '' %></span></div>
-        <form method="post" action="<%= del('deductions', e.id) %>"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form></div>
+      <div class="milestone-row"><div style="flex:1"><strong><%= $(e.amount) %></strong> <span class="muted small"><%= e.date %><%= e.category ? ' · ' + e.category : '' %><%= e.note ? ' · ' + e.note : '' %><%= e.fromBudget ? ' · from your budget' : '' %></span></div>
+        <% if (!e.fromBudget) { %><form method="post" action="<%= del('deductions', e.id) %>"><button class="btn btn-ghost btn-sm" aria-label="Delete">✕</button></form><% } %></div>
     <% }) %>
   </div>
   <div class="card">
@@ -97,6 +94,13 @@
     <label>Federal tax bracket<select name="fed"><% brackets.forEach(b => { %><option value="<%= b %>" <%= Number(settings.fed || 12) === b ? 'selected' : '' %>><%= b %>%</option><% }) %></select></label>
     <label>State income tax (%)<input name="state" inputmode="decimal" value="<%= settings.state || 0 %>" style="max-width:110px"></label>
     <label>Mileage rate ($/mile)<input name="mile_rate" inputmode="decimal" value="<%= sum.mileRate %>" style="max-width:110px"></label>
+    <fieldset style="flex-basis:100%;border:0;padding:0;margin:.4rem 0 0">
+      <legend class="small"><strong>Budget categories that count as business deductions</strong></legend>
+      <% categories.forEach(c => { %>
+        <input type="hidden" name="cats_shown" value="<%= c.name %>">
+        <label class="check" style="display:inline-flex;margin-right:1rem"><input type="checkbox" name="deductible" value="<%= c.name %>" <%= c.on ? 'checked' : '' %>> <%= c.name %></label>
+      <% }) %>
+    </fieldset>
     <button class="btn btn-primary btn-sm">Save rates</button>
   </form>
   <p class="muted small">The set-aside rate is self-employment tax (about 14.1%) plus your federal bracket and state rate, applied to income minus expenses and mileage. Check the IRS standard mileage rate each year.</p>
