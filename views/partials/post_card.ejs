@@ -1,0 +1,60 @@
+<%# One member post, with its reactions and latest comments.
+    Locals: p (a decorated post from src/posts.js), backTo (where forms return),
+    maxComment, full (true on the post's own page). %>
+<%
+  var _ago = function (d) {
+    var s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 90) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm';
+    if (s < 86400) return Math.round(s / 3600) + 'h';
+    if (s < 604800) return Math.round(s / 86400) + 'd';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  var _initial = function (w) { return (w.display_name || w.username || '?').slice(0, 1).toUpperCase(); };
+%>
+<article class="card post-card" id="p-<%= p.id %>">
+  <header class="post-head">
+    <a class="post-avatar" href="/members/<%= p.who.username %>"><% if (p.who.avatar_url) { %><img src="<%= p.who.avatar_url %>" alt=""><% } else { %><%= _initial(p.who) %><% } %></a>
+    <div style="flex:1;min-width:0">
+      <a href="/members/<%= p.who.username %>"><strong><%= p.who.display_name || p.who.username %></strong></a>
+      <% if (p.who.headline) { %><span class="muted small"> · <%= p.who.headline %></span><% } %>
+      <div class="muted small"><%= p.type.emoji %> <%= p.type.label %> · <a class="muted" href="/feed/p/<%= p.id %>"><%= _ago(p.created_at) %></a></div>
+    </div>
+    <% if (p.mine) { %>
+      <form method="post" action="/feed/p/<%= p.id %>/delete" onsubmit="return confirm('Delete this post?')">
+        <input type="hidden" name="back" value="<%= full ? '/feed' : backTo %>">
+        <button class="btn-x" title="Delete post" aria-label="Delete post">×</button>
+      </form>
+    <% } %>
+  </header>
+  <p class="post-body"><%= p.content %></p>
+  <% if (p.link_url) { %>
+    <a class="post-link" href="<%= p.link_url %>" target="_blank" rel="noopener noreferrer nofollow"><%= p.link_title || p.link_url.replace(/^https?:\/\//, '') %></a>
+  <% } %>
+  <footer class="post-actions">
+    <form method="post" action="/feed/p/<%= p.id %>/react" class="inline">
+      <input type="hidden" name="back" value="<%= backTo %>">
+      <button class="btn btn-ghost btn-sm <%= p.likedByMe ? 'chip-active' : '' %>" aria-pressed="<%= p.likedByMe %>">👍 <%= p.like_count || 0 %></button>
+    </form>
+    <a class="btn btn-ghost btn-sm" href="/feed/p/<%= p.id %>#comment">💬 <%= p.comment_count || 0 %></a>
+  </footer>
+  <% if (p.moreComments) { %><p class="small" style="margin:.4rem 0 0"><a href="/feed/p/<%= p.id %>">View all <%= p.comment_count %> comments</a></p><% } %>
+  <% p.comments.forEach(function (c) { %>
+    <div class="post-comment">
+      <a class="post-avatar sm" href="/members/<%= c.who.username %>"><% if (c.who.avatar_url) { %><img src="<%= c.who.avatar_url %>" alt=""><% } else { %><%= _initial(c.who) %><% } %></a>
+      <div style="flex:1;min-width:0">
+        <a href="/members/<%= c.who.username %>"><strong class="small"><%= c.who.display_name || c.who.username %></strong></a>
+        <span class="muted small"> · <%= _ago(c.created_at) %></span>
+        <p style="margin:.1rem 0 0"><%= c.content %></p>
+      </div>
+      <% if (typeof user !== 'undefined' && user && c.user_id === user.id) { %>
+        <form method="post" action="/feed/c/<%= c.id %>/delete"><input type="hidden" name="back" value="<%= backTo %>"><button class="btn-x" title="Delete comment" aria-label="Delete comment">×</button></form>
+      <% } %>
+    </div>
+  <% }) %>
+  <form method="post" action="/feed/p/<%= p.id %>/comment" class="post-comment-form"<%= full ? ' id=comment' : '' %>>
+    <input type="hidden" name="back" value="<%= backTo %>">
+    <input name="content" maxlength="<%= maxComment %>" placeholder="Add a comment…" required aria-label="Add a comment">
+    <button class="btn btn-ghost btn-sm">Reply</button>
+  </form>
+</article>

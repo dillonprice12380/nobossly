@@ -40,7 +40,7 @@
         <p class="small muted"><%= b.tester_count || 0 %>/<%= b.max_testers %> testers · by <%= (pmap[b.owner_id] || {}).display_name || 'a member' %></p>
         <% if (enrolled.has(b.id)) { %><span class="chip chip-success">✅ Enrolled</span>
         <% } else if (user && b.owner_id !== user.id) { %>
-          <form method="post" action="/community/beta/<%= b.id %>/join"><button class="btn btn-primary btn-sm">Join as tester (+15 XP)</button></form>
+          <form method="post" action="/community/beta/<%= b.id %>/join"><button class="btn btn-primary btn-sm">Join as tester<% if (flags.ladder) { %> (+15 XP)<% } %></button></form>
         <% } %>
       </div>
     <% }) %>

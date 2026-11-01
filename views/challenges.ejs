@@ -1,9 +1,9 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Quests</h1><p class="muted">Everything you can take on, matched to where you are. Core quests fit your level; electives fit your business. The weekly sprint carries you between rungs.</p></div>
+  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Quests</h1><p class="muted">Everything you can take on, matched to where you are. <% if (flags.ladder) { %>Core quests fit your level; electives<% } else { %>Electives<% } %> fit your business.<% if (flags.sprints && flags.ladder) { %> The weekly sprint carries you between rungs.<% } %></p></div>
   <div>
-    <span class="chip">⚔️ Level <%= level %></span>
-    <% if (streak && streak.days > 0) { %><span class="chip">🔥 <%= streak.days %>-day streak</span><% } %>
+    <% if (flags.ladder) { %><span class="chip">⚔️ Level <%= level %></span><% } %>
+    <% if (flags.sprints && streak && streak.days > 0) { %><span class="chip">🔥 <%= streak.days %>-day streak</span><% } %>
   </div>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
@@ -24,7 +24,7 @@
       <div class="milestone-row">
         <div style="flex:1"><strong><%= p.ch.emoji || '🏁' %> <%= p.ch.title %></strong>
         <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(p.ch.title), from: 'quest', compact: true }) %>
-        <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
+        <p class="muted small">due <%= p.due %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %><% if (flags.ladder) { %> · ⚡ <%= p.ch.xp_reward || 0 %> XP<% } %><%= p.kind === 'cohort' ? ' · 🚩 cohort' : '' %><%= p.kind === 'custom' ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 quest' : '' %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
             <textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note to complete: who, what, result — a few honest sentences."></textarea>
@@ -42,6 +42,7 @@
   </div>
 <% } %>
 
+<% if (flags.sprints) { %>
 <div class="card" id="weekly-sprint" style="border-left:3px solid var(--accent)">
   <div class="page-head" style="margin:0 0 .4rem">
     <div><h2>🏃 Your weekly sprint</h2><p class="muted small">The repeating 7-day quest. Every quest below gets won one sprint at a time.</p></div>
@@ -57,11 +58,12 @@
     <a class="btn btn-primary btn-sm" href="/dashboard">Start a sprint</a>
   <% } %>
 </div>
+<% } %>
 
 <% if (cohorts && cohorts.length) { %>
   <div class="card">
     <h2>🚩 Cohort quests</h2>
-    <p class="muted small">A new cohort starts every Monday: everyone runs a 7-day sprint together and climbs the same leaderboard.</p>
+    <p class="muted small">A new cohort starts every Monday: everyone runs a 7-day sprint together<% if (flags.ladder) { %> and climbs the same leaderboard<% } %>.</p>
     <div class="grid">
       <% cohorts.forEach(c => { const a = accMap[c.id];
          const now = Date.now();
@@ -71,7 +73,7 @@
          const daysTo = ms => Math.max(0, Math.ceil((ms - now) / 86400000));
          const onList = typeof waiting !== 'undefined' && waiting.has(c.id); %>
         <div class="card">
-          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🚩' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🚩' %></span><% if (flags.ladder) { %><span class="chip">⚡ <%= c.xp_reward %> XP</span><% } %></div>
           <h3><%= c.title %></h3>
           <p class="muted"><%= c.description %></p>
           <p>
@@ -94,7 +96,7 @@
               <% } %>
             </div>
           <% } %>
-          <% if (state !== 'upcoming') { %><p style="margin-top:.5rem"><a class="btn btn-ghost btn-sm" href="/quests/<%= c.id %>/leaderboard">🏆 View leaderboard</a></p><% } %>
+          <% if (state !== 'upcoming') { %><p style="margin-top:.5rem"><a class="btn btn-ghost btn-sm" href="/quests/<%= c.id %>/leaderboard"><% if (flags.ladder) { %>🏆 View leaderboard<% } else { %>👥 See who's in<% } %></a></p><% } %>
         </div>
       <% }) %>
     </div>
@@ -103,15 +105,15 @@
 
 <div class="card">
   <h2>🧭 Core quests</h2>
-  <p class="muted small">The path everyone walks on the way out — filtered to your level. New quests unlock as you climb; active ones are pinned at the top of the page.</p>
+  <p class="muted small">The path everyone walks on the way out<% if (flags.ladder) { %> — filtered to your level. New quests unlock as you climb; active<% } else { %>. Active<% } %> ones are pinned at the top of the page.</p>
   <div class="grid">
     <% challenges.filter(c => !(accMap[c.id] && accMap[c.id].status === 'active')).forEach(c => { const a = accMap[c.id]; %>
       <div class="card">
-        <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+        <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><% if (flags.ladder) { %><span class="chip">⚡ <%= c.xp_reward %> XP</span><% } %></div>
         <h3><%= c.title %><%= c.requires_proof ? ' 🎮' : '' %></h3>
         <p class="muted"><%= c.description %></p>
         <%- include('partials/affiliate_picks', { picks: affiliates.forTitle(c.title), from: 'quest', compact: true }) %>
-        <% if (c.requires_proof) { %><p class="muted small">Ladder quest — completing it takes a short proof note and posts to the Wins wall.</p><% } %>
+        <% if (c.requires_proof) { %><p class="muted small"><% if (flags.ladder) { %>Ladder quest — completing<% } else { %>Completing<% } %> it takes a short proof note and posts to the Wins wall.</p><% } %>
         <% if (c.title === 'Get 3 Feedback Sessions') { %><p class="small" style="margin:.3rem 0">Two ways to clear it: <a href="/reviews">get 3 reviews in Peer review</a>, or talk to three people off-site and log them here with a proof note.</p><% } %>
         <% if (!a) { %>
           <form method="post" action="/quests/<%= c.id %>/accept">
@@ -142,15 +144,15 @@
     <p class="muted">Electives are quests matched to your path and business — pick your path and they'll fill in here.</p>
     <a class="btn btn-primary btn-sm" href="/choose-path">Choose your path</a>
   <% } else if (!electives.length && custom.length) { %>
-    <p class="muted">You've taken on every elective that fits your business at this level — impressive. New ones appear as you level up.</p>
+    <p class="muted">You've taken on every elective that fits your business<% if (flags.ladder) { %> at this level<% } %> — impressive.<% if (flags.ladder) { %> New ones appear as you level up.<% } %></p>
   <% } else if (!electives.length) { %>
-    <p class="muted">Electives unlock as you level up. Clear a core quest or two and the first ones for your path appear here.</p>
+    <p class="muted"><% if (flags.ladder) { %>Electives unlock as you level up. <% } %>Clear a core quest or two and the first ones for your path appear here.</p>
   <% } else { %>
     <p class="muted small">Matched to your path and business. Accept the ones that move your needle.</p>
     <div class="grid">
       <% electives.forEach(t => { %>
         <div class="card">
-          <div class="idea-top"><span style="font-size:1.6rem"><%= t.emoji || '🏁' %></span><span class="chip">⚡ <%= t.xp_reward %> XP</span></div>
+          <div class="idea-top"><span style="font-size:1.6rem"><%= t.emoji || '🏁' %></span><% if (flags.ladder) { %><span class="chip">⚡ <%= t.xp_reward %> XP</span><% } %></div>
           <h3><%= t.title %></h3>
           <p class="muted"><%= t.description %></p>
           <form method="post" action="/quests/tailored/<%= t.id %>/accept">
@@ -178,7 +180,7 @@
     <div class="grid">
       <% nonActiveCustom.forEach(c => { %>
         <div class="card">
-          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><span class="chip">⚡ <%= c.xp_reward %> XP</span></div>
+          <div class="idea-top"><span style="font-size:1.6rem"><%= c.emoji || '🏁' %></span><% if (flags.ladder) { %><span class="chip">⚡ <%= c.xp_reward %> XP</span><% } %></div>
           <h3><%= c.title %></h3>
           <p class="muted"><%= c.description %></p>
           <% if (c.status === 'completed') { %>

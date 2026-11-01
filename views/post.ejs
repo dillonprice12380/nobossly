@@ -1,0 +1,6 @@
+<%- include('partials/head') %>
+<div class="page-head"><div><a class="muted small" href="/feed">← Feed</a></div></div>
+<div class="feed-list" style="max-width:720px">
+  <%- include('partials/post_card', { p: post, backTo: '/feed/p/' + post.id, maxComment, full: true }) %>
+</div>
+<%- include('partials/foot') %>

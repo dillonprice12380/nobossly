@@ -18,7 +18,7 @@
 
 <% if (nextRung) { %>
   <div class="card">
-    <p style="margin:0">🪜 <strong>Your next money rung:</strong> <%= nextRung.title %> — Level <%= nextRung.level %>, <%= nextRung.rung %>.
+    <p style="margin:0">🪜 <strong><% if (flags.ladder) { %>Your next money rung:<% } else { %>Your next money milestone:<% } %></strong> <%= nextRung.title %><% if (flags.ladder) { %> — Level <%= nextRung.level %>, <%= nextRung.rung %><% } %>.
       <% if (nextRung.eta && nextRung.eta.months === 0) { %>Your logged pace is already there.
       <% } else if (nextRung.eta) { %>At your logged pace, about <strong><%= monthLabel(nextRung.eta.month) %></strong>.
       <% } else { %>Once your log shows a few months of growth, this shows when you will get there.<% } %></p>

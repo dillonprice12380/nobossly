@@ -11,7 +11,7 @@
     <input type="hidden" name="body_html">
     <div data-rich data-placeholder="Share your thoughts… use the toolbar for formatting, images, and link cards"></div>
     <textarea name="body" rows="3"></textarea>
-    <button class="btn btn-primary">Post thread (+10 XP)</button>
+    <button class="btn btn-primary">Post thread<% if (flags.ladder) { %> (+10 XP)<% } %></button>
   </form>
 </div>
 <% } else { %><div class="card center"><p>Sign up to start a thread and get feedback from other members.</p><a class="btn btn-primary" href="/signup">Join free</a></div><% } %>

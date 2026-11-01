@@ -1,4 +1,5 @@
 <%- include('partials/head') %>
+<% if (flags.sprints) { %>
 <div class="card form-card">
   <h2>📝 Daily check-in</h2>
   <% if (sprint) { %><p class="muted">Sprint: <%= sprint.theme %> — <%= sprint.goal %></p>
@@ -15,7 +16,10 @@
     <label>Any wins today?<textarea name="wins_today" rows="2"></textarea></label>
     <label>Blockers?<textarea name="blockers" rows="2"></textarea></label>
     <label>Plan for tomorrow<textarea name="tomorrow_plan" rows="2"></textarea></label>
-    <button class="btn btn-primary btn-block">Check in (+15 XP)</button>
+    <button class="btn btn-primary btn-block">Check in<% if (flags.ladder) { %> (+15 XP)<% } %></button>
   </form>
 </div>
+<% } else { %>
+<div class="card center"><p class="muted">Daily check-ins are switched off for now.</p><a class="btn btn-ghost btn-sm" href="/dashboard">Back to your dashboard</a></div>
+<% } %>
 <%- include('partials/foot') %>

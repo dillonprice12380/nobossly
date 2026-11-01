@@ -24,7 +24,10 @@ const ok = (name, cond, detail) => {
 console.log('\nPremium is off:');
 {
   const { FLAGS } = require('../src/features');
-  ok('every shelved flag starts off', Object.values(FLAGS).every(v => v === false), Object.keys(FLAGS).length + ' flags');
+  // Shelved until there are members to want them. (Challenges, results,
+  // collaborators and the help board came back on in Phase 1.)
+  const SHELVED_FLAGS = ['premium', 'ladder', 'trophies', 'sprints', 'analytics', 'friendships'];
+  ok('every shelved flag is off', SHELVED_FLAGS.every(k => FLAGS[k] === false), SHELVED_FLAGS.filter(k => FLAGS[k] !== false).join(', ') || SHELVED_FLAGS.join(', '));
 
   const premium = require('../src/premium');
   ok('every member has the tools', premium.hasPremium({ subscription_status: null }) === true);

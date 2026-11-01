@@ -31,8 +31,8 @@
 <%# The entry point is the path now, not the Compass — nine of them, each with
     its own questions, its own ten rungs and its own quests. Sending a reader
     straight to /paths shows them that before asking for an email. %>
-        <p><strong>You just read the manual — now find your path.</strong> A plumber and a podcaster do not leave their jobs the same way, so NoBossly does not ask them the same questions. Pick one of nine paths and everything changes with it: what you are asked, the number your idea is held to, the quests you get, and the ten rungs you climb — named for the work you actually do.</p>
-        <a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= user ? '/dashboard' : '/paths' %>"><%= user ? 'Back to the climb →' : 'Find your path — free →' %></a>
+        <p><strong>You just read the manual — now find your path.</strong> A plumber and a podcaster do not leave their jobs the same way, so NoBossly does not ask them the same questions. Pick one of nine paths and everything changes with it: what you are asked, the number your idea is held to<% if (flags.ladder) { %>, the quests you get, and the ten rungs you climb — named for the work you actually do<% } else { %> and the quests you get<% } %>.</p>
+        <a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= user ? '/dashboard' : '/paths' %>"><%= user ? (flags.ladder ? 'Back to the climb →' : 'Back to your dashboard →') : 'Find your path — free →' %></a>
       </div>
     <% } %>
   </article>

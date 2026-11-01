@@ -7,9 +7,9 @@
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
 
 <% const $m = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
-<% claims.forEach(c => { %>
+<% claims.forEach(c => { if (c.kind !== 'quest' && !flags.trophies) return; %>
   <div class="card" style="border-left:3px solid var(--accent-2)">
-    <p style="margin:0">🏆 Your income log shows <strong><%= c.title %></strong> — Level <%= c.level %>, <%= c.rung %> on your path. <a href="<%= c.href %>"><%= c.kind === 'quest' ? 'Complete the quest' : 'Claim the trophy' %></a>: <%= c.how %>.</p>
+    <p style="margin:0">🏆 Your income log shows <strong><%= c.title %></strong><% if (flags.ladder) { %> — Level <%= c.level %>, <%= c.rung %> on your path<% } %>. <a href="<%= c.href %>"><%= c.kind === 'quest' ? 'Complete the quest' : 'Claim the trophy' %></a>: <%= c.how %>.</p>
   </div>
 <% }) %>
 
@@ -34,7 +34,7 @@
     </div>
     <div>
       <h3 style="margin-top:0">Recent payments</h3>
-      <% if (!incomeLog.length) { %><p class="muted small">Nothing logged yet. Every payment counts — the first sale is a rung on every path.</p><% } %>
+      <% if (!incomeLog.length) { %><p class="muted small">Nothing logged yet. Every payment counts<% if (flags.ladder) { %> — the first sale is a rung on every path<% } %>.</p><% } %>
       <table class="table small" style="width:100%">
         <% incomeLog.forEach(e => { %>
           <tr>

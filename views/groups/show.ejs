@@ -34,7 +34,7 @@
       <div class="card reply">
         <p class="muted small">
           <strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= (pmap[p.user_id] || {}).display_name || 'a member' %></a></strong>
-          · lvl <%= (pmap[p.user_id] || {}).current_level || 1 %> · <%= new Date(p.created_at).toLocaleString() %>
+          <% if (flags.ladder) { %>· lvl <%= (pmap[p.user_id] || {}).current_level || 1 %> <% } %>· <%= new Date(p.created_at).toLocaleString() %>
           <% if (p.user_id === user.id || isOwner || (profile && profile.is_admin)) { %><% } %>
         </p>
         <p class="pre"><%= p.body %></p>

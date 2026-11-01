@@ -269,41 +269,37 @@ for (const re of STALE_COUNT) {
 
 
 // ---------------------------------------------------------------------------
-// 3c. The feed names each member's rung from THEIR ladder, not the viewer's.
+// 3c. The feed is people posting, and their shared results.
 //
-// Nine paths means Level 4 is "Regular" for a creator and "Quoting" for a
-// plumber. Every view that renders someone else's level has to look the title
-// up against that person's own path — the feed, the dashboard peek and the
-// member directory all do, and the failure is silent: the page renders, the
-// number is right, and the word is somebody else's.
+// Members post updates, questions, resources and results; wins and finished
+// challenges sit in the same timeline. XP and levels are switched off
+// (FLAGS.ladder), so nothing on the feed may print one.
 
-console.log('\nThe feed reads each member from their own ladder:');
+console.log('\nThe feed shows what members post:');
 {
-  const ladders = require('../src/ladders');
-  const helpers = {
-    rungTitle: (p, l) => { const r = (ladders.ladderFor(p) || []).find(x => x.level === l); return r ? r.title : ''; },
-    pathLabel: (s) => { const p = paths.get(s); return p ? p.label : ''; }
+  const who = (u) => ({ id: 'id-' + u, username: u, display_name: u.toUpperCase(), avatar_url: null, path: 'creator', headline: 'Bakes for markets' });
+  const post = {
+    id: '11111111-1111-1111-1111-111111111111', user_id: 'id-ana', post_type: 'question', content: 'How do you price a first batch?',
+    link_url: null, link_title: null, like_count: 2, comment_count: 4, created_at: new Date().toISOString(),
+    who: who('ana'), type: { label: 'Question', emoji: '❓' }, likedByMe: true, mine: false,
+    comments: [{ id: 'c1', user_id: 'id-bo', content: 'Cost times three, then test.', created_at: new Date().toISOString(), who: who('bo') }],
+    moreComments: 3
   };
-  const at = (path, username) => ({
-    id: 'e-' + username, kind: 'level', title: 'reached Level 4', emoji: '\u2b06\ufe0f',
-    created_at: new Date().toISOString(),
-    who: { username, display_name: username, current_level: 4, path }
-  });
-  const html = render('feed.ejs', Object.assign({ user: { id: 'me' } }, helpers, {
-    following: 2, suggestions: [],
-    events: [at('creator', 'ana'), at('local_service', 'bo')]
-  }));
-  const creator = ladders.ladderFor('creator').find(r => r.level === 4).title;
-  const trade = ladders.ladderFor('local_service').find(r => r.level === 4).title;
-  ok('two members at Level 4 on different paths get different words',
-     creator !== trade, `${creator} vs ${trade}`);
-  ok('...and both of those words are on the page',
-     html.includes(creator) && html.includes(trade), `${creator}, ${trade}`);
+  const event = { id: 'e1', user_id: 'id-bo', kind: 'win', title: 'posted a win: first paying customer', emoji: '🤝', created_at: new Date().toISOString(), who: who('bo') };
+  const locals = { user: { id: 'me' }, msg: null, scope: 'everyone', types: require('../src/posts').TYPES, maxPost: 500, maxComment: 280,
+    pathLabel: () => 'Creator' };
+  const html = render('feed.ejs', Object.assign({}, locals, { following: 2, suggestions: [],
+    items: [{ item: 'post', at: post.created_at, post }, { item: 'event', at: event.created_at, event }] }));
+  ok('a member post renders with its author and headline', html.includes('How do you price a first batch?') && html.includes('Bakes for markets'));
+  ok('...with its reactions, comments and a way to reply', html.includes('👍 2') && html.includes('Cost times three') && html.includes('/feed/p/' + post.id + '/comment'));
+  ok('...and a link to the rest of the comments', html.includes('View all 4 comments'));
+  ok('a shared result sits in the same timeline', html.includes('first paying customer') && html.includes('href="/wins"'));
+  ok('there is a box to post from', html.includes('action="/feed/post"'));
+  const text = html.replace(/<[^>]+>/g, ' ');
+  ok('no XP or level is printed', !/\bXP\b|Level \d/.test(text));
 
-  // The empty states are the ones a new member actually sees first.
-  const noFollows = render('feed.ejs', Object.assign({ user: { id: 'me' } }, helpers,
-    { following: 0, events: [], suggestions: [] }));
-  ok('following nobody renders a way out of it', /Find members|not following anyone/i.test(noFollows), 'has a next step');
+  const empty = render('feed.ejs', Object.assign({}, locals, { following: 0, items: [], suggestions: [] }));
+  ok('an empty feed gives a next step', /Be the first to post/.test(empty) && /Find members/.test(empty));
 }
 
 

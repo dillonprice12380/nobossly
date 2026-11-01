@@ -24,7 +24,7 @@
 
 <div class="card">
   <h3>👁️ Profile visibility</h3>
-  <p class="muted small">Public profiles are fully visible to everyone. Private profiles only show your username, level, awards and badges.</p>
+  <p class="muted small">Public profiles are fully visible to everyone. Private profiles only show your username<% if (flags.ladder) { %>, level<% } %><% if (flags.trophies) { %>, awards and badges<% } %>.</p>
   <form method="post" action="/account/visibility" class="cta-row" style="justify-content:flex-start">
     <label class="check"><input type="radio" name="visibility" value="public" <%= p.profile_is_public !== false ? 'checked' : '' %>> Public</label>
     <label class="check"><input type="radio" name="visibility" value="private" <%= p.profile_is_public === false ? 'checked' : '' %>> Private</label>
@@ -51,7 +51,7 @@
   <% } else if (isPremium) { %>
     <p><span class="chip chip-success">Premium (admin)</span> Admins have every Premium tool. <a href="/tools">Open your tools</a></p>
   <% } else { %>
-    <p><span class="chip">Free</span> — every path, quest, sprint and rung, free for good.</p>
+    <p><span class="chip">Free</span> — every path<% if (flags.sprints || flags.ladder) { %>, quest<% if (flags.sprints) { %>, sprint<% } %><% if (flags.ladder) { %> and rung<% } %><% } else { %> and quest<% } %>, free for good.</p>
     <p class="muted small">Premium adds five planning tools for leaving your job — from $5 a month.</p>
     <a class="btn btn-primary btn-sm" href="/pricing">See Premium</a>
   <% } %>
