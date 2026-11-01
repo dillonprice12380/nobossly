@@ -1,0 +1,17 @@
+<%- include('../partials/head') %>
+<div class="card center" style="max-width:640px;margin:1.5rem auto">
+  <div class="sv-done-mark" aria-hidden="true"><%= result === 'ok' || result === 'duplicate' ? '✓' : '•' %></div>
+  <h1><%= done.head %></h1>
+  <% if (surveyTitle) { %><p class="muted small" style="margin-top:-.4rem"><%= surveyTitle %></p><% } %>
+  <p><%= done.body %></p>
+  <% if (result === 'ok') { %><p class="muted small">You can close this page.</p><% } %>
+  <% if (!user) { %>
+    <hr style="border:0;border-top:1px solid var(--border);margin:1.4rem 0">
+    <p class="muted small">Want feedback on your own idea? NoBossly is a free community for people building their way out of a 9-to-5 — surveys included.</p>
+    <a class="btn btn-ghost btn-sm" href="/">See NoBossly</a>
+  <% } %>
+</div>
+<style>
+  .sv-done-mark { width: 3rem; height: 3rem; margin: 0 auto .4rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; background: var(--panel-2); color: var(--accent); border: 1px solid var(--border); }
+</style>
+<%- include('../partials/foot') %>

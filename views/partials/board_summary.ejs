@@ -1,0 +1,27 @@
+<%#
+  A board at a glance, for a dashboard. Pass the result of pipeline.summary()
+  (or pipeline.list()) as `summary`:
+    include('../partials/board_summary', { summary: clients })   (in an unescaped output tag)
+  `root` (where the workspace router is mounted) defaults to /workspace.
+%>
+<% var _root = typeof root !== 'undefined' && root ? root : '/workspace';
+   var _d = summary.def, _t = summary.totals; %>
+<div class="card">
+  <div class="milestone-row" style="border-top:0;padding-top:0">
+    <strong><%= _d.emoji ? _d.emoji + ' ' : '' %><%= _d.label %></strong>
+    <a class="btn btn-ghost btn-sm" href="<%= _root %>/boards/<%= _d.key %>">Open</a>
+  </div>
+  <% if (!_t.count) { %>
+    <p class="muted small" style="margin:.2rem 0 0">No <%= _d.itemLabel %>s yet. <a href="<%= _root %>/boards/<%= _d.key %>">Add your first</a>.</p>
+  <% } else { %>
+    <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:.3rem 0 0;flex-wrap:wrap">
+      <% _d.stages.forEach(function (s) { var b = _t.byStage[s.key] || { count: 0 }; %>
+        <a class="chip <%= b.count ? 'chip-active' : '' %>" href="<%= _root %>/boards/<%= _d.key %>#stage-<%= s.key %>"><%= s.label %> <strong><%= b.count %></strong></a>
+      <% }) %>
+    </div>
+    <p class="muted small" style="margin:.5rem 0 0">
+      <%= _t.count %> <%= _t.count === 1 ? _d.itemLabel : _d.itemLabel + 's' %>
+      <% if (_d.valueLabel) { %> · <%= _t.display.value %> total<% if (_d.stages.some(function (s) { return s.done; })) { %> · <%= _t.display.openValue %> open<% } %><% } %>
+    </p>
+  <% } %>
+</div>

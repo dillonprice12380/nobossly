@@ -1,0 +1,70 @@
+<%- include('../partials/head') %>
+<%
+  // A month of dated cards. Wide screens get the grid; narrow ones an agenda
+  // list of the days that have something on (a 7-column grid is unreadable on
+  // a phone). Both are plain HTML; CSS picks one.
+  var q = function (month) { return root + '/calendar?' + (boardsParam ? 'boards=' + encodeURIComponent(boardsParam) + '&' : '') + 'month=' + month; };
+  var keys = Object.keys(cal.boards);
+  var many = keys.length > 1;
+  var tag = function (it) { var b = cal.boards[it.board] || {}; return b.emoji || (many ? b.label : ''); };
+  var days = Object.keys(cal.byDate).sort();
+%>
+<style>
+  .ws-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .ws-cal .ws-dow { font-size: .74rem; color: var(--muted); text-transform: uppercase; padding: 0 .3rem; }
+  .ws-day { min-height: 92px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: .3rem; overflow: hidden; }
+  .ws-day.out { opacity: .4; }
+  .ws-day.today { border-color: var(--accent); }
+  .ws-day .n { font-size: .78rem; color: var(--muted); }
+  .ws-ev { display: block; font-size: .76rem; line-height: 1.25; margin-top: .2rem; padding: .15rem .3rem; border-radius: 5px; background: var(--panel-2); color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ws-agenda { display: none; }
+  @media (max-width: 680px) { .ws-cal { display: none; } .ws-agenda { display: block; } }
+</style>
+
+<div class="page-head">
+  <div>
+    <h1>📅 <%= fmt.monthLabel(cal.month) %></h1>
+    <p class="muted small">
+      <% keys.forEach(function (k, i) { var b = cal.boards[k]; %><%= i ? ' · ' : '' %><a href="<%= root %>/boards/<%= k %>"><%= b.emoji ? b.emoji + ' ' : '' %><%= b.label %></a><% }) %>
+      <% if (!keys.length) { %>No boards yet.<% } %>
+    </p>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-ghost btn-sm" href="<%= q(cal.prev) %>">← <%= fmt.monthLabel(cal.prev, true) %></a>
+    <a class="btn btn-ghost btn-sm" href="<%= q(new Date().toISOString().slice(0, 7)) %>">This month</a>
+    <a class="btn btn-ghost btn-sm" href="<%= q(cal.next) %>"><%= fmt.monthLabel(cal.next, true) %> →</a>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Your calendar is being set up. Check back shortly.</p></div>
+<% } else { %>
+  <% if (!cal.count) { %><p class="muted">Nothing dated in <%= fmt.monthLabel(cal.month) %>. Give a card a date and it shows up here.</p><% } %>
+  <div class="ws-cal" role="grid" aria-label="<%= fmt.monthLabel(cal.month) %>">
+    <% ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(function (d) { %><div class="ws-dow"><%= d %></div><% }) %>
+    <% cal.weeks.forEach(function (week) { week.forEach(function (c) { %>
+      <div class="ws-day <%= c.inMonth ? '' : 'out' %> <%= c.today ? 'today' : '' %>">
+        <span class="n"><%= c.day %></span>
+        <% c.items.forEach(function (it) { %>
+          <a class="ws-ev" href="<%= root %>/boards/<%= it.board %>/<%= it.id %>" title="<%= it.title %>"><%= tag(it) ? tag(it) + ' ' : '' %><%= it.title %></a>
+        <% }) %>
+      </div>
+    <% }) }) %>
+  </div>
+
+  <div class="ws-agenda">
+    <% days.forEach(function (d) { %>
+      <div class="card" style="padding:.8rem 1rem;margin-bottom:.6rem">
+        <strong><%= fmt.date(d) %></strong>
+        <% cal.byDate[d].forEach(function (it) { var b = cal.boards[it.board] || {}; %>
+          <div class="milestone-row" style="padding:.45rem 0">
+            <a href="<%= root %>/boards/<%= it.board %>/<%= it.id %>"><%= it.title %></a>
+            <span class="chip"><%= b.emoji ? b.emoji + ' ' : '' %><%= b.label %></span>
+          </div>
+        <% }) %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

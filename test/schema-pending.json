@@ -62,6 +62,64 @@
           ]
         }
       }
+    },
+    "2026-11-01_workspace_foundations.sql": {
+      "profiles": [
+        "path_answers"
+      ],
+      "workspace_docs": [
+        "id",
+        "user_id",
+        "kind",
+        "title",
+        "data",
+        "created_at",
+        "updated_at"
+      ],
+      "pipeline_items": [
+        "id",
+        "user_id",
+        "board",
+        "stage",
+        "title",
+        "value",
+        "due_on",
+        "data",
+        "position",
+        "created_at",
+        "updated_at"
+      ],
+      "metric_entries": [
+        "id",
+        "user_id",
+        "metric",
+        "period",
+        "value",
+        "note",
+        "created_at"
+      ],
+      "checklist_progress": [
+        "user_id",
+        "checklist",
+        "item",
+        "done_at",
+        "due_on",
+        "note"
+      ],
+      "surveys": [
+        "share_code",
+        "max_responses"
+      ],
+      "survey_responses": [
+        "visitor_key"
+      ],
+      "_enums": {
+        "surveys": {
+          "status": [
+            "draft"
+          ]
+        }
+      }
     }
   }
 }

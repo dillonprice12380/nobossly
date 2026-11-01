@@ -1,0 +1,24 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1><%= def.emoji %> <%= def.label %></h1>
+  <p class="muted"><%= def.blurb %></p>
+</div><a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">This opens shortly — the workspace is being set up.</p></div>
+<% } else { %>
+  <form method="post" action="/workspace/docs/<%= kind %>" class="card cta-row" style="justify-content:flex-start;align-items:flex-end;gap:.5rem;flex-wrap:wrap">
+    <label style="flex:1;min-width:220px;margin:0"><%= def.titleLabel || 'Name' %><input name="title" maxlength="120" placeholder="<%= def.titlePlaceholder || ('My ' + def.label.toLowerCase()) %>"></label>
+    <button class="btn btn-primary btn-sm">Start a new one</button>
+  </form>
+  <% if (!docs.length) { %><div class="card center"><p class="muted" style="margin:0">Nothing yet. Start one above — you can save half-finished and come back.</p></div><% } %>
+  <div class="grid">
+    <% docs.forEach(function (d) { var pr = progress(def, d.data || {}); var sc = kind === 'idea_refiner' ? ideaScore(d.data || {}) : null; %>
+      <a class="card ws-tool" href="/workspace/docs/<%= kind %>/<%= d.id %>" style="display:block;color:inherit;text-decoration:none">
+        <strong><%= d.title || def.label %></strong>
+        <p class="muted small" style="margin:.3rem 0 0"><%= pr.done %> of <%= pr.total %> filled in · edited <%= new Date(d.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %><% if (sc) { %> · scores <%= sc.total %>/<%= sc.of %><% } %></p>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

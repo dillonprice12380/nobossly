@@ -1,0 +1,26 @@
+<%#
+  One number and its trend, for a dashboard. Pass metrics.card() as `card`:
+    include('../partials/metric_card', { card: followers })   (in an unescaped output tag)
+  `root` defaults to /workspace.
+%>
+<% var _root = typeof root !== 'undefined' && root ? root : '/workspace';
+   var _d = card.def, _s = card.summary, _x = card.display; %>
+<div class="card">
+  <div class="milestone-row" style="border-top:0;padding:0">
+    <span class="muted small"><%= _d.label %></span>
+    <a class="small" href="<%= _root %>/metrics/<%= _d.key %>"><%= _s.latest ? 'Log' : 'Log your first' %> →</a>
+  </div>
+  <div style="font-size:1.6rem;font-weight:800;font-family:var(--font-display);line-height:1.15"><%= _x.latest %></div>
+  <% if (_x.change) { %>
+    <p class="small" style="margin:.1rem 0 0;color:<%= _s.good === true ? 'var(--accent-2)' : _s.good === false ? 'var(--danger)' : 'var(--muted)' %>">
+      <%= _s.direction === 'up' ? '▲' : _s.direction === 'down' ? '▼' : '•' %> <%= _x.change %><%= _x.changePct ? ' (' + _x.changePct + ')' : '' %> vs previous
+    </p>
+  <% } else { %>
+    <p class="muted small" style="margin:.1rem 0 0"><%= _s.latest ? _x.latestPeriod : 'Nothing logged yet' %></p>
+  <% } %>
+  <div aria-hidden="true" style="display:flex;align-items:flex-end;gap:2px;height:28px;margin-top:.45rem">
+    <% card.bars.forEach(function (b) { %>
+      <span title="<%= b.label %>" style="flex:1 1 0;border-radius:2px 2px 0 0;<%= b.value === null ? 'height:2px;background:var(--border)' : 'height:' + b.pct + '%;background:var(--accent-2)' %>"></span>
+    <% }) %>
+  </div>
+</div>

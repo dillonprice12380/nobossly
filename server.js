@@ -147,6 +147,10 @@ app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
+app.use('/workspace', requireAuth, require('./src/routes/workspace')); // planning worksheets, goals, milestones — ordered per path
+app.use('/workspace', requireAuth, require('./src/routes/boards')); // boards, calendar, metrics, checklists (path dashboards)
+app.use('/surveys', requireAuth, require('./src/routes/surveys').router); // survey maker: build, share, results, CSV
+app.use('/s', require('./src/routes/surveys').publicRouter);              // public survey links — anyone, no account
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends, groups
 app.use('/', require('./src/routes/affiliates')); // /go/:key click-through, /toolkit, /affiliate-disclosure
 app.use('/upload', requireAuth, require('./src/routes/uploads'));

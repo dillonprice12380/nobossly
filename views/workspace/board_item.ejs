@@ -1,0 +1,42 @@
+<%- include('../partials/head') %>
+<% var base = root + '/boards/' + def.key; var d = item.data || {}; %>
+<div class="page-head">
+  <div>
+    <p class="muted small" style="margin:0"><a href="<%= base %>">← <%= def.emoji ? def.emoji + ' ' : '' %><%= def.label %></a></p>
+    <h1><%= item.title %></h1>
+    <p class="muted small">Added <%= fmt.date(item.created_at) %><% if (item.updated_at && item.updated_at !== item.created_at) { %> · updated <%= fmt.date(item.updated_at) %><% } %></p>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<form class="card form-card" method="post" action="<%= base %>/<%= item.id %>">
+  <label>Name <input name="title" required maxlength="160" value="<%= item.title %>"></label>
+  <div class="grid-2">
+    <label>Stage
+      <select name="stage">
+        <% def.stages.forEach(function (s) { %><option value="<%= s.key %>" <%= s.key === item.stage ? 'selected' : '' %>><%= s.label %></option><% }) %>
+      </select>
+    </label>
+    <% if (def.valueLabel) { %><label><%= def.valueLabel %> <input name="value" inputmode="decimal" value="<%= item.value === null ? '' : item.value %>"></label><% } %>
+    <label><%= def.dueLabel %> <input type="date" name="due_on" value="<%= item.due_on ? String(item.due_on).slice(0, 10) : '' %>"></label>
+  </div>
+  <% def.fields.forEach(function (f) { var v = d[f.key] === undefined || d[f.key] === null ? '' : d[f.key]; %>
+    <label><%= f.label %>
+      <% if (f.type === 'longtext') { %><textarea name="<%= f.key %>" rows="4" maxlength="4000" placeholder="<%= f.placeholder %>"><%= v %></textarea>
+      <% } else if (f.type === 'select') { %><select name="<%= f.key %>"><option value="">—</option><% f.options.forEach(function (o) { %><option <%= o === v ? 'selected' : '' %>><%= o %></option><% }) %></select>
+      <% } else if (f.type === 'date') { %><input type="date" name="<%= f.key %>" value="<%= v %>">
+      <% } else if (f.type === 'url') { %><input inputmode="url" name="<%= f.key %>" maxlength="500" value="<%= v %>" placeholder="<%= f.placeholder || 'https://' %>"><% if (/^https?:\/\//i.test(v)) { %> <a class="small" href="<%= v %>" target="_blank" rel="noopener nofollow">Open ↗</a><% } %>
+      <% } else if (f.type === 'number' || f.type === 'money') { %><input name="<%= f.key %>" inputmode="decimal" value="<%= v %>" placeholder="<%= f.placeholder %>">
+      <% } else { %><input name="<%= f.key %>" maxlength="300" value="<%= v %>" placeholder="<%= f.placeholder %>"><% } %>
+    </label>
+  <% }) %>
+  <div class="cta-row" style="justify-content:flex-start">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-ghost" href="<%= base %>">Cancel</a>
+  </div>
+</form>
+
+<form class="form-card" method="post" action="<%= base %>/<%= item.id %>/delete" onsubmit="return confirm('Delete it for good?')">
+  <button class="btn btn-ghost btn-sm" type="submit">Delete this <%= def.itemLabel %></button>
+</form>
+<%- include('../partials/foot') %>

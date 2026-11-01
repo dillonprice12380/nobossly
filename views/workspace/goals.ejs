@@ -1,0 +1,38 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🎯 Goals</h1>
+  <p class="muted">A goal you can check: what, why, how you will know, and by when. Keep it to a few at a time.</p>
+</div><a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %><div class="card center"><p class="muted" style="margin:0">Goals open shortly — the workspace is being set up.</p></div><% } else { %>
+<form method="post" action="/workspace/goals" class="card form-card" style="max-width:820px">
+  <h3 style="margin-top:0">New goal</h3>
+  <label>The goal<input name="title" maxlength="120" required placeholder="e.g. Land my first three paying clients"></label>
+  <div class="grid-2" style="gap:.6rem">
+    <label>How you will know<input name="measure" maxlength="300" placeholder="e.g. 3 invoices paid"></label>
+    <label>By when<input type="date" name="target"></label>
+  </div>
+  <label>Why it matters<textarea name="why" rows="2" maxlength="600"></textarea></label>
+  <label>Next step<input name="next_step" maxlength="300" placeholder="The very next thing you will do"></label>
+  <button class="btn btn-primary btn-sm">Add goal</button>
+</form>
+<% if (!goals.length) { %><div class="card center"><p class="muted" style="margin:0">No goals yet.</p></div><% } %>
+<% goals.forEach(function (g) { var st = g.status || 'active'; %>
+  <details class="card" style="max-width:820px" <%= st === 'active' ? 'open' : '' %>>
+    <summary><strong><%= g.title %></strong> <span class="chip <%= st === 'done' ? 'chip-success' : '' %>"><%= GOAL_STATUS[st] %></span><% if (g.target) { %> <span class="muted small">by <%= new Date(g.target + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></span><% } %></summary>
+    <form method="post" action="/workspace/goals/<%= g.id %>" style="margin-top:.6rem">
+      <label>The goal<input name="title" maxlength="120" value="<%= g.title %>"></label>
+      <div class="grid-2" style="gap:.6rem">
+        <label>How you will know<input name="measure" maxlength="300" value="<%= g.measure || '' %>"></label>
+        <label>By when<input type="date" name="target" value="<%= g.target || '' %>"></label>
+      </div>
+      <label>Why it matters<textarea name="why" rows="2" maxlength="600"><%= g.why || '' %></textarea></label>
+      <label>Next step<input name="next_step" maxlength="300" value="<%= g.next_step || '' %>"></label>
+      <label>Status<select name="status"><% Object.keys(GOAL_STATUS).forEach(function (k) { %><option value="<%= k %>" <%= st === k ? 'selected' : '' %>><%= GOAL_STATUS[k] %></option><% }) %></select></label>
+      <div class="cta-row" style="justify-content:flex-start;gap:.5rem"><button class="btn btn-primary btn-sm">Save</button></div>
+    </form>
+    <form method="post" action="/workspace/goals/<%= g.id %>/delete" onsubmit="return confirm('Delete this goal?')" style="margin-top:.4rem"><button class="btn btn-ghost btn-sm">Delete</button></form>
+  </details>
+<% }) %>
+<% } %>
+<%- include('../partials/foot') %>

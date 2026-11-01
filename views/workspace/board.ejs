@@ -1,0 +1,100 @@
+<%- include('../partials/head') %>
+<%
+  // One board, its stages as columns. Works without JS: every move is a form.
+  var today = new Date().toISOString().slice(0, 10);
+  var base = root + '/boards/' + def.key;
+  var showValue = function (v) { return v === null || v === undefined ? '' : fmt.byUnit(def.valueKind, v); };
+  var doneStages = def.stages.filter(function (s) { return s.done; }).map(function (s) { return s.key; });
+  var empty = !totals.count;
+%>
+<style>
+  .ws-board { display: flex; gap: .8rem; overflow-x: auto; padding: .2rem 0 .8rem; align-items: flex-start; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .ws-col { flex: 0 0 255px; scroll-snap-align: start; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem; }
+  .ws-col.is-done { border-top: 3px solid var(--accent-2); }
+  .ws-col h3 { font-size: .92rem; margin: 0; display: flex; justify-content: space-between; gap: .4rem; }
+  .ws-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: .6rem .7rem; margin-top: .55rem; }
+  .ws-card a.ws-title { font-weight: 700; color: var(--text); text-decoration: none; word-break: break-word; }
+  .ws-meta { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+  .ws-meta .chip { font-size: .74rem; padding: .12rem .5rem; }
+  .ws-move { display: flex; gap: .3rem; align-items: center; margin-top: .5rem; flex-wrap: wrap; }
+  .ws-move form { display: inline-flex; gap: .3rem; align-items: center; margin: 0; }
+  .ws-move select { width: auto; margin: 0; padding: .22rem .4rem; font-size: .78rem; }
+  .ws-add summary { cursor: pointer; font-weight: 700; }
+  .ws-overdue { color: var(--danger); border-color: var(--danger); }
+  @media (min-width: 1100px) { .ws-col { flex: 1 1 0; min-width: 190px; } }
+</style>
+
+<div class="page-head">
+  <div>
+    <h1><%= def.emoji ? def.emoji + ' ' : '' %><%= def.label %></h1>
+    <% if (def.help) { %><p class="muted"><%= def.help %></p><% } %>
+    <p class="muted small"><%= totals.count %> <%= totals.count === 1 ? def.itemLabel : def.itemLabel + 's' %><% if (def.valueLabel) { %> · <%= totals.display.value %> total<% if (doneStages.length) { %> · <%= totals.display.openValue %> still open<% } %><% } %></p>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-ghost btn-sm" href="<%= root %>/calendar?boards=<%= def.key %>">Calendar</a>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Your <%= def.label.toLowerCase() %> board is being set up. Check back shortly.</p></div>
+<% } else { %>
+  <details class="card ws-add" <%= empty ? 'open' : '' %>>
+    <summary>+ Add a <%= def.itemLabel %></summary>
+    <form method="post" action="<%= base %>">
+      <div class="grid-2">
+        <label>Name <input name="title" required maxlength="160" placeholder="The <%= def.itemLabel %>"></label>
+        <label>Stage
+          <select name="stage">
+            <% def.stages.forEach(function (s) { %><option value="<%= s.key %>"><%= s.label %></option><% }) %>
+          </select>
+        </label>
+        <% if (def.valueLabel) { %><label><%= def.valueLabel %> <input name="value" inputmode="decimal" placeholder="<%= def.valueKind === 'money' ? '1,200' : '0' %>"></label><% } %>
+        <label><%= def.dueLabel %> <input type="date" name="due_on"></label>
+        <% def.fields.forEach(function (f) { %>
+          <label><%= f.label %>
+            <% if (f.type === 'longtext') { %><textarea name="<%= f.key %>" rows="2" maxlength="4000" placeholder="<%= f.placeholder %>"></textarea>
+            <% } else if (f.type === 'select') { %><select name="<%= f.key %>"><option value="">—</option><% f.options.forEach(function (o) { %><option><%= o %></option><% }) %></select>
+            <% } else if (f.type === 'date') { %><input type="date" name="<%= f.key %>">
+            <% } else if (f.type === 'url') { %><input inputmode="url" name="<%= f.key %>" maxlength="500" placeholder="<%= f.placeholder || 'https://' %>">
+            <% } else if (f.type === 'number' || f.type === 'money') { %><input name="<%= f.key %>" inputmode="decimal" placeholder="<%= f.placeholder %>">
+            <% } else { %><input name="<%= f.key %>" maxlength="300" placeholder="<%= f.placeholder %>"><% } %>
+          </label>
+        <% }) %>
+      </div>
+      <button class="btn btn-primary" type="submit">Add <%= def.itemLabel %></button>
+    </form>
+  </details>
+
+  <div class="ws-board">
+    <% columns.forEach(function (col, ci) { var st = totals.byStage[col.stage.key] || { count: 0 }; %>
+      <section class="ws-col <%= col.stage.done ? 'is-done' : '' %>" id="stage-<%= col.stage.key %>">
+        <h3><span><%= col.stage.label %></span><span class="muted small"><%= st.count %><% if (def.valueLabel && st.value) { %> · <%= totals.display.byStage[col.stage.key] %><% } %></span></h3>
+        <% if (!col.items.length) { %><p class="muted small" style="margin:.5rem 0 0">Nothing here.</p><% } %>
+        <% col.items.forEach(function (it) {
+             var prev = def.stages[ci - 1], next = def.stages[ci + 1];
+             var overdue = it.due_on && String(it.due_on).slice(0, 10) < today && !col.stage.done; %>
+          <article class="ws-card" id="item-<%= it.id %>">
+            <a class="ws-title" href="<%= base %>/<%= it.id %>"><%= it.title %></a>
+            <div class="ws-meta">
+              <% if (def.valueLabel && it.value !== null) { %><span class="chip"><%= showValue(it.value) %></span><% } %>
+              <% if (it.due_on) { %><span class="chip <%= overdue ? 'ws-overdue' : '' %>" title="<%= def.dueLabel %>">📅 <%= fmt.date(it.due_on) %></span><% } %>
+              <% def.fields.forEach(function (f) { if (f.type === 'select' && it.data[f.key]) { %><span class="chip"><%= it.data[f.key] %></span><% } }) %>
+            </div>
+            <div class="ws-move">
+              <% if (prev) { %><form method="post" action="<%= base %>/<%= it.id %>/move"><button class="btn btn-ghost btn-sm" name="stage" value="<%= prev.key %>" title="Move to <%= prev.label %>" aria-label="Move to <%= prev.label %>">←</button></form><% } %>
+              <% if (next) { %><form method="post" action="<%= base %>/<%= it.id %>/move"><button class="btn btn-ghost btn-sm" name="stage" value="<%= next.key %>" title="Move to <%= next.label %>" aria-label="Move to <%= next.label %>">→</button></form><% } %>
+              <form method="post" action="<%= base %>/<%= it.id %>/move">
+                <select name="stage" aria-label="Stage" onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()">
+                  <% def.stages.forEach(function (s) { %><option value="<%= s.key %>" <%= s.key === col.stage.key ? 'selected' : '' %>><%= s.label %></option><% }) %>
+                </select>
+                <noscript><button class="btn btn-ghost btn-sm">Move</button></noscript>
+              </form>
+            </div>
+          </article>
+        <% }) %>
+      </section>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

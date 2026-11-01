@@ -1,0 +1,144 @@
+<%- include('../partials/head') %>
+<%
+  var base = '/surveys/' + survey.id;
+  var max = survey.max_responses || 1000;
+  var fill = Math.min(100, Math.round((total / max) * 100));
+  var chipFor = function (st) { return st === 'active' ? 'chip chip-success' : st === 'draft' ? 'chip chip-active' : 'chip'; };
+  var stamp = function (d) { return d ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; };
+%>
+<div class="page-head">
+  <div>
+    <h1><%= survey.title %></h1>
+    <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:.3rem 0 0;flex-wrap:wrap">
+      <span class="<%= chipFor(survey.status) %>"><%= STATUS[survey.status] || survey.status %></span>
+      <span class="chip"><%= (survey.questions || []).length %> question<%= (survey.questions || []).length === 1 ? '' : 's' %></span>
+      <% if (survey.deadline) { %><span class="chip"><%= pastDeadline ? 'Deadline passed' : 'Open until ' + survey.deadline %></span><% } %>
+    </div>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-ghost btn-sm" href="/surveys">All surveys</a>
+    <a class="btn btn-ghost btn-sm" href="<%= base %>/edit">Edit</a>
+    <% if (total) { %><a class="btn btn-primary btn-sm" href="<%= base %>/export.csv" data-turbo="false" download>Export CSV</a><% } %>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (loadFailed) { %><p class="error">Some answers could not be loaded. Refresh to try again.</p><% } %>
+
+<div class="grid-2">
+  <div class="card">
+    <h2 style="margin-top:0">Share</h2>
+    <% if (shareUrl && survey.status !== 'draft') { %>
+      <p class="muted small" style="margin-top:0">Anyone with this link can answer — no NoBossly account needed. One answer per person.</p>
+      <div class="sv-share">
+        <input id="sv-link" value="<%= shareUrl %>" readonly onfocus="this.select()" aria-label="Survey link">
+        <button type="button" class="btn btn-primary btn-sm" data-copy="#sv-link">Copy</button>
+      </div>
+      <p class="small" style="margin:.5rem 0 0"><a href="<%= shareUrl %>" target="_blank" rel="noopener">Open the survey ↗</a></p>
+      <% if (survey.status !== 'active') { %><p class="muted small">The link is not taking answers while the survey is <%= (STATUS[survey.status] || survey.status).toLowerCase() %>.</p><% } %>
+    <% } else { %>
+      <p class="muted" style="margin-top:0">Publish the survey to get a link you can share.</p>
+      <a class="btn btn-primary btn-sm" href="<%= base %>/edit">Finish and publish</a>
+    <% } %>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">Responses</h2>
+    <p style="margin:0"><strong class="sv-big"><%= total %></strong> <span class="muted">of <%= max %></span></p>
+    <div class="progress" role="img" aria-label="<%= total %> of <%= max %> responses"><div class="progress-bar" style="width:<%= fill %>%"></div></div>
+    <div class="cta-row" style="justify-content:flex-start;gap:.4rem;flex-wrap:wrap;margin:.6rem 0 0">
+      <% if (survey.status === 'active') { %>
+        <form method="post" action="<%= base %>/close"><button class="btn btn-ghost btn-sm">Close survey</button></form>
+      <% } %>
+      <% if (survey.status === 'closed' || survey.status === 'archived') { %>
+        <form method="post" action="<%= base %>/reopen"><button class="btn btn-ghost btn-sm">Reopen</button></form>
+      <% } %>
+      <% if (survey.status !== 'archived') { %>
+        <form method="post" action="<%= base %>/archive"><button class="btn btn-ghost btn-sm">Archive</button></form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<% if (!total) { %>
+  <div class="card center">
+    <h2>No answers yet</h2>
+    <p class="muted"><%= survey.status === 'active' ? 'Share the link where your people are: your email list, a post, a DM, a QR code at the till.' : 'Answers will show up here once the survey is open.' %></p>
+  </div>
+<% } else { %>
+  <% summary.forEach(function (s, i) { %>
+    <div class="card">
+      <p class="muted small" style="margin:0">Question <%= i + 1 %> · <%= TYPES[s.type] || s.type %></p>
+      <h3 style="margin:.2rem 0 .3rem"><%= s.label %></h3>
+      <p class="muted small" style="margin:0 0 .7rem"><%= s.answered %> answered<% if (s.skipped) { %> · <%= s.skipped %> skipped<% } %></p>
+
+      <% if (s.kind === 'choice' || s.kind === 'rating') { var rows = s.kind === 'rating' ? s.distribution : s.options; %>
+        <% if (s.kind === 'rating') { %><p style="margin:0 0 .6rem">Average <strong class="sv-big"><%= s.average === null ? '–' : s.average %></strong> <span class="muted">/ 5</span></p><% } %>
+        <div class="sv-bars">
+          <% rows.forEach(function (o) { %>
+            <div class="sv-bar-row">
+              <span class="sv-bar-label"><%= s.kind === 'rating' ? '★ ' + o.label : o.label %></span>
+              <span class="sv-bar" role="img" aria-label="<%= o.count %> (<%= o.pct %>%)"><span style="width:<%= o.pct %>%"></span></span>
+              <span class="sv-bar-num"><%= o.count %> <span class="muted">· <%= o.pct %>%</span></span>
+            </div>
+          <% }) %>
+        </div>
+        <% if (s.type === 'multi_choice') { %><p class="muted small" style="margin:.5rem 0 0">People could pick more than one, so these can add up to more than 100%.</p><% } %>
+      <% } else { %>
+        <% if (!s.texts.length) { %><p class="muted" style="margin:0">No written answers yet.</p><% } %>
+        <ul class="sv-texts">
+          <% s.texts.slice(0, TEXT_CAP).forEach(function (t) { %>
+            <li><div class="sv-text"><%= t.text %></div><span class="muted small"><%= stamp(t.at) %></span></li>
+          <% }) %>
+        </ul>
+        <% if (s.texts.length > TEXT_CAP) { %><p class="muted small" style="margin:.4rem 0 0">Showing the newest <%= TEXT_CAP %> of <%= s.texts.length %>. <a href="<%= base %>/export.csv" data-turbo="false">Export CSV</a> for all of them.</p><% } %>
+      <% } %>
+    </div>
+  <% }) %>
+<% } %>
+
+<div class="card">
+  <h3 style="margin-top:0">Delete survey</h3>
+  <form method="post" action="<%= base %>/delete">
+    <% if (survey.status === 'draft' && !survey.response_count) { %>
+      <p class="muted small" style="margin-top:0">This draft has no answers yet.</p>
+    <% } else { %>
+      <label class="sv-check"><input type="checkbox" name="confirm" value="yes" required> Yes, delete this survey and all <%= total %> answer<%= total === 1 ? '' : 's' %>. This cannot be undone.</label>
+    <% } %>
+    <button class="btn btn-ghost btn-sm">Delete survey</button>
+  </form>
+</div>
+
+<style>
+  .sv-big { font-size: 1.6rem; font-family: var(--font-head, inherit); }
+  .sv-share { display: flex; gap: .4rem; align-items: center; }
+  .sv-share input { margin: 0; flex: 1; min-width: 0; }
+  .sv-bars { display: grid; gap: .45rem; }
+  .sv-bar-row { display: grid; grid-template-columns: minmax(6rem, 30%) 1fr auto; gap: .6rem; align-items: center; }
+  .sv-bar-label { overflow-wrap: anywhere; font-size: .92rem; }
+  .sv-bar { display: block; height: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .sv-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+  .sv-bar-num { font-size: .88rem; white-space: nowrap; }
+  .sv-texts { list-style: none; padding: 0; margin: 0; max-height: 32rem; overflow-y: auto; }
+  .sv-texts li { border-top: 1px solid var(--border); padding: .55rem 0; }
+  .sv-texts li:first-child { border-top: 0; }
+  .sv-text { white-space: pre-line; overflow-wrap: anywhere; }
+  .sv-check { display: flex; align-items: flex-start; gap: .5rem; font-weight: 500; }
+  .sv-check input { width: auto; margin: .2rem 0 0; }
+  @media (max-width: 560px) { .sv-bar-row { grid-template-columns: 1fr auto; } .sv-bar { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+<script>
+  // One listener for the whole site visit (Turbo keeps the page alive between
+  // visits), so the copy button works however the page was reached.
+  if (!window.__nbSurveyCopy) {
+    window.__nbSurveyCopy = true;
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-copy]');
+      if (!b) return;
+      var input = document.querySelector(b.getAttribute('data-copy'));
+      if (!input) return;
+      var done = function () { var t = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = t; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(done, function () { input.select(); });
+      else { input.select(); try { document.execCommand('copy'); done(); } catch (_) {} }
+    });
+  }
+</script>
+<%- include('../partials/foot') %>

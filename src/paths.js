@@ -585,7 +585,7 @@ const PATHS = [
 
   {
     slug: 'software',
-    label: 'Software or app',
+    label: 'Apps & Software',
     emoji: '⌨️',
     blurb: 'You build a product people use — a web app, mobile app, tool or plugin.',
     marketing: {

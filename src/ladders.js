@@ -152,7 +152,7 @@ const LADDERS = {
     }
   },
   software: {
-    label: 'Software or app',
+    label: 'Apps & Software',
     rungs: [
       ['Tinkerer', '🔧'], ['Specced', '📄'], ['Shipped v1', '🚀'], ['Talking to Users', '🎧'],
       ['First Paying User', '💳'], ['Charging Properly', '💰'], ['Ten Payers', '🔟'],
