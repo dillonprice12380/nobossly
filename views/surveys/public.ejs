@@ -1,0 +1,90 @@
+<%- include('../partials/head') %>
+<%
+  var v = values || {};
+  var isMissing = function (id) { return (missingIds || []).indexOf(id) !== -1; };
+  var picked = function (q, opt) { var a = v[q.id]; return Array.isArray(a) ? a.indexOf(opt) !== -1 : String(a) === String(opt); };
+%>
+<div class="sv-public">
+<% if (notReady) { %>
+  <div class="card center"><h1>Surveys are being set up</h1><p class="muted">Check back shortly.</p></div>
+<% } else if (!survey) { %>
+  <div class="card center">
+    <h1>This survey isn't open</h1>
+    <p class="muted">The link may be mistyped, or the survey has been taken down. Check with whoever sent it to you.</p>
+  </div>
+<% } else if (survey.status !== 'active') { %>
+  <div class="card center">
+    <h1><%= survey.title %></h1>
+    <p class="muted">This survey has closed and is no longer taking answers.</p>
+  </div>
+<% } else { %>
+  <form method="post" action="/s/<%= code %>" class="card">
+    <h1 style="margin-top:0"><%= survey.title %></h1>
+    <% if (survey.by) { %><p class="muted small" style="margin-top:-.4rem">From <%= survey.by %></p><% } %>
+    <% if (survey.description) { %><p class="sv-desc"><%= survey.description %></p><% } %>
+    <% if (problem) { %><p class="error" role="alert"><%= problem %></p><% } %>
+    <% if (survey.questions.some(function (q) { return q.required; })) { %><p class="muted small"><span class="sv-req">*</span> Required</p><% } %>
+
+    <% survey.questions.forEach(function (q, i) { var name = 'a[' + q.id + ']'; var hid = 'h-' + q.id; %>
+      <fieldset class="sv-field<%= isMissing(q.id) ? ' sv-missing' : '' %>" id="f-<%= q.id %>" <% if (q.help) { %>aria-describedby="<%= hid %>"<% } %>>
+        <legend><%= i + 1 %>. <%= q.label %><% if (q.required) { %> <span class="sv-req" aria-label="required">*</span><% } %></legend>
+        <% if (q.help) { %><p class="muted small sv-help" id="<%= hid %>"><%= q.help %></p><% } %>
+        <% if (isMissing(q.id)) { %><p class="small sv-missing-note">Please answer this one.</p><% } %>
+
+        <% if (q.type === 'short_text') { %>
+          <input name="<%= name %>" value="<%= typeof v[q.id] === 'string' ? v[q.id] : '' %>" maxlength="<%= LIMITS.answer.short_text %>" <%= q.required ? 'required' : '' %> aria-label="<%= q.label %>">
+        <% } else if (q.type === 'long_text') { %>
+          <textarea name="<%= name %>" rows="4" maxlength="<%= LIMITS.answer.long_text %>" <%= q.required ? 'required' : '' %> aria-label="<%= q.label %>"><%= typeof v[q.id] === 'string' ? v[q.id] : '' %></textarea>
+        <% } else if (q.type === 'single_choice') { %>
+          <% (q.options || []).forEach(function (o, j) { %>
+            <label class="sv-opt"><input type="radio" name="<%= name %>" value="<%= o %>" <%= picked(q, o) ? 'checked' : '' %> <%= q.required && j === 0 ? 'required' : '' %>> <span><%= o %></span></label>
+          <% }) %>
+        <% } else if (q.type === 'multi_choice') { %>
+          <% (q.options || []).forEach(function (o) { %>
+            <label class="sv-opt"><input type="checkbox" name="<%= name %>[]" value="<%= o %>" <%= picked(q, o) ? 'checked' : '' %>> <span><%= o %></span></label>
+          <% }) %>
+        <% } else if (q.type === 'rating') { %>
+          <div class="sv-rating">
+            <% [1, 2, 3, 4, 5].forEach(function (n) { %>
+              <label class="sv-rate"><input type="radio" name="<%= name %>" value="<%= n %>" <%= picked(q, n) ? 'checked' : '' %> <%= q.required && n === 1 ? 'required' : '' %>><span><%= n %></span></label>
+            <% }) %>
+          </div>
+          <p class="muted small sv-scale"><span>1 = low</span><span>5 = high</span></p>
+        <% } else if (q.type === 'yes_no') { %>
+          <div class="sv-rating">
+            <label class="sv-rate sv-yn"><input type="radio" name="<%= name %>" value="yes" <%= picked(q, 'yes') ? 'checked' : '' %> <%= q.required ? 'required' : '' %>><span>Yes</span></label>
+            <label class="sv-rate sv-yn"><input type="radio" name="<%= name %>" value="no" <%= picked(q, 'no') ? 'checked' : '' %>><span>No</span></label>
+          </div>
+        <% } %>
+      </fieldset>
+    <% }) %>
+
+    <button class="btn btn-primary">Send answers</button>
+    <p class="muted small" style="margin-bottom:0">Your answers go only to the person who made this survey.</p>
+  </form>
+  <% if (!user) { %>
+    <p class="muted small center">Made with <a href="/">NoBossly</a> — a free community for people building their way out of a 9-to-5.</p>
+  <% } %>
+<% } %>
+</div>
+<style>
+  .sv-public { max-width: 720px; margin: 0 auto; }
+  .sv-desc { white-space: pre-line; }
+  .sv-field { border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 1rem 0 .4rem; margin: 0; }
+  .sv-field legend { font-weight: 700; padding: 0; float: left; width: 100%; margin-bottom: .4rem; }
+  .sv-field legend + * { clear: both; }
+  .sv-help { margin: 0 0 .4rem; clear: both; }
+  .sv-req { color: var(--danger); }
+  .sv-missing { border-left: 3px solid var(--danger); padding-left: .8rem; }
+  .sv-missing-note { color: var(--danger); margin: 0 0 .3rem; clear: both; }
+  .sv-opt { display: flex; align-items: flex-start; gap: .55rem; font-weight: 500; margin: .45rem 0; cursor: pointer; clear: both; }
+  .sv-opt input { width: auto; margin: .2rem 0 0; }
+  .sv-rating { display: flex; gap: .4rem; flex-wrap: wrap; clear: both; }
+  .sv-rate { margin: 0; cursor: pointer; }
+  .sv-rate input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .sv-rate span { display: inline-flex; align-items: center; justify-content: center; min-width: 2.8rem; height: 2.6rem; padding: 0 .8rem; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); font-weight: 700; }
+  .sv-rate input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sv-rate input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sv-scale { display: flex; justify-content: space-between; max-width: 16rem; margin: .3rem 0 0; }
+</style>
+<%- include('../partials/foot') %>

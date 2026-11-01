@@ -1,0 +1,12 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>📋 New survey</h1>
+  <p class="muted">Name it and say what it is for. You will add questions next, and nothing is shared until you publish.</p>
+</div><a class="btn btn-ghost btn-sm" href="/surveys">All surveys</a></div>
+<form method="post" action="/surveys" class="card" style="max-width:720px">
+  <label>Title<input name="title" maxlength="<%= LIMITS.title %>" required placeholder="e.g. What do you think of our new menu?"></label>
+  <label>Introduction <span class="muted small">(optional — shown at the top of the survey)</span><textarea name="description" rows="4" maxlength="<%= LIMITS.description %>" placeholder="Why you are asking, how long it takes, and what you will do with the answers."></textarea></label>
+  <p class="muted small">Answers are private to you. People can leave their email if you ask for it — only you will see it.</p>
+  <button class="btn btn-primary">Create and add questions</button>
+</form>
+<%- include('../partials/foot') %>

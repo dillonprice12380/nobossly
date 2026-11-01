@@ -1,0 +1,55 @@
+<%- include('../partials/head') %>
+<%
+  var chipFor = function (st) { return st === 'active' ? 'chip chip-success' : st === 'draft' ? 'chip chip-active' : 'chip'; };
+  var shortDate = function (d) { return d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+%>
+<div class="page-head">
+  <div>
+    <h1>📋 Surveys</h1>
+    <p class="muted">Ask your customers, your audience or other members what they think. Share a link — anyone can answer, no account needed — and read the results here.</p>
+  </div>
+  <div class="cta-row"><a class="btn btn-primary" href="/surveys/new">New survey</a></div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Surveys are being set up</h2><p class="muted">Check back shortly.</p></div>
+<% } else { %>
+  <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem">
+    <a class="chip <%= !show ? 'chip-active' : '' %>" href="/surveys">All</a>
+    <% Object.keys(STATUS).forEach(function (k) { %><a class="chip <%= show === k ? 'chip-active' : '' %>" href="/surveys?show=<%= k %>"><%= STATUS[k] %></a><% }) %>
+  </div>
+
+  <% if (!surveys.length) { %>
+    <div class="card center">
+      <h2><%= show ? 'No ' + STATUS[show].toLowerCase() + ' surveys' : 'No surveys yet' %></h2>
+      <p class="muted">Five good questions to the right people beat a hundred guesses. Start with what you most need to know.</p>
+      <a class="btn btn-primary" href="/surveys/new">Make your first survey</a>
+    </div>
+  <% } %>
+
+  <div class="sv-list">
+    <% surveys.forEach(function (s) { var link = shareUrl(s.share_code); %>
+      <div class="card sv-row">
+        <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0 0 .3rem;flex-wrap:wrap">
+          <span class="<%= chipFor(s.status) %>"><%= STATUS[s.status] || s.status %></span>
+          <span class="chip"><%= s.response_count || 0 %> / <%= s.max_responses || 1000 %> responses</span>
+          <% if (s.deadline) { %><span class="chip">Until <%= shortDate(s.deadline + 'T12:00:00Z') %></span><% } %>
+        </div>
+        <a class="sv-title" href="/surveys/<%= s.id %>"><strong><%= s.title %></strong></a>
+        <p class="muted small" style="margin:.25rem 0 .5rem">Created <%= shortDate(s.created_at) %><% if (link && s.status === 'active') { %> · <span class="sv-link"><%= link %></span><% } %></p>
+        <div class="cta-row" style="justify-content:flex-start;gap:.4rem;margin:0">
+          <a class="btn btn-ghost btn-sm" href="/surveys/<%= s.id %>">Results</a>
+          <a class="btn btn-ghost btn-sm" href="/surveys/<%= s.id %>/edit">Edit</a>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<style>
+  .sv-row { padding: .9rem 1rem; }
+  .sv-title { color: inherit; }
+  .sv-title:hover { color: var(--accent); }
+  .sv-link { word-break: break-all; }
+</style>
+<%- include('../partials/foot') %>

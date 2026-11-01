@@ -1,0 +1,109 @@
+<%- include('../partials/head') %>
+<%
+  var base = '/surveys/' + survey.id;
+  var qs = survey.questions || [];
+  var hints = { short_text: 'They type a line of text.', long_text: 'They type a paragraph.', rating: 'They pick a number from 1 (low) to 5 (high).', yes_no: 'They pick Yes or No.' };
+%>
+<div class="page-head">
+  <div>
+    <h1>✏️ Build your survey</h1>
+    <p class="muted">Every button on this page saves what you have typed. <% if (survey.status === 'draft') { %>Nothing is shared until you publish.<% } %></p>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-ghost btn-sm" href="/surveys">All surveys</a>
+    <a class="btn btn-ghost btn-sm" href="<%= base %>">Results</a>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (survey.status === 'active') { %><p class="notice">This survey is open<% if (shareUrl) { %> at <a href="<%= shareUrl %>" target="_blank" rel="noopener"><%= shareUrl %></a><% } %>. Changes show to everyone who opens the link from now on.</p><% } %>
+<% if (locked) { %><p class="muted small">People have already answered, so question types and options are locked — changing them would muddle the results. You can still reword questions, add new ones, or remove them.</p><% } %>
+
+<form method="post" action="<%= base %>/save" id="sv-form" class="sv-form">
+  <%# Pressing Enter in a field submits with the form's first button; make that a plain save, not "move question 1 up". %>
+  <button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">Save</button>
+  <div class="card">
+    <h2 style="margin-top:0">Details</h2>
+    <label>Title<input name="title" value="<%= survey.title %>" maxlength="<%= LIMITS.title %>" required></label>
+    <label>Introduction <span class="muted small">(optional)</span><textarea name="description" rows="3" maxlength="<%= LIMITS.description %>"><%= survey.description || '' %></textarea></label>
+    <div class="grid-2" style="gap:.6rem">
+      <label>Stop after this many responses<input type="number" name="max_responses" min="<%= LIMITS.maxResponses.min %>" max="<%= LIMITS.maxResponses.max %>" value="<%= survey.max_responses || LIMITS.maxResponses.default %>"></label>
+      <label>Close on <span class="muted small">(optional — open until the end of that day)</span><input type="date" name="deadline" value="<%= survey.deadline || '' %>"></label>
+    </div>
+  </div>
+
+  <% if (!qs.length) { %>
+    <div class="card center"><p class="muted" style="margin:0">No questions yet. Add one below.</p></div>
+  <% } %>
+
+  <% qs.forEach(function (q, i) { var n = 'q[' + q.id + ']'; %>
+    <div class="card sv-q" id="q-<%= q.id %>">
+      <div class="sv-q-head">
+        <strong>Question <%= i + 1 %></strong>
+        <span class="chip"><%= TYPES[q.type] || q.type %></span>
+        <span class="sv-q-tools">
+          <button class="btn btn-ghost btn-sm" formaction="<%= base %>/questions/<%= q.id %>/move" name="dir" value="up" <%= i === 0 ? 'disabled' : '' %> title="Move up" aria-label="Move question <%= i + 1 %> up">↑</button>
+          <button class="btn btn-ghost btn-sm" formaction="<%= base %>/questions/<%= q.id %>/move" name="dir" value="down" <%= i === qs.length - 1 ? 'disabled' : '' %> title="Move down" aria-label="Move question <%= i + 1 %> down">↓</button>
+          <button class="btn btn-ghost btn-sm" formaction="<%= base %>/questions/<%= q.id %>/delete" formnovalidate onclick="return confirm('Delete this question?')" aria-label="Delete question <%= i + 1 %>">Delete</button>
+        </span>
+      </div>
+      <label>Question<input name="<%= n %>[label]" value="<%= q.label %>" maxlength="<%= LIMITS.label %>" required></label>
+      <label>Hint <span class="muted small">(optional — shown under the question)</span><input name="<%= n %>[help]" value="<%= q.help || '' %>" maxlength="<%= LIMITS.help %>"></label>
+      <div class="grid-2" style="gap:.6rem;align-items:end">
+        <label>Type
+          <select name="<%= n %>[type]" <%= locked ? 'disabled' : '' %>>
+            <% Object.keys(TYPES).forEach(function (t) { %><option value="<%= t %>" <%= t === q.type ? 'selected' : '' %>><%= TYPES[t] %></option><% }) %>
+          </select>
+        </label>
+        <label class="sv-check"><input type="checkbox" name="<%= n %>[required]" value="on" <%= q.required ? 'checked' : '' %>> Required</label>
+      </div>
+      <% if (isChoice(q.type)) { %>
+        <label>Options <span class="muted small">(one per line, <%= LIMITS.options.min %>–<%= LIMITS.options.max %>)</span>
+          <textarea name="<%= n %>[options]" rows="<%= Math.max(3, (q.options || []).length + 1) %>" <%= locked ? 'disabled' : '' %>><%= (q.options || []).join('\n') %></textarea>
+        </label>
+      <% } else { %>
+        <p class="muted small" style="margin:.2rem 0 0"><%= hints[q.type] || '' %><% if (!locked) { %> Switch the type to a choice to list options.<% } %></p>
+      <% } %>
+      <div class="cta-row" style="justify-content:flex-end;margin:.6rem 0 0">
+        <button class="btn btn-ghost btn-sm" formaction="<%= base %>/questions/<%= q.id %>">Save</button>
+      </div>
+    </div>
+  <% }) %>
+
+  <div class="card">
+    <h2 style="margin-top:0">Add a question</h2>
+    <% if (qs.length >= LIMITS.questions) { %>
+      <p class="muted" style="margin:0">That is the most a survey can have (<%= LIMITS.questions %>).</p>
+    <% } else { %>
+      <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.4rem;margin:0">
+        <% Object.keys(TYPES).forEach(function (t) { %>
+          <button class="btn btn-ghost btn-sm" formaction="<%= base %>/questions" name="type" value="<%= t %>" formnovalidate>+ <%= TYPES[t] %></button>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="cta-row sv-actions">
+    <button class="btn btn-ghost">Save</button>
+    <% if (survey.status === 'draft') { %>
+      <button class="btn btn-primary" formaction="<%= base %>/publish">Publish and get the link</button>
+    <% } else { %>
+      <a class="btn btn-primary" href="<%= base %>">See results</a>
+    <% } %>
+  </div>
+</form>
+
+<% if (survey.status === 'draft' && !survey.response_count) { %>
+  <form method="post" action="<%= base %>/delete" style="margin-top:1rem" onsubmit="return confirm('Delete this draft?')">
+    <button class="btn btn-ghost btn-sm">Delete draft</button>
+  </form>
+<% } %>
+<style>
+  .sv-q { scroll-margin-top: 5rem; }
+  .sv-q-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .sv-q-tools { margin-left: auto; display: flex; gap: .3rem; }
+  .sv-check { display: flex; align-items: center; gap: .5rem; }
+  .sv-check input { width: auto; margin: 0; }
+  .sv-actions { justify-content: flex-start; gap: .5rem; position: sticky; bottom: 0; padding: .8rem 0; background: var(--bg); }
+  .sv-form button[disabled] { opacity: .4; cursor: default; }
+</style>
+<%- include('../partials/foot') %>

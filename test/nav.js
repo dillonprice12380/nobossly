@@ -212,7 +212,8 @@ for (const old of ['/challenges', '/milestones', '/wins']) {
 // a heading or nav label that names the tab by its old name.
 const RETIRED = [
   [/label: 'Quests'/,           'no nav tab is labelled "Quests"'],
-  [/<h1>[^<]*\bMilestones\b/, 'no page heading says "Milestones"'],
+  // "Milestones" as the trophies tab stays retired. A member's own milestone
+  // tracker in the workspace (2026-11-01) is a different thing and may say so.
   [/label: 'Milestones'/,       'no nav tab is labelled "Milestones"']
 ];
 const viewSrc = fs.readdirSync(VIEWS_DIR, { recursive: true })
