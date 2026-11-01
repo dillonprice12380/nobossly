@@ -6,10 +6,10 @@
   // Each section's pages sit in a second row so everything is one click away.
   var APP_NAV = [
     { href: '/feed',       label: 'Feed',       short: 'Feed',       icon: 'i-team',      match: ['/feed'], subs: [] },
-    { href: '/community',  label: 'Community',  short: 'Community',  icon: 'i-community', match: ['/community', '/help', '/members', '/reviews', '/collaborations'],
+    { href: '/community',  label: 'Community',  short: 'Community',  icon: 'i-community', match: ['/community', '/exchange', '/members', '/reviews', '/collaborations'],
       subs: [
         { href: '/community', label: 'Q&A', match: ['/community'], not: ['/community/collab'] },
-        { href: '/help', label: 'Help board', match: ['/help'], flag: 'helpBoard' },
+        { href: '/exchange', label: 'Help & exchange', match: ['/exchange'], flag: 'helpBoard' },
         { href: '/members', label: 'Members', match: ['/members'] },
         { href: '/reviews', label: 'Get feedback', match: ['/reviews'] },
         { href: '/community/collab', label: 'Collaborators', match: ['/community/collab', '/collaborations'], flag: 'collabs' }

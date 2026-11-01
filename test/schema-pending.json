@@ -14,6 +14,54 @@
         "context",
         "created_at"
       ]
+    },
+    "2026-11-01_phase1_public_side.sql": {
+      "profiles": [
+        "headline",
+        "working_on",
+        "help_offer",
+        "help_need"
+      ],
+      "help_posts": [
+        "id",
+        "author_id",
+        "group_id",
+        "kind",
+        "title",
+        "body",
+        "category",
+        "exchange",
+        "status",
+        "partner_id",
+        "closed_at",
+        "created_at",
+        "updated_at"
+      ],
+      "help_responses": [
+        "id",
+        "post_id",
+        "responder_id",
+        "message",
+        "status",
+        "created_at"
+      ],
+      "help_thanks": [
+        "id",
+        "post_id",
+        "helper_id",
+        "thanker_id",
+        "note",
+        "rating",
+        "is_public",
+        "created_at"
+      ],
+      "_enums": {
+        "notifications": {
+          "type": [
+            "help"
+          ]
+        }
+      }
     }
   }
 }

@@ -5,7 +5,7 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
-const { attachUser, requireAuth, requireAdmin, requirePaid } = require('./src/middleware/auth');
+const { attachUser, requireAuth, requireAdmin, requireFlag, requirePaid } = require('./src/middleware/auth');
 
 const app = express();
 app.set('view engine', 'ejs');
@@ -134,7 +134,8 @@ app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 // so that a POST to an old URL still works instead of silently becoming a GET.
 app.use('/quests', requireAuth, require('./src/routes/challenges'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));   // former name
-app.use('/feed', requireAuth, require('./src/routes/feed')); // what the people you follow have been doing
+app.use('/feed', requireAuth, require('./src/routes/feed')); // the social feed: member posts and shared results
+app.use('/exchange', requireAuth, requireFlag('helpBoard'), require('./src/routes/exchange')); // help & exchange board
 app.use('/community', require('./src/routes/community'));
 app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
 app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review

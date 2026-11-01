@@ -1,24 +1,31 @@
 <%- include('partials/head') %>
-<div class="card">
+<% var shownName = isPrivate ? '@' + p.username : (p.display_name || p.username); %>
+<div class="card profile-card">
   <div class="profile-head">
-    <div class="avatar-circle"><%= ((isPrivate ? p.username : (p.display_name || p.username)) || '?').slice(0,1).toUpperCase() %></div>
-    <div>
-      <h1><%= isPrivate ? '@' + p.username : (p.display_name || p.username) %></h1>
-      <p class="muted"><% if (!isPrivate) { %>@<%= p.username %> · <% } %><%= lvl.emoji %> Level <%= p.current_level || 1 %> — <%= lvl.title %><% if (!isPrivate) { %> · Member since <%= new Date(p.created_at).toLocaleDateString() %><% } %></p>
-      <div class="scores">
-        <span class="chip">⚡ <%= p.xp_total || 0 %> XP</span>
-        <% if (!isPrivate) { %>
-          <span class="chip">🔥 <%= p.streak_days || 0 %>-day streak</span>
-          <span class="chip">✅ <%= p.tasks_completed || 0 %> tasks done</span>
-          <% if (p.founder_stage) { %><span class="chip">🚀 <%= p.founder_stage %></span><% } %>
-          <%# The Level 7 unlock, delivered. Shown to everyone, including them,
-              so the rung visibly gave them something. %>
+    <div class="avatar-circle"><% if (p.avatar_url && !isPrivate) { %><img src="<%= p.avatar_url %>" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><% } else { %><%= ((isPrivate ? p.username : (p.display_name || p.username)) || '?').slice(0,1).toUpperCase() %><% } %></div>
+    <div style="flex:1;min-width:0">
+      <h1 style="margin:0"><%= shownName %></h1>
+      <% if (!isPrivate && p.headline) { %><p style="margin:.15rem 0 0;font-size:1.05rem"><%= p.headline %></p><% } %>
+      <p class="muted small" style="margin:.25rem 0 0">
+        <% if (!isPrivate) { %>@<%= p.username %><% } %>
+        <% if (!isPrivate && pathDef) { %> · <%= pathDef.emoji %> <%= pathDef.label %><% } %>
+        <% if (!isPrivate && p.location) { %> · 📍 <%= p.location %><% } %>
+        <% if (flags.ladder) { %> · <%= lvl.emoji %> Level <%= p.current_level || 1 %> — <%= lvl.title %><% } %>
+      </p>
+      <% if (!isPrivate && typeof showcase !== 'undefined' && showcase && showcase.url) { %>
+        <p class="small" style="margin:.25rem 0 0"><a href="<%= showcase.url %>" rel="nofollow noopener" target="_blank">🔗 <%= showcase.url.replace(/^https?:\/\//, '') %></a></p>
+      <% } %>
+      <% if (flags.ladder) { %>
+        <div class="scores">
+          <span class="chip">⚡ <%= p.xp_total || 0 %> XP</span>
+          <% if (!isPrivate && flags.sprints) { %><span class="chip">🔥 <%= p.streak_days || 0 %>-day streak</span><% } %>
           <% if (mentor) { %><span class="chip chip-success" title="Level <%= mentorLevel %>+ — open to helping members on lower rungs">🧑‍🏫 Mentor</span><% } %>
-        <% } %>
-      </div>
+        </div>
+      <% } %>
     </div>
-    <% if (isMe) { %><a class="btn btn-ghost" style="margin-left:auto" href="/members/me/edit">Edit profile</a><% } %>
+    <% if (isMe) { %><a class="btn btn-ghost" style="margin-left:auto;align-self:flex-start" href="/members/me/edit">Edit profile</a><% } %>
   </div>
+
   <% if (!isMe && typeof social !== 'undefined') { %>
     <div class="social-bar">
       <% if (social.blockedMe) { %>
@@ -27,82 +34,99 @@
         <span class="chip">🚫 Blocked</span>
         <form method="post" action="/unblock/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">Unblock</button></form>
       <% } else { %>
-        <% if (!isPrivate) { %><a class="btn btn-primary btn-sm" href="/messages/with/<%= p.id %>">💬 Message</a><% } %>
         <% if (social.isFollowing) { %>
           <form method="post" action="/unfollow/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">✓ Following</button></form>
         <% } else { %>
-          <form method="post" action="/follow/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">+ Follow</button></form>
+          <form method="post" action="/follow/<%= p.id %>" class="inline"><button class="btn btn-primary btn-sm">+ Follow</button></form>
         <% } %>
-        <% const f = social.friendship; %>
-        <% if (!f || f.status === 'declined') { %>
-          <form method="post" action="/friends/request/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">🤝 Add friend</button></form>
-        <% } else if (f.status === 'pending' && f.addressee_id !== p.id) { %>
-          <form method="post" action="/friends/<%= f.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Accept friend request</button></form>
-          <form method="post" action="/friends/<%= f.id %>/decline" class="inline"><button class="btn btn-ghost btn-sm">Decline</button></form>
-        <% } else if (f.status === 'pending') { %>
-          <span class="chip">🤝 Request sent</span>
-        <% } else if (f.status === 'accepted') { %>
-          <span class="chip chip-success">🤝 Friends</span>
-          <form method="post" action="/friends/<%= f.id %>/remove" class="inline"><button class="btn btn-ghost btn-sm">Unfriend</button></form>
+        <% if (!isPrivate) { %><a class="btn btn-ghost btn-sm" href="/messages/with/<%= p.id %>">💬 Message</a><% } %>
+        <% if (flags.friendships) { const f = social.friendship; %>
+          <% if (!f || f.status === 'declined') { %>
+            <form method="post" action="/friends/request/<%= p.id %>" class="inline"><button class="btn btn-ghost btn-sm">🤝 Add friend</button></form>
+          <% } else if (f.status === 'pending' && f.addressee_id !== p.id) { %>
+            <form method="post" action="/friends/<%= f.id %>/accept" class="inline"><button class="btn btn-primary btn-sm">Accept friend request</button></form>
+            <form method="post" action="/friends/<%= f.id %>/decline" class="inline"><button class="btn btn-ghost btn-sm">Decline</button></form>
+          <% } else if (f.status === 'pending') { %>
+            <span class="chip">🤝 Request sent</span>
+          <% } else if (f.status === 'accepted') { %>
+            <span class="chip chip-success">🤝 Friends</span>
+            <form method="post" action="/friends/<%= f.id %>/remove" class="inline"><button class="btn btn-ghost btn-sm">Unfriend</button></form>
+          <% } %>
         <% } %>
         <a class="btn btn-ghost btn-sm" href="/report?type=user&id=<%= p.id %>">⚑ Report</a>
         <form method="post" action="/block/<%= p.id %>" class="inline" onsubmit="return confirm('Block @<%= p.username %>? You will no longer see each other\'s messages and posts.')"><button class="btn btn-ghost btn-sm">🚫 Block</button></form>
       <% } %>
     </div>
-    <p class="muted small" style="margin-top:.4rem"><%= social.followers %> follower<%= social.followers === 1 ? '' : 's' %> · <%= social.following %> following · <%= social.friends %> friend<%= social.friends === 1 ? '' : 's' %></p>
   <% } %>
-  <% if (isPrivate) { %>
-    <p class="muted small" style="margin-top:1rem">🔒 This profile is private. Only the username, level, awards and badges are shown.</p>
-  <% } else { %>
-  <% if (p.bio) { %><p style="margin-top:1rem"><%= p.bio %></p><% } %>
-  <p class="muted small">
-    <% if (p.occupation) { %><%= p.occupation %> · <% } %>
-    <% if (p.location) { %>📍 <%= p.location %><% } %>
-  </p>
+  <p class="muted small" style="margin:.5rem 0 0"><%= social.followers %> follower<%= social.followers === 1 ? '' : 's' %> · <%= social.following %> following<% if (flags.friendships) { %> · <%= social.friends %> friend<%= social.friends === 1 ? '' : 's' %><% } %><% if (!isPrivate) { %> · Member since <%= new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %><% } %></p>
+</div>
 
-  <%# Level 3 — Builder. The business name and link are withheld below it, which
-      is what makes the rung an actual unlock rather than a line of copy. %>
-  <% if (typeof showcase !== 'undefined' && showcase) { %>
-    <div class="card" style="margin:.8rem 0 0;background:var(--panel-2)">
-      <p class="muted small" style="margin:0 0 .2rem">🔨 Building</p>
-      <% if (showcase.businessName) { %><strong style="font-size:1.05rem"><%= showcase.businessName %></strong><br><% } %>
-      <% if (showcase.url) { %><a href="<%= showcase.url %>" rel="nofollow noopener" target="_blank">🔗 <%= showcase.url.replace(/^https?:\/\//, '') %></a><% } %>
+<% if (isPrivate) { %>
+  <div class="card"><p class="muted small" style="margin:0">🔒 This profile is private. Follow or message to connect.</p></div>
+<% } else { %>
+  <% var offer = p.help_offer || [], need = p.help_need || []; %>
+  <% if (p.working_on || p.bio || offer.length || need.length || isMe) { %>
+    <div class="card">
+      <% if (p.working_on) { %><h3 style="margin-top:0">Working on</h3><p><%= p.working_on %></p><% } %>
+      <% if (p.bio) { %><h3 style="<%= p.working_on ? '' : 'margin-top:0' %>">About</h3><p style="white-space:pre-wrap"><%= p.bio %></p><% } %>
+      <% if (offer.length) { %>
+        <h3>Can help with</h3>
+        <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem"><% offer.forEach(function (k) { %><a class="chip chip-success" href="/exchange?kind=ask&category=<%= k %>"><%= helpCats.emoji(k) %> <%= helpCats.label(k) %></a><% }) %></div>
+      <% } %>
+      <% if (need.length) { %>
+        <h3>Looking for help with</h3>
+        <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem"><% need.forEach(function (k) { %><a class="chip" href="/exchange?kind=offer&category=<%= k %>"><%= helpCats.emoji(k) %> <%= helpCats.label(k) %></a><% }) %></div>
+      <% } %>
+      <% if (isMe && !p.working_on && !p.bio && !offer.length && !need.length) { %>
+        <p class="muted" style="margin:0">Say what you are working on and what you can help with, so the right people find you. <a href="/members/me/edit">Fill in your profile →</a></p>
+      <% } %>
     </div>
-  <% } else if (isMe && typeof canShowcase !== 'undefined' && !canShowcase) { %>
-    <p class="muted small" style="margin-top:.8rem">🔒 Your business name and link show here from <strong>Level <%= showcaseLevel %> — Builder</strong>, once you've shipped something. <a href="/dashboard">See what's left</a>.</p>
   <% } %>
-  <% } %>
-</div>
-<div class="grid-2">
-  <div class="card">
-    <h3><svg class="icon"><use href="#i-star"/></svg> Badges (<%= badges.length %>)</h3>
-    <% if (badges.length) { %>
-      <div class="badge-grid">
-        <% badges.forEach(b => { %><div class="badge-chip" title="<%= b.description %>"><span class="b-emoji"><%= b.emoji %></span><span class="small"><%= b.name %></span><br><span class="muted small"><%= b.tier %></span></div><% }) %>
-      </div>
-    <% } else { %><p class="muted">No badges yet.</p><% } %>
-  </div>
-  <div class="card">
-    <h3><svg class="icon"><use href="#i-trophy"/></svg> Awards & trophies (<%= milestones.length %>)</h3>
-    <% if (milestones.length) { %>
-      <ul class="feature-list"><% milestones.forEach(m => { %><li><%= m.emoji %> <%= m.title %></li><% }) %></ul>
-    <% } else { %><p class="muted">No trophies yet.</p><% } %>
-  </div>
-</div>
 
-<%# Lately. A Follow button is only worth pressing if there is something on the
-    other side of it, and badges and trophies are a cabinet, not a timeline.
-    RLS decides what is readable here, so a private profile simply returns
-    nothing rather than needing its own rule in the view. %>
-<% if (typeof recent !== 'undefined' && recent && recent.length) { %>
-  <div class="card">
-    <h3><svg class="icon"><use href="#i-trophy"/></svg> Lately</h3>
-    <% recent.forEach(function (ev) { %>
-      <div class="milestone-row">
-        <p style="margin:.25rem 0"><%= ev.emoji || '•' %> <%= ev.title %></p>
-        <span class="muted small" style="flex:none"><%= new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
-      </div>
+  <% if (thanks && thanks.length) { %>
+    <div class="card">
+      <h3 style="margin-top:0">💚 Thanked for helping</h3>
+      <% thanks.forEach(function (t) { %>
+        <div class="milestone-row"><p style="margin:.2rem 0"><%= t.note ? '“' + t.note + '”' : 'Thanks for the help.' %> <span class="muted small">— <% if (t.who) { %><a href="/members/<%= t.who.username %>"><%= t.who.display_name || t.who.username %></a><% } else { %>a member<% } %></span></p></div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <h3 style="margin:1.2rem 0 .5rem">Posts</h3>
+  <% if (!memberPosts.length) { %>
+    <div class="card"><p class="muted" style="margin:0"><%= isMe ? 'You have not posted yet. ' : 'No posts yet.' %><% if (isMe) { %><a href="/feed">Share an update →</a><% } %></p></div>
+  <% } %>
+  <div class="feed-list">
+    <% memberPosts.forEach(function (post) { %>
+      <%- include('partials/post_card', { p: post, backTo: '/members/' + p.username, maxComment: 280, full: false }) %>
     <% }) %>
   </div>
+
+  <% if (typeof recent !== 'undefined' && recent && recent.length) { %>
+    <div class="card" style="margin-top:1rem">
+      <h3 style="margin-top:0">Results</h3>
+      <% recent.filter(function (ev) { return flags.ladder || ['win', 'challenge'].indexOf(ev.kind) > -1; }).forEach(function (ev) { %>
+        <div class="milestone-row">
+          <p style="margin:.25rem 0"><%= ev.emoji || '•' %> <%= ev.title %></p>
+          <span class="muted small" style="flex:none"><%= new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (flags.trophies) { %>
+    <div class="grid-2">
+      <div class="card">
+        <h3><svg class="icon"><use href="#i-star"/></svg> Badges (<%= badges.length %>)</h3>
+        <% if (badges.length) { %>
+          <div class="badge-grid"><% badges.forEach(b => { %><div class="badge-chip" title="<%= b.description %>"><span class="b-emoji"><%= b.emoji %></span><span class="small"><%= b.name %></span><br><span class="muted small"><%= b.tier %></span></div><% }) %></div>
+        <% } else { %><p class="muted">No badges yet.</p><% } %>
+      </div>
+      <div class="card">
+        <h3><svg class="icon"><use href="#i-trophy"/></svg> Awards &amp; trophies (<%= milestones.length %>)</h3>
+        <% if (milestones.length) { %><ul class="feature-list"><% milestones.forEach(m => { %><li><%= m.emoji %> <%= m.title %></li><% }) %></ul><% } else { %><p class="muted">No trophies yet.</p><% } %>
+      </div>
+    </div>
+  <% } %>
 <% } %>
 <%- include('partials/foot') %>

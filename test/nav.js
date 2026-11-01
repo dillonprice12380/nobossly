@@ -45,7 +45,9 @@ const topLevel = new Set(
   [...server.matchAll(/app\.get\(\s*'([^']+)'/g)].map(m => m[1]));
 
 // app.use('/members', requireAuth, require('./src/routes/members'))
-const mounts = [...server.matchAll(/app\.use\(\s*'([^']+)'[^)]*require\('\.\/(src\/routes\/[a-z_]+)'\)/g)]
+// Middleware between the path and the router may itself be a call, e.g.
+// requireFlag('helpBoard'), so one level of parentheses is allowed.
+const mounts = [...server.matchAll(/app\.use\(\s*'([^']+)'(?:[^()]|\([^()]*\))*?require\('\.\/(src\/routes\/[a-z_]+)'\)/g)]
   .map(m => ({ prefix: m[1], file: m[2] + '.js' }))
   .sort((a, b) => b.prefix.length - a.prefix.length);
 
@@ -152,7 +154,7 @@ ok('every tab matches its own href (or it hides the nav it is in)',
 // A page no tab matches hides the whole tab row. /wins is a page inside the
 // Challenges section now (2026-11-01), so it is matched rather than linked.
 const covers = (href) => APP_NAV.some(i => i.match.some(m => href === m || href.startsWith(m + '/')));
-for (const href of ['/feed', '/wins', '/help', '/members', '/reviews', '/budget', '/tasks', '/tools']) {
+for (const href of ['/feed', '/wins', '/exchange', '/members', '/reviews', '/budget', '/tasks', '/tools']) {
   ok(`${href} keeps the section nav`, covers(href), 'opening it used to make the whole tab row disappear');
 }
 // Every page a section lists is a real page, and is matched by that section.

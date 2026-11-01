@@ -1,0 +1,63 @@
+<%- include('../partials/head') %>
+<%
+  var _ago = function (d) {
+    var s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    return Math.round(s / 86400) + 'd ago';
+  };
+  var qs = function (over) {
+    var o = Object.assign({ kind: f.kind, category: f.category, exchange: f.exchange, mine: f.mine ? '1' : '' }, over);
+    var parts = Object.keys(o).filter(function (k) { return o[k]; }).map(function (k) { return k + '=' + encodeURIComponent(o[k]); });
+    return '/exchange' + (parts.length ? '?' + parts.join('&') : '');
+  };
+%>
+<div class="page-head">
+  <div>
+    <h1>🤝 Help &amp; exchange</h1>
+    <p class="muted">Ask for a hand, offer one, or swap skills with another member. When someone helps you, say thanks — it closes the loop.</p>
+  </div>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="/exchange/new?kind=ask">Ask for help</a>
+    <a class="btn btn-ghost" href="/exchange/new?kind=offer">Offer help</a>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Opening soon</h2><p class="muted">The help board is being set up. Check back shortly.</p></div>
+<% } else { %>
+  <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem;margin-bottom:.4rem">
+    <a class="chip <%= !f.mine && !f.kind ? 'chip-active' : '' %>" href="<%= qs({ kind: '', mine: '' }) %>">All open</a>
+    <% Object.keys(KINDS).forEach(function (k) { %><a class="chip <%= f.kind === k && !f.mine ? 'chip-active' : '' %>" href="<%= qs({ kind: k, mine: '' }) %>"><%= KINDS[k] %>s</a><% }) %>
+    <% Object.keys(EXCHANGES).forEach(function (k) { %><a class="chip <%= f.exchange === k ? 'chip-active' : '' %>" href="<%= qs({ exchange: f.exchange === k ? '' : k }) %>"><%= EXCHANGES[k] %></a><% }) %>
+    <a class="chip <%= f.mine ? 'chip-active' : '' %>" href="<%= qs({ mine: f.mine ? '' : '1', kind: '' }) %>">Mine</a>
+  </div>
+  <div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem">
+    <% cats.CATEGORIES.forEach(function (c) { %><a class="chip <%= f.category === c.key ? 'chip-active' : '' %>" href="<%= qs({ category: f.category === c.key ? '' : c.key }) %>"><%= c.emoji %> <%= c.label %></a><% }) %>
+  </div>
+
+  <% if (!posts.length) { %>
+    <div class="card center">
+      <h2><%= f.mine ? 'Nothing of yours yet' : 'Nothing here yet' %></h2>
+      <p class="muted">Be the first: ask for the thing you are stuck on, or offer the thing you are good at.</p>
+    </div>
+  <% } %>
+  <div class="feed-list">
+    <% posts.forEach(function (p) { var a = who[p.author_id] || {}; %>
+      <a class="card exchange-row" href="/exchange/<%= p.id %>">
+        <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0 0 .3rem;flex-wrap:wrap">
+          <span class="chip <%= p.kind === 'ask' ? '' : 'chip-success' %>"><%= KINDS[p.kind] %></span>
+          <span class="chip"><%= cats.emoji(p.category) %> <%= cats.label(p.category) %></span>
+          <% if (p.exchange === 'swap') { %><span class="chip">🔁 Swap</span><% } %>
+          <% if (p.status !== 'open') { %><span class="chip"><%= p.status === 'in_progress' ? 'In progress' : p.status === 'closed' ? 'Closed' : p.status %></span><% } %>
+        </div>
+        <strong><%= p.title %></strong>
+        <p class="muted small" style="margin:.25rem 0 0"><%= p.body.slice(0, 180) %><%= p.body.length > 180 ? '…' : '' %></p>
+        <p class="muted small" style="margin:.35rem 0 0"><%= a.display_name || a.username || 'A member' %> · <%= _ago(p.created_at) %></p>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<style>.exchange-row { display: block; color: inherit; text-decoration: none; padding: .85rem 1rem; } .exchange-row:hover { border-color: var(--accent); }</style>
+<%- include('../partials/foot') %>

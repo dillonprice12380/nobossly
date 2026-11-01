@@ -1,6 +1,6 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Quests</h1><p class="muted">Everything you can take on, matched to where you are. <% if (flags.ladder) { %>Core quests fit your level; electives<% } else { %>Electives<% } %> fit your business.<% if (flags.sprints && flags.ladder) { %> The weekly sprint carries you between rungs.<% } %></p></div>
+  <div><h1><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Challenges</h1><p class="muted">Take on a challenge alone or join a public cohort doing it together, then share your results. <% if (flags.ladder) { %>Core quests fit your level; electives<% } else { %>Electives<% } %> fit your business.<% if (flags.sprints && flags.ladder) { %> The weekly sprint carries you between rungs.<% } %></p></div>
   <div>
     <% if (flags.ladder) { %><span class="chip">⚔️ Level <%= level %></span><% } %>
     <% if (flags.sprints && streak && streak.days > 0) { %><span class="chip">🔥 <%= streak.days %>-day streak</span><% } %>
