@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { planOf } = require('../middleware/auth');
@@ -167,6 +168,8 @@ router.post('/new', async (req, res, next) => {
     const TYPES = ['idea', 'blueprint', 'landing_page', 'pitch_deck', 'copy', 'pricing', 'general'];
     const type = TYPES.includes(b.review_type) ? b.review_type : 'idea';
     const url = s(b.url_or_content, 500);
+    const found = pi.check(title, description);
+    if (found) return pi.refuse(req, res, '/reviews', found, 'review_request');
     const { data: created, error } = await req.sb.from('peer_reviews').insert({
       submitter_id: req.user.id, review_type: type, title, description,
       url_or_content: /^https?:\/\//i.test(url) ? url : null,
@@ -235,6 +238,8 @@ router.post('/:id/review', async (req, res, next) => {
       return res.redirect(back + '?msg=' + encodeURIComponent(
         'A review needs at least ' + MIN_FEEDBACK + ' characters — say what you would change and why. Yours was ' + feedback.length + '.'));
     }
+    const found = pi.check(feedback);
+    if (found) return pi.refuse(req, res, back, found, 'review_feedback');
     const rating = scoreOf(b.rating);
     if (!rating) return res.redirect(back + '?msg=' + encodeURIComponent('Give it an overall rating from 1 to 5.'));
 

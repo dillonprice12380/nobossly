@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { awardXP } = require('../xp');
 const { notifySocial } = require('../notify');
 const { sanitizeForumHtml, addLinkCards } = require('../richtext');
@@ -101,6 +102,8 @@ router.post('/c/:slug/thread', requireAuth, async (req, res, next) => {
       body = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000) || '(rich post)';
     }
     if (!title || (!body && !bodyHtml)) return res.redirect('/community/c/' + cat.slug);
+    const found = pi.check(title, body, bodyHtml);
+    if (found) return pi.refuse(req, res, '/community/c/' + cat.slug, found, 'forum_thread');
     const tags = parseTags(req.body.tags);
     const { data: thread, error } = await req.sb.from('forum_threads').insert({
       category_id: cat.id, user_id: req.user.id, title, body, body_html: bodyHtml, tags, last_reply_at: new Date().toISOString()
@@ -146,6 +149,8 @@ router.post('/t/:id/reply', requireAuth, async (req, res, next) => {
       bodyHtml = await addLinkCards(sanitizeForumHtml(rawHtml));
       body = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000) || '(rich reply)';
     }
+    const found = pi.check(body, bodyHtml);
+    if (found) return pi.refuse(req, res, '/community/t/' + thread.id, found, 'forum_reply');
     if (body || bodyHtml) {
       await req.sb.from('forum_replies').insert({ thread_id: thread.id, user_id: req.user.id, body, body_html: bodyHtml });
       await req.sb.from('forum_threads').update({ reply_count: (thread.reply_count || 0) + 1, last_reply_at: new Date().toISOString() }).eq('id', thread.id);
@@ -181,6 +186,8 @@ router.post('/t/:id/edit', requireAuth, async (req, res, next) => {
       bodyHtml = await addLinkCards(sanitizeForumHtml(rawHtml));
       body = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000) || '(rich post)';
     }
+    const found = pi.check(title, body, bodyHtml);
+    if (found) return pi.refuse(req, res, '/community/t/' + thread.id + '/edit', found, 'forum_thread_edit');
     if (title && (body || bodyHtml)) {
       await req.sb.from('forum_threads').update({ title, body, body_html: bodyHtml, tags: parseTags(req.body.tags), edited_at: new Date().toISOString() }).eq('id', thread.id);
     }
@@ -212,6 +219,8 @@ router.post('/r/:id/edit', requireAuth, async (req, res, next) => {
         bodyHtml = await addLinkCards(sanitizeForumHtml(rawHtml));
         body = bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000) || '(rich reply)';
       }
+      const found = pi.check(body, bodyHtml);
+      if (found) return pi.refuse(req, res, '/community/t/' + reply.thread_id, found, 'forum_reply_edit');
       if (body || bodyHtml) await req.sb.from('forum_replies').update({ body, body_html: bodyHtml, edited_at: new Date().toISOString() }).eq('id', reply.id);
       return res.redirect('/community/t/' + reply.thread_id);
     }

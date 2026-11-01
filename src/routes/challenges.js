@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { awardXP } = require('../xp');
 const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
@@ -177,6 +178,9 @@ router.post('/:id/finish', async (req, res, next) => {
   try {
     const back = req.body.from === 'dashboard' ? '/dashboard' : '/quests';
     const proof = String(req.body.proof_note || '').trim();
+    // A proof note can become a public win story (below), so it is filtered too.
+    const found = pi.check(proof);
+    if (found) return pi.refuse(req, res, back, found, 'quest_proof');
     const { data: done, error: doneErr } = await req.sb.rpc('complete_quest_for', {
       p_challenge_id: req.params.id, p_proof: proof
     });

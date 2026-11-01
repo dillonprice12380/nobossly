@@ -58,6 +58,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Feature flags, for every view: `<% if (flags.ladder) { %>`.
+const { FLAGS } = require('./src/features');
+app.use((req, res, next) => { res.locals.flags = FLAGS; next(); });
+// `?err=` from any redirect is shown by the shared header, unless the page
+// prints its own `err`.
+app.use((req, res, next) => {
+  res.locals.flashErr = typeof req.query.err === 'string' ? req.query.err.slice(0, 300) : null;
+  next();
+});
+
 // Turbo Drive submits forms over fetch and expects the redirect that follows to
 // be a 303, so the browser re-requests the destination as a GET. Express sends
 // 302 by default; upgrade non-GET redirects centrally rather than editing every
@@ -93,23 +103,29 @@ app.use((req, res, next) => {
 // are still in sent emails, bookmarks and search results, so send them
 // somewhere useful instead of a 404.
 const RETIRED = [
-  [/^\/(checkout|upgrade)(\/.*)?$/, '/pricing'],
+  // Premium is off (FLAGS.premium). Pricing and billing pages go to the
+  // dashboard; the two webhooks above are untouched so Stripe and PayPal
+  // keep getting a 2xx.
+  ...(FLAGS.premium ? [[/^\/(checkout|upgrade)(\/.*)?$/, '/pricing']]
+    : [[/^\/(checkout|upgrade|pricing)(\/.*)?$/, '/dashboard'],
+       [/^\/billing\/(?!webhook$|paypal\/webhook$).*$/, '/dashboard']]),
   [/^\/questionnaire(\/.*)?$/, '/choose-path'],
   [/^\/(compass|ideas|blueprint|coach|weekly-plan)(\/.*)?$/, '/dashboard']
 ];
 app.get(RETIRED.map(r => r[0]), (req, res) => {
   const hit = RETIRED.find(r => r[0].test(req.path));
-  res.redirect(301, hit[1]);
+  // 302 for what a flag hides, so turning the flag back on is not fighting
+  // browsers that cached a permanent redirect.
+  res.redirect(/^\/(pricing|billing|checkout|upgrade)/.test(req.path) ? 302 : 301, hit[1]);
 });
 
 app.use('/', require('./src/routes/auth'));
-app.use('/', billing.router); // /pricing + /billing/* (Premium checkout)
-app.use('/tools', requireAuth, require('./src/routes/tools')); // the five Premium tools
+if (FLAGS.premium) app.use('/', billing.router); // /pricing + /billing/* (Premium checkout)
+app.use('/tools', requireAuth, require('./src/routes/tools')); // the five tools — free while FLAGS.premium is off
 app.get('/proof/:username', require('./src/routes/tools').publicProof); // a member's public Proof Page
 // Onboarding: pick a path, land straight in the product. Replaces the old
 // AI-driven questionnaire + Compass.
 app.use('/choose-path', requireAuth, require('./src/routes/choose_path'));
-app.use('/jobs', requireAuth, require('./src/routes/jobs')); // background generation job polling
 app.use('/dashboard', requireAuth, require('./src/routes/dashboard'));
 app.use('/tasks', requireAuth, require('./src/routes/tasks'));
 // The quest board and the trophy case. Both answer to their old names too:
@@ -173,7 +189,7 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },
       { loc: base + '/help', pri: '0.6' },
-      { loc: base + '/pricing', pri: '0.6' },
+      ...(FLAGS.premium ? [{ loc: base + '/pricing', pri: '0.6' }] : []),
       ...(pages || []).map(p => ({ loc: base + '/' + p.slug, mod: p.updated_at, pri: '0.5' })),
       ...(posts || []).map(p => ({ loc: base + '/blog/' + p.slug, mod: p.updated_at, pri: '0.7' })),
       ...(guides || []).map(g => ({ loc: base + '/guides/' + g.slug, mod: g.updated_at, pri: '0.7' })),
@@ -227,10 +243,19 @@ app.get('/debug', requireAdmin, async (req, res) => {
   }
 });
 
-// Task deadline reminders: sweep every 10 minutes
-const { anonClient } = require('./src/supabase');
+// Task deadline reminders: sweep every 10 minutes. Runs with the service key:
+// process_task_reminders() is no longer callable by anon or signed-in members
+// (migrations/2026-11-01_lock_down_all_function_grants.sql).
+const { anonClient, serviceClient } = require('./src/supabase');
+let warnedNoReminders = false;
 setInterval(() => {
-  anonClient().rpc('process_task_reminders').then(
+  let sc;
+  try { sc = serviceClient(); }
+  catch (_) {
+    if (!warnedNoReminders) { warnedNoReminders = true; console.warn('[reminders] SUPABASE_SERVICE_ROLE_KEY unset — task reminders are off.'); }
+    return;
+  }
+  sc.rpc('process_task_reminders').then(
     r => { if (r.data) console.log('task reminders sent:', r.data); },
     () => {}
   );

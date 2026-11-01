@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL, isMentor, MENTOR_LEVEL } = require('../unlocks');
 const activity = require('../activity');
@@ -81,6 +82,10 @@ router.get('/me/edit', (req, res) => {
 router.post('/me/edit', async (req, res, next) => {
   try {
     const b = req.body;
+    // Public by default: none of the free-text fields may carry contact details.
+    // (website_url is a link field, and links are allowed.)
+    const found = pi.check(b.display_name, b.bio, b.location, b.occupation);
+    if (found) return pi.refuse(req, res, '/members/me/edit', found, 'profile');
     await req.sb.from('profiles').update({
       display_name: (b.display_name || '').slice(0, 60) || req.profile.username,
       bio: (b.bio || '').slice(0, 600),
@@ -127,10 +132,9 @@ router.get('/:username', async (req, res, next) => {
     const canShowcase = showsBuild(p);
     let showcase = null;
     if (canShowcase) {
-      const { data: bp } = await req.sb.from('blueprints')
-        .select('business_name').eq('user_id', p.id).eq('is_active', true)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-      showcase = { businessName: (bp && bp.business_name) || null, url: p.website_url || null };
+      // The business name came from an AI blueprint; that table is being
+      // dropped, so the showcase is the member's own link.
+      showcase = { businessName: null, url: p.website_url || null };
       if (!showcase.businessName && !showcase.url) showcase = null;
     }
     const isPrivate = p.profile_is_public === false && !isMe;

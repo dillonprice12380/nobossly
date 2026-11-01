@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { anonClient } = require('../supabase');
 const { awardXP } = require('../xp');
 
@@ -58,6 +59,8 @@ router.post('/', async (req, res, next) => {
     if (!Number.isFinite(amount) || amount <= 0) amount = null;
     if (amount) amount = Math.min(amount, 10000000);
     if (!title || !story) return res.redirect('/wins/new?msg=' + enc('Please add both a title and a short story.'));
+    const found = pi.check(title, story);
+    if (found) return pi.refuse(req, res, '/wins/new', found, 'win');
     await req.sb.from('wins').insert({ user_id: req.user.id, title, story, category, amount_usd: amount });
     res.redirect('/wins?msg=' + enc('Win submitted 🎉 It will appear on the wall once approved.'));
   } catch (e) { next(e); }

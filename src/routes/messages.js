@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { fetchOg, firstUrl } = require('../notify');
 
 const { quiet } = require('../db');
@@ -95,6 +96,8 @@ router.post('/c/:id', async (req, res, next) => {
       const { iBlocked, blockedMe } = await blockSets(req.sb, req.user.id);
       if (iBlocked.has(otherIdChk) || blockedMe.has(otherIdChk)) return res.redirect('/messages');
     }
+    const found = pi.check(content, attachmentName);
+    if (found) return pi.refuse(req, res, '/messages/c/' + req.params.id, found, 'message');
     if (convo && (content || attachmentUrl)) {
       let link = {};
       const url = firstUrl(content);

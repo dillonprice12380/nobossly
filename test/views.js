@@ -72,7 +72,8 @@ const base = {
   // Set on every request by the affiliate and premium middleware, so every
   // view can count on them. Built the same way here, with no offers loaded.
   affiliates: (() => { const a = {}; require('../src/affiliates').attach({}, { locals: a }, () => {}); return a.affiliates; })(),
-  premiumTools: require('../src/premium').TOOLS, isPremium: false
+  premiumTools: require('../src/premium').TOOLS, isPremium: false,
+  flags: require('../src/features').FLAGS
 };
 
 const render = (file, data) =>

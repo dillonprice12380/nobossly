@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pi = require('../personal_info_filter');
 const { requireAuth } = require('../middleware/auth');
 const { safeBack, relativePath } = require('../safe_back');
 
@@ -177,6 +178,8 @@ router.post('/groups/:slug/leave', requireAuth, async (req, res, next) => {
 router.post('/groups/:slug/post', requireAuth, async (req, res, next) => {
   try {
     const body = (req.body.body || '').trim().slice(0, 3000);
+    const found = pi.check(body);
+    if (found) return pi.refuse(req, res, '/groups/' + req.params.slug, found, 'group_post');
     const { data: group } = await req.sb.from('groups').select('id').eq('slug', req.params.slug).maybeSingle();
     if (group && body) await req.sb.from('group_posts').insert({ group_id: group.id, user_id: req.user.id, body });
     res.redirect('/groups/' + req.params.slug);

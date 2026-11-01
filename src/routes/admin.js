@@ -37,7 +37,7 @@ router.get('/', async (req, res, next) => {
       count('profiles'),
       count('forum_threads'),
       count('cms_contents'),
-      count('generated_ideas'),
+      Promise.resolve({ count: 0 }), // generated_ideas: an AI-era table, being dropped
       req.sb.from('profiles').select('id', { count: 'exact', head: true }).is('username', null),
       req.sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
     ]);

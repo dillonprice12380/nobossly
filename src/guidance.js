@@ -59,10 +59,12 @@ async function computeState(sb, user, profile, pre = {}) {
   const head = q => q.then(r => r.count || 0, () => 0);
 
   const [compassN, blueprintN, ideasN, openN, overdueN, completionsN, winsN, forumN, milestonesN, pendingVerifN, xpToday, qrun, ideaRows, signalRows] = await Promise.all([
-    head(sb.from('founder_compasses').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
-    head(sb.from('blueprints').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
-    pre.ideasCount != null ? Promise.resolve(pre.ideasCount)
-      : head(sb.from('generated_ideas').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+    // Compass, blueprints and generated ideas were AI features, removed with
+    // their tables (migrations/2026-11-01_drop_ai_era_tables.sql). Nobody has
+    // any, so the rules that read these counts never fire.
+    Promise.resolve(0),
+    Promise.resolve(0),
+    Promise.resolve(pre.ideasCount != null ? pre.ideasCount : 0),
     head(sb.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'done')),
     head(sb.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'done').lt('due_date', today)),
     head(sb.from('challenge_completions').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
@@ -71,13 +73,11 @@ async function computeState(sb, user, profile, pre = {}) {
     head(sb.from('user_milestones').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'pending')),
     sb.from('xp_events').select('reason').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z').limit(50).then(r => r.data || [], () => []),
-    sb.from('questionnaire_responses').select('founder_path, path_answers').eq('user_id', user.id).eq('completed', true)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle().then(r => r.data, () => null),
-    // The Level 1 refinement loop: how far the best idea got against the
-    // founder's own fit test, and how much evidence it carries.
-    sb.from('generated_ideas').select('fit_passed, fit_total, best_fit_passed, best_fit_pct, cut_at').eq('user_id', user.id)
-      .then(r => r.data || [], () => []),
-    sb.from('idea_signals').select('idea_id, source').eq('user_id', user.id).then(r => r.data || [], () => [])
+    // The old questionnaire run and the idea-refinement loop went with the same
+    // tables; the path lives on the profile.
+    Promise.resolve(null),
+    Promise.resolve([]),
+    Promise.resolve([])
   ]);
 
   const reasons = xpToday.map(e => String(e.reason || ''));

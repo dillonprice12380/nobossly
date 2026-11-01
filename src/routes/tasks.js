@@ -1,5 +1,4 @@
 const router = require('express').Router();
-const { planOf } = require('../middleware/auth');
 const starter = require('../starter_tasks');
 
 const { quiet } = require('../db');
@@ -119,11 +118,6 @@ router.post('/create', async (req, res, next) => {
     const b = req.body;
     const title = (b.title || '').trim().slice(0, 200);
     if (!title) return res.json({ error: 'Title required' });
-    if (planOf(req.profile) === 'free') {
-      const { count } = await req.sb.from('tasks').select('id', { count: 'exact', head: true })
-        .eq('user_id', req.user.id).neq('status', 'done');
-      if ((count || 0) >= 8) return res.json({ error: 'The free plan lets you manage up to 8 open tasks at a time. Complete some tasks or upgrade for unlimited tasks + AI roadmaps → nobossly.com/pricing' });
-    }
     let assignee = b.assigned_to || req.user.id;
     if (assignee !== req.user.id) {
       const team = await getTeam(req.sb, req.user.id);

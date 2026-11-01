@@ -81,15 +81,14 @@
         <div class="avatar-dropdown" id="avatar-dropdown">
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
-          <a href="/tools"><svg class="icon"><use href="#i-upgrade"/></svg> Toolkit</a>
+          <a href="/tools"><svg class="icon"><use href="#i-target"/></svg> Tools</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
       </div>
     <% } else { %>
       <%# The platform is free, so the public header leads with what it is — no
-          "Premium" link and no second path link beside the "Find your path"
-          button. Premium is reachable from How it works, Help and the footer. %>
+          second path link beside the "Find your path" button. %>
       <a href="/community">Community</a>
       <a href="/how-it-works">How it works</a>
       <div class="nav-dropdown" data-dd>
@@ -143,3 +142,4 @@
 <div class="warn-banner">⚠️ Your account is scheduled for permanent deletion on <%= new Date(new Date(pendingDeletion).getTime() + 7*86400000).toLocaleDateString() %>. <form method="post" action="/account/cancel-deletion" class="inline"><button class="btn btn-sm btn-primary">Cancel deletion</button></form></div>
 <% } %>
 <main class="container">
+<% if (typeof flashErr !== 'undefined' && flashErr && typeof err === 'undefined') { %><p class="error"><%= flashErr %></p><% } %>

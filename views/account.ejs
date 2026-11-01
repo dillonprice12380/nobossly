@@ -32,6 +32,7 @@
   </form>
 </div>
 
+<% if (flags.premium) { %>
 <div class="card">
   <h3>⭐ Plan</h3>
   <% if (p.is_lifetime) { %>
@@ -55,6 +56,7 @@
     <a class="btn btn-primary btn-sm" href="/pricing">See Premium</a>
   <% } %>
 </div>
+<% } %>
 
 <div class="card" style="border-color:#fca5a5">
   <h3 style="color:var(--danger)">⚠️ Danger zone</h3>

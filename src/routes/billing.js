@@ -31,19 +31,11 @@ async function stripe(method, path, params) {
   return j;
 }
 
-// apply_subscription grants paid access, and it is currently EXECUTE-able by the
-// `anon` role — meaning anyone holding the (public) anon key can call it, with
-// only the shared secret in the way. Prefer the service role so the grant runs
-// on a trusted connection; the anon client stays as a fallback so billing keeps
-// working on deployments where SUPABASE_SERVICE_ROLE_KEY isn't set yet.
-// Once the key is confirmed in production, run the revoke in
-// migrations/2026-08-31_lock_down_security_definer.sql to close the hole.
+// apply_subscription() and find_user_by_stripe_sub() are callable by the
+// service role only (migrations/2026-11-01_lock_down_all_function_grants.sql),
+// so there is no anon fallback any more: without the key the call fails loudly.
 function subClient() {
-  try { return serviceClient(); }
-  catch (_) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY unset — applying subscription over the anon client');
-    return anonClient();
-  }
+  return serviceClient();
 }
 
 // Newer Stripe API versions moved the period end from the subscription onto

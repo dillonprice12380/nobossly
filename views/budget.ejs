@@ -30,7 +30,7 @@
         <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
         <button class="btn btn-primary">Log income</button>
       </form>
-      <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else { %><a href="/pricing">Premium</a> turns this into quarterly estimates and a quit date.<% } %></p>
+      <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates and a quit date.<% } %></p>
     </div>
     <div>
       <h3 style="margin-top:0">Recent payments</h3>

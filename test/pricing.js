@@ -10,6 +10,10 @@
 //
 //   node test/pricing.js
 
+// Billing is shelved behind FLAGS.premium (src/features.js). These checks are
+// for the billing that returns with it, so they run with the flag on.
+const FLAGS = require('../src/features').FLAGS;
+FLAGS.premium = true;
 const fs = require('fs');
 const path = require('path');
 const pricing = require('../src/pricing');
@@ -84,7 +88,7 @@ const VIEW = path.join(ROOT, 'views/pricing.ejs');
 const renderPricing = tiers => ejs.render(read('views/pricing.ejs'), {
   currentPath: '/pricing', user: null, settings: {}, notifications: [], profile: null,
   title: 'Pricing', tiers, plan: null, upgrade: null, msg: null,
-  freeFeatures: ['f'], paidFeatures: ['p']
+  freeFeatures: ['f'], paidFeatures: ['p'], flags: FLAGS
 }, { filename: VIEW });
 
 const headline = html => [...html.matchAll(/<p class="price">([\s\S]*?)<\/p>/g)]
