@@ -155,8 +155,13 @@
 </section>
 
 <section style="margin:3rem 0">
+<% if (flags.premium) { %>
   <h2 style="text-align:center;margin-bottom:.5rem">Free to climb. Premium if you want the Toolkit.</h2>
   <p class="muted" style="text-align:center;margin-bottom:2rem">Every quest, every sprint and every rung is free, with no card needed. Premium is optional: five planning tools for the practical side of leaving, from $5 a month.</p>
+<% } else { %>
+  <h2 style="text-align:center;margin-bottom:.5rem">Free. No card, no catch.</h2>
+  <p class="muted" style="text-align:center;margin-bottom:2rem">Everything on NoBossly is free, including the five planning tools.</p>
+<% } %>
   <div class="pricing-grid">
     <div class="card price-card" style="max-width:26rem;margin:0 auto">
       <h3>Free, forever</h3>
@@ -172,6 +177,7 @@
       </ul>
       <a class="btn btn-primary btn-block" href="/paths">Find your path</a>
     </div>
+    <% if (flags.premium) { %>
     <div class="card price-card" style="max-width:26rem;margin:0 auto">
       <h3>⭐ Premium</h3>
       <p class="price">$5<span class="muted small"> a month</span></p>
@@ -181,6 +187,7 @@
       </ul>
       <a class="btn btn-ghost btn-block" href="/pricing">See Premium</a>
     </div>
+    <% } %>
   </div>
 </section>
 

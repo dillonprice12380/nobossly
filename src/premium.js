@@ -20,9 +20,13 @@ const TOOLS = [
 ];
 
 const GRACE_MS = 3 * 86400000;
+const { on } = require('./features');
 
+// While FLAGS.premium is off every member has the tools: the gating below is
+// what returns, unchanged, when a paid tier does.
 function hasPremium(profile) {
   if (!profile) return false;
+  if (!on('premium')) return true;
   if (profile.is_admin || profile.is_lifetime) return true;
   const status = profile.subscription_status;
   const end = profile.subscription_period_end ? new Date(profile.subscription_period_end).getTime() : null;
@@ -42,7 +46,7 @@ function attach(req, res, next) {
 // members without Premium see the tool's own sales page instead of the tool.
 function requirePremium(tool) {
   return (req, res, next) => {
-    if (hasPremium(req.profile)) return next();
+    if (!on('premium') || hasPremium(req.profile)) return next();
     const def = TOOLS.find(t => t.key === tool);
     res.status(200).render('tools/locked', { title: def ? def.name : 'Premium', tool: def });
   };

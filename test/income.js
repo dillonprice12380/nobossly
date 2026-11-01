@@ -139,7 +139,8 @@ console.log('\nThe pages render with a log and without one:');
     canonicalUrl: 'https://nobossly.com/', unreadCount: 0, unreadMsgs: 0, metaDescription: '',
     bodyTheme: 'theme-light', settings: {}, pendingDeletion: null, reactivated: false, isPremium: true,
     affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false },
-    premiumTools: require('../src/premium').TOOLS
+    premiumTools: require('../src/premium').TOOLS,
+    flags: require('../src/features').FLAGS
   };
   const render = (f, data) => ejs.render(fs.readFileSync(V(f), 'utf8'), Object.assign({}, base, data), { filename: V(f) });
   const s = income.summary([pay('2026-07-01', 500), pay('2026-08-01', 550), pay('2026-09-01', 1200)], [], NOW);

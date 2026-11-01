@@ -8,6 +8,10 @@
 //
 //   node test/paypal.js
 
+// Billing is shelved behind FLAGS.premium (src/features.js). These checks are
+// for the billing that returns with it, so they run with the flag on.
+const FLAGS = require('../src/features').FLAGS;
+FLAGS.premium = true;
 const fs = require('fs');
 const path = require('path');
 

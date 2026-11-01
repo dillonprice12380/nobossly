@@ -14,11 +14,13 @@ async function loadBudget(req, extra = {}) {
   // The launch budget the member declared when they picked their path. This
   // tab is about money and it should not ignore the one money number they
   // already gave us — see src/starter_budget.js.
-  const [{ data: budgets }, { data: expenses }, { data: q }] = await Promise.all([
+  const [{ data: budgets }, { data: expenses }] = await Promise.all([
     req.sb.from('budgets').select('*').eq('user_id', req.user.id).order('category'),
-    req.sb.from('expenses').select('*').eq('user_id', req.user.id).gte('spent_at', ms).order('spent_at', { ascending: false }).limit(200),
-    req.sb.from('questionnaire_responses').select('launch_budget').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    req.sb.from('expenses').select('*').eq('user_id', req.user.id).gte('spent_at', ms).order('spent_at', { ascending: false }).limit(200)
   ]);
+  // The launch budget came from the old questionnaire (questionnaire_responses),
+  // an AI-era table being dropped. Nobody who joined since was asked it.
+  const q = null;
   const spentByCat = {};
   let totalSpent = 0;
   (expenses || []).forEach(e => { const amt = Number(e.amount) || 0; spentByCat[e.category] = (spentByCat[e.category] || 0) + amt; totalSpent += amt; });
@@ -64,8 +66,7 @@ router.post('/start', async (req, res, next) => {
   try {
     const { data: existing } = await req.sb.from('budgets').select('id').eq('user_id', req.user.id).limit(1);
     if (existing && existing.length) return res.redirect('/budget');
-    const { data: q } = await req.sb.from('questionnaire_responses')
-      .select('launch_budget').eq('user_id', req.user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const q = null; // see loadBudget: the launch-budget answer is gone with the questionnaire
     const rows = starter.suggest(q && q.launch_budget, req.profile.path);
     if (!rows.length) return res.redirect('/budget');
     await req.sb.from('budgets').insert(rows.map(r => ({ user_id: req.user.id, ...r })));

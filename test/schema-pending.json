@@ -1,0 +1,12 @@
+{
+  "_comment": [
+    "Columns and tables added by migrations that are written but NOT yet applied",
+    "to the live database. test/schema-drift.js treats them as present and prints",
+    "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
+    "remove its entries here."
+  ],
+  "migrations": {
+    "2026-11-01_age_gate.sql": { "profiles": ["date_of_birth"] },
+    "2026-11-01_personal_info_filter.sql": { "filter_hits": ["id", "user_id", "kind", "context", "created_at"] }
+  }
+}

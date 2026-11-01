@@ -13,10 +13,11 @@ const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
 const today = () => new Date().toISOString().slice(0, 10);
 const back = (res, to, m) => res.redirect(to + (m ? (to.includes('?') ? '&' : '?') + 'm=' + encodeURIComponent(m) : ''));
 
-// Hub: every member sees the five tools; without Premium each links to its
+// Hub: every member sees the five tools. While FLAGS.premium is off they are
+// all open; with it on, a tool without Premium links to its
 // sales page instead of the tool.
 router.get('/', (req, res) => {
-  res.render('tools/index', { title: 'Toolkit', welcome: !!req.query.welcome });
+  res.render('tools/index', { title: 'Tools', welcome: !!req.query.welcome });
 });
 
 // ---------------------------------------------------------------- Quit date
@@ -305,7 +306,8 @@ router.post('/proof/testimonial/:id/delete', premium.requirePremium('proof'), as
 });
 
 // Public page, mounted at /proof/:username in server.js. proof_page() returns
-// nothing unless the owner has Premium and has published it.
+// nothing unless the owner has Premium (every member, while FLAGS.premium is
+// off) and has published it.
 async function publicProof(req, res, next) {
   try {
     const { data: p, error } = await (req.sb || anonClient()).rpc('proof_page', { p_username: str(req.params.username, 60) });

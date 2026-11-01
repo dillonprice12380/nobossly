@@ -6,6 +6,10 @@
 //
 //   node test/plan-change.js
 
+// Billing is shelved behind FLAGS.premium (src/features.js). These checks are
+// for the billing that returns with it, so they run with the flag on.
+const FLAGS = require('../src/features').FLAGS;
+FLAGS.premium = true;
 const fs = require('fs');
 const path = require('path');
 
@@ -135,7 +139,7 @@ const msg = to => decodeURIComponent((to.split('msg=')[1] || ''));
     { key: 'year', name: 'Premium Annual', price_cents: 4800, interval_label: 'per year', mode: 'subscription', tagline: '', offer: { cents: 4800, listCents: 4800, isPromo: false } },
     { key: 'lifetime', name: 'Premium Lifetime', price_cents: 20000, interval_label: 'one-time', mode: 'payment', tagline: '', offer: { cents: 20000, listCents: 20000, isPromo: false } }];
   const render = extra => new Promise((res, rej) => ejs.renderFile(path.join(__dirname, '..', 'views/pricing.ejs'),
-    Object.assign({ title: 't', metaDescription: 'm', tiers, freeFeatures: [], paidFeatures: [], msg: null, upgrade: null, premiumTools: [], user: { id: 'u' }, profile: {}, isPremium: true, paypalAvail: {}, payer: 'stripe' }, extra),
+    Object.assign({ title: 't', metaDescription: 'm', tiers, freeFeatures: [], paidFeatures: [], msg: null, upgrade: null, premiumTools: [], user: { id: 'u' }, profile: {}, isPremium: true, paypalAvail: {}, payer: 'stripe', flags: FLAGS }, extra),
     { views: [path.join(__dirname, '..', 'views')] }, (e, h) => e ? rej(e) : res(h)));
   let html = await render({ currentTier: 'month', canSwitch: true });
   ok('a Monthly member sees Switch to Annual, and Monthly marked as their plan', /action="\/billing\/change\/year"/.test(html) && /Switch to Annual/.test(html) && /Your plan/.test(html));

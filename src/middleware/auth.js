@@ -113,6 +113,14 @@ async function attachUser(req, res, next) {
           prof = ins || Object.assign({ id: user.id }, patch);
         }
       }
+      // A date of birth given at signup lives on the auth user until the profile
+      // has a column for it; copy it across once, quietly.
+      const metaDob = (user.user_metadata || {}).date_of_birth;
+      if (prof && Object.prototype.hasOwnProperty.call(prof, 'date_of_birth') && !prof.date_of_birth
+          && /^\d{4}-\d{2}-\d{2}$/.test(String(metaDob || ''))) {
+        prof.date_of_birth = metaDob;
+        sb.from('profiles').update({ date_of_birth: metaDob }).eq('id', user.id).then(...require('../db').quiet('profiles.date_of_birth_backfill'));
+      }
       req.profile = prof;
       if (prof && prof.account_status === 'deactivated') {
         await sb.from('profiles').update({ account_status: 'active' }).eq('id', user.id);
@@ -155,6 +163,14 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// A shelved part of the product (src/features.js) answers 404 while its flag
+// is off, the same as a page that does not exist.
+function requireFlag(name) {
+  const { on } = require('../features');
+  return (req, res, next) => on(name) ? next()
+    : res.status(404).render('error', { title: 'Not found', message: 'Page not found.' });
+}
+
 // Pricing is gone — NoBossly is free for everyone. planOf() is kept as a
 // function, always returning 'paid', rather than ripping out every
 // isPaid()/planOf(...)==='paid' check spread across the route files: those
@@ -167,4 +183,4 @@ function planOf() {
 // behind it (there are none left on purpose) doesn't need to change.
 function requirePaid(req, res, next) { next(); }
 
-module.exports = { attachUser, requireAuth, requireAdmin, requirePaid, planOf, setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts, COOKIE_DOMAIN };
+module.exports = { attachUser, requireAuth, requireAdmin, requireFlag, requirePaid, planOf, setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts, COOKIE_DOMAIN };
