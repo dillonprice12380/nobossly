@@ -37,8 +37,6 @@
     <label>Community username <span class="muted small">(your name or a made-up handle — shown to other members)</span>
       <input name="username" pattern="[A-Za-z0-9_]{3,24}" title="3-24 letters, numbers or underscores" required></label>
     <label>Password (8+ characters)<input type="password" name="password" minlength="8" required></label>
-    <label>Date of birth <span class="muted small">(NoBossly is for people 18 and older; it is never shown to other members)</span>
-      <input type="date" name="date_of_birth" required max="<%= new Date().toISOString().slice(0, 10) %>"></label>
     <button class="btn btn-primary btn-block">Create account</button>
   </form>
   <p class="muted">Already registered? <a href="/login">Log in</a></p>

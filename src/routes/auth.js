@@ -4,8 +4,6 @@ const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts } = require('../middleware/auth');
 const mailer = require('../mailer');
 const pathsLib = require('../paths');
-const age = require('../age');
-const { quiet } = require('../db');
 function callbackBase(req) {
   const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
   return proto + '://' + req.get('host');
@@ -42,13 +40,6 @@ router.get('/signup', (req, res) => {
 router.post('/signup', async (req, res) => {
   const { email, password } = req.body;
   const chosenPath = keepPath(req);
-  // 18+ only. A browser already turned away is not given a second try with a
-  // different date for the next day.
-  const again = error => res.render('signup', { title: 'Sign up', error, path: keepPath(req), pathDef: pathDefOf(req) });
-  if (age.isBlocked(req)) return again(age.MESSAGE);
-  const dob = age.parseDob(req.body.date_of_birth);
-  if (!dob) return again('Enter your date of birth.');
-  if (!age.isAdult(dob)) { age.block(res); return again(age.MESSAGE); }
   if (!password || password.length < 8) {
     return res.render('signup', { title: 'Sign up', error: 'Password must be at least 8 characters.', path: keepPath(req), pathDef: pathDefOf(req) });
   }
@@ -59,16 +50,12 @@ router.post('/signup', async (req, res) => {
   const sb = anonClient();
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
   if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken — try another.', path: keepPath(req), pathDef: pathDefOf(req) });
-  // The date also rides on the auth user, so it reaches the profile even when
-  // email confirmation means there is no session yet (src/middleware/auth.js).
-  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username, date_of_birth: dob } } });
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message, path: keepPath(req), pathDef: pathDefOf(req) });
   // Fire-and-forget: a mail failure must never block a signup.
   if (data.user) mailer.send('welcome', email, username, { userId: data.user.id }).catch(() => {});
   if (data.session) {
     setSessionCookies(res, data.session);
-    await userClient(data.session.access_token).from('profiles')
-      .update({ date_of_birth: dob }).eq('id', data.user.id).then(...quiet('profiles.date_of_birth'));
     // Straight into the product. If a path landing page already chose a path,
     // save it and go straight to the dashboard; otherwise send them to pick one.
     if (chosenPath) {
@@ -266,51 +253,22 @@ router.get('/choose-username', (req, res) => {
   const meta = req.user.user_metadata || {};
   const suggestedName = (req.profile && req.profile.display_name) || meta.full_name || meta.name || '';
   const suggestedUser = (req.profile && req.profile.username) || '';
-  res.render('choose-username', { title: 'Choose your username', error: null, suggestedUser, suggestedName, askDob: needsDob(req) });
+  res.render('choose-username', { title: 'Choose your username', error: null, suggestedUser, suggestedName });
 });
-
-// A social sign-up gives its date of birth here. Members from before the age
-// gate are not asked again (the column is nullable for them).
-const needsDob = req => !!(req.profile && req.profile.needs_username && !req.profile.date_of_birth);
-// profiles.date_of_birth arrives with migrations/2026-11-01_age_gate.sql. Until
-// it is applied the date is kept on the auth user only, and copied onto the
-// profile on a later visit (src/middleware/auth.js).
-const hasDobColumn = req => !!req.profile && Object.prototype.hasOwnProperty.call(req.profile, 'date_of_birth');
 
 router.post('/choose-username', async (req, res) => {
   if (!req.user) return res.redirect('/login');
   const sb = req.sb || anonClient();
   const username = String(req.body.username || '').trim().toLowerCase();
   const displayName = String(req.body.display_name || '').trim().slice(0, 60);
-  const rerender = (error) => res.render('choose-username', { title: 'Choose your username', error, suggestedUser: username, suggestedName: displayName, askDob: needsDob(req) });
-  let dob = null;
-  if (needsDob(req)) {
-    // Under 18: the account is signed out and scheduled for removal by the
-    // nightly purge, the same way a member's own deletion request is.
-    const refuse = async () => {
-      age.block(res);
-      await sb.from('profiles').update({ delete_requested_at: new Date().toISOString(), account_status: 'pending_deletion' })
-        .eq('id', req.user.id).then(...quiet('profiles.age_gate'));
-      clearSessionCookies(res);
-      return res.redirect('/login?m=' + encodeURIComponent(age.MESSAGE));
-    };
-    if (age.isBlocked(req)) return refuse();
-    dob = age.parseDob(req.body.date_of_birth);
-    if (!dob) return rerender('Enter your date of birth.');
-    if (!age.isAdult(dob)) return refuse();
-    try {
-      await serviceClient().auth.admin.updateUserById(req.user.id, {
-        user_metadata: Object.assign({}, req.user.user_metadata, { date_of_birth: dob })
-      });
-    } catch (e) { console.error('[auth] could not store date of birth on the auth user:', e.message); }
-  }
+  const rerender = (error) => res.render('choose-username', { title: 'Choose your username', error, suggestedUser: username, suggestedName: displayName });
   if (!USERNAME_RE.test(username)) {
     return rerender('Username must be 3–24 characters: letters, numbers, or underscores.');
   }
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).neq('id', req.user.id).maybeSingle();
   if (taken) return rerender('That username is taken — try another.');
   const { error } = await sb.from('profiles')
-    .update({ username, display_name: displayName || username, needs_username: false, ...(dob && hasDobColumn(req) ? { date_of_birth: dob } : {}) })
+    .update({ username, display_name: displayName || username, needs_username: false })
     .eq('id', req.user.id);
   if (error) return rerender('Could not save that username: ' + error.message);
   // After a first-time OAuth sign-up, send them to pick a path if they haven't.

@@ -1,6 +1,5 @@
 // Phase 0 of the restructure: safe to start marketing.
 //
-//  - 18+ only, checked on the server.
 //  - Premium is off: no page a member can reach mentions it, prices, upgrading
 //    or billing, and every tool is open. The Stripe and PayPal webhooks stay
 //    mounted so neither sees failures.
@@ -20,29 +19,6 @@ const ok = (name, cond, detail) => {
   if (!cond) fail++;
   console.log(`  ${cond ? '✓' : '✗'} ${name}${detail !== undefined ? '  — ' + detail : ''}`);
 };
-
-// ---------------------------------------------------------------------------
-console.log('\n18+ only:');
-{
-  const age = require('../src/age');
-  const on = new Date('2026-11-01T12:00:00Z');
-  ok('a real date parses', age.parseDob('1990-05-17') === '1990-05-17');
-  ok('an impossible date does not', age.parseDob('2001-02-30') === null && age.parseDob('17/05/1990') === null && age.parseDob('') === null);
-  ok('a date in the future does not', age.parseDob('2999-01-01') === null);
-  ok('18 today is old enough', age.isAdult('2008-11-01', on));
-  ok('18 tomorrow is not', !age.isAdult('2008-11-02', on));
-  ok('the message is neutral', age.MESSAGE === 'NoBossly is for people 18 and older.');
-
-  const auth = read('src/routes/auth.js');
-  ok('signup requires a date of birth and refuses under 18 on the server',
-     /age\.parseDob\(req\.body\.date_of_birth\)/.test(auth) && /if \(!age\.isAdult\(dob\)\) \{ age\.block\(res\);/.test(auth));
-  ok('...and a refused browser is not given a second try', auth.indexOf('if (age.isBlocked(req)) return again(age.MESSAGE);') > -1
-     && auth.indexOf('if (age.isBlocked(req)) return again(age.MESSAGE);') < auth.indexOf('age.parseDob(req.body.date_of_birth)'));
-  ok('social sign-ups give it on the username step, and under 18 is signed out and queued for removal',
-     /needsDob\(req\)/.test(auth) && /delete_requested_at: new Date\(\)\.toISOString\(\), account_status: 'pending_deletion'/.test(auth));
-  ok('the signup form asks for it', /name="date_of_birth" required/.test(read('views/signup.ejs')));
-  ok('the username step asks for it', /name="date_of_birth" required/.test(read('views/choose-username.ejs')));
-}
 
 // ---------------------------------------------------------------------------
 console.log('\nPremium is off:');
@@ -103,7 +79,7 @@ console.log('\nPremium is off:');
 // ---------------------------------------------------------------------------
 console.log('\nThe migrations are written for review, not applied:');
 {
-  const files = ['lock_down_all_function_grants', 'age_gate', 'personal_info_filter', 'drop_ai_era_tables', 'premium_off_everyone_has_tools']
+  const files = ['lock_down_all_function_grants', 'personal_info_filter', 'drop_ai_era_tables', 'premium_off_everyone_has_tools']
     .map(n => `migrations/2026-11-01_${n}.sql`);
   for (const f of files) ok(`${path.basename(f)} says NOT APPLIED`, /^-- NOT APPLIED, written for review\./.test(read(f)));
 
