@@ -1,0 +1,29 @@
+<%#
+  A checklist at a glance, for a dashboard. Pass checklists.progress() as
+  `progress`:
+    include('../partials/checklist_card', { progress: licences })   (in an unescaped output tag)
+  `root` defaults to /workspace.
+%>
+<% var _root = typeof root !== 'undefined' && root ? root : '/workspace';
+   var _p = progress, _d = _p.def, _href = _root + '/checklists/' + _d.key; %>
+<div class="card">
+  <div class="milestone-row" style="border-top:0;padding-top:0">
+    <strong><%= _d.label %></strong>
+    <span class="muted small"><%= _p.done %>/<%= _p.total %></span>
+  </div>
+  <div class="progress"><div class="progress-bar" style="width:<%= _p.pct %>%"></div></div>
+  <% if (_p.nextExpiry) { %>
+    <p class="small" style="margin:.2rem 0 .3rem<%= _p.nextExpiry.overdue ? ';color:var(--danger)' : '' %>">
+      <%= _p.nextExpiry.overdue ? '⚠️ Overdue:' : '🔁 Renew' %> <%= _p.nextExpiry.label %> — <%= _p.nextExpiry.dueLabel %>
+    </p>
+  <% } %>
+  <% if (_p.open.length) { %>
+    <ul class="small" style="margin:.3rem 0 0;padding-left:1.1rem">
+      <% _p.open.slice(0, 3).forEach(function (it) { %><li><a href="<%= _href %>#item-<%= it.key %>"><%= it.label %></a></li><% }) %>
+    </ul>
+    <% if (_p.open.length > 3) { %><p class="muted small" style="margin:.2rem 0 0">+ <%= _p.open.length - 3 %> more</p><% } %>
+  <% } else { %>
+    <p class="muted small" style="margin:.3rem 0 0">All done. 🎉</p>
+  <% } %>
+  <a class="btn btn-ghost btn-sm" style="margin-top:.6rem" href="<%= _href %>">Open checklist</a>
+</div>

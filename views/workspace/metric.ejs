@@ -1,0 +1,86 @@
+<%- include('../partials/head') %>
+<%
+  var base = root + '/metrics/' + def.key;
+  var unitWord = def.unit === 'money' ? 'Amount ($)' : def.unit === 'percent' ? 'Percent (%)' : 'Number';
+  var s = card.summary, d = card.display;
+%>
+<style>
+  .ws-chart { display: flex; align-items: flex-end; gap: 4px; height: 160px; padding: .4rem 0 0; border-bottom: 1px solid var(--border); }
+  .ws-chart .bar { flex: 1 1 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
+  .ws-chart .fill { background: linear-gradient(180deg, var(--accent-2), var(--accent)); border-radius: 4px 4px 0 0; }
+  .ws-chart .gap { border: 1px dashed var(--border); border-bottom: 0; height: 4px; border-radius: 4px 4px 0 0; }
+  .ws-chart-labels { display: flex; gap: 4px; }
+  .ws-chart-labels span { flex: 1 1 0; font-size: .68rem; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; }
+  .ws-big { font-size: 2rem; font-weight: 800; font-family: var(--font-display); line-height: 1.1; }
+  .ws-up { color: var(--accent-2); } .ws-down { color: var(--danger); }
+</style>
+
+<div class="page-head">
+  <div>
+    <h1><%= def.label %></h1>
+    <% if (def.help) { %><p class="muted"><%= def.help %></p><% } %>
+    <p class="muted small">Logged <%= def.period === 'week' ? 'weekly' : 'monthly' %><%= def.higherIsBetter ? '' : ' · lower is better' %></p>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Logging <%= def.label.toLowerCase() %> is being set up. Check back shortly.</p></div>
+<% } else { %>
+  <div class="grid-2">
+    <div class="card">
+      <p class="muted small" style="margin:0">Latest<%= d.latestPeriod ? ' · ' + d.latestPeriod : '' %></p>
+      <div class="ws-big"><%= d.latest %></div>
+      <% if (d.change) { %>
+        <p class="small <%= s.good === true ? 'ws-up' : s.good === false ? 'ws-down' : 'muted' %>" style="margin:.2rem 0 0">
+          <%= s.direction === 'up' ? '▲' : s.direction === 'down' ? '▼' : '•' %> <%= d.change %><%= d.changePct ? ' (' + d.changePct + ')' : '' %> vs previous
+        </p>
+      <% } else if (!s.latest) { %><p class="muted small">Nothing logged yet.</p><% } %>
+      <% if (d.best && s.logged > 1) { %><p class="muted small" style="margin:.3rem 0 0">Best: <%= d.best %></p><% } %>
+    </div>
+
+    <form class="card" method="post" action="<%= base %>">
+      <strong>Log <%= def.label.toLowerCase() %></strong>
+      <label><%= def.period === 'week' ? 'Week' : 'Month' %>
+        <input type="<%= def.period === 'week' ? 'week' : 'month' %>" name="period" value="<%= periodValue %>"
+               placeholder="<%= def.period === 'week' ? '2026-W45 or any date that week' : '2026-11' %>">
+      </label>
+      <label><%= unitWord %> <input name="value" required inputmode="decimal" placeholder="0"></label>
+      <label>Note <span class="muted small">(optional)</span> <input name="note" maxlength="200"></label>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <p class="muted small" style="margin:.4rem 0 0">Logging a <%= def.period %> again replaces its number. This <%= def.period %>: <%= periodLabel %>.</p>
+    </form>
+  </div>
+
+  <div class="card">
+    <strong>Last <%= card.bars.length %> <%= def.period === 'week' ? 'weeks' : 'months' %></strong>
+    <div class="ws-chart" aria-hidden="true">
+      <% card.bars.forEach(function (b) { %>
+        <div class="bar" title="<%= b.label %>: <%= b.value === null ? 'nothing logged' : fmt.byUnit(def.unit, b.value) %>">
+          <% if (b.value === null) { %><div class="gap"></div><% } else { %><div class="fill" style="height:<%= b.pct %>%"></div><% } %>
+        </div>
+      <% }) %>
+    </div>
+    <div class="ws-chart-labels" aria-hidden="true"><% card.bars.forEach(function (b) { %><span><%= b.label %></span><% }) %></div>
+  </div>
+
+  <div class="card table-wrap">
+    <strong>History</strong>
+    <% if (!history.length) { %><p class="muted small">Nothing logged yet.</p><% } else { %>
+      <table class="table">
+        <thead><tr><th><%= def.period === 'week' ? 'Week' : 'Month' %></th><th><%= def.label %></th><th>Note</th><th></th></tr></thead>
+        <tbody>
+          <% history.forEach(function (h) { %>
+            <tr>
+              <td><%= h.label %></td>
+              <td><strong><%= fmt.byUnit(def.unit, h.value) %></strong></td>
+              <td class="muted small"><%= h.note || '' %></td>
+              <td><form method="post" action="<%= base %>/<%= h.id %>/delete" onsubmit="return confirm('Delete this entry?')"><button class="btn btn-ghost btn-sm" type="submit">Delete</button></form></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

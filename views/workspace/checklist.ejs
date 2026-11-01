@@ -1,0 +1,69 @@
+<%- include('../partials/head') %>
+<% var base = root + '/checklists/' + def.key; var p = progress; %>
+<style>
+  .ws-check { display: flex; gap: .7rem; align-items: flex-start; padding: .8rem 0; border-top: 1px solid var(--border); }
+  .ws-check:first-child { border-top: 0; }
+  .ws-check form { margin: 0; }
+  .ws-tick { width: 1.7rem; height: 1.7rem; border-radius: 6px; border: 2px solid var(--border); background: var(--panel-2); color: var(--accent-2); font-weight: 800; cursor: pointer; line-height: 1; padding: 0; }
+  .ws-tick.on { border-color: var(--accent-2); background: rgba(0,212,160,.12); }
+  .ws-check .body { flex: 1 1 auto; min-width: 0; }
+  .ws-check.done .label { text-decoration: line-through; color: var(--muted); }
+  .ws-check details summary { cursor: pointer; font-size: .82rem; color: var(--muted); }
+  .ws-check .inline-form input { max-width: 220px; }
+</style>
+
+<div class="page-head">
+  <div>
+    <h1><%= def.label %></h1>
+    <% if (def.help) { %><p class="muted"><%= def.help %></p><% } %>
+  </div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">This checklist is being set up. Check back shortly.</p></div>
+<% } else { %>
+  <div class="card">
+    <p style="margin:0"><strong><%= p.done %> of <%= p.total %></strong> done</p>
+    <div class="progress"><div class="progress-bar" style="width:<%= p.pct %>%"></div></div>
+    <% if (p.nextExpiry) { %>
+      <p class="small <%= p.nextExpiry.overdue ? 'chip-danger' : '' %>" style="margin:.3rem 0 0">
+        <%= p.nextExpiry.overdue ? '⚠️ Overdue:' : 'Next renewal:' %> <%= p.nextExpiry.label %> — <%= p.nextExpiry.dueLabel %>
+      </p>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <% p.items.forEach(function (it) { %>
+      <div class="ws-check <%= it.done ? 'done' : '' %>" id="item-<%= it.key %>">
+        <form method="post" action="<%= base %>/<%= it.key %>/toggle">
+          <input type="hidden" name="done" value="<%= it.done ? '0' : '1' %>">
+          <button class="ws-tick <%= it.done ? 'on' : '' %>" type="submit" aria-label="<%= it.done ? 'Mark not done' : 'Mark done' %>: <%= it.label %>"><%= it.done ? '✓' : '' %></button>
+        </form>
+        <div class="body">
+          <span class="label"><strong><%= it.label %></strong></span>
+          <% if (it.link) { %> <a class="small" href="<%= it.link %>" <%= /^https?:/.test(it.link) ? 'target="_blank" rel="noopener"' : '' %>>Where to start ↗</a><% } %>
+          <% if (it.help) { %><p class="muted small" style="margin:.2rem 0 0"><%= it.help %></p><% } %>
+          <% if (it.due_on) { %>
+            <p class="small" style="margin:.25rem 0 0"><span class="chip <%= it.overdue ? 'chip-danger' : it.dueSoon ? 'chip-active' : '' %>">Renew by <%= it.dueLabel %><%= it.overdue ? ' — overdue' : it.dueSoon ? ' — soon' : '' %></span></p>
+          <% } %>
+          <% if (it.note) { %><p class="muted small" style="margin:.25rem 0 0">📝 <%= it.note %></p><% } %>
+          <details style="margin-top:.3rem">
+            <summary><%= it.expires ? 'Renew-by date & note' : 'Note' %></summary>
+            <% if (it.expires) { %>
+              <form class="inline-form" method="post" action="<%= base %>/<%= it.key %>/due" style="margin-top:.4rem">
+                <input type="date" name="due_on" value="<%= it.due_on || '' %>" aria-label="Renew by">
+                <button class="btn btn-ghost btn-sm" type="submit">Save date</button>
+              </form>
+            <% } %>
+            <form class="inline-form" method="post" action="<%= base %>/<%= it.key %>/note" style="margin-top:.4rem">
+              <input name="note" maxlength="200" value="<%= it.note %>" placeholder="Policy number, who to call…" aria-label="Note">
+              <button class="btn btn-ghost btn-sm" type="submit">Save note</button>
+            </form>
+          </details>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>
