@@ -1,0 +1,71 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <a class="muted small" href="/workspace/docs/<%= kind %>">← <%= def.label %></a>
+  <h1 style="margin:.2rem 0 0"><%= def.emoji %> <%= doc.title || def.label %></h1>
+  <p class="muted small" style="margin:.2rem 0 0"><%= progress.done %> of <%= progress.total %> filled in · last saved <%= new Date(doc.updated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %></p>
+</div><a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a></div>
+<% if (saved) { %><p class="notice">Saved.</p><% } %>
+
+<% if (score) { %>
+  <div class="card" style="border-left:3px solid var(--accent-2)">
+    <p style="margin:0"><strong>Score: <%= score.total %> / <%= score.of %></strong><% if (!score.complete) { %> <span class="muted small">(score all five for the full picture)</span><% } %> · Weakest: <strong><%= score.weakest %></strong> — that is what your smallest test should check.</p>
+  </div>
+<% } %>
+
+<% var val = function (s) { var v = data[s.key]; return Array.isArray(v) ? v.join('\n') : (v == null ? '' : v); }; %>
+<form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>" class="<%= def.layout === 'canvas' ? 'ws-canvas' : 'card form-card' %>" style="<%= def.layout === 'canvas' ? '' : 'max-width:820px' %>">
+  <div class="<%= def.layout === 'canvas' ? 'card' : '' %>" style="<%= def.layout === 'canvas' ? 'grid-column:1/-1' : '' %>">
+    <label><%= def.titleLabel || 'Name' %><input name="title" maxlength="120" value="<%= doc.title || '' %>"></label>
+  </div>
+  <% def.sections.forEach(function (s) { %>
+    <div class="<%= def.layout === 'canvas' ? 'card ws-box ws-' + s.key : 'ws-field' %>">
+      <% if (s.type === 'score') { %>
+        <fieldset class="ws-score"><legend><strong><%= s.label %></strong></legend>
+          <% if (s.help) { %><p class="muted small" style="margin:0 0 .3rem"><%= s.help %></p><% } %>
+          <% [1,2,3,4,5].forEach(function (n) { %><label class="chip"><input type="radio" name="<%= s.key %>" value="<%= n %>" <%= data[s.key] === n ? 'checked' : '' %>> <%= n %></label><% }) %>
+        </fieldset>
+      <% } else { %>
+        <label><strong><%= s.label %></strong><% if (s.type === 'list') { %> <span class="muted small">(one per line)</span><% } %>
+          <% if (s.help) { %><span class="muted small" style="display:block;font-weight:normal"><%= s.help %></span><% } %>
+          <% if (s.type === 'longtext' || s.type === 'list') { %>
+            <textarea name="<%= s.key %>" rows="<%= def.layout === 'canvas' ? 5 : (s.key === 'pitch' ? 6 : 3) %>" maxlength="<%= s.type === 'list' ? 6000 : 3000 %>"><%= val(s) %></textarea>
+          <% } else if (s.type === 'select') { %>
+            <select name="<%= s.key %>"><option value="">—</option><% (s.options || []).forEach(function (o) { %><option <%= data[s.key] === o ? 'selected' : '' %>><%= o %></option><% }) %></select>
+          <% } else if (s.type === 'money' || s.type === 'number') { %>
+            <input name="<%= s.key %>" inputmode="decimal" value="<%= val(s) %>" placeholder="<%= s.type === 'money' ? '$' : '' %>">
+          <% } else if (s.type === 'date') { %>
+            <input type="date" name="<%= s.key %>" value="<%= val(s) %>">
+          <% } else { %>
+            <input name="<%= s.key %>" maxlength="200" value="<%= val(s) %>">
+          <% } %>
+        </label>
+        <% if (s.key === 'pitch' && pitch) { %><p class="muted small" style="margin:-.2rem 0 0"><%= pitch.words %> words · about <%= pitch.seconds %> seconds out loud</p><% } %>
+      <% } %>
+    </div>
+  <% }) %>
+  <div class="<%= def.layout === 'canvas' ? 'card' : '' %> cta-row" style="justify-content:flex-start;gap:.5rem;<%= def.layout === 'canvas' ? 'grid-column:1/-1' : '' %>">
+    <button class="btn btn-primary">Save</button>
+  </div>
+</form>
+
+<% if (kind === 'elevator_pitch' && (data.versions || []).length) { %>
+  <div class="card" style="max-width:820px">
+    <h3 style="margin-top:0">Earlier versions</h3>
+    <% data.versions.forEach(function (v) { %>
+      <div class="milestone-row"><div><p style="margin:.2rem 0;white-space:pre-wrap"><%= v.text %></p><p class="muted small" style="margin:0"><%= new Date(v.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p></div></div>
+    <% }) %>
+  </div>
+<% } %>
+
+<div class="cta-row" style="justify-content:flex-start;gap:.5rem;margin-top:.8rem">
+  <form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>/duplicate"><button class="btn btn-ghost btn-sm">Make a copy</button></form>
+  <form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>/delete" onsubmit="return confirm('Delete this for good?')"><button class="btn btn-ghost btn-sm">Delete</button></form>
+</div>
+<style>
+  .ws-canvas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .6rem; }
+  .ws-canvas .ws-box textarea { width: 100%; }
+  .ws-field { margin-bottom: .4rem; }
+  .ws-score { border: 0; padding: 0; margin: .3rem 0 .6rem; }
+  .ws-score .chip input { margin-right: .2rem; }
+</style>
+<%- include('../partials/foot') %>

@@ -1,0 +1,41 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🧰 Workspace</h1>
+  <p class="muted"><% if (pathDef) { %>Arranged for your path — <%= pathDef.emoji %> <%= pathDef.label %>. <% } %>Everything here is private to you.</p>
+</div><% if (pathDef) { %><a class="btn btn-ghost btn-sm" href="/choose-path/setup">Path settings</a><% } %></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (needsSetup) { %>
+  <div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0">Answer a few questions about your <%= pathDef.label.toLowerCase() %> work and your dashboard will show the right tools first. <a href="/choose-path/setup">Set it up →</a></p></div>
+<% } else if (!pathDef) { %>
+  <div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0">Pick your path and this workspace puts the tools that matter for it first. <a href="/choose-path">Pick your path →</a></p></div>
+<% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Your workspace is being set up — saving documents opens shortly.</p></div><% } %>
+
+<% var card = function (t) { var mine = recent[t.key === 'goals' ? 'goal' : t.key] || []; %>
+  <a class="card ws-tool" href="<%= t.href %>">
+    <div class="ws-head"><span class="ws-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div>
+    <p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p>
+    <% if (mine.length) { %><p class="small" style="margin:.4rem 0 0"><%= mine.length %> saved · last edited <%= new Date(mine[0].updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p><% } %>
+  </a>
+<% }; %>
+
+<h2 class="ws-section">For your path</h2>
+<div class="grid"><% tools.featured.forEach(function (t) { card(t); }) %></div>
+<% if (tools.available.length) { %>
+  <h2 class="ws-section">Also useful</h2>
+  <div class="grid"><% tools.available.forEach(function (t) { card(t); }) %></div>
+<% } %>
+<% if (tools.library.length) { %>
+  <details class="ws-library"><summary><strong>More tools</strong> <span class="muted small">(<%= tools.library.length %>)</span></summary>
+    <div class="grid" style="margin-top:.6rem"><% tools.library.forEach(function (t) { card(t); }) %></div>
+  </details>
+<% } %>
+<style>
+  .ws-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .ws-tool { display: block; color: inherit; text-decoration: none; }
+  .ws-tool:hover { border-color: var(--accent); }
+  .ws-head { display: flex; gap: .5rem; align-items: center; }
+  .ws-emoji { font-size: 1.4rem; }
+  .ws-library { margin-top: 1.2rem; }
+</style>
+<%- include('../partials/foot') %>

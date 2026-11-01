@@ -236,7 +236,7 @@ dropshipping.*
 - **Workspace:** Business Model Canvas ★ · persona ★ · surveys ★ (demand
   before tooling) · business plan ★ (financing a run) · Pricing ★ · Lean ○.
 
-### ⌨️ Software or app
+### ⌨️ Apps & Software
 *Subpaths: B2B software, consumer app, mobile, extension, AI tool, marketplace.*
 
 - **North star:** **paying customers / monthly recurring revenue**; before

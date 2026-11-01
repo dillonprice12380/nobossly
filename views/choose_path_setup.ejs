@@ -1,0 +1,44 @@
+<%- include('partials/head') %>
+<div class="page-head"><div>
+  <h1><%= def.emoji %> Set up your <%= def.label.toLowerCase() %> dashboard</h1>
+  <p class="muted">A few questions so your dashboard shows the tools and numbers that matter for what you are building. About a minute; you can change any of it later.</p>
+</div></div>
+
+<form method="post" action="/choose-path/setup" class="card form-card" style="max-width:760px">
+  <% if (subpaths.length) { %>
+    <fieldset class="setup-q">
+      <legend><strong>Which of these is closest?</strong></legend>
+      <% subpaths.forEach(function (s) { %>
+        <label class="check"><input type="radio" name="subpath" value="<%= s.slug %>" <%= subpath === s.slug ? 'checked' : '' %>> <%= s.label %></label>
+      <% }) %>
+    </fieldset>
+  <% } %>
+
+  <% questions.forEach(function (q) { var a = answers[q.name]; %>
+    <% if (q.type === 'select') { %>
+      <label><strong><%= q.label %></strong>
+        <select name="<%= q.name %>">
+          <option value="">Choose…</option>
+          <% (q.options || []).forEach(function (o) { %><option <%= a === o ? 'selected' : '' %>><%= o %></option><% }) %>
+        </select></label>
+    <% } else if (q.type === 'checks') { %>
+      <fieldset class="setup-q"><legend><strong><%= q.label %></strong> <span class="muted small">(pick any)</span></legend>
+        <% (q.options || []).forEach(function (o) { %><label class="check"><input type="checkbox" name="<%= q.name %>" value="<%= o %>" <%= Array.isArray(a) && a.includes(o) ? 'checked' : '' %>> <%= o %></label><% }) %>
+      </fieldset>
+    <% } else if (q.type === 'textarea') { %>
+      <label><strong><%= q.label %></strong><textarea name="<%= q.name %>" rows="3" maxlength="600" placeholder="<%= q.placeholder || '' %>"><%= a || '' %></textarea></label>
+    <% } else if (q.type === 'csv') { %>
+      <label><strong><%= q.label %></strong> <span class="muted small">(separate with commas)</span><input name="<%= q.name %>" maxlength="600" value="<%= Array.isArray(a) ? a.join(', ') : (a || '') %>" placeholder="<%= q.placeholder || '' %>"></label>
+    <% } else { %>
+      <label><strong><%= q.label %></strong><input name="<%= q.name %>" maxlength="160" value="<%= a || '' %>" placeholder="<%= q.placeholder || '' %>"></label>
+    <% } %>
+  <% }) %>
+
+  <div class="cta-row" style="justify-content:flex-start;gap:.6rem;margin-top:.8rem">
+    <button class="btn btn-primary">Set up my dashboard</button>
+    <button class="btn btn-ghost" name="skip" value="1" formnovalidate>Skip for now</button>
+    <a class="muted small" href="/choose-path">Change path</a>
+  </div>
+</form>
+<style>.setup-q { border: 1px solid var(--border); border-radius: 10px; padding: .55rem .8rem; margin: .7rem 0; } .setup-q label.check { display: flex; margin: .25rem 0; }</style>
+<%- include('partials/foot') %>
