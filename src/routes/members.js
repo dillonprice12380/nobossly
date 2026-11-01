@@ -1,5 +1,8 @@
 const router = require('express').Router();
 const pi = require('../personal_info_filter');
+const posts = require('../posts');
+const helpCats = require('../help_categories');
+const { on } = require('../features');
 const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL, isMentor, MENTOR_LEVEL } = require('../unlocks');
 const activity = require('../activity');
@@ -53,12 +56,15 @@ router.get('/', async (req, res, next) => {
     // immediately without requiring a manual admin action.
     await backfillBareProfiles();
 
-    const { data: members } = await req.sb.from('profiles')
-      .select('username, display_name, profile_is_public, current_level, verified_level, mentor_available, xp_total, created_at, avatar_url, path')
+    // '*' so headline and the help lists come along once they exist. Most
+    // recently active first, unless levels are switched on.
+    const { data: rows } = await req.sb.from('profiles').select('*')
       .eq('account_status', 'active')
       .not('username', 'is', null)
-      .order('xp_total', { ascending: false })
+      .order(on('ladder') ? 'xp_total' : 'last_active_at', { ascending: false, nullsFirst: false })
       .limit(200);
+    const help = helpCats.KEYS.includes(req.query.help) ? req.query.help : '';
+    const members = (rows || []).filter(m => !help || (m.profile_is_public !== false && (m.help_offer || []).includes(help)));
     // A rung is named differently on every path, so each member's title has to
     // be read from THEIR ladder. One shared lookup would show a plumber a
     // creator's word for the level they reached.
@@ -69,14 +75,20 @@ router.get('/', async (req, res, next) => {
     // Mentors first. The Level 7 unlock is "anyone on a lower rung can find
     // you", and 200 members ordered by XP is not findable — it is a wall.
     const mentors = withRung.filter(m => m.mentor);
-    res.render('members', { title: 'Members', members: withRung, mentors, mentorLevel: MENTOR_LEVEL });
+    res.render('members', { title: 'Members', members: withRung, mentors, mentorLevel: MENTOR_LEVEL, help, helpCats });
   } catch (e) { next(e); }
 });
 
 // Edit own profile
+// headline, working_on and help_offer / help_need arrive with
+// migrations/2026-11-01_phase1_public_side.sql. Until it is applied the form
+// leaves them out rather than writing columns that are not there.
+const hasNetworkFields = p => !!p && Object.prototype.hasOwnProperty.call(p, 'headline');
+
 router.get('/me/edit', (req, res) => {
   res.render('profile_edit', { title: 'Edit profile', p: req.profile, saved: req.query.saved,
-    isMentor: isMentor(req.profile), mentorLevel: MENTOR_LEVEL });
+    isMentor: isMentor(req.profile), mentorLevel: MENTOR_LEVEL,
+    networkFields: hasNetworkFields(req.profile), helpCats });
 });
 
 router.post('/me/edit', async (req, res, next) => {
@@ -84,7 +96,7 @@ router.post('/me/edit', async (req, res, next) => {
     const b = req.body;
     // Public by default: none of the free-text fields may carry contact details.
     // (website_url is a link field, and links are allowed.)
-    const found = pi.check(b.display_name, b.bio, b.location, b.occupation);
+    const found = pi.check(b.display_name, b.bio, b.location, b.occupation, b.headline, b.working_on);
     if (found) return pi.refuse(req, res, '/members/me/edit', found, 'profile');
     await req.sb.from('profiles').update({
       display_name: (b.display_name || '').slice(0, 60) || req.profile.username,
@@ -94,6 +106,12 @@ router.post('/me/edit', async (req, res, next) => {
       occupation: (b.occupation || '').slice(0, 80),
       founder_stage: b.founder_stage || null,
       notification_emails_enabled: b.notification_emails_enabled === 'on',
+      ...(hasNetworkFields(req.profile) ? {
+        headline: String(b.headline || '').trim().slice(0, 120) || null,
+        working_on: String(b.working_on || '').trim().slice(0, 200) || null,
+        help_offer: helpCats.pick(b.help_offer),
+        help_need: helpCats.pick(b.help_need)
+      } : {}),
       // Only writable once the rung is reached; below it the checkbox is not
       // rendered, and a hand-rolled POST must not be able to set the flag that
       // decides whether someone is advertised as available to help.
@@ -106,8 +124,8 @@ router.post('/me/edit', async (req, res, next) => {
 
 router.get('/:username', async (req, res, next) => {
   try {
-    const { data: p } = await req.sb.from('profiles')
-      .select('id, username, display_name, bio, location, website_url, occupation, founder_stage, xp_total, current_level, verified_level, mentor_available, streak_days, tasks_completed, created_at, profile_is_public, account_status, path')
+    // '*': headline, working_on and the help lists may not exist yet (see above).
+    const { data: p } = await req.sb.from('profiles').select('*')
       .eq('username', req.params.username).maybeSingle();
     if (!p || (p.account_status !== 'active' && p.id !== req.user.id)) return res.status(404).render('error', { title: 'Not found', message: 'Member not found.' });
     const [{ data: ub }, { data: um }, { data: customM }] = await Promise.all([
@@ -129,7 +147,8 @@ router.get('/:username', async (req, res, next) => {
     // public profile". The link used to show from Level 1, so the rung unlocked
     // nothing. It is withheld until Level 3 now, and the business name comes
     // from their active blueprint.
-    const canShowcase = showsBuild(p);
+    // With levels switched off (FLAGS.ladder) the link is simply theirs to show.
+    const canShowcase = !on('ladder') || showsBuild(p);
     let showcase = null;
     if (canShowcase) {
       // The business name came from an AI blueprint; that table is being
@@ -161,7 +180,20 @@ router.get('/:username', async (req, res, next) => {
     // the other side of it. RLS decides what is readable, so a private profile
     // simply returns nothing here rather than needing a second rule.
     const recent = await activity.forUser(req.sb, p.id, 8);
-    res.render('profile', { title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent, mentor: isMentor(p), mentorLevel: MENTOR_LEVEL });
+    const memberPosts = isPrivate ? [] : await posts.byMember(req.sb, req.user.id, p.id, 10);
+    // Public thank-yous from the help board. The table arrives with the same
+    // migration; until then there are simply none.
+    const { data: thanksRows } = await req.sb.from('help_thanks')
+      .select('note, rating, created_at, thanker_id').eq('helper_id', p.id).eq('is_public', true)
+      .order('created_at', { ascending: false }).limit(5).then(r => r, () => ({ data: [] }));
+    const thankers = {};
+    if ((thanksRows || []).length) {
+      const { data: tp } = await req.sb.from('profiles').select('id, username, display_name').in('id', thanksRows.map(t => t.thanker_id));
+      (tp || []).forEach(x => { thankers[x.id] = x; });
+    }
+    const thanks = (thanksRows || []).map(t => ({ ...t, who: thankers[t.thanker_id] || null }));
+    res.render('profile', {
+      memberPosts, thanks, helpCats, pathDef: p.path ? require('../paths').get(p.path) : null, title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent, mentor: isMentor(p), mentorLevel: MENTOR_LEVEL });
   } catch (e) { next(e); }
 });
 

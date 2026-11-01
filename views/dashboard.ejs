@@ -1,20 +1,22 @@
 <%- include('partials/head') %>
 <div class="page-head">
   <div><h1>Hey <%= profile.display_name || 'there' %> <svg class="icon icon-lg"><use href="#i-wave"/></svg></h1>
-  <p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
+  <% if (flags.ladder) { %><p class="muted"><%= levelInfo.current.emoji %> Level <%= profile.current_level || 1 %> — <%= levelInfo.current.title %>
   <% if (typeof ladder !== 'undefined' && ladder) { %>
     <% if (ladder.xpNeeded > 0) { %> · <%= ladder.xpNeeded %> XP to <%= ladder.next.title %>
     <% } else if (!ladder.questsMet) { %> · XP ready for <%= ladder.next.title %> — <%= ladder.needMin - ladder.doneCount %> quest<%= (ladder.needMin - ladder.doneCount) === 1 ? '' : 's' %> to go
     <% } %>
-  <% } else if (levelInfo.next) { %> · <%= Math.max(0, levelInfo.next.xp_required - (profile.xp_total||0)) %> XP to <%= levelInfo.next.title %><% } %></p>
+  <% } else if (levelInfo.next) { %> · <%= Math.max(0, levelInfo.next.xp_required - (profile.xp_total||0)) %> XP to <%= levelInfo.next.title %><% } %></p><% } %>
   <% if (typeof yourPath !== 'undefined' && yourPath) { %>
     <p class="muted small" style="margin:.15rem 0 0">
       <%= yourPath.emoji %> <%= yourPath.label %>
       <a class="muted" style="margin-left:.4rem" href="/choose-path">change</a>
     </p>
   <% } %></div>
-  <% if (!checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in (+15 XP)</a>
+  <% if (flags.sprints) { %>
+  <% if (!checkinToday) { %><a class="btn btn-primary" href="/dashboard/checkin">📝 Daily check-in<% if (flags.ladder) { %> (+15 XP)<% } %></a>
   <% } else { %><span class="chip">✅ Checked in today · 🔥 <%= profile.streak_days || 0 %> day streak</span><% } %>
+  <% } %>
 </div>
 
 <% if (typeof checklist !== 'undefined' && checklist) { %>
@@ -38,20 +40,20 @@
   <div class="card" style="border-color:var(--accent);display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div style="flex:1;min-width:16rem">
       <h2 style="margin:0 0 .2rem">🧭 Start here: pick your path</h2>
-      <p class="muted small" style="margin:0">This is what your quests, ladder and electives are matched to. Takes ten seconds.</p>
+      <p class="muted small" style="margin:0">This is what your quests<% if (flags.ladder) { %>, ladder<% } %> and electives are matched to. Takes ten seconds.</p>
     </div>
     <a class="btn btn-primary" style="flex:none" href="/choose-path">Choose →</a>
   </div>
 <% } %>
 
 <div class="stat-row">
-  <div class="stat card"><span class="stat-num" data-count="<%= profile.xp_total || 0 %>"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div>
-  <div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <span data-count="<%= profile.streak_days || 0 %>"><%= profile.streak_days || 0 %></span></span><span class="muted">day check-in streak</span></div>
+  <% if (flags.ladder) { %><div class="stat card"><span class="stat-num" data-count="<%= profile.xp_total || 0 %>"><%= profile.xp_total || 0 %></span><span class="muted">XP</span></div><% } %>
+  <% if (flags.sprints) { %><div class="stat card"><span class="stat-num"><svg class="icon <%= (profile.streak_days || 0) >= 3 ? 'flame-live' : '' %>" style="color:#f59e0b"><use href="#i-flame"/></svg> <span data-count="<%= profile.streak_days || 0 %>"><%= profile.streak_days || 0 %></span></span><span class="muted">day check-in streak</span></div><% } %>
   <div class="stat card"><span class="stat-num" data-count="<%= profile.tasks_completed || 0 %>"><%= profile.tasks_completed || 0 %></span><span class="muted">tasks done</span></div>
-  <% if (sprint) { %><div class="stat card"><span class="stat-num"><span data-count="<%= sprint.velocity_pct || 0 %>"><%= sprint.velocity_pct || 0 %></span>%</span><span class="muted">sprint velocity</span></div><% } %>
+  <% if (flags.sprints && sprint) { %><div class="stat card"><span class="stat-num"><span data-count="<%= sprint.velocity_pct || 0 %>"><%= sprint.velocity_pct || 0 %></span>%</span><span class="muted">sprint velocity</span></div><% } %>
 </div>
 
-<% if (typeof ladder !== 'undefined' && ladder) { %>
+<% if (flags.ladder && typeof ladder !== 'undefined' && ladder) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem">
       <div><h2><%= ladder.next.emoji %> Next rung: Level <%= ladder.next.level %> — <%= ladder.next.title %></h2>
@@ -103,7 +105,7 @@
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
 <div class="card">
   <h2 style="margin-top:0">💵 Got paid?</h2>
-  <p class="muted small" style="margin:.1rem 0 .6rem">Log every payment your side business brings in. It shows you what to put aside for tax, and when you reach a money rung on your path.</p>
+  <p class="muted small" style="margin:.1rem 0 .6rem">Log every payment your side business brings in. It shows you what to put aside for tax<% if (flags.ladder) { %>, and when you reach a money rung on your path<% } %>.</p>
   <form method="post" action="/budget/income" class="cta-row" style="justify-content:flex-start;align-items:flex-end;flex-wrap:wrap;gap:.5rem">
     <input type="hidden" name="from" value="dashboard">
     <label>Amount ($)<input name="amount" inputmode="decimal" required style="max-width:130px"></label>
@@ -114,10 +116,10 @@
   </form>
 </div>
 
-<% if ((typeof pinned !== 'undefined' && pinned.length) || sprint) { %>
+<% if ((typeof pinned !== 'undefined' && pinned.length) || (flags.sprints && sprint)) { %>
   <div class="card challenge-pin">
     <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active quests</h2>
-    <% if (sprint) { %>
+    <% if (flags.sprints && sprint) { %>
       <div class="milestone-row">
         <div><strong>🏃 Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></strong>
         <p class="muted small">7-day quest · <%= sprint.tasks_done %>/<%= sprint.tasks_total %> tasks · <%= sprint.velocity_pct || 0 %>% velocity · ends <%= sprint.end_date %></p></div>
@@ -127,7 +129,7 @@
     <% (typeof pinned !== 'undefined' ? pinned : []).forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/quests/custom/' + a.id : '/quests/' + a.challenge_id; const needsProof = !a.custom && a.challenge.requires_proof; %>
       <div class="milestone-row">
         <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Quest' %></strong>
-        <p class="muted small"><%= a.duration_days %>-day quest · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<%= a.custom ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 proof needed' : '' %></p>
+        <p class="muted small"><%= a.duration_days %>-day quest · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %><% if (flags.ladder) { %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<% } %><%= a.custom ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 proof needed' : '' %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
             <input type="hidden" name="from" value="dashboard">
@@ -183,6 +185,7 @@
   </div>
 <% } %>
 
+<% if (flags.sprints) { %>
 <a id="sprint"></a>
 <% if (sprint) { %>
   <div class="card" id="sprint-card">
@@ -231,15 +234,16 @@
     <% } %>
   </div>
 <% } %>
+<% } %>
 
-<% if (typeof analytics !== 'undefined' && analytics) { %>
+<% if (flags.analytics && typeof analytics !== 'undefined' && analytics) { %>
 <section class="card analytics">
   <h2>📈 Your progress <span class="muted small">last 8 weeks</span></h2>
   <div class="analytics-stats">
     <div><span class="big-number"><%= analytics.totalDone %></span><span class="muted small">tasks completed</span></div>
-    <div><span class="big-number"><%= analytics.totalXp %></span><span class="muted small">XP earned</span></div>
+    <% if (flags.ladder) { %><div><span class="big-number"><%= analytics.totalXp %></span><span class="muted small">XP earned</span></div><% } %>
     <div><span class="big-number"><%= analytics.openTasks %></span><span class="muted small">tasks open</span></div>
-    <div><span class="big-number"><%= profile.streak_days || 0 %>🔥</span><span class="muted small">day streak</span></div>
+    <% if (flags.sprints) { %><div><span class="big-number"><%= profile.streak_days || 0 %>🔥</span><span class="muted small">day streak</span></div><% } %>
   </div>
   <div class="charts">
     <div class="chart">
@@ -252,7 +256,7 @@
         <% }) %>
       </svg>
     </div>
-    <div class="chart">
+    <% if (flags.ladder) { %><div class="chart">
       <h3 class="small muted">XP earned / week</h3>
       <svg viewBox="0 0 320 110" class="bar-chart" role="img" aria-label="XP earned per week">
         <% analytics.weeks.forEach((w, i) => { const h = Math.round(w.xp / analytics.maxXp * 80); %>
@@ -261,7 +265,7 @@
           <text x="<%= 23 + i * 39 %>" y="104" text-anchor="middle" class="bar-label"><%= w.label %></text>
         <% }) %>
       </svg>
-    </div>
+    </div><% } %>
   </div>
 </section>
 <% } %>

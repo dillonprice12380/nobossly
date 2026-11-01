@@ -26,6 +26,14 @@ const pending = JSON.parse(fs.readFileSync(path.join(__dirname, 'schema-pending.
 for (const [file, tables] of Object.entries(pending)) {
   console.log(`  … pending migration ${file} — apply it, regenerate the snapshot, then drop it from schema-pending.json`);
   for (const [table, cols] of Object.entries(tables)) {
+    if (table === '_enums') {
+      // Values a pending migration adds to a CHECK list.
+      for (const [t, byCol] of Object.entries(cols)) for (const [col, vals] of Object.entries(byCol)) {
+        snap.enums[t] = snap.enums[t] || {};
+        snap.enums[t][col] = [...new Set((snap.enums[t][col] || []).concat(vals))];
+      }
+      continue;
+    }
     snap.columns[table] = [...new Set((snap.columns[table] || []).concat(cols))];
   }
 }

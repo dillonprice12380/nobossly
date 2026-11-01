@@ -26,7 +26,7 @@
         <label>Button text<input name="contact_label" maxlength="40" value="<%= page.contact_label || '' %>" placeholder="Book a call"></label>
       </div>
       <label class="check"><input type="checkbox" name="show_wins" <%= page.show_wins !== false ? 'checked' : '' %>> Show my approved wins from the Wins wall</label>
-      <label class="check"><input type="checkbox" name="show_level" <%= page.show_level !== false ? 'checked' : '' %>> Show my NoBossly level</label>
+      <% if (flags.ladder) { %><label class="check"><input type="checkbox" name="show_level" <%= page.show_level !== false ? 'checked' : '' %>> Show my NoBossly level</label><% } %>
       <label class="check"><input type="checkbox" name="published" <%= page.published ? 'checked' : '' %>> Publish my page</label>
       <button class="btn btn-primary btn-sm">Save page</button>
     </form>

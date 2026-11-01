@@ -1,15 +1,20 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-profile"/></svg> Members</h1><p class="muted">Everyone here is building their way out of a job.</p></div></div>
+<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-profile"/></svg> Members</h1><p class="muted">Everyone here is building their way out of a job. Find someone who can help with what you are stuck on.</p></div></div>
+
+<div class="cta-row" style="justify-content:flex-start;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem" aria-label="Filter by what members can help with">
+  <a class="chip <%= !help ? 'chip-active' : '' %>" href="/members">Everyone</a>
+  <% helpCats.CATEGORIES.forEach(function (c) { %><a class="chip <%= help === c.key ? 'chip-active' : '' %>" href="/members?help=<%= c.key %>">Can help with <%= c.label.toLowerCase() %></a><% }) %>
+</div>
 
 <%# The Level 7 unlock is "anyone on a lower rung can find you", and a
     200-strong list sorted by XP is not findable. Mentors get their own row at
     the top, so the unlock is delivered to the people it is for as much as to
     the mentor. Absent entirely until someone has earned it — an empty
     "Mentors" heading advertises a thing the platform cannot yet do. %>
-<% if ((mentors || []).length) { %>
+<% if (flags.ladder && (mentors || []).length) { %>
   <div class="card">
     <h2 style="margin-top:0">🧑‍🏫 Open to mentoring</h2>
-    <p class="muted small" style="margin:.15rem 0 .7rem">Members past Level <%= mentorLevel %> who have said they will help. Message them.</p>
+    <p class="muted small" style="margin:.15rem 0 .7rem">Members<% if (flags.ladder) { %> past Level <%= mentorLevel %><% } %> who have said they will help. Message them.</p>
     <div class="grid">
       <% mentors.forEach(m => { const lvl = m.rung; %>
         <a class="card idea-card" href="/members/<%= m.username %>">
@@ -17,7 +22,7 @@
             <div class="avatar-circle"><%= ((m.profile_is_public === false ? m.username : (m.display_name || m.username)) || '?').slice(0,1).toUpperCase() %></div>
             <div>
               <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
-              <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %></p>
+              <% if (flags.ladder) { %><p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %></p><% } %>
             </div>
           </div>
         </a>
@@ -27,7 +32,7 @@
 <% } %>
 
 <% if (!members.length) { %>
-  <div class="card center"><p class="muted">No members yet.</p></div>
+  <div class="card center"><p class="muted"><%= help ? 'Nobody has said they can help with ' + helpCats.label(help).toLowerCase() + ' yet. Try the Help & exchange board.' : 'No members yet.' %></p></div>
 <% } else { %>
   <div class="grid">
     <% members.forEach(m => { if (!m.username) return; const lvl = m.rung; %>
@@ -37,8 +42,9 @@
           <div>
             <strong><%= m.profile_is_public === false ? '@' + m.username : (m.display_name || m.username) %></strong>
             <% if (m.profile_is_public === false) { %><span class="chip" style="margin-left:.3rem">🔒 private</span><% } %>
-            <% if (m.mentor) { %><span class="chip chip-success" style="margin-left:.3rem">🧑‍🏫 Mentor</span><% } %>
-            <p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %> &middot; &#9889; <%= m.xp_total || 0 %> XP</p>
+            <% if (flags.ladder && m.mentor) { %><span class="chip chip-success" style="margin-left:.3rem">🧑‍🏫 Mentor</span><% } %>
+            <% if (m.profile_is_public !== false && m.headline) { %><p class="muted small" style="margin:.15rem 0 0"><%= m.headline %></p><% } %>
+            <% if (flags.ladder) { %><p class="muted small"><%= lvl.emoji %> Level <%= m.current_level || 1 %> &mdash; <%= lvl.title %> &middot; &#9889; <%= m.xp_total || 0 %> XP</p><% } %>
           </div>
         </div>
       </a>

@@ -72,7 +72,7 @@ router.get('/', async (req, res, next) => {
       const { data } = await qy;
       results = data || [];
     }
-    res.render('community/forum', { title: 'Community', cats: cats || [], counts, latest, sidebar, q, filterCat, filterTag, results });
+    res.render('community/forum', { title: 'Q&A', cats: cats || [], counts, latest, sidebar, q, filterCat, filterTag, results });
   } catch (e) { next(e); }
 });
 

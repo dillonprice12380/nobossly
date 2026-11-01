@@ -7,8 +7,8 @@
     <% if (pg.headline) { %><p class="lead" style="margin:0"><%= pg.headline %></p><% } %>
     <p style="margin:.6rem 0 0">
       <% if (pathLabel) { %><span class="chip"><%= pathLabel %></span><% } %>
-      <% if (pg.show_level !== false && p.current_level) { %><span class="chip">NoBossly Level <%= p.current_level %></span><% } %>
-      <% if (pg.show_level !== false && p.verified_level > 1) { %><span class="chip chip-success">✓ Verified Level <%= p.verified_level %></span><% } %>
+      <% if (flags.ladder && pg.show_level !== false && p.current_level) { %><span class="chip">NoBossly Level <%= p.current_level %></span><% } %>
+      <% if (flags.ladder && pg.show_level !== false && p.verified_level > 1) { %><span class="chip chip-success">✓ Verified Level <%= p.verified_level %></span><% } %>
     </p>
     <% if (pg.contact_url) { %><a class="btn btn-primary" style="margin-top:1rem;display:inline-block" href="<%= pg.contact_url %>" rel="noopener nofollow" target="_blank"><%= pg.contact_label || 'Get in touch' %></a><% } %>
   </div>

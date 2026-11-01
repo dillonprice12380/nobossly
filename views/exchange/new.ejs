@@ -1,0 +1,22 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1><%= kind === 'ask' ? '🙋 Ask for help' : '🙌 Offer help' %></h1>
+  <p class="muted"><%= kind === 'ask' ? 'Say what you need and what a good result looks like. Specific asks get answered.' : 'Say what you can do, for whom, and roughly how long it takes you.' %></p>
+</div><a class="btn btn-ghost btn-sm" href="/exchange">Help &amp; exchange</a></div>
+<% if (needsPath) { %>
+  <div class="card"><p style="margin:0">Pick your path first — it takes a few seconds — then come back to post. <a href="/choose-path">Pick your path →</a></p></div>
+<% } %>
+<form method="post" action="/exchange" class="card" style="max-width:720px">
+  <div class="cta-row" style="justify-content:flex-start;gap:.5rem;margin:0 0 .6rem">
+    <% Object.keys(KINDS).forEach(function (k) { %><label class="chip"><input type="radio" name="kind" value="<%= k %>" <%= k === kind ? 'checked' : '' %>> <%= KINDS[k] %></label><% }) %>
+  </div>
+  <label>Title<input name="title" minlength="5" maxlength="120" required placeholder="<%= kind === 'ask' ? 'e.g. Feedback on my landing page headline' : 'e.g. I will review your pricing page' %>"></label>
+  <label>Details<textarea name="body" rows="6" minlength="10" maxlength="2000" required placeholder="Context, what you have tried, and what would help."></textarea></label>
+  <div class="grid-2" style="gap:.6rem">
+    <label>Category<select name="category"><% cats.CATEGORIES.forEach(function (c) { %><option value="<%= c.key %>"><%= c.emoji %> <%= c.label %></option><% }) %></select></label>
+    <label>Exchange<select name="exchange"><option value="free">Free — happy to help</option><option value="swap">Swap — skill for skill</option></select></label>
+  </div>
+  <p class="muted small">Keep emails, phone numbers and addresses out — you will connect through NoBossly messages once someone is matched.</p>
+  <button class="btn btn-primary">Post</button>
+</form>
+<%- include('../partials/foot') %>

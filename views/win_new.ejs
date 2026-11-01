@@ -20,7 +20,7 @@
       <textarea name="story" rows="5" maxlength="1000" required placeholder="What did you do, how long did it take, and what surprised you?"></textarea>
     </label>
     <button class="btn btn-primary">Submit for review</button>
-    <p class="small muted">Wins are reviewed before they appear publicly. Approved wins earn 25 XP and a notification.</p>
+    <p class="small muted">Wins are reviewed before they appear publicly. Approved wins earn <% if (flags.ladder) { %>25 XP and <% } %>a notification.</p>
   </form>
 </div>
 <%- include('partials/foot') %>

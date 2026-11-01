@@ -1,12 +1,13 @@
 <%- include('partials/head') %>
-<div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Trophies</h1><p class="muted">Your trophy case. Most of it unlocks itself while you play. The real-world trophies below — the ones no metric can see — you log yourself, with a written account.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div>
+<% if (flags.trophies) { %><div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Trophies</h1><p class="muted">Your trophy case. Most of it unlocks itself while you play. The real-world trophies below — the ones no metric can see — you log yourself, with a written account.</p></div><div><span class="chip">🏆 <%= earnedCount %> earned</span></div></div><% } else { %><div class="page-head"><div><h1><svg class="icon icon-lg"><use href="#i-milestone"/></svg> Your goals</h1></div></div><% } %>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
+<% if (flags.trophies) { %>
 <% if (fresh && fresh.length) { %>
   <div class="card" style="border:1px solid var(--accent, #10b981)">
     <h2>🎉 New troph<%= fresh.length === 1 ? 'y' : 'ies' %> unlocked!</h2>
     <% fresh.forEach(f => { %>
-      <p style="margin:.35rem 0"><strong><%= f.emoji %> <%= f.title %></strong> <span class="chip">⚡ +<%= f.xp_reward %> XP</span></p>
+      <p style="margin:.35rem 0"><strong><%= f.emoji %> <%= f.title %></strong><% if (flags.ladder) { %> <span class="chip">⚡ +<%= f.xp_reward %> XP</span><% } %></p>
     <% }) %>
   </div>
 <% } %>
@@ -14,7 +15,7 @@
 <% if (typeof claimable !== 'undefined' && claimable.length) { %>
   <div class="card">
     <h2>🌍 Real-world trophies</h2>
-    <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account and a proof link. The biggest ones are confirmed by another member before they unlock, because they carry the top rungs of the Ladder.</p>
+    <p class="muted small" style="margin-top:-.3rem">The trophies below unlock themselves. These ones can't — nothing inside the app can see that you registered a company or hit $1k MRR. You log them yourself, with a short honest account and a proof link. The biggest ones are confirmed by another member before they unlock<% if (flags.ladder) { %>, because they carry the top rungs of the Ladder<% } %>.</p>
     <% claimable.forEach(function (m) {
          var got = earned[m.id];
          var gate = gatesLevel[String(m.title).trim().toLowerCase()]; %>
@@ -22,8 +23,8 @@
         <div style="flex:1;min-width:0">
           <strong><%= got ? m.emoji : '🔒' %> <%= m.title %></strong>
           <p class="muted small"><%= m.description %></p>
-          <span class="chip">⚡ <%= m.xp_reward %> XP</span>
-          <% if (gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
+          <% if (flags.ladder) { %><span class="chip">⚡ <%= m.xp_reward %> XP</span><% } %>
+          <% if (flags.ladder && gate) { %><span class="chip"><%= gate.emoji %> unlocks Level <%= gate.level %> — <%= gate.title %></span><% } %>
           <% var cs = (typeof claimState !== 'undefined' && claimState) ? claimState[m.id] : null; %>
           <% if (!got && cs === 'pending') { %>
             <p class="small" style="margin:.4rem 0 0"><span class="chip">⏳ Waiting for a member to confirm your proof</span></p>
@@ -35,7 +36,7 @@
                 placeholder="What actually happened? A few sentences — when, where, the specifics."></textarea>
               <label class="small" style="margin-top:.35rem">Proof link <span class="muted">— something another member could check: your live site, a public listing, a registry lookup, a shared screenshot</span>
                 <input name="proof_url" type="url" required maxlength="500" placeholder="https://"></label>
-              <% if (m.xp_reward >= 300) { %><p class="muted small" style="margin:.3rem 0 0">Worth <%= m.xp_reward %> XP, so another member checks your proof before it unlocks.</p><% } %>
+              <% if (m.xp_reward >= 300) { %><p class="muted small" style="margin:.3rem 0 0"><% if (flags.ladder) { %>Worth <%= m.xp_reward %> XP, so another<% } else { %>Another<% } %> member checks your proof before it unlocks.</p><% } %>
               <button class="btn btn-primary btn-sm" style="margin-top:.35rem">I did this</button>
             </form>
           <% } %>
@@ -56,7 +57,7 @@
         <div style="flex:1;min-width:0">
           <strong><%= got ? m.emoji : '🔒' %> <%= m.title %></strong>
           <p class="muted small"><%= m.description %></p>
-          <span class="chip">⚡ <%= m.xp_reward %> XP</span>
+          <% if (flags.ladder) { %><span class="chip">⚡ <%= m.xp_reward %> XP</span><% } %>
           <% if (m.badge_id && badgeMap[m.badge_id]) { %><span class="chip"><%= paid ? '🏅' : '🔒' %> <%= badgeMap[m.badge_id].emoji %> <%= badgeMap[m.badge_id].name %></span><% } %>
           <% if (!got) { %>
             <div style="display:flex;align-items:center;gap:.5rem;margin-top:.45rem;max-width:280px">
@@ -85,17 +86,18 @@
     <% }) %>
   </div>
 <% } %>
+<% } %>
 
 <% if (custom && custom.length) { %>
   <div class="card">
     <h2>🎯 Your personal goals</h2>
-    <p class="muted small">Your own targets — you check them off yourself; trophies above are earned only by playing.</p>
+    <p class="muted small">Your own targets — you check them off yourself<% if (flags.trophies) { %>; trophies above are earned only by playing<% } %>.</p>
     <% custom.forEach(m => { %>
       <div class="milestone-row">
         <div>
           <strong><%= m.emoji %> <%= m.title %></strong>
           <p class="muted small"><%= m.description %></p>
-          <span class="chip">⚡ <%= m.xp_reward %> XP</span> <span class="chip"><%= m.category %></span>
+          <% if (flags.ladder) { %><span class="chip">⚡ <%= m.xp_reward %> XP</span> <% } %><span class="chip"><%= m.category %></span>
         </div>
         <% if (m.achieved) { %>
           <span class="chip chip-success">✅ <%= m.date_achieved %></span>
@@ -105,5 +107,7 @@
       </div>
     <% }) %>
   </div>
+<% } else if (!flags.trophies) { %>
+  <div class="card center"><p class="muted">No personal goals yet.</p></div>
 <% } %>
 <%- include('partials/foot') %>

@@ -1,60 +1,60 @@
 <%- include('partials/head') %>
-<%
-  var ago = function (d) {
-    var s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
-    if (s < 90) return 'just now';
-    if (s < 3600) return Math.round(s / 60) + 'm ago';
-    if (s < 86400) return Math.round(s / 3600) + 'h ago';
-    if (s < 604800) return Math.round(s / 86400) + 'd ago';
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-%>
 <div class="page-head">
   <div>
-    <h1>👥 Your feed</h1>
-    <p class="muted">Everyone here is fitting this around a job. This is them doing it.</p>
+    <h1>Feed</h1>
+    <p class="muted">What members are working on, asking and finishing — all of them fitting this around a job.</p>
   </div>
   <a class="btn btn-ghost" href="/members">Find members</a>
 </div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
-<% if (!following) { %>
-  <div class="card center">
-    <h2>You are not following anyone yet</h2>
-    <p class="muted">Follow a few members and their real wins show up here — first customer, first non-salary dollar, the day they hand in their notice.</p>
-    <%- include('partials/follow_suggestions', { suggestions, pathLabel }) %>
+<form method="post" action="/feed/post" class="card post-composer">
+  <label class="sr-only" for="post-content">Share something</label>
+  <textarea id="post-content" name="content" rows="3" maxlength="<%= maxPost %>" required
+    placeholder="Share an update, ask a question, or pass on something useful…"></textarea>
+  <div class="cta-row" style="justify-content:space-between;align-items:center;margin:.5rem 0 0;flex-wrap:wrap;gap:.5rem">
+    <div class="post-types" role="radiogroup" aria-label="What kind of post">
+      <% Object.keys(types).forEach(function (k, i) { %>
+        <label class="chip"><input type="radio" name="post_type" value="<%= k %>" <%= i === 0 ? 'checked' : '' %>> <%= types[k].emoji %> <%= types[k].label %></label>
+      <% }) %>
+    </div>
+    <button class="btn btn-primary btn-sm">Post</button>
   </div>
-<% } else if (!events.length) { %>
-  <div class="card center">
-    <h2>Nothing yet</h2>
-    <p class="muted">You follow <%= following %> <%= following === 1 ? 'member' : 'members' %>. When one of them clears a quest or reaches a rung, it lands here.</p>
+  <p class="muted small" style="margin:.4rem 0 0">Links are fine. Keep emails, phone numbers and addresses out — use NoBossly messages to connect.</p>
+</form>
+
+<div class="cta-row" style="justify-content:flex-start;margin:0 0 .8rem">
+  <a class="chip <%= scope === 'everyone' ? 'chip-active' : '' %>" href="/feed">Everyone</a>
+  <a class="chip <%= scope === 'following' ? 'chip-active' : '' %>" href="/feed?scope=following">Following<%= following ? ' (' + following + ')' : '' %></a>
+</div>
+
+<% if (!following && suggestions.length) { %>
+  <div class="card">
+    <h3 style="margin-top:0">People to follow</h3>
+    <p class="muted small">Follow members to see their posts under Following.</p>
     <%- include('partials/follow_suggestions', { suggestions, pathLabel }) %>
-    <a class="btn btn-ghost" style="margin-top:.9rem;display:inline-block" href="/members">Follow a few more</a>
-  </div>
-<% } else { %>
-  <div class="feed-list">
-    <% events.forEach(function (e) { %>
-      <div class="card feed-item">
-        <div class="avatar-circle">
-          <% if (e.who.avatar_url) { %><img src="<%= e.who.avatar_url %>" alt=""><% } else { %><%= (e.who.display_name || e.who.username || '?').slice(0,1).toUpperCase() %><% } %>
-        </div>
-        <div style="flex:1;min-width:0">
-          <p style="margin:0">
-            <a href="/members/<%= e.who.username %>"><strong><%= e.who.display_name || e.who.username %></strong></a>
-            <%= e.emoji ? ' ' + e.emoji : '' %> <%= e.title %>
-          </p>
-          <p class="muted small" style="margin:.2rem 0 0">
-            <%= ago(e.created_at) %>
-            <% var t = rungTitle(e.who.path, e.who.current_level); if (t) { %> · Level <%= e.who.current_level %> — <%= t %><% } %>
-          </p>
-        </div>
-        <% if (e.kind === 'win') { %><a class="chip" href="/wins">On the wall</a><% } %>
-      </div>
-    <% }) %>
   </div>
 <% } %>
 
-<style>
-  .feed-list { display: flex; flex-direction: column; gap: .5rem; }
-  .feed-item { display: flex; gap: .8rem; align-items: center; padding: .8rem .9rem; }
-</style>
+<% if (!items.length) { %>
+  <div class="card center">
+    <h2><%= scope === 'following' ? 'Nothing from the people you follow yet' : 'Be the first to post' %></h2>
+    <p class="muted">Say what you are working on this week, or ask the question you have been sitting on.</p>
+  </div>
+<% } %>
+
+<div class="feed-list">
+  <% items.forEach(function (it) { %>
+    <% if (it.item === 'post') { %>
+      <%- include('partials/post_card', { p: it.post, backTo: '/feed', maxComment, full: false }) %>
+    <% } else { var e = it.event; %>
+      <div class="card feed-event">
+        <a class="post-avatar sm" href="/members/<%= e.who.username %>"><% if (e.who.avatar_url) { %><img src="<%= e.who.avatar_url %>" alt=""><% } else { %><%= (e.who.display_name || e.who.username || '?').slice(0, 1).toUpperCase() %><% } %></a>
+        <p style="margin:0;flex:1"><a href="/members/<%= e.who.username %>"><strong><%= e.who.display_name || e.who.username %></strong></a> <%= e.emoji ? e.emoji + ' ' : '' %><%= e.title %></p>
+        <% if (e.kind === 'win') { %><a class="chip" href="/wins">Results wall</a><% } else if (e.kind === 'challenge') { %><a class="chip" href="/quests">Challenges</a><% } %>
+      </div>
+    <% } %>
+  <% }) %>
+</div>
+
 <%- include('partials/foot') %>

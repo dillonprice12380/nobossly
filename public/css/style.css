@@ -692,3 +692,23 @@ body.theme-light .article-body a { color: #047857; }
 .loc-country-accordion[open] summary::after { transform: rotate(180deg); }
 
 .loc-hidden { display: none !important; }
+
+/* ---------- Feed posts (views/partials/post_card.ejs) ---------- */
+.feed-list { display: flex; flex-direction: column; gap: .6rem; }
+.post-composer textarea { width: 100%; resize: vertical; }
+.post-types { display: flex; gap: .35rem; flex-wrap: wrap; }
+.post-types input { margin: 0 .2rem 0 0; }
+.post-card { padding: .9rem 1rem; }
+.post-head { display: flex; gap: .65rem; align-items: flex-start; }
+.post-avatar { width: 40px; height: 40px; min-width: 40px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #047857, #10b981); color: #fff; font-weight: 800; text-decoration: none; }
+.post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.post-avatar.sm { width: 30px; height: 30px; min-width: 30px; font-size: .85rem; }
+.post-body { margin: .6rem 0 .3rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-link { display: block; margin: .2rem 0 .4rem; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: 8px; overflow-wrap: anywhere; }
+.post-actions { display: flex; gap: .4rem; margin-top: .3rem; }
+.post-comment { display: flex; gap: .5rem; align-items: flex-start; margin-top: .55rem; }
+.post-comment-form { display: flex; gap: .4rem; margin-top: .6rem; }
+.post-comment-form input { flex: 1; min-width: 0; }
+.feed-event { display: flex; gap: .65rem; align-items: center; padding: .7rem .9rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

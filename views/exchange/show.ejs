@@ -1,0 +1,69 @@
+<%- include('../partials/head') %>
+<% var name = function (id) { var p = who[id] || {}; return p.display_name || p.username || 'A member'; };
+   var link = function (id) { var p = who[id]; return p ? '/members/' + p.username : '#'; }; %>
+<div class="page-head"><div><a class="muted small" href="/exchange">← Help &amp; exchange</a></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<article class="card" style="max-width:760px">
+  <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0 0 .4rem;flex-wrap:wrap">
+    <span class="chip <%= post.kind === 'ask' ? '' : 'chip-success' %>"><%= KINDS[post.kind] %></span>
+    <span class="chip"><%= cats.emoji(post.category) %> <%= cats.label(post.category) %></span>
+    <span class="chip"><%= post.exchange === 'swap' ? '🔁 Swap' : 'Free' %></span>
+    <span class="chip"><%= post.status === 'open' ? 'Open' : post.status === 'in_progress' ? 'In progress' : post.status === 'closed' ? 'Closed' : post.status %></span>
+  </div>
+  <h1 style="margin:.2rem 0"><%= post.title %></h1>
+  <p class="muted small">by <a href="<%= link(post.author_id) %>"><%= name(post.author_id) %></a></p>
+  <p style="white-space:pre-wrap"><%= post.body %></p>
+
+  <% if (post.status === 'in_progress' && (isAuthor || isPartner)) { var other = isAuthor ? post.partner_id : post.author_id; %>
+    <div class="card" style="border-left:3px solid var(--accent-2)">
+      <p style="margin:0">You are matched with <a href="<%= link(other) %>"><strong><%= name(other) %></strong></a>. <a class="btn btn-primary btn-sm" href="/messages/with/<%= other %>">Message them</a></p>
+    </div>
+  <% } %>
+
+  <% if (canThank) { %>
+    <form method="post" action="/exchange/<%= post.id %>/thank" class="card">
+      <h3 style="margin-top:0">Did it help? Say thanks</h3>
+      <label>A note (optional, shown on their profile)<textarea name="note" rows="2" maxlength="500"></textarea></label>
+      <label>How did it go?<select name="rating"><option value="">—</option><option value="5">5 — brilliant</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label>
+      <label class="check"><input type="checkbox" name="is_public" value="off"> Keep this thank-you private</label>
+      <button class="btn btn-primary btn-sm">Send thanks and close</button>
+    </form>
+  <% } %>
+
+  <% if (thanks) { %>
+    <div class="card"><p style="margin:0">💚 <strong><%= name(thanks.thanker_id) %></strong> thanked <strong><%= name(thanks.helper_id) %></strong><%= thanks.note ? ': “' + thanks.note + '”' : '.' %></p></div>
+  <% } %>
+
+  <% if (isAuthor) { %>
+    <h3>Responses (<%= responses.length %>)</h3>
+    <% if (!responses.length) { %><p class="muted small">No responses yet. Members who said they can help with <%= cats.label(post.category).toLowerCase() %> have been told.</p><% } %>
+    <% responses.forEach(function (r) { %>
+      <div class="milestone-row">
+        <div style="flex:1"><a href="<%= link(r.responder_id) %>"><strong><%= name(r.responder_id) %></strong></a> <span class="muted small">· <%= r.status %></span><p style="margin:.2rem 0 0;white-space:pre-wrap"><%= r.message %></p></div>
+        <% if (post.status === 'open' && r.status === 'pending') { %>
+          <form method="post" action="/exchange/responses/<%= r.id %>/accept"><button class="btn btn-primary btn-sm">Accept</button></form>
+        <% } %>
+      </div>
+    <% }) %>
+    <div class="cta-row" style="justify-content:flex-start;margin-top:1rem">
+      <% if (post.status === 'open') { %>
+        <form method="post" action="/exchange/<%= post.id %>/delete" onsubmit="return confirm('Delete this post?')"><button class="btn btn-ghost btn-sm">Delete</button></form>
+      <% } %>
+      <% if (post.status === 'open' || post.status === 'in_progress') { %>
+        <form method="post" action="/exchange/<%= post.id %>/close" onsubmit="return confirm('Close without a thank-you?')"><button class="btn btn-ghost btn-sm">Close</button></form>
+      <% } %>
+    </div>
+  <% } else if (myResponse) { %>
+    <div class="card"><p style="margin:0">You responded: “<%= myResponse.message %>” <span class="muted small">(<%= myResponse.status %>)</span></p>
+      <% if (myResponse.status === 'pending') { %><form method="post" action="/exchange/responses/<%= myResponse.id %>/withdraw" style="margin-top:.4rem"><button class="btn btn-ghost btn-sm">Withdraw</button></form><% } %>
+    </div>
+  <% } else if (post.status === 'open') { %>
+    <form method="post" action="/exchange/<%= post.id %>/respond" class="card">
+      <h3 style="margin-top:0"><%= post.kind === 'ask' ? 'Offer to help' : 'Take them up on it' %></h3>
+      <label>Your message<textarea name="message" rows="3" maxlength="600" required placeholder="<%= post.kind === 'ask' ? 'What you can do and when.' : 'What you would like help with.' %>"></textarea></label>
+      <button class="btn btn-primary btn-sm">Send</button>
+    </form>
+  <% } %>
+</article>
+<%- include('../partials/foot') %>

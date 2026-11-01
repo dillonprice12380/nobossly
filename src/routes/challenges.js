@@ -63,7 +63,7 @@ router.get('/', async (req, res, next) => {
     const waiting = new Set((waits || []).map(w => w.cohort_id));
 
     res.render('challenges', {
-      title: 'Quests',
+      title: 'Challenges',
       challenges: sorted(all.filter(c => !c.is_cohort)),
       cohorts, waiting,
       accMap, paid, custom: custom || [], sprint: sprint || null,

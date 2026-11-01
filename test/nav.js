@@ -45,7 +45,9 @@ const topLevel = new Set(
   [...server.matchAll(/app\.get\(\s*'([^']+)'/g)].map(m => m[1]));
 
 // app.use('/members', requireAuth, require('./src/routes/members'))
-const mounts = [...server.matchAll(/app\.use\(\s*'([^']+)'[^)]*require\('\.\/(src\/routes\/[a-z_]+)'\)/g)]
+// Middleware between the path and the router may itself be a call, e.g.
+// requireFlag('helpBoard'), so one level of parentheses is allowed.
+const mounts = [...server.matchAll(/app\.use\(\s*'([^']+)'(?:[^()]|\([^()]*\))*?require\('\.\/(src\/routes\/[a-z_]+)'\)/g)]
   .map(m => ({ prefix: m[1], file: m[2] + '.js' }))
   .sort((a, b) => b.prefix.length - a.prefix.length);
 
@@ -149,10 +151,17 @@ const selfBlind = APP_NAV.filter(i =>
 ok('every tab matches its own href (or it hides the nav it is in)',
    selfBlind.length === 0, selfBlind.map(i => i.href).join(', ') || 'clean');
 
-for (const href of ['/feed', '/wins']) {
-  ok(`${href} is in the section nav`, APP_NAV.some(i => i.href === href),
-     'opening it used to make the whole tab row disappear');
+// A page no tab matches hides the whole tab row. /wins is a page inside the
+// Challenges section now (2026-11-01), so it is matched rather than linked.
+const covers = (href) => APP_NAV.some(i => i.match.some(m => href === m || href.startsWith(m + '/')));
+for (const href of ['/feed', '/wins', '/exchange', '/members', '/reviews', '/budget', '/tasks', '/tools']) {
+  ok(`${href} keeps the section nav`, covers(href), 'opening it used to make the whole tab row disappear');
 }
+// Every page a section lists is a real page, and is matched by that section.
+const subs = APP_NAV.flatMap(i => (i.subs || []).map(s => Object.assign({ section: i }, s)));
+ok('every section page is a real page', subs.every(s => resolves(s.href)),
+   subs.filter(s => !resolves(s.href)).map(s => s.href).join(', ') || subs.length + ' pages');
+ok('...and sits inside its own section', subs.every(s => s.section.match.some(m => s.href === m || s.href.startsWith(m + '/'))));
 // /coach was retired with the AI features and now redirects to /dashboard, so
 // it must not come back as a tab pointing at a redirect.
 ok('/coach is not a tab any more', !APP_NAV.some(i => i.href === '/coach'), 'retired → /dashboard');
@@ -178,24 +187,21 @@ if (loggedIn) {
 // ---------------------------------------------------------------------------
 // 3. One name per thing.
 //
-// The nav said "Challenges" and "Milestones" while the pages themselves, the
-// upgrade panel and the ladder countdown all said "quests" and "trophy case".
-// Two words for each of the product's two loops, and the phone bar had already
-// quietly switched to the second set — which is how "Wins" ended up meaning
-// both Milestones and the Wins wall. These hold the settled names.
+// The settled names (Dillon, 2026-11-01): the public side's loop is
+// "Challenges", at /quests; shared results are "Results", at /wins. Trophies
+// are shelved behind FLAGS.trophies, so they are a page in the Dashboard
+// section only while that flag is on.
 
-console.log('\nThe product has one word for each of its two loops:');
+console.log('\nThe product has one word for each thing:');
 
-const renamed = { '/quests': 'Quests', '/trophies': 'Trophies' };
-for (const [href, label] of Object.entries(renamed)) {
-  const tab = APP_NAV.find(i => i.href === href);
-  ok(`${href} is the tab, labelled "${label}"`, !!tab && tab.label === label,
-     tab ? `labelled "${tab.label}"` : 'no tab points there');
-}
+const tab = APP_NAV.find(i => i.href === '/quests');
+ok('/quests is the tab, labelled "Challenges"', !!tab && tab.label === 'Challenges', tab ? `labelled "${tab.label}"` : 'no tab points there');
+const trophies = subs.find(s => s.href === '/trophies');
+ok('/trophies is a Dashboard page behind its flag', !!trophies && trophies.flag === 'trophies' && trophies.section.href === '/dashboard');
 
 // Old URLs are in notifications already sent and in whatever anyone bookmarked.
 // They are mounted, not redirected, so a POST to one still works.
-for (const old of ['/challenges', '/milestones']) {
+for (const old of ['/challenges', '/milestones', '/wins']) {
   ok(`${old} still resolves`, resolves(old), 'the former name has to keep working');
   ok(`...and ${old} is matched by its tab, so the nav still renders there`,
      APP_NAV.some(i => i.match.includes(old)));
@@ -205,9 +211,8 @@ for (const old of ['/challenges', '/milestones']) {
 // themselves are ordinary English and stay allowed in prose; what is banned is
 // a heading or nav label that names the tab by its old name.
 const RETIRED = [
-  [/<h1>[^<]*\bChallenges\b/, 'no page heading says "Challenges"'],
+  [/label: 'Quests'/,           'no nav tab is labelled "Quests"'],
   [/<h1>[^<]*\bMilestones\b/, 'no page heading says "Milestones"'],
-  [/label: 'Challenges'/,       'no nav tab is labelled "Challenges"'],
   [/label: 'Milestones'/,       'no nav tab is labelled "Milestones"']
 ];
 const viewSrc = fs.readdirSync(VIEWS_DIR, { recursive: true })

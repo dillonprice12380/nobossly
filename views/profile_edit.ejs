@@ -5,7 +5,22 @@
   <% if (saved) { %><p class="notice">Profile saved.</p><% } %>
   <form method="post" action="/members/me/edit">
     <label>Display name<input name="display_name" value="<%= p.display_name || '' %>" maxlength="60"></label>
-    <label>Bio<textarea name="bio" rows="3" maxlength="600"><%= p.bio || '' %></textarea></label>
+    <% if (networkFields) { %>
+      <label>Headline <span class="muted small">(one line under your name, e.g. "Nurse by day, building a meal-prep business")</span>
+        <input name="headline" value="<%= p.headline || '' %>" maxlength="120"></label>
+      <label>What are you working on? <span class="muted small">(right now, in a sentence)</span>
+        <input name="working_on" value="<%= p.working_on || '' %>" maxlength="200"></label>
+    <% } %>
+    <label>About<textarea name="bio" rows="3" maxlength="600"><%= p.bio || '' %></textarea></label>
+    <% if (networkFields) { %>
+      <fieldset class="help-pick"><legend>I can help with</legend>
+        <% helpCats.CATEGORIES.forEach(function (c) { %><label class="check"><input type="checkbox" name="help_offer" value="<%= c.key %>" <%= (p.help_offer || []).includes(c.key) ? 'checked' : '' %>> <%= c.emoji %> <%= c.label %></label><% }) %>
+      </fieldset>
+      <fieldset class="help-pick"><legend>I'm looking for help with</legend>
+        <% helpCats.CATEGORIES.forEach(function (c) { %><label class="check"><input type="checkbox" name="help_need" value="<%= c.key %>" <%= (p.help_need || []).includes(c.key) ? 'checked' : '' %>> <%= c.emoji %> <%= c.label %></label><% }) %>
+      </fieldset>
+      <p class="muted small">These decide who is told when someone asks for, or offers, that kind of help on the Help &amp; exchange board.</p>
+    <% } %>
     <label>Occupation<input name="occupation" value="<%= p.occupation || '' %>"></label>
     <label>Location<input name="location" value="<%= p.location || '' %>"></label>
     <label>Website<input name="website_url" value="<%= p.website_url || '' %>" placeholder="https://"></label>
@@ -19,10 +34,11 @@
         to help is a commitment made in public, so it is declinable — but it is
         on by default, because the rung was earned rather than asked for. The
         route ignores this field for anyone below the rung. %>
-    <% if ((p.verified_level || 1) >= mentorLevel) { %>
+    <% if (flags.ladder && (p.verified_level || 1) >= mentorLevel) { %>
       <label class="check"><input type="checkbox" name="mentor_available" <%= p.mentor_available !== false ? 'checked' : '' %>> List me as a mentor &mdash; members on lower rungs can find and message me</label>
     <% } %>
     <button class="btn btn-primary">Save</button>
   </form>
 </div>
+<style>.help-pick { border: 1px solid var(--border); border-radius: 10px; padding: .5rem .8rem; margin: .6rem 0; } .help-pick label.check { display: inline-flex; margin: .2rem 1rem .2rem 0; }</style>
 <%- include('partials/foot') %>

@@ -65,7 +65,9 @@ console.log('\nEvery member-written field goes through it:');
     ['src/routes/community.js', 'forum_thread_edit'], ['src/routes/community.js', 'forum_reply_edit'],
     ['src/routes/social.js', 'group_post'], ['src/routes/messages.js', 'message'],
     ['src/routes/members.js', 'profile'], ['src/routes/reviews.js', 'review_request'],
-    ['src/routes/reviews.js', 'review_feedback'], ['src/routes/wins.js', 'win'], ['src/routes/challenges.js', 'quest_proof']
+    ['src/routes/reviews.js', 'review_feedback'], ['src/routes/wins.js', 'win'], ['src/routes/challenges.js', 'quest_proof'],
+    ['src/routes/feed.js', 'post'], ['src/routes/feed.js', 'post_comment'],
+    ['src/routes/exchange.js', 'help_post'], ['src/routes/exchange.js', 'help_response'], ['src/routes/exchange.js', 'help_thanks']
   ];
   const missing = sites.filter(([file, where]) => !read(file).includes(`'${where}')`));
   ok('each write refuses contact details before it reaches the database', missing.length === 0,

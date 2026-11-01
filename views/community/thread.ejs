@@ -16,7 +16,7 @@
 <h3><%= replies.length %> replies</h3>
 <% replies.forEach(r => { %>
   <div class="card reply">
-    <p class="muted small"><strong><%= (pmap[r.user_id] || {}).display_name || 'a member' %></strong> · lvl <%= (pmap[r.user_id] || {}).current_level || 1 %> · <%= new Date(r.created_at).toLocaleString() %><% if (r.edited_at) { %> · edited<% } %><% if (user && r.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_reply&id=<%= r.id %>">⚑ report</a><% } %></p>
+    <p class="muted small"><strong><%= (pmap[r.user_id] || {}).display_name || 'a member' %></strong><% if (flags.ladder) { %> · lvl <%= (pmap[r.user_id] || {}).current_level || 1 %><% } %> · <%= new Date(r.created_at).toLocaleString() %><% if (r.edited_at) { %> · edited<% } %><% if (user && r.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_reply&id=<%= r.id %>">⚑ report</a><% } %></p>
     <% if (r.body_html) { %><div class="article-body rt-content"><%- r.body_html %></div><% } else { %><p class="pre"><%= r.body %></p><% } %>
     <%- include('../partials/reactions', { rkey: 'reply:' + r.id, entityType: 'reply', entityId: r.id, reactions, REACTIONS, user, backUrl: '/community/t/' + thread.id }) %>
     <% if (user && (r.user_id === user.id || (profile && profile.is_admin))) { %>
@@ -36,7 +36,7 @@
 <% if (!thread.is_locked && user) { %>
   <div class="card">
     <form method="post" action="/community/t/<%= thread.id %>/reply">
-      <label>Reply (+5 XP)</label>
+      <label>Reply<% if (flags.ladder) { %> (+5 XP)<% } %></label>
       <input type="hidden" name="body_html">
       <div data-rich data-placeholder="Write a reply…"></div>
       <textarea name="body" rows="3"></textarea>
