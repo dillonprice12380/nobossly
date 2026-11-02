@@ -14,13 +14,17 @@ const { registry, pipeline, metrics, checklists } = require('../engines');
 const { missing } = require('../engines/errors');
 const { WORKSHEETS } = require('../workspace/worksheets');
 
-// Paths with their own dashboard so far (step 2). Each file declares its
+// Paths with their own dashboard so far (steps 2 and 3). Each file declares its
 // boards, metrics, checklists and worksheets when it loads.
 const DASHBOARDS = {
   creator: require('./creator'),
   freelancer: require('./freelancer'),
   software: require('./software'),
-  exploring: require('./exploring')
+  exploring: require('./exploring'),
+  consultant: require('./consultant'),
+  local_service: require('./local_service'),
+  online_store: require('./online_store'),
+  physical_product: require('./physical_product')
 };
 
 // Shared workspace tools. `href` is where the tool lives; `kind` marks the
@@ -65,13 +69,13 @@ const PATHS = {
   },
   consultant: {
     setup: ['stage', 'expertise', 'who_you_advise', 'ticket_comfort'],
-    featured: ['persona', 'elevator_pitch', 'pricing', 'surveys'],
-    available: ['proof', 'goals', 'tax', 'quit', 'money', 'tasks', 'milestones', 'lean_canvas']
+    featured: ['con_offer', 'persona', 'elevator_pitch', 'proof'],
+    available: ['pricing', 'surveys', 'con_lead_magnet', 'goals', 'tax', 'quit', 'money', 'tasks', 'milestones', 'lean_canvas']
   },
   local_service: {
     setup: ['stage', 'service', 'service_area', 'avg_job_value'],
-    featured: ['pricing', 'tax', 'money', 'goals'],
-    available: ['business_plan', 'persona', 'elevator_pitch', 'proof', 'tasks', 'milestones', 'quit']
+    featured: ['loc_quote', 'loc_price_list', 'tax', 'money'],
+    available: ['loc_equipment', 'pricing', 'goals', 'business_plan', 'persona', 'elevator_pitch', 'proof', 'tasks', 'milestones', 'quit']
   },
   brick_mortar: {
     setup: ['stage', 'venue_type', 'location_status', 'rent_capacity'],
@@ -80,13 +84,13 @@ const PATHS = {
   },
   online_store: {
     setup: ['stage', 'product', 'goods_type', 'channel'],
-    featured: ['pricing', 'persona', 'tax', 'goals'],
-    available: ['surveys', 'money', 'lean_canvas', 'business_plan', 'tasks', 'milestones', 'quit']
+    featured: ['shop_product', 'persona', 'tax', 'goals'],
+    available: ['pricing', 'surveys', 'money', 'lean_canvas', 'business_plan', 'tasks', 'milestones', 'quit']
   },
   physical_product: {
     setup: ['stage', 'product', 'made_how', 'sell_where'],
-    featured: ['business_model_canvas', 'persona', 'surveys', 'business_plan'],
-    available: ['pricing', 'interviews', 'lean_canvas', 'money', 'goals', 'tasks', 'milestones']
+    featured: ['prod_bom', 'surveys', 'persona', 'business_model_canvas'],
+    available: ['prod_makers', 'business_plan', 'pricing', 'interviews', 'lean_canvas', 'money', 'goals', 'tasks', 'milestones']
   },
   software: {
     setup: ['stage', 'problem', 'can_build', 'who_pays'],
@@ -184,16 +188,20 @@ async function panelFor(sb, userId, profile, now = new Date()) {
     return null;
   });
   const north = d.northStar(ctx);
-  const [northCard, supporting, northBoard, boards, lists] = await Promise.all([
+  // Before there is a number to log (a product still in development), a path
+  // can make a checklist its north star instead.
+  const northList = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
+  const [northCard, supporting, northBoard, northChecklist, boards, lists] = await Promise.all([
     north ? safe(metrics.card(sb, userId, north, 6, now)) : null,
     Promise.all(d.supporting(ctx).map(k => safe(metrics.card(sb, userId, k, 6, now)))),
     d.northStarBoard ? safe(pipeline.summary(sb, userId, d.northStarBoard)) : null,
+    northList ? safe(checklists.progress(sb, userId, northList, now)) : null,
     Promise.all(d.boards(ctx).filter(k => k !== d.northStarBoard).map(k => safe(pipeline.summary(sb, userId, k)))),
-    Promise.all(d.checklists(ctx).map(k => safe(checklists.progress(sb, userId, k, now))))
+    Promise.all(d.checklists(ctx).filter(k => k !== northList).map(k => safe(checklists.progress(sb, userId, k, now))))
   ]);
   return {
     slug: d.slug, intro: d.intro, stage: stageOf(d, ctx),
-    north: northCard, northBoard,
+    north: northCard, northBoard, northChecklist,
     supporting: supporting.filter(Boolean),
     boards: boards.filter(Boolean),
     checklists: lists.filter(Boolean),
