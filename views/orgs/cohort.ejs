@@ -1,0 +1,42 @@
+<%- include('../partials/head') %>
+<% var day = function (d) { return d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'; }; %>
+<a class="muted small" href="/orgs/<%= org.slug %>">← <%= org.name %></a>
+<div class="page-head"><div>
+  <h1 style="margin:.2rem 0 0"><%= group.name %> — activity</h1>
+  <p class="muted small" style="margin:.2rem 0 0">Counts and dates only. Posts and messages are not shown here.</p>
+</div><a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/cohorts/<%= group.slug %>?format=csv">Download CSV</a></div>
+
+<div class="stat-row">
+  <div class="stat card"><span class="stat-num"><%= act.totals.members %></span><span class="muted">founders</span></div>
+  <div class="stat card"><span class="stat-num"><%= act.totals.postsWeek %></span><span class="muted">posts this week</span></div>
+  <div class="stat card"><span class="stat-num"><%= act.totals.handed %></span><span class="muted">assignments handed in</span></div>
+  <div class="stat card"><span class="stat-num"><%= act.totals.approved %></span><span class="muted">approved</span></div>
+</div>
+
+<% if (act.quiet.length) { %>
+  <div class="card" style="border-left:3px solid var(--danger)">
+    <h3 style="margin-top:0">Gone quiet</h3>
+    <p class="muted small" style="margin-top:0">No activity on NoBossly in <%= QUIET_DAYS %> days. A short message often helps.</p>
+    <% act.quiet.forEach(function (r) { %><p style="margin:.2rem 0"><a href="/members/<%= r.username %>"><%= r.name %></a> <span class="muted small">· last active <%= day(r.lastActive) %></span></p><% }) %>
+  </div>
+<% } %>
+
+<div class="card" style="overflow-x:auto">
+  <table class="oc-table">
+    <thead><tr><th>Founder</th><th>Role</th><th>Joined</th><th>Last active</th><th>Posts (7d)</th><th>Handed in</th><th>Approved</th></tr></thead>
+    <tbody>
+      <% act.rows.forEach(function (r) { %>
+        <tr class="<%= r.quiet && !['owner','admin','mentor'].includes(r.role) ? 'oc-quiet' : '' %>">
+          <td><a href="/members/<%= r.username %>"><%= r.name %></a></td><td><%= r.role %></td><td><%= day(r.joined) %></td><td><%= day(r.lastActive) %></td>
+          <td><%= r.postsWeek %></td><td><%= r.handed %> / <%= act.assignments.length %></td><td><%= r.approved %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<style>
+  .oc-table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  .oc-table th, .oc-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .oc-quiet td:first-child a { color: var(--danger); }
+</style>
+<%- include('../partials/foot') %>

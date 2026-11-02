@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/groups/<%= group.slug %>">← <%= group.name %></a>
+<div class="page-head"><div>
+  <h1 style="margin:.2rem 0 0">Assignments</h1>
+  <p class="muted small" style="margin:.2rem 0 0"><%= ctx.isLeader ? 'What you ask the cohort to work on, and what has come in.' : 'Work your program has asked for. Hand in a copy — your workspace stays private.' %></p>
+</div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Assignments are being set up — they open shortly.</p></div><% } %>
+
+<% if (!notReady && !list.length) { %><div class="card"><p class="muted" style="margin:0"><%= ctx.isLeader ? 'No assignments yet. Set the first one below.' : 'Nothing has been set yet.' %></p></div><% } %>
+<% var STATUS = { submitted: 'Handed in', returned: 'Sent back', approved: 'Approved ✓' }; %>
+<% list.forEach(function (a) { var m = mine[a.id], c = counts[a.id] || {}; var late = a.due_on && !m && a.due_on < new Date().toISOString().slice(0, 10); %>
+  <a class="card as-row" href="/groups/<%= group.slug %>/assignments/<%= a.id %>">
+    <div>
+      <strong><%= a.title %></strong>
+      <p class="muted small" style="margin:.15rem 0 0"><%= toolLabel(a) %><%= a.due_on ? ' · due ' + new Date(a.due_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '' %></p>
+    </div>
+    <div class="small as-status">
+      <% if (ctx.isLeader) { %>
+        <%= (c.submitted || 0) %> to review · <%= (c.approved || 0) %>/<%= learners %> approved
+      <% } else if (m) { %>
+        <span class="as-pill as-<%= m.status %>"><%= STATUS[m.status] %></span>
+      <% } else { %>
+        <span class="as-pill <%= late ? 'as-late' : '' %>"><%= late ? 'Overdue' : 'To do' %></span>
+      <% } %>
+    </div>
+  </a>
+<% }) %>
+
+<% if (ctx.isLeader && !notReady) { %>
+  <details class="card" <%= list.length ? '' : 'open' %> style="margin-top:1rem">
+    <summary><strong>Set an assignment</strong></summary>
+    <form method="post" action="/groups/<%= group.slug %>/assignments" style="margin-top:.6rem">
+      <label>Title<input name="title" maxlength="160" required placeholder="e.g. Week 2: your Lean Canvas"></label>
+      <label>What they hand in
+        <select name="what">
+          <option value="text:">A written answer</option>
+          <option value="link:">A link (deck, site, video)</option>
+          <optgroup label="A worksheet from their workspace"><% tools.sheets.forEach(function (o) { %><option value="<%= o.value %>"><%= o.label %></option><% }) %></optgroup>
+          <optgroup label="A board from their workspace"><% tools.boards.forEach(function (o) { %><option value="<%= o.value %>"><%= o.label %></option><% }) %></optgroup>
+        </select>
+      </label>
+      <label>Instructions<textarea name="instructions" rows="3" maxlength="4000" placeholder="What good looks like, and anything to focus on"></textarea></label>
+      <label>Due<input type="date" name="due_on"></label>
+      <button class="btn btn-primary">Set assignment</button>
+    </form>
+  </details>
+<% } %>
+<style>
+  .as-row { display: flex; justify-content: space-between; gap: 1rem; align-items: center; color: inherit; text-decoration: none; }
+  .as-row:hover { border-color: var(--accent); }
+  .as-status { text-align: right; flex: none; }
+  .as-pill { border: 1px solid var(--border); border-radius: 99px; padding: .1rem .55rem; white-space: nowrap; }
+  .as-submitted { border-color: var(--accent); }
+  .as-returned, .as-late { border-color: var(--danger); color: var(--danger); }
+  .as-approved { border-color: var(--accent-2); color: var(--accent-2); }
+</style>
+<%- include('../partials/foot') %>

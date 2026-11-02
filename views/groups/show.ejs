@@ -1,53 +1,139 @@
 <%- include('../partials/head') %>
-<a class="muted" href="/groups">← All groups</a>
+<% var G = group, vis = G.visibility || 'public', name = function (id) { return (pmap[id] || {}).display_name || (pmap[id] || {}).username || 'a member'; }; %>
+<a class="muted small" href="/groups">← Groups</a>
 <div class="page-head">
   <div>
-    <h1><%= group.name %></h1>
-    <% if (group.description) { %><p class="muted"><%= group.description %></p><% } %>
-    <p class="muted small"><%= members.length %> member<%= members.length === 1 ? '' : 's' %> · created <%= new Date(group.created_at).toLocaleDateString() %></p>
+    <h1><%= G.name %></h1>
+    <p class="muted small" style="margin:.15rem 0 0">
+      <% if (org) { %>🔒 Private cohort · <%= org.name %><% } else if (vis === 'hidden') { %>🔒 Hidden group · invite only<% } else if (vis === 'private') { %>🔐 Private group · members approve new members<% } else { %>Public group<% } %>
+      · <%= members.length %> member<%= members.length === 1 ? '' : 's' %>
+    </p>
+    <% if (G.description) { %><p class="muted" style="margin:.4rem 0 0"><%= G.description %></p><% } %>
   </div>
   <div class="actions">
-    <% if (!isMember) { %>
-      <form method="post" action="/groups/<%= group.slug %>/join"><button class="btn btn-primary">Join group</button></form>
-    <% } else if (!isOwner) { %>
-      <form method="post" action="/groups/<%= group.slug %>/leave"><button class="btn btn-ghost">Leave</button></form>
-    <% } %>
-    <% if (isOwner || (profile && profile.is_admin)) { %>
-      <form method="post" action="/groups/<%= group.slug %>/delete" onsubmit="return confirm('Delete this group and all its posts?')"><button class="btn btn-ghost">Delete group</button></form>
+    <% if (ctx.isMember && (assignmentCount || ctx.isLeader)) { %><a class="btn btn-primary" href="/groups/<%= G.slug %>/assignments">Assignments<%= assignmentCount ? ' (' + assignmentCount + ')' : '' %></a><% } %>
+    <% if (!ctx.isMember && myStatus === 'requested') { %>
+      <span class="muted small">Request sent</span>
+    <% } else if (!ctx.isMember && vis !== 'hidden') { %>
+      <form method="post" action="/groups/<%= G.slug %>/join"><button class="btn btn-primary"><%= vis === 'private' ? 'Ask to join' : 'Join group' %></button></form>
+    <% } else if (ctx.isMember && ctx.role !== 'owner' && myStatus) { %>
+      <form method="post" action="/groups/<%= G.slug %>/leave" onsubmit="return confirm('Leave this group?')"><button class="btn btn-ghost">Leave</button></form>
     <% } %>
   </div>
 </div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (org && ctx.isMember) { %><p class="muted small">Everything in this cohort — posts, members and work handed in — is visible only to its members and the program team.</p><% } %>
+
 <div class="two-col">
   <div>
-    <% if (isMember) { %>
+    <% if (ctx.isMember) { %>
       <div class="card">
-        <form method="post" action="/groups/<%= group.slug %>/post">
-          <label>Share with the group<textarea name="body" rows="3" required placeholder="What's on your mind?"></textarea></label>
+        <form method="post" action="/groups/<%= G.slug %>/post">
+          <label>Share with the group<textarea name="body" rows="3" maxlength="3000" required placeholder="What are you working on? What do you need?"></textarea></label>
           <button class="btn btn-primary">Post</button>
         </form>
       </div>
+    <% } else if (!canSeePosts) { %>
+      <div class="card"><p class="muted" style="margin:0">Posts in this group are for members only.</p></div>
     <% } else { %>
       <p class="notice">Join the group to post.</p>
     <% } %>
-    <% if (!posts.length) { %><div class="card center"><p class="muted">No posts yet.</p></div><% } %>
-    <% posts.forEach(p => { %>
+    <% if (canSeePosts && !posts.length) { %><div class="card center"><p class="muted">No posts yet.</p></div><% } %>
+    <% (canSeePosts ? posts : []).forEach(function (p) { %>
       <div class="card reply">
-        <p class="muted small">
-          <strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= (pmap[p.user_id] || {}).display_name || 'a member' %></a></strong>
-          <% if (flags.ladder) { %>· lvl <%= (pmap[p.user_id] || {}).current_level || 1 %> <% } %>· <%= new Date(p.created_at).toLocaleString() %>
-          <% if (p.user_id === user.id || isOwner || (profile && profile.is_admin)) { %><% } %>
+        <p class="muted small" style="display:flex;justify-content:space-between;gap:.5rem">
+          <span><strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= name(p.user_id) %></a></strong> · <%= new Date(p.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %></span>
+          <% if (p.user_id === user.id || ctx.canModerate || ctx.isAdmin) { %>
+            <form method="post" action="/groups/<%= G.slug %>/posts/<%= p.id %>/delete" onsubmit="return confirm('Delete this post?')"><button class="linkish small">Delete</button></form>
+          <% } else { %>
+            <a class="small muted" href="/report?type=group_post&id=<%= p.id %>">Report</a>
+          <% } %>
         </p>
         <p class="pre"><%= p.body %></p>
       </div>
     <% }) %>
   </div>
+
   <aside>
+    <% if (requests.length) { %>
+      <div class="card" style="border-color:var(--accent)">
+        <h3 style="margin-top:0">Requests to join</h3>
+        <% requests.forEach(function (m) { %>
+          <div class="milestone-row" style="border-top:0">
+            <a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= name(m.user_id) %></a>
+            <span style="display:flex;gap:.3rem">
+              <form method="post" action="/groups/<%= G.slug %>/requests/<%= m.user_id %>"><input type="hidden" name="approve" value="1"><button class="btn btn-primary btn-sm">Approve</button></form>
+              <form method="post" action="/groups/<%= G.slug %>/requests/<%= m.user_id %>"><input type="hidden" name="approve" value="0"><button class="btn btn-ghost btn-sm">Decline</button></form>
+            </span>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
     <div class="card">
-      <h3>Members</h3>
-      <% members.forEach(m => { %>
-        <p class="small"><a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= (pmap[m.user_id] || {}).display_name || 'a member' %></a><%= m.role === 'owner' ? ' · 👑 owner' : '' %></p>
+      <h3 style="margin-top:0">Members</h3>
+      <% members.forEach(function (m) { var canEdit = ctx.isManager && m.role !== 'owner' && m.user_id !== user.id; %>
+        <div class="gr-member">
+          <span><a href="/members/<%= (pmap[m.user_id] || {}).username || '' %>"><%= name(m.user_id) %></a><% if (m.role !== 'member') { %> <span class="muted small">· <%= ROLE_LABEL[m.role] || m.role %></span><% } %></span>
+          <% if (canEdit) { %>
+            <details class="gr-manage"><summary class="small muted">Manage</summary>
+              <form method="post" action="/groups/<%= G.slug %>/members/<%= m.user_id %>/role" class="gr-inline">
+                <select name="role" aria-label="Role"><% ['member','mentor','moderator','admin'].forEach(function (r) { %><option value="<%= r %>" <%= m.role === r ? 'selected' : '' %>><%= ROLE_LABEL[r] %></option><% }) %></select>
+                <button class="btn btn-ghost btn-sm">Set role</button>
+              </form>
+              <form method="post" action="/groups/<%= G.slug %>/members/<%= m.user_id %>/remove" onsubmit="return confirm('Remove this member?')"><button class="linkish small">Remove from group</button></form>
+            </details>
+          <% } %>
+        </div>
       <% }) %>
+      <% if (ctx.isManager) { %><p class="muted small" style="margin:.5rem 0 0">Mentors can set assignments and review work. Moderators can approve requests and remove posts.</p><% } %>
     </div>
+
+    <% if (ctx.isManager) { %>
+      <div class="card" id="invites">
+        <h3 style="margin-top:0">Invite links</h3>
+        <% if (!invites.length) { %><p class="muted small">No invite links yet.</p><% } %>
+        <% invites.forEach(function (i) { var dead = (i.expires_at && new Date(i.expires_at) < new Date()) || (i.max_uses && i.uses >= i.max_uses); %>
+          <div class="gr-invite">
+            <input readonly value="<%= origin %>/groups/join/<%= i.code %>" onclick="this.select()" aria-label="Invite link">
+            <p class="muted small" style="margin:.2rem 0 0">
+              <%= i.uses %><%= i.max_uses ? ' / ' + i.max_uses : '' %> used<%= i.expires_at ? ' · ' + (dead ? 'expired ' : 'expires ') + new Date(i.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %>
+              · <form method="post" action="/groups/<%= G.slug %>/invites/<%= i.id %>/delete" style="display:inline"><button class="linkish small">Turn off</button></form>
+            </p>
+          </div>
+        <% }) %>
+        <form method="post" action="/groups/<%= G.slug %>/invites" class="gr-inline" style="margin-top:.5rem">
+          <select name="days" aria-label="Expires"><option value="7">Expires in 7 days</option><option value="30" selected>Expires in 30 days</option><option value="90">Expires in 90 days</option><option value="">Never expires</option></select>
+          <input name="max_uses" inputmode="numeric" placeholder="Max uses" style="max-width:7rem" aria-label="Maximum uses">
+          <button class="btn btn-ghost btn-sm">New link</button>
+        </form>
+      </div>
+
+      <details class="card">
+        <summary><strong>Settings</strong></summary>
+        <form method="post" action="/groups/<%= G.slug %>/settings" style="margin-top:.5rem">
+          <label>Name<input name="name" maxlength="80" value="<%= G.name %>" required></label>
+          <label>Description<textarea name="description" rows="2" maxlength="600"><%= G.description || '' %></textarea></label>
+          <% if (!G.org_id) { %>
+            <label>Who can join<select name="visibility"><% Object.keys(VISIBILITY).forEach(function (k) { %><option value="<%= k %>" <%= vis === k ? 'selected' : '' %>><%= VISIBILITY[k].label %> — <%= VISIBILITY[k].help %></option><% }) %></select></label>
+          <% } %>
+          <button class="btn btn-primary btn-sm">Save</button>
+        </form>
+        <% if (ctx.role === 'owner' || ctx.isAdmin) { %>
+          <form method="post" action="/groups/<%= G.slug %>/delete" onsubmit="return confirm('Delete this group, its posts and any work handed in? This cannot be undone.')" style="margin-top:.6rem"><button class="linkish small" style="color:var(--danger)">Delete group</button></form>
+        <% } %>
+      </details>
+    <% } %>
   </aside>
 </div>
+<style>
+  .gr-member { padding: .3rem 0; border-top: 1px solid var(--border); }
+  .gr-member:first-of-type { border-top: 0; }
+  .gr-member > span { display: block; }
+  .gr-manage summary { cursor: pointer; }
+  .gr-inline { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin: .3rem 0; }
+  .gr-invite { margin: .4rem 0; }
+  .gr-invite input { width: 100%; font-size: .8rem; }
+  .linkish { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
+</style>
 <%- include('../partials/foot') %>

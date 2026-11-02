@@ -1,0 +1,22 @@
+<%- include('../partials/head') %>
+<div class="card form-card" style="max-width:560px;margin:2rem auto">
+  <% if (notReady) { %>
+    <h1 style="margin-top:0">Almost ready</h1>
+    <p class="muted">Private groups and cohorts are being set up. Try this link again shortly.</p>
+  <% } else if (!preview) { %>
+    <h1 style="margin-top:0">That invite link does not work</h1>
+    <p class="muted">It may have been turned off. Ask whoever sent it for a new one.</p>
+    <a class="btn btn-ghost" href="/groups">Browse groups</a>
+  <% } else { %>
+    <p class="muted small" style="margin:0"><%= preview.is_cohort ? '🔒 Private cohort' + (preview.org ? ' · ' + preview.org : '') : 'You have been invited to a group' %></p>
+    <h1 style="margin:.3rem 0"><%= preview.name %></h1>
+    <% if (preview.description) { %><p class="muted"><%= preview.description %></p><% } %>
+    <% if (preview.is_cohort) { %><p class="small">Posts, members and work handed in stay inside the cohort — nothing here is public.</p><% } %>
+    <% if (preview.valid) { %>
+      <form method="post" action="/groups/join/<%= code %>"><button class="btn btn-primary">Join <%= preview.is_cohort ? 'the cohort' : 'the group' %></button></form>
+    <% } else { %>
+      <p class="notice">This invite link has expired or been used up. Ask for a new one.</p>
+    <% } %>
+  <% } %>
+</div>
+<%- include('../partials/foot') %>

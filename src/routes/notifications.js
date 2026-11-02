@@ -15,7 +15,8 @@ const LINKS = {
   collab_projects: () => '/collaborations',
   collaborations: () => '/collaborations',
   wins: () => '/wins',
-  peer_reviews: id => '/reviews/' + id
+  peer_reviews: id => '/reviews/' + id,
+  cohort_assignments: id => '/groups/a/' + id
 };
 
 function hrefFor(n) {

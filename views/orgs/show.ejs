@@ -1,0 +1,47 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs">← Programs</a>
+<div class="page-head"><div>
+  <h1 style="margin:.2rem 0 0"><%= org.name %></h1>
+  <p class="muted small" style="margin:.2rem 0 0"><%= KINDS[org.kind] || org.kind %><%= org.website_url ? ' · ' : '' %><% if (org.website_url) { %><a href="<%= org.website_url %>" rel="noopener noreferrer" target="_blank"><%= org.website_url.replace(/^https?:\/\//, '') %></a><% } %> · you are <%= (ORG_ROLES[myRole] || myRole).toLowerCase() %></p>
+</div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<h2 style="font-size:1.05rem;margin:1rem 0 .5rem">Cohorts</h2>
+<% if (!cohorts.length) { %><div class="card"><p class="muted" style="margin:0">No cohorts yet. Create the first one below — it comes with an invite link to send to your founders.</p></div><% } %>
+<% cohorts.forEach(function (c) { %>
+  <div class="card" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
+    <div><strong><a href="/groups/<%= c.slug %>"><%= c.name %></a></strong><p class="muted small" style="margin:.15rem 0 0"><%= counts[c.id] || 0 %> member<%= (counts[c.id] || 0) === 1 ? '' : 's' %> · started <%= new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p></div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <a class="btn btn-ghost btn-sm" href="/groups/<%= c.slug %>/assignments">Assignments</a>
+      <a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/cohorts/<%= c.slug %>">Activity</a>
+      <a class="btn btn-ghost btn-sm" href="/groups/<%= c.slug %>#invites">Invite links</a>
+    </div>
+  </div>
+<% }) %>
+<details class="card" <%= cohorts.length ? '' : 'open' %>><summary><strong>Create a cohort</strong></summary>
+  <form method="post" action="/orgs/<%= org.slug %>/cohorts" style="margin-top:.6rem">
+    <label>Name<input name="name" maxlength="80" required placeholder="e.g. Spring 2027 cohort"></label>
+    <label>Description<textarea name="description" rows="2" maxlength="600" placeholder="Shown to founders when they open the invite link"></textarea></label>
+    <p class="muted small">Cohorts are private: hidden from everyone outside, joined only by invite link. Your team are its admins automatically.</p>
+    <button class="btn btn-primary">Create cohort</button>
+  </form>
+</details>
+
+<h2 style="font-size:1.05rem;margin:1.2rem 0 .5rem">Team</h2>
+<div class="card">
+  <% team.forEach(function (t) { var p = pmap[t.user_id] || {}; %>
+    <div class="milestone-row">
+      <span><a href="/members/<%= p.username || '' %>"><%= p.display_name || p.username || 'a member' %></a> <span class="muted small">· <%= ORG_ROLES[t.role] || t.role %></span></span>
+      <% if (myRole === 'owner' && t.user_id !== user.id) { %><form method="post" action="/orgs/<%= org.slug %>/team/<%= t.user_id %>/remove" onsubmit="return confirm('Remove from the team?')"><button class="btn btn-ghost btn-sm">Remove</button></form><% } %>
+    </div>
+  <% }) %>
+  <% if (myRole === 'owner') { %>
+    <form method="post" action="/orgs/<%= org.slug %>/team" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem">
+      <input name="username" maxlength="40" required placeholder="NoBossly username" aria-label="Username">
+      <select name="role" aria-label="Role"><option value="staff">Staff</option><option value="admin">Admin</option><option value="owner">Owner</option></select>
+      <button class="btn btn-ghost btn-sm">Add to team</button>
+    </form>
+    <p class="muted small" style="margin:.4rem 0 0">Everyone on the team can run every cohort: set assignments, review work and see activity.</p>
+  <% } %>
+</div>
+<%- include('../partials/foot') %>

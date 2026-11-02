@@ -1,0 +1,21 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>Programs</h1><p class="muted">Accelerators and programs running private cohorts on NoBossly.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Programs are being set up — this opens shortly.</p></div><% } %>
+<% if (!notReady && !orgs.length) { %><div class="card"><p class="muted" style="margin:0">You are not on a program's team. Running an accelerator or program? See <a href="/help">Help</a> to get set up.</p></div><% } %>
+<div class="grid"><% orgs.forEach(function (o) { %>
+  <a class="card" style="display:block;color:inherit;text-decoration:none" href="/orgs/<%= o.slug %>"><strong><%= o.name %></strong><p class="muted small" style="margin:.2rem 0 0"><%= KINDS[o.kind] || o.kind %></p></a>
+<% }) %></div>
+<% if (admin && !notReady) { %>
+  <details class="card" style="margin-top:1rem"><summary><strong>Add an organization</strong> <span class="muted small">(NoBossly admins)</span></summary>
+    <form method="post" action="/orgs" style="margin-top:.6rem">
+      <label>Name<input name="name" maxlength="120" required placeholder="e.g. EforAll"></label>
+      <label>Web address<span class="muted small" style="display:block">nobossly.com/orgs/…</span><input name="slug" maxlength="50" placeholder="eforall"></label>
+      <label>Kind<select name="kind"><% Object.keys(KINDS).forEach(function (k) { %><option value="<%= k %>"><%= KINDS[k] %></option><% }) %></select></label>
+      <label>Website<input name="website_url" type="url" placeholder="https://"></label>
+      <label>Owner's NoBossly username<input name="owner" maxlength="40" placeholder="their username"></label>
+      <button class="btn btn-primary">Create</button>
+    </form>
+  </details>
+<% } %>
+<%- include('../partials/foot') %>
