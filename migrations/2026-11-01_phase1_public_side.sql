@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor).
 -- REQUIRES 2026-11-01_personal_info_filter.sql first (contains_personal_info()
 -- and refuse_personal_info() come from there).
 --
