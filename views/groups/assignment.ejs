@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+<% var STATUS = { submitted: 'Handed in — waiting for review', returned: 'Sent back — see the feedback', approved: 'Approved ✓' };
+   var when = function (d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }; %>
+<a class="muted small" href="/groups/<%= group.slug %>/assignments">← Assignments</a>
+<div class="page-head"><div>
+  <h1 style="margin:.2rem 0 0"><%= a.title %></h1>
+  <p class="muted small" style="margin:.2rem 0 0"><%= toolLabel(a) %><%= a.due_on ? ' · due ' + new Date(a.due_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : '' %> · <%= group.name %></p>
+</div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (a.instructions) { %><div class="card"><p class="pre" style="margin:0"><%= a.instructions %></p></div><% } %>
+
+<% if (ctx.isLeader) { %>
+  <div class="card">
+    <h3 style="margin-top:0">Hand-ins</h3>
+    <% if (!roster.length) { %><p class="muted small">No members to hand in yet. Share an invite link from the group page.</p><% } %>
+    <% roster.forEach(function (r) { %>
+      <div class="milestone-row">
+        <span><%= r.user.display_name || r.user.username || 'a member' %></span>
+        <% if (r.sub) { %>
+          <span class="small"><span class="as-pill as-<%= r.sub.status %>"><%= { submitted: 'To review', returned: 'Sent back', approved: 'Approved' }[r.sub.status] %></span> · <%= when(r.sub.submitted_at) %> · <a href="/groups/<%= group.slug %>/assignments/<%= a.id %>/s/<%= r.sub.id %>">Open</a></span>
+        <% } else { %>
+          <span class="muted small">Not handed in</span>
+        <% } %>
+      </div>
+    <% }) %>
+    <form method="post" action="/groups/<%= group.slug %>/assignments/<%= a.id %>/delete" onsubmit="return confirm('Delete this assignment and everything handed in for it?')" style="margin-top:.8rem"><button class="linkish small" style="color:var(--danger)">Delete assignment</button></form>
+  </div>
+<% } %>
+
+<% if (ctx.isMember && !ctx.isLeader) { %>
+  <% if (mine) { %>
+    <div class="card" style="border-left:3px solid <%= mine.status === 'approved' ? 'var(--accent-2)' : mine.status === 'returned' ? 'var(--danger)' : 'var(--accent)' %>">
+      <p style="margin:0"><strong><%= STATUS[mine.status] %></strong> <span class="muted small">· handed in <%= when(mine.submitted_at) %></span></p>
+      <% if (mine.feedback) { %><p class="small" style="margin:.5rem 0 0"><strong>Feedback:</strong></p><p class="pre" style="margin:.2rem 0 0"><%= mine.feedback %></p><% } %>
+      <p class="small" style="margin:.5rem 0 0"><a href="/groups/<%= group.slug %>/assignments/<%= a.id %>/s/<%= mine.id %>">See what you handed in</a></p>
+    </div>
+  <% } %>
+
+  <% if (!mine || mine.status !== 'approved') { %>
+    <form method="post" action="/groups/<%= group.slug %>/assignments/<%= a.id %>/submit" class="card form-card" style="max-width:760px">
+      <h3 style="margin-top:0"><%= mine ? 'Hand in a new version' : 'Hand it in' %></h3>
+      <% if (a.kind === 'worksheet') { %>
+        <% if (!sheet) { %>
+          <p class="muted">This worksheet is no longer available.</p>
+        <% } else if (!docs.length) { %>
+          <p>You have not started a <%= sheet.label %> yet. <a href="/workspace/docs/<%= a.tool_key %>">Open <%= sheet.label %> →</a> then come back here.</p>
+        <% } else { %>
+          <p class="muted small" style="margin-top:0">A copy of the document as it is now goes to your program team. Your workspace stays private, and later edits are not shared unless you hand in again.</p>
+          <% docs.forEach(function (d, i) { %>
+            <label class="check"><input type="radio" name="doc_id" value="<%= d.id %>" <%= (mine && mine.source_id === d.id) || (!mine && i === 0) ? 'checked' : '' %>> <%= d.title || sheet.label %> <span class="muted small">· edited <%= when(d.updated_at) %></span></label>
+          <% }) %>
+          <p class="small"><a href="/workspace/docs/<%= a.tool_key %>">Open your <%= sheet.label %> documents</a></p>
+        <% } %>
+      <% } else if (a.kind === 'board') { %>
+        <% if (!board) { %><p class="muted">This board is no longer available.</p>
+        <% } else if (!boardCount) { %><p>Your <%= board.label %> board is empty. <a href="/workspace/boards/<%= a.tool_key %>">Add some cards →</a></p>
+        <% } else { %><p class="muted small" style="margin-top:0">A copy of your <a href="/workspace/boards/<%= a.tool_key %>"><%= board.label %></a> board (<%= boardCount %> card<%= boardCount === 1 ? '' : 's' %>) goes to your program team.</p><% } %>
+      <% } else if (a.kind === 'link') { %>
+        <label>Link<input name="link_url" type="url" required placeholder="https://" value="<%= mine && mine.link_url || '' %>"></label>
+      <% } %>
+      <label><%= a.kind === 'text' ? 'Your answer' : 'Anything to add' %><textarea name="body" rows="<%= a.kind === 'text' ? 8 : 3 %>" maxlength="6000" <%= a.kind === 'text' ? 'required' : '' %>><%= mine && mine.body || '' %></textarea></label>
+      <button class="btn btn-primary" <%= (a.kind === 'worksheet' && (!sheet || !docs.length)) || (a.kind === 'board' && (!board || !boardCount)) ? 'disabled' : '' %>>Hand in</button>
+    </form>
+  <% } %>
+<% } %>
+<style>
+  .as-pill { border: 1px solid var(--border); border-radius: 99px; padding: .1rem .55rem; white-space: nowrap; }
+  .as-submitted { border-color: var(--accent); }
+  .as-returned { border-color: var(--danger); color: var(--danger); }
+  .as-approved { border-color: var(--accent-2); color: var(--accent-2); }
+  .linkish { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
+  label.check { display: flex; gap: .5rem; align-items: center; margin: .3rem 0; }
+</style>
+<%- include('../partials/foot') %>

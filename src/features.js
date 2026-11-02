@@ -12,6 +12,6 @@ const FLAGS = {
   collabs:      true,   // collaborations: seek collaborators
   helpBoard:    true,   // help board: asks, offers, service swaps (needs migrations/2026-11-01_phase1_public_side.sql)
   worksheets:   false,  // the workspace tools (Phase 2)
-  orgs:         false,  // accelerator orgs and private cohorts (Phase 3)
+  orgs:         true,   // accelerator orgs and private cohorts (Phase 3)
 };
 module.exports = { FLAGS, on: k => !!FLAGS[k] };

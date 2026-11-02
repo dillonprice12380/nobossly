@@ -1,30 +1,53 @@
 <%- include('../partials/head') %>
 <div class="page-head">
   <div><h1><svg class="icon icon-lg"><use href="#i-team"/></svg> Groups</h1>
-  <p class="muted">Member-led groups around niches, industries, and goals.</p></div>
-  <a class="btn btn-ghost" href="/community">← Community</a>
+  <p class="muted">Member-led groups around niches, industries and goals — and the private cohorts you have been invited to.</p></div>
 </div>
-<% if (canCreate) { %>
-  <div class="card">
-    <h3>Create a group</h3>
-    <form method="post" action="/groups">
-      <label>Name<input name="name" maxlength="80" required placeholder="e.g. Leaving retail"></label>
-      <label>Description<textarea name="description" rows="2" maxlength="600" placeholder="What is this group about?"></textarea></label>
-      <button class="btn btn-primary">Create group</button>
-    </form>
-  </div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (typeof runsPrograms !== 'undefined' && runsPrograms && flags.orgs) { %><p class="small"><a href="/orgs">Your programs →</a></p><% } %>
+
+<% var badge = function (g) { var v = g.visibility || 'public'; return g.org_id ? '🔒 Cohort' : v === 'hidden' ? '🔒 Hidden' : v === 'private' ? '🔐 Private' : ''; }; %>
+<% var tile = function (g, note) { %>
+  <a class="card gr-tile" href="/groups/<%= g.slug %>">
+    <strong><%= g.name %></strong> <% if (badge(g)) { %><span class="gr-badge"><%= badge(g) %></span><% } %>
+    <% if (g.description) { %><p class="muted small" style="margin:.3rem 0 0"><%= g.description %></p><% } %>
+    <% if (note) { %><p class="small" style="margin:.4rem 0 0"><%= note %></p><% } %>
+  </a>
+<% }; %>
+
+<% if (mine.length) { %>
+  <h2 class="gr-h">Your groups</h2>
+  <div class="grid"><% mine.forEach(function (g) { tile(g); }) %></div>
 <% } %>
-<% if (!groups.length) { %>
-  <div class="card center"><p class="muted">No groups yet. <%= canCreate ? 'Start the first one!' : 'Check back soon.' %></p></div>
+<% if (pending.length) { %>
+  <h2 class="gr-h">Waiting for approval</h2>
+  <div class="grid"><% pending.forEach(function (g) { tile(g, 'Request sent'); }) %></div>
 <% } %>
-<div class="grid-3">
-  <% groups.forEach(g => { %>
-    <div class="card">
-      <h3><a href="/groups/<%= g.slug %>"><%= g.name %></a></h3>
-      <% if (g.description) { %><p class="muted small"><%= g.description %></p><% } %>
-      <p class="muted small"><%= counts[g.id] || 0 %> member<%= (counts[g.id] || 0) === 1 ? '' : 's' %><%= mine.has(g.id) ? ' · ✓ joined' : '' %></p>
-      <a class="btn btn-ghost btn-sm" href="/groups/<%= g.slug %>">Open</a>
-    </div>
-  <% }) %>
-</div>
+
+<h2 class="gr-h">Discover</h2>
+<% if (!discover.length) { %><div class="card"><p class="muted" style="margin:0">No other groups yet. Start one below.</p></div><% } %>
+<div class="grid"><% discover.forEach(function (g) { tile(g); }) %></div>
+
+<details class="card" style="margin-top:1.2rem" <%= !mine.length && !discover.length ? 'open' : '' %>>
+  <summary><strong>Start a group</strong></summary>
+  <form method="post" action="/groups" style="margin-top:.6rem">
+    <label>Name<input name="name" maxlength="80" required placeholder="e.g. Leaving retail"></label>
+    <label>What it is about<textarea name="description" rows="2" maxlength="600" placeholder="Who is it for, and what happens here?"></textarea></label>
+    <fieldset class="gr-vis"><legend><strong>Who can join</strong></legend>
+      <% Object.keys(VISIBILITY).forEach(function (k, i) { %>
+        <label class="check"><input type="radio" name="visibility" value="<%= k %>" <%= i === 0 ? 'checked' : '' %>> <span><strong><%= VISIBILITY[k].label %></strong> — <span class="muted small"><%= VISIBILITY[k].help %></span></span></label>
+      <% }) %>
+    </fieldset>
+    <button class="btn btn-primary">Create group</button>
+  </form>
+</details>
+<p class="muted small" style="margin-top:.8rem">Running an accelerator or program? Cohorts are private groups under your organization — see <a href="/help">Help</a> to get one set up.</p>
+<style>
+  .gr-h { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .gr-tile { display: block; color: inherit; text-decoration: none; }
+  .gr-tile:hover { border-color: var(--accent); }
+  .gr-badge { font-size: .75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: .05rem .45rem; margin-left: .3rem; }
+  .gr-vis { border: 1px solid var(--border); border-radius: 10px; padding: .5rem .8rem; margin: .6rem 0; }
+  .gr-vis label.check { display: flex; gap: .5rem; align-items: flex-start; margin: .3rem 0; }
+</style>
 <%- include('../partials/foot') %>

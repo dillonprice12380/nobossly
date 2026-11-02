@@ -5,5 +5,141 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-02_private_cohorts.sql": {
+      "organizations": [
+        "id",
+        "name",
+        "slug",
+        "kind",
+        "website_url",
+        "contact_email",
+        "created_by",
+        "created_at"
+      ],
+      "org_admins": [
+        "org_id",
+        "user_id",
+        "role",
+        "created_at"
+      ],
+      "groups": [
+        "visibility",
+        "join_policy",
+        "org_id"
+      ],
+      "group_members": [
+        "status"
+      ],
+      "group_invites": [
+        "id",
+        "group_id",
+        "code",
+        "created_by",
+        "max_uses",
+        "uses",
+        "expires_at",
+        "created_at"
+      ],
+      "cohort_assignments": [
+        "id",
+        "group_id",
+        "title",
+        "instructions",
+        "kind",
+        "tool_key",
+        "due_on",
+        "position",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ],
+      "cohort_submissions": [
+        "id",
+        "assignment_id",
+        "group_id",
+        "user_id",
+        "status",
+        "title",
+        "body",
+        "link_url",
+        "snapshot",
+        "source_id",
+        "feedback",
+        "reviewed_by",
+        "reviewed_at",
+        "submitted_at"
+      ],
+      "_enums": {
+        "notifications": {
+          "type": [
+            "cohort",
+            "group"
+          ]
+        },
+        "reports": {
+          "target_type": [
+            "group_post"
+          ]
+        },
+        "group_members": {
+          "role": [
+            "admin",
+            "moderator",
+            "mentor"
+          ],
+          "status": [
+            "active",
+            "requested",
+            "invited",
+            "removed",
+            "left"
+          ]
+        },
+        "groups": {
+          "visibility": [
+            "public",
+            "private",
+            "hidden"
+          ],
+          "join_policy": [
+            "open",
+            "request",
+            "invite"
+          ]
+        },
+        "organizations": {
+          "kind": [
+            "accelerator",
+            "incubator",
+            "nonprofit",
+            "university",
+            "other"
+          ]
+        },
+        "org_admins": {
+          "role": [
+            "owner",
+            "admin",
+            "staff"
+          ]
+        },
+        "cohort_assignments": {
+          "kind": [
+            "worksheet",
+            "board",
+            "text",
+            "link"
+          ]
+        },
+        "cohort_submissions": {
+          "status": [
+            "submitted",
+            "returned",
+            "approved"
+          ]
+        }
+      }
+    }
+  }
 }

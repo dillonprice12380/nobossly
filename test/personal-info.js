@@ -63,7 +63,7 @@ console.log('\nEvery member-written field goes through it:');
   const sites = [
     ['src/routes/community.js', 'forum_thread'], ['src/routes/community.js', 'forum_reply'],
     ['src/routes/community.js', 'forum_thread_edit'], ['src/routes/community.js', 'forum_reply_edit'],
-    ['src/routes/social.js', 'group_post'], ['src/routes/messages.js', 'message'],
+    ['src/routes/groups.js', 'group_post'], ['src/routes/groups.js', 'group'], ['src/routes/orgs.js', 'cohort'], ['src/routes/messages.js', 'message'],
     ['src/routes/members.js', 'profile'], ['src/routes/reviews.js', 'review_request'],
     ['src/routes/reviews.js', 'review_feedback'], ['src/routes/wins.js', 'win'], ['src/routes/challenges.js', 'quest_proof'],
     ['src/routes/feed.js', 'post'], ['src/routes/feed.js', 'post_comment'],
