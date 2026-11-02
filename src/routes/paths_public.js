@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const paths = require('../paths');
-const ladders = require('../ladders');
+const dashboards = require('../path_dashboards');
 
 // Public landing pages, one per path.
 //
@@ -12,7 +12,7 @@ const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
 
 async function challengesFor(sb, slug) {
   const { data } = await sb.from('tailored_challenges')
-    .select('title, description, emoji, xp_reward, suggested_days, paths')
+    .select('title, description, emoji, suggested_days, paths')
     .eq('is_active', true).eq('source', 'curated').limit(200);
   return (data || []).filter(c => (c.paths || []).includes(slug)).slice(0, 5);
 }
@@ -20,7 +20,7 @@ async function challengesFor(sb, slug) {
 router.get('/', (req, res) => {
   res.render('paths_index', {
     title: 'Pick your path',
-    metaDescription: 'NoBossly asks different questions depending on what you are building — a channel, a client base, a shop, a product. Nine paths, each with its own quest board.',
+    metaDescription: 'NoBossly sets up a different dashboard depending on what you are building: a channel, a client base, a shop, a product. Pick your path and see what it tracks.',
     canonicalUrl: 'https://nobossly.com/paths',
     paths: paths.MARKETED
   });
@@ -40,8 +40,8 @@ router.get('/:slug', async (req, res, next) => {
       metaDescription: def.marketing.subhead.slice(0, 300),
       canonicalUrl: canonical(req, def.slug),
       def,
-      // The rungs this path actually climbs, named in its own vernacular.
-      rungs: ladders.ladderFor(def.slug),
+      // What this path's dashboard is made of, from the same config members get.
+      dash: dashboards.previewFor(def.slug),
       subpaths: paths.subpathsOf(def.slug),
       challenges,
       others: paths.MARKETED.filter(p => p.slug !== def.slug)

@@ -286,7 +286,7 @@ const PATHS = [
     blurb: 'You build an audience first — video, writing, podcasting, streaming — and money follows attention.',
     marketing: {
       headline: 'You are not short of ideas. You are short of a plan that survives week three.',
-      subhead: 'NoBossly asks what kind of creator you are and then measures you in the right unit — followers if you are on social, monthly visitors if you publish — against the sizes where each actually starts paying: around 10,000 followers, around 50,000 visits a month. Then a ladder where the levels are real: first paid collaboration, first $1k month, the day the channel out-earns the job.',
+      subhead: 'NoBossly asks what kind of creator you are and then measures you in the right unit — followers if you are on social, monthly visitors if you publish — against the sizes where each actually starts paying: around 10,000 followers, around 50,000 visits a month. Then a dashboard that tracks it: your audience number each month, a content pipeline with a publish calendar, brand deals, and what each income source brings in.',
       pains: [
         'You have posted before and stopped, and you are not sure why it did not stick.',
         'Everyone says "be consistent" without asking what time you get home.',
@@ -334,7 +334,7 @@ const PATHS = [
     blurb: 'You sell a skill and do the work yourself — design, writing, development, editing, admin.',
     marketing: {
       headline: 'Freelancing is a business. Most freelancing advice treats it like a hobby with invoices.',
-      subhead: 'NoBossly holds your rate against the hours you have outside your job and the income that would actually replace it, tells you plainly when the arithmetic does not work — then gives you the quests that fix it.',
+      subhead: 'NoBossly holds your rate against the hours you have outside your job and the income that would actually replace it, tells you plainly when the arithmetic does not work — then gives you the client pipeline, proposals and invoices to fix it.',
       pains: [
         'You are busy in the evenings and still nowhere near replacing the salary.',
         'Every month starts from zero because the work is all one-off.',
@@ -631,10 +631,10 @@ const PATHS = [
     slug: 'exploring',
     label: 'Still figuring it out',
     emoji: '🧭',
-    blurb: 'You know you want to build something, but not what yet. Start here, take on the early quests, and let real conversations narrow it down.',
+    blurb: 'You know you want to build something, but not what yet. Start here: weigh up a few options, run small tests, and let real conversations narrow it down.',
     marketing: {
       headline: 'Knowing you want out is enough to start. You do not need the idea yet.',
-      subhead: 'Start on the exploring path: small real-world quests, feedback from people on the same climb, and conversations that rule ideas in or out fast. It never picks for you — it helps you find out.',
+      subhead: 'Start on the exploring path: a self-inventory, an options matrix to compare ideas, two-week experiments, and conversations with members that rule ideas in or out fast. It never picks for you — it helps you find out.',
       pains: [
         'You want out of your job and every list of business ideas feels written for someone else.',
         'You have skills your employer profits from and no obvious way to sell them yourself.',

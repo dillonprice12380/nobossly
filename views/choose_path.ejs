@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <div class="card" style="max-width:820px;margin:0 auto">
   <h2><%= current ? 'Change your path' : 'What are you working toward?' %></h2>
-  <p class="muted">Pick the one that fits best. You can change it any time — this just decides which challenges and quests show up for you.</p>
+  <p class="muted">Pick the one that fits best. It decides what your dashboard puts first: your stage, your numbers, and the boards, checklists and tools for that kind of work. You can change it any time.</p>
   <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
   <form method="post" action="/choose-path">
     <div class="path-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin:1rem 0">

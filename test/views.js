@@ -109,7 +109,7 @@ for (const def of paths.MARKETED) {
         title: def.label, metaDescription: def.marketing.subhead,
         canonicalUrl: 'https://nobossly.com/paths/' + def.slug,
         def, questions, criteria, challenges,
-        rungs: require("../src/ladders").ladderFor(def.slug),
+        dash: require('../src/path_dashboards').previewFor(def.slug),
         subpaths: paths.subpathsOf(def.slug),
         others: paths.MARKETED.filter(p => p.slug !== def.slug)
       });
@@ -128,6 +128,9 @@ for (const def of paths.MARKETED) {
     if (!html.includes('/signup?path=' + def.slug)) missing.push('the signup CTA');
     if (challenges.length && !html.includes(esc(challenges[0].title))) missing.push('the quest');
     if (!html.includes(esc(def.marketing.bar))) missing.push('the traction bar');
+    const dash = require('../src/path_dashboards').previewFor(def.slug);
+    if (!html.includes('Your dashboard on this path') || !dash.stages.every(st => html.includes(esc(st)))) missing.push('the dashboard preview');
+    if (/\bXP\b|\brungs?\b|\bladder\b/.test(html.replace(/<style[\s\S]*?<\/style>/g, ''))) missing.push('no retired XP/ladder wording');
     if (criteria.length && !html.includes(esc(criteria[0].criterion))) missing.push('the criterion');
     ok(`${def.slug} ${label}: every block is in the HTML`, !missing.length,
        missing.join(', ') || 'all present');
@@ -181,7 +184,7 @@ const marketing = {
 for (const def of paths.MARKETED) {
   marketing['path_landing.ejs:' + def.slug] = {
     def, questions: paths.ownQuestions(def.slug), criteria: [], challenges: [],
-    rungs: require('../src/ladders').ladderFor(def.slug),
+    dash: require('../src/path_dashboards').previewFor(def.slug),
     subpaths: paths.subpathsOf(def.slug),
     others: paths.MARKETED.filter(p => p.slug !== def.slug)
   };
