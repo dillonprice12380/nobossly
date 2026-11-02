@@ -6,7 +6,8 @@
     "value the schema rejected -- every notification in the product, cutting an",
     "idea, the coach thread, and deactivating an account -- with the errors",
     "swallowed at the call site so nothing surfaced.",
-    "Regenerate after any migration that adds a column or changes a CHECK."
+    "Regenerate after any migration that adds a column or changes a CHECK.",
+    "Updated 2026-11-02 after applying income_log, personal_info_filter, phase1_public_side, workspace_foundations and lock_down_all_function_grants."
   ],
   "columns": {
     "accountability_pairs": [
@@ -729,6 +730,9 @@
       "display_preference",
       "founder_stage",
       "generations_used",
+      "headline",
+      "help_need",
+      "help_offer",
       "id",
       "industry",
       "is_admin",
@@ -746,6 +750,7 @@
       "occupation",
       "onboarding_completed",
       "path",
+      "path_answers",
       "profile_completed",
       "profile_is_public",
       "streak_days",
@@ -765,6 +770,7 @@
       "verified_level",
       "website_url",
       "weekly_digest_enabled",
+      "working_on",
       "xp_total",
       "years_experience"
     ],
@@ -990,6 +996,7 @@
       "id",
       "responder_id",
       "survey_id",
+      "visitor_key",
       "xp_awarded"
     ],
     "surveys": [
@@ -999,8 +1006,10 @@
       "description",
       "id",
       "idea_id",
+      "max_responses",
       "questions",
       "response_count",
+      "share_code",
       "status",
       "target_count",
       "title",
@@ -1239,6 +1248,85 @@
       "rank",
       "username",
       "xp_total"
+    ],
+    "filter_hits": [
+      "context",
+      "created_at",
+      "id",
+      "kind",
+      "user_id"
+    ],
+    "help_posts": [
+      "author_id",
+      "body",
+      "category",
+      "closed_at",
+      "created_at",
+      "exchange",
+      "group_id",
+      "id",
+      "kind",
+      "partner_id",
+      "status",
+      "title",
+      "updated_at"
+    ],
+    "help_responses": [
+      "created_at",
+      "id",
+      "message",
+      "post_id",
+      "responder_id",
+      "status"
+    ],
+    "help_thanks": [
+      "created_at",
+      "helper_id",
+      "id",
+      "is_public",
+      "note",
+      "post_id",
+      "rating",
+      "thanker_id"
+    ],
+    "workspace_docs": [
+      "created_at",
+      "data",
+      "id",
+      "kind",
+      "title",
+      "updated_at",
+      "user_id"
+    ],
+    "pipeline_items": [
+      "board",
+      "created_at",
+      "data",
+      "due_on",
+      "id",
+      "position",
+      "stage",
+      "title",
+      "updated_at",
+      "user_id",
+      "value"
+    ],
+    "metric_entries": [
+      "created_at",
+      "id",
+      "metric",
+      "note",
+      "period",
+      "user_id",
+      "value"
+    ],
+    "checklist_progress": [
+      "checklist",
+      "done_at",
+      "due_on",
+      "item",
+      "note",
+      "user_id"
     ]
   },
   "enums": {
@@ -1441,7 +1529,8 @@
         "repost",
         "mention",
         "badge",
-        "system"
+        "system",
+        "help"
       ]
     },
     "peer_reviews": {
@@ -1546,7 +1635,11 @@
         "forum_thread",
         "forum_reply",
         "user",
-        "message"
+        "message",
+        "post",
+        "post_comment",
+        "help_post",
+        "help_response"
       ]
     },
     "revenue_entries": {
@@ -1587,6 +1680,7 @@
     },
     "surveys": {
       "status": [
+        "draft",
         "active",
         "closed",
         "archived"
@@ -1633,6 +1727,47 @@
         "template",
         "tool_rec",
         "case_study"
+      ]
+    },
+    "filter_hits": {
+      "kind": [
+        "email",
+        "phone",
+        "address"
+      ]
+    },
+    "help_posts": {
+      "kind": [
+        "ask",
+        "offer"
+      ],
+      "category": [
+        "website",
+        "marketing_seo",
+        "design",
+        "legal_finance",
+        "sales",
+        "product",
+        "accountability",
+        "other"
+      ],
+      "exchange": [
+        "free",
+        "swap"
+      ],
+      "status": [
+        "open",
+        "in_progress",
+        "closed",
+        "removed"
+      ]
+    },
+    "help_responses": {
+      "status": [
+        "pending",
+        "accepted",
+        "declined",
+        "withdrawn"
       ]
     }
   }

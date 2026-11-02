@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor).
 --
 -- Keeps emails, phone numbers and street addresses out of member-written text,
 -- in the database as well as in the app (src/personal_info_filter.js), so a

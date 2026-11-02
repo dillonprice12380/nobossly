@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor).
 --
 -- Path dashboards, step 1: the storage every tailored dashboard is built from
 -- (docs/path-dashboards.md). Four member-owned tables, path setup answers on

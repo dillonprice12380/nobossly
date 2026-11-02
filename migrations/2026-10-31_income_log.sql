@@ -5,7 +5,7 @@
 --
 -- Logging income is free. What it unlocks on the ladder is still claimed the
 -- usual way (a quest proof note, a confirmed trophy): nothing here awards XP.
--- Applied live 2026-10-31.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor; the 2026-10-31 note was wrong).
 
 alter table public.revenue_entries
   add constraint revenue_entries_amount_range check (amount > 0 and amount <= 100000000);

@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor).
 --
 -- The Supabase security advisor reported 36 SECURITY DEFINER functions in
 -- `public` callable by `anon` and 55 by `authenticated`. Supabase's default
