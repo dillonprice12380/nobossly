@@ -126,7 +126,7 @@ const { FLAGS } = require('../src/features');
 
   console.log('\nThe migration:');
   const sql = read('migrations/2026-11-02_group_checkins.sql');
-  ok('it is written for review', /^-- NOT APPLIED, written for review\./.test(sql));
+  ok('it is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
   ok('only the server can run the job', /revoke all on function public\.post_weekly_checkins\(text, date\) from public, anon, authenticated;/.test(sql) && /grant execute on function public\.post_weekly_checkins\(text, date\) to service_role;/.test(sql));
   ok('one check-in per group per day', /create unique index if not exists group_posts_checkin_once/.test(sql));
   ok('a member post always has its author; a check-in never does', /kind = 'post' and user_id is not null/.test(sql) && /kind = 'checkin' and user_id is null/.test(sql));

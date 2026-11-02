@@ -8,7 +8,8 @@
     "swallowed at the call site so nothing surfaced.",
     "Regenerate after any migration that adds a column or changes a CHECK.",
     "Updated 2026-11-02 after applying income_log, personal_info_filter, phase1_public_side, workspace_foundations and lock_down_all_function_grants.",
-    "Updated 2026-11-02 after applying private_cohorts."
+    "Updated 2026-11-02 after applying private_cohorts.",
+    "Updated 2026-11-02 after applying group_checkins and dropping the AI-era tables."
   ],
   "columns": {
     "accountability_pairs": [
@@ -31,65 +32,6 @@
       "kind",
       "level",
       "title",
-      "user_id"
-    ],
-    "ai_conversations": [
-      "context_type",
-      "created_at",
-      "credits_used",
-      "id",
-      "messages",
-      "updated_at",
-      "user_id"
-    ],
-    "ai_credit_costs": [
-      "cost",
-      "kind",
-      "label",
-      "updated_at"
-    ],
-    "ai_credit_plans": [
-      "monthly",
-      "plan",
-      "updated_at",
-      "visible"
-    ],
-    "ai_credits": [
-      "balance",
-      "created_at",
-      "id",
-      "issued_cap",
-      "period_key",
-      "total_purchased",
-      "total_used",
-      "updated_at",
-      "user_id"
-    ],
-    "ai_memory": [
-      "active_sprint_context",
-      "business_summary",
-      "context",
-      "id",
-      "last_briefed_at",
-      "updated_at",
-      "user_id"
-    ],
-    "ai_reading_lists": [
-      "created_at",
-      "guide_ids",
-      "id",
-      "reasoning",
-      "sprint_id",
-      "user_id",
-      "week_of"
-    ],
-    "ai_spend": [
-      "balance_after",
-      "cost",
-      "created_at",
-      "id",
-      "kind",
-      "plan",
       "user_id"
     ],
     "app_errors": [
@@ -126,7 +68,6 @@
       "description",
       "feedback_format",
       "id",
-      "idea_id",
       "ideal_tester",
       "max_testers",
       "owner_id",
@@ -145,48 +86,12 @@
       "status",
       "tester_id"
     ],
-    "blueprints": [
-      "business_name",
-      "created_at",
-      "differentiators",
-      "elevator_pitch",
-      "gtm_channels",
-      "gtm_first_customer",
-      "gtm_strategy",
-      "gtm_week1_actions",
-      "icp_archetype",
-      "icp_demographics",
-      "icp_description",
-      "icp_motivations",
-      "icp_pain_points",
-      "icp_watering_holes",
-      "id",
-      "idea_id",
-      "is_active",
-      "positioning",
-      "pricing_tiers",
-      "projection_month12",
-      "projection_month3",
-      "projection_month6",
-      "revenue_rationale",
-      "revenue_type",
-      "roadmap_summary",
-      "tagline",
-      "updated_at",
-      "user_id"
-    ],
     "budgets": [
       "category",
       "created_at",
       "id",
       "monthly_limit",
       "user_id"
-    ],
-    "business_taxonomy": [
-      "id",
-      "kind",
-      "label",
-      "slug"
     ],
     "challenge_acceptances": [
       "accepted_at",
@@ -291,7 +196,6 @@
       "created_at",
       "description",
       "id",
-      "idea_id",
       "is_public",
       "offering",
       "recipient_id",
@@ -364,22 +268,6 @@
       "spent_at",
       "user_id"
     ],
-    "fit_criteria_library": [
-      "applies_when",
-      "category",
-      "check_kind",
-      "created_at",
-      "criterion",
-      "is_active",
-      "metric",
-      "op",
-      "paths",
-      "priority",
-      "slug",
-      "value",
-      "value_from",
-      "why"
-    ],
     "follows": [
       "created_at",
       "follower_id",
@@ -431,23 +319,6 @@
       "user_id",
       "view_count"
     ],
-    "founder_compasses": [
-      "created_at",
-      "data",
-      "founder_path",
-      "id",
-      "questionnaire_id",
-      "user_id"
-    ],
-    "founder_levels": [
-      "emoji",
-      "level",
-      "perks",
-      "requirements",
-      "title",
-      "unlock_text",
-      "xp_required"
-    ],
     "friendships": [
       "addressee_id",
       "created_at",
@@ -455,63 +326,6 @@
       "requester_id",
       "responded_at",
       "status"
-    ],
-    "generated_ideas": [
-      "advisor",
-      "best_fit_passed",
-      "best_fit_pct",
-      "category",
-      "competitor_landscape",
-      "competitors",
-      "created_at",
-      "cut_at",
-      "cut_reason",
-      "demand_evidence",
-      "demand_score",
-      "draft",
-      "evidence_at",
-      "first_steps",
-      "fit_applicable",
-      "fit_passed",
-      "fit_pct",
-      "fit_test",
-      "fit_total",
-      "fit_verified",
-      "id",
-      "is_favorited",
-      "is_pinned",
-      "legal_nuances",
-      "market_analysis",
-      "name",
-      "passion_score",
-      "position",
-      "profile_summary",
-      "questionnaire_id",
-      "revision_count",
-      "source",
-      "startup_cost_full",
-      "startup_cost_lean",
-      "startup_cost_standard",
-      "status",
-      "success_likelihood",
-      "tagline",
-      "time_to_revenue",
-      "updated_at",
-      "user_id",
-      "why_you"
-    ],
-    "generation_jobs": [
-      "created_at",
-      "error",
-      "id",
-      "kind",
-      "progress",
-      "redirect",
-      "stage",
-      "stage_label",
-      "status",
-      "updated_at",
-      "user_id"
     ],
     "group_members": [
       "group_id",
@@ -522,12 +336,17 @@
     ],
     "group_posts": [
       "body",
+      "checkin_key",
       "created_at",
       "group_id",
       "id",
+      "kind",
+      "parent_id",
       "user_id"
     ],
     "groups": [
+      "checkin_friday",
+      "checkin_monday",
       "created_at",
       "description",
       "id",
@@ -563,11 +382,6 @@
       "slug",
       "sort_order"
     ],
-    "guide_h2_backup": [
-      "backed_up_at",
-      "old_h2",
-      "slug"
-    ],
     "guide_locations": [
       "code",
       "created_at",
@@ -578,28 +392,6 @@
       "parent_id",
       "slug",
       "sort_order"
-    ],
-    "idea_signals": [
-      "claim",
-      "created_at",
-      "id",
-      "idea_id",
-      "source",
-      "strength",
-      "url",
-      "user_id"
-    ],
-    "idea_versions": [
-      "advisor",
-      "created_at",
-      "draft",
-      "fit_passed",
-      "fit_total",
-      "id",
-      "idea_id",
-      "success_likelihood",
-      "user_id",
-      "version_no"
     ],
     "karma_transactions": [
       "amount",
@@ -802,90 +594,6 @@
       "website_url",
       "xp_total"
     ],
-    "questionnaire_responses": [
-      "advice_topic",
-      "age_range",
-      "ai_stance",
-      "avoid_industries",
-      "biggest_fear",
-      "biggest_obstacle",
-      "biz_age",
-      "biz_best_channel",
-      "biz_channels",
-      "biz_customer_count",
-      "biz_description",
-      "biz_goal_12mo",
-      "biz_growth_blocker",
-      "biz_misconceptions",
-      "biz_model",
-      "biz_models",
-      "biz_name",
-      "biz_offerings",
-      "biz_pivot_openness",
-      "biz_pricing",
-      "biz_profitability",
-      "biz_revenue_monthly",
-      "biz_stage",
-      "biz_traction_metric",
-      "biz_trend",
-      "biz_url",
-      "biz_whats_stuck",
-      "biz_whats_working",
-      "competition_preference",
-      "completed",
-      "created_at",
-      "credentials",
-      "customer_access",
-      "deal_breakers",
-      "energizing_work",
-      "existing_assets",
-      "founder_name",
-      "founder_path",
-      "has_idea",
-      "hobbies",
-      "hours_per_week",
-      "hustle_mode",
-      "id",
-      "idea_biggest_unknown",
-      "idea_customer",
-      "idea_description",
-      "idea_differentiator",
-      "idea_known_competitors",
-      "idea_monetization",
-      "idea_problem",
-      "idea_stage",
-      "idea_validation",
-      "idea_why_now",
-      "ideal_day",
-      "income_year1",
-      "industry_field",
-      "launch_budget",
-      "learning_appetite",
-      "location",
-      "marketing_comfort",
-      "motivation",
-      "passion_topic",
-      "path_answers",
-      "prior_attempts",
-      "problem_pain",
-      "readiness_score",
-      "regret",
-      "risk_tolerance",
-      "run_number",
-      "runway",
-      "sales_comfort",
-      "skills",
-      "success_definition",
-      "superpower",
-      "target_customer",
-      "team_preference",
-      "tech_level",
-      "unfair_advantage",
-      "updated_at",
-      "user_id",
-      "work_mode",
-      "work_status"
-    ],
     "reports": [
       "created_at",
       "details",
@@ -911,7 +619,6 @@
       "entry_date",
       "entry_type",
       "id",
-      "idea_id",
       "is_recurring",
       "source",
       "updated_at",
@@ -969,14 +676,12 @@
       "user_id"
     ],
     "sprints": [
-      "blueprint_id",
       "completed_at",
       "created_at",
       "days_label",
       "end_date",
       "goal",
       "id",
-      "idea_id",
       "sprint_number",
       "start_date",
       "status",
@@ -1010,7 +715,6 @@
       "deadline",
       "description",
       "id",
-      "idea_id",
       "max_responses",
       "questions",
       "response_count",
@@ -1410,16 +1114,6 @@
         "compass"
       ]
     },
-    "ai_conversations": {
-      "context_type": [
-        "coach",
-        "general",
-        "blueprint",
-        "sprint",
-        "idea",
-        "cofounder"
-      ]
-    },
     "badges": {
       "tier": [
         "beginner",
@@ -1442,14 +1136,6 @@
         "testing",
         "completed",
         "dropped"
-      ]
-    },
-    "business_taxonomy": {
-      "kind": [
-        "business_type",
-        "industry",
-        "customer_segment",
-        "value_prop"
       ]
     },
     "challenge_acceptances": {
@@ -1545,14 +1231,6 @@
         "pending",
         "accepted",
         "declined"
-      ]
-    },
-    "generated_ideas": {
-      "status": [
-        "active",
-        "archived",
-        "converted",
-        "dropped"
       ]
     },
     "group_members": {
@@ -1682,19 +1360,6 @@
         "builder",
         "founder",
         "studio"
-      ]
-    },
-    "questionnaire_responses": {
-      "founder_path": [
-        "creator",
-        "freelancer",
-        "consultant",
-        "local_service",
-        "brick_mortar",
-        "online_store",
-        "physical_product",
-        "software",
-        "exploring"
       ]
     },
     "reports": {
@@ -1884,6 +1549,12 @@
         "submitted",
         "returned",
         "approved"
+      ]
+    },
+    "group_posts": {
+      "kind": [
+        "post",
+        "checkin"
       ]
     }
   }

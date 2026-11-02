@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor).
 --
 -- Weekly check-in threads and threaded replies in groups (brief 2.3).
 --
