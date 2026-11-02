@@ -73,23 +73,82 @@
 
 <% if (mode === 'link') { %><p class="muted small center no-print">Planning a business of your own? <a href="/">NoBossly is free</a> — canvases, plans and a community building the same way.</p><% } %>
 
-<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 <script>
 (function () {
-  var landscape = <%= poster ? 'true' : 'false' %>;
+  var poster = <%= poster ? 'true' : 'false' %>;
+  // The PDF is drawn from a copy laid out at a fixed width, off screen, so it
+  // comes out the same whatever the size of the browser window, and nothing is
+  // cut off however much is written in a box.
+  var WIDTH = poster ? 1400 : 860;
+  var ready = function () { return window.html2canvas && window.jspdf && window.jspdf.jsPDF; };
+
+  function snapshot(el) {
+    var holder = document.createElement('div');
+    holder.className = 'wv-export';
+    holder.style.cssText = 'position:absolute;left:-20000px;top:0;width:' + WIDTH + 'px;background:#fff;z-index:-1';
+    var copy = el.cloneNode(true);
+    copy.removeAttribute('id');
+    holder.appendChild(copy);
+    document.body.appendChild(holder);
+    // Where each box ends, so document pages break between sections, not through them.
+    var top = copy.getBoundingClientRect().top;
+    var cssWidth = copy.offsetWidth, cssHeight = copy.offsetHeight;
+    var breaks = Array.prototype.map.call(copy.querySelectorAll('.wv-field, .wv-table tr, .wv-head, .wv-foot'), function (n) { return n.getBoundingClientRect().bottom - top; });
+    return window.html2canvas(copy, { scale: 2, backgroundColor: '#ffffff', useCORS: true, width: cssWidth, height: cssHeight, windowWidth: WIDTH, windowHeight: cssHeight, scrollX: 0, scrollY: 0 })
+      .then(function (canvas) { holder.remove(); return { canvas: canvas, breaks: breaks, cssWidth: cssWidth }; },
+            function (e) { holder.remove(); throw e; });
+  }
+
+  function build(shot) {
+    var jsPDF = window.jspdf.jsPDF, c = shot.canvas, M = 8;
+    if (poster) {
+      // One page. A4 landscape when the canvas fits without shrinking the words
+      // too far; otherwise one taller page, so every box is still whole.
+      var pw = 297, ph = 210, iw = pw - 2 * M, ih = iw * c.height / c.width;
+      var fit = Math.min(1, (ph - 2 * M) / ih);
+      if (fit < 0.72) { ph = ih + 2 * M; fit = 1; }
+      var doc = new jsPDF({ unit: 'mm', format: [pw, ph], orientation: pw > ph ? 'landscape' : 'portrait' });
+      var w = iw * fit, h = ih * fit;
+      doc.addImage(c.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w) / 2, M, w, h);
+      return doc;
+    }
+    // A document: A4 portrait pages, breaking between sections.
+    var pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    var PW = 210, PH = 297, IW = PW - 2 * M, pxPerMm = c.width / IW, pageCss = (PH - 2 * M) * pxPerMm / (c.width / shot.cssWidth);
+    var ratio = c.width / shot.cssWidth, y = 0, total = c.height / ratio, first = true;
+    while (y < total - 1) {
+      var end = Math.min(total, y + pageCss);
+      if (end < total) {
+        var cut = shot.breaks.filter(function (b) { return b > y + 40 && b <= end; });
+        if (cut.length) end = cut[cut.length - 1];
+      }
+      var slice = document.createElement('canvas');
+      slice.width = c.width; slice.height = Math.ceil((end - y) * ratio);
+      var ctx = slice.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, slice.width, slice.height);
+      ctx.drawImage(c, 0, Math.floor(y * ratio), c.width, slice.height, 0, 0, c.width, slice.height);
+      if (!first) pdf.addPage();
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.95), 'JPEG', M, M, IW, slice.height / pxPerMm);
+      first = false; y = end;
+    }
+    return pdf;
+  }
+
+  var busy = false;
   function pdf() {
     var el = document.getElementById('wv-doc');
-    if (!el) return;
-    if (!window.html2pdf) { window.print(); return; }   // library blocked or offline
-    document.body.classList.add('wv-exporting');
-    window.html2pdf().set({
-      margin: 8,
-      filename: (el.getAttribute('data-filename') || 'worksheet') + '.pdf',
-      image: { type: 'jpeg', quality: 0.96 },
-      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: landscape ? 1400 : 900 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'], avoid: ['.wv-field', 'tr'] }
-    }).from(el).save().then(function () { document.body.classList.remove('wv-exporting'); }, function () { document.body.classList.remove('wv-exporting'); window.print(); });
+    if (!el || busy) return;
+    if (!ready()) { window.print(); return; }   // libraries blocked or offline
+    busy = true;
+    var btns = document.querySelectorAll('[data-pdf]');
+    btns.forEach(function (b) { b.disabled = true; b.setAttribute('data-label', b.textContent); b.textContent = 'Preparing PDF…'; });
+    var done = function () { busy = false; btns.forEach(function (b) { b.disabled = false; b.textContent = b.getAttribute('data-label') || 'Download PDF'; }); };
+    snapshot(el).then(function (shot) {
+      build(shot).save((el.getAttribute('data-filename') || 'worksheet') + '.pdf');
+      done();
+    }).catch(function (e) { if (window.console) console.error('PDF export failed', e); done(); window.print(); });
   }
   function init() {
     document.querySelectorAll('[data-pdf]').forEach(function (b) {
@@ -98,7 +157,7 @@
       b.addEventListener('click', pdf);
     });
     <% if (typeof autoPdf !== 'undefined' && autoPdf) { %>
-    if (!window.__wvAutoPdf) { window.__wvAutoPdf = true; var go = function () { window.html2pdf ? pdf() : setTimeout(go, 300); }; setTimeout(go, 400); }
+    if (!window.__wvAutoPdf) { window.__wvAutoPdf = true; var tries = 0; var go = function () { if (ready() || ++tries > 30) pdf(); else setTimeout(go, 300); }; setTimeout(go, 400); }
     <% } %>
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -135,7 +194,10 @@
     .wv-box { border: 1px solid #cfd8d4; border-radius: 8px; margin-bottom: .6rem; min-height: 0; }
   }
   .ws-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
-  .wv-exporting .wv { box-shadow: none; }
+  /* The off-screen copy the PDF is drawn from: always the full poster, never the phone layout. */
+  .wv-export .wv { margin: 0; box-shadow: none; border-radius: 0; padding: 24px; }
+  .wv-export .wv-poster { display: grid !important; border: 2px solid #14201c !important; }
+  .wv-export .wv-box { border: 1px solid #14201c !important; border-radius: 0 !important; margin: 0 !important; min-height: 9rem !important; }
   @media print {
     @page { size: <%= poster ? 'A4 landscape' : 'A4 portrait' %>; margin: 10mm; }
     body { background: #fff !important; }
