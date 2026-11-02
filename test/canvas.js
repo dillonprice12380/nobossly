@@ -221,6 +221,8 @@ const CANVAS = { id: DOC, user_id: ME, kind: 'business_model_canvas', title: 'En
     ok('...older list boxes show as bullets', view.includes('<li>Drivers</li>'));
     ok('...and nothing dangerous gets through', !/<img src=x|<script>alert|onerror/.test(view));
     ok('...prints landscape', /size: A4 landscape/.test(view));
+    ok('the PDF is drawn from a fixed-width copy, so a narrow window cannot cut it off', /var WIDTH = poster \? 1400 : 860/.test(view) && view.includes('windowWidth: WIDTH') && !view.includes('html2pdf'));
+    ok('...a canvas is always one whole page (taller when it has to be)', /if \(fit < 0\.72\) \{ ph = ih \+ 2 \* M; fit = 1; \}/.test(view));
     const link = render('workspace/view.ejs', { def, kind: 'business_model_canvas', doc: CANVAS, data: CANVAS.data, mode: 'link', ownerName: 'Bea', note: 'Thoughts?', canShare: false });
     ok('the emailed view shows who shared it and their note, and no edit links', link.includes('Shared with you by Bea') && link.includes('Thoughts?') && !link.includes('/workspace/docs/'));
     const plan = ws.WORKSHEETS.business_plan;
