@@ -110,7 +110,7 @@ router.get('/', async (req, res, next) => {
       title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
       msg: req.query.msg || null, today: new Date().toISOString().slice(0, 10),
       // The path's featured workspace tools (src/path_dashboards).
-      needsSetup: dashboards.needsSetup(p), pathTools: dashboards.workspaceFor(p.path).featured, pathPanel,
+      needsSetup: dashboards.needsSetup(p), pathTools: dashboards.featuredFor(p.path), pathPanel,
       levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
       needsPath, checklist,
       // Suggested first tasks for a new sprint, matched to the member's path.

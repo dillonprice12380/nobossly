@@ -41,57 +41,61 @@ const TOOLS = {
   milestones:            { label: 'Milestones',             emoji: '🏁', href: '/workspace/milestones', blurb: 'Mark the moments that matter, in your own words.' },
   surveys:               { label: 'Surveys',                emoji: '📋', href: '/surveys', blurb: 'Ask customers or your audience, and see the answers add up.' },
   tasks:                 { label: 'Tasks',                  emoji: '✅', href: '/tasks', blurb: 'Everything on your plate, with due dates.' },
-  money:                 { label: 'Money',                  emoji: '💰', href: '/budget', blurb: 'Income, budget and expenses in one place.' },
-  quit:                  { label: 'Quit-Date Planner',      emoji: '🗓️', href: '/tools/quit-date', blurb: 'The month you can afford to hand in your notice.' },
-  tax:                   { label: 'Tax Set-Aside',          emoji: '🧾', href: '/tools/tax', blurb: 'What to put aside from each payment, and your quarterly estimates.' },
-  pricing:               { label: 'Pricing & Margin',       emoji: '🏷️', href: '/tools/pricing', blurb: 'The rate or price you need, and the true margin after fees.' },
+  tax:                   { label: 'Tax Set-Aside',          emoji: '🧾', href: '/tools/tax', money: true, blurb: 'What to put aside from each payment, and your quarterly estimates.' },
+  pricing:               { label: 'Pricing & Margin',       emoji: '🏷️', href: '/tools/pricing', money: true, blurb: 'The rate or price you need, and the true margin after fees.' },
   proof:                 { label: 'Proof Page',             emoji: '🌟', href: '/tools/proof', blurb: 'A public page with your work, testimonials and results.' },
   interviews:            { label: 'Customer interviews',    emoji: '🎙️', href: '/tools/interviews', blurb: 'Log conversations and see which problems keep coming up.' }
 };
+// Path worksheets that are about money: costs, prices, margins, break-even.
+// They live under Dashboard → Money with the pricing and tax tools, not in the
+// Workspace (2026-11-02). Proposals and quotes are sales documents and stay.
+const MONEY_WORKSHEETS = new Set(['sw_pricing', 'loc_price_list', 'loc_equipment', 'shop_product', 'prod_bom', 'bm_startup', 'bm_breakeven']);
+
 // Worksheets a path config adds (a proposal builder, an MVP scope) become
 // tools like any other — featured on their path, in the library elsewhere.
 Object.values(DASHBOARDS).forEach(d => (d.worksheets || []).forEach(k => {
   const w = WORKSHEETS[k];
-  TOOLS[k] = { label: w.label, emoji: w.emoji, href: '/workspace/docs/' + k, kind: true, blurb: w.blurb };
+  TOOLS[k] = Object.assign({ label: w.label, emoji: w.emoji, href: '/workspace/docs/' + k, kind: true, blurb: w.blurb }, MONEY_WORKSHEETS.has(k) ? { money: true } : {});
 }));
+const isMoney = k => !!(TOOLS[k] && TOOLS[k].money);
 
 // F = featured on the dashboard, A = available (listed), anything not named is
 // in the library only. Order within each list is the order shown.
 const PATHS = {
   creator: {
     setup: ['stage', 'platform', 'audience_size', 'monetization'],
-    featured: ['persona', 'idea_refiner', 'goals', 'quit'],
-    available: ['elevator_pitch', 'lean_canvas', 'surveys', 'proof', 'tax', 'money', 'tasks', 'milestones']
+    featured: ['persona', 'idea_refiner', 'goals', 'proof'],
+    available: ['elevator_pitch', 'lean_canvas', 'surveys', 'tax', 'pricing', 'tasks', 'milestones']
   },
   freelancer: {
     setup: ['stage', 'service', 'client_source', 'pricing_model'],
     featured: ['fl_proposal', 'pricing', 'persona', 'proof'],
-    available: ['elevator_pitch', 'tax', 'quit', 'goals', 'money', 'tasks', 'milestones', 'lean_canvas', 'surveys']
+    available: ['elevator_pitch', 'tax', 'goals', 'tasks', 'milestones', 'lean_canvas', 'surveys']
   },
   consultant: {
     setup: ['stage', 'expertise', 'who_you_advise', 'ticket_comfort'],
     featured: ['con_offer', 'persona', 'elevator_pitch', 'proof'],
-    available: ['pricing', 'surveys', 'con_lead_magnet', 'goals', 'tax', 'quit', 'money', 'tasks', 'milestones', 'lean_canvas']
+    available: ['pricing', 'surveys', 'con_lead_magnet', 'goals', 'tax', 'tasks', 'milestones', 'lean_canvas']
   },
   local_service: {
     setup: ['stage', 'service', 'service_area', 'avg_job_value'],
-    featured: ['loc_quote', 'loc_price_list', 'tax', 'money'],
-    available: ['loc_equipment', 'pricing', 'goals', 'business_plan', 'persona', 'elevator_pitch', 'proof', 'tasks', 'milestones', 'quit']
+    featured: ['loc_quote', 'loc_price_list', 'tax', 'proof'],
+    available: ['loc_equipment', 'pricing', 'goals', 'business_plan', 'persona', 'elevator_pitch', 'tasks', 'milestones']
   },
   brick_mortar: {
     setup: ['stage', 'venue_type', 'location_status', 'rent_capacity'],
     featured: ['business_plan', 'bm_breakeven', 'bm_startup', 'surveys'],
-    available: ['bm_site_compare', 'business_model_canvas', 'persona', 'money', 'pricing', 'goals', 'tasks', 'milestones', 'lean_canvas', 'elevator_pitch', 'tax']
+    available: ['bm_site_compare', 'business_model_canvas', 'persona', 'pricing', 'goals', 'tasks', 'milestones', 'lean_canvas', 'elevator_pitch', 'tax']
   },
   online_store: {
     setup: ['stage', 'product', 'goods_type', 'channel'],
     featured: ['shop_product', 'persona', 'tax', 'goals'],
-    available: ['pricing', 'surveys', 'money', 'lean_canvas', 'business_plan', 'tasks', 'milestones', 'quit']
+    available: ['pricing', 'surveys', 'lean_canvas', 'business_plan', 'tasks', 'milestones']
   },
   physical_product: {
     setup: ['stage', 'product', 'made_how', 'sell_where'],
     featured: ['prod_bom', 'surveys', 'persona', 'business_model_canvas'],
-    available: ['prod_makers', 'business_plan', 'pricing', 'interviews', 'lean_canvas', 'money', 'goals', 'tasks', 'milestones']
+    available: ['prod_makers', 'business_plan', 'pricing', 'interviews', 'lean_canvas', 'goals', 'tasks', 'milestones']
   },
   software: {
     setup: ['stage', 'problem', 'can_build', 'who_pays'],
@@ -107,7 +111,7 @@ const PATHS = {
 const FALLBACK = {
   setup: [],
   featured: ['idea_refiner', 'goals', 'persona', 'lean_canvas'],
-  available: ['business_model_canvas', 'business_plan', 'elevator_pitch', 'surveys', 'tasks', 'money', 'milestones']
+  available: ['business_model_canvas', 'business_plan', 'elevator_pitch', 'surveys', 'tasks', 'milestones', 'pricing', 'tax']
 };
 
 const configFor = slug => PATHS[slug] || FALLBACK;
@@ -119,16 +123,33 @@ function setupQuestions(slug) {
   return configFor(slug).setup.map(name => own.find(q => q.name === name)).filter(Boolean);
 }
 
-// The workspace for a path: featured, then available, then the rest.
+// The workspace for a path: featured, then available, then the rest. Money
+// tools are left out; they are listed under Money (moneyToolsFor).
 function workspaceFor(slug) {
   const c = configFor(slug);
   const named = new Set(c.featured.concat(c.available));
-  const as = (keys, rank) => keys.filter(k => TOOLS[k]).map(k => Object.assign({ key: k, rank }, TOOLS[k]));
+  const as = (keys, rank) => keys.filter(k => TOOLS[k] && !isMoney(k)).map(k => Object.assign({ key: k, rank }, TOOLS[k]));
   return {
     featured: as(c.featured, 'featured'),
     available: as(c.available, 'available'),
     library: as(Object.keys(TOOLS).filter(k => !named.has(k)), 'library')
   };
+}
+
+// The money tools for a path: the ones the path names first (its own
+// worksheets, pricing, tax), then every other path's money worksheets.
+function moneyToolsFor(slug) {
+  const c = configFor(slug);
+  const named = c.featured.concat(c.available).filter(isMoney);
+  const shared = ['pricing', 'tax'].filter(k => !named.includes(k));
+  const as = keys => keys.map(k => Object.assign({ key: k }, TOOLS[k]));
+  const mine = named.concat(shared);
+  return { mine: as(mine), more: as(Object.keys(TOOLS).filter(k => isMoney(k) && !mine.includes(k))) };
+}
+
+// What the dashboard features for a path, money tools included.
+function featuredFor(slug) {
+  return configFor(slug).featured.filter(k => TOOLS[k]).map(k => Object.assign({ key: k, rank: 'featured' }, TOOLS[k]));
 }
 
 // Whether a member has answered the setup for their path yet.
@@ -159,7 +180,9 @@ function pathItemsFor(profile) {
   const north = d.northStar(ctx);
   return {
     boards: d.boards(ctx).map(registry.board),
-    metrics: [north].concat(d.supporting(ctx)).filter(Boolean).map(registry.metric),
+    // Number logs kept in dollars are listed under Money; the rest here.
+    metrics: [north].concat(d.supporting(ctx)).filter(Boolean).map(registry.metric).filter(m => m.unit !== 'money'),
+    moneyMetrics: [north].concat(d.supporting(ctx)).filter(Boolean).map(registry.metric).filter(m => m.unit === 'money'),
     checklists: d.checklists(ctx).map(registry.checklist)
   };
 }
@@ -237,5 +260,5 @@ function previewFor(slug) {
   };
 }
 
-module.exports = { TOOLS, PATHS, DASHBOARDS, previewFor, configFor, setupQuestions, workspaceFor, needsSetup,
+module.exports = { TOOLS, PATHS, DASHBOARDS, MONEY_WORKSHEETS, isMoney, previewFor, configFor, setupQuestions, workspaceFor, moneyToolsFor, featuredFor, needsSetup,
   dashboardFor, contextOf, pathItemsFor, stageOf, panelFor, northBoardOf };

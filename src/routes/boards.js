@@ -146,6 +146,13 @@ router.param('metric', (req, res, next, key) => {
   next();
 });
 
+// A number kept in dollars belongs to Dashboard → Money in the nav.
+router.param('metric', (req, res, next, key) => {
+  const def = registry.metric(key);
+  if (def && def.unit === 'money') res.locals.navSub = 'money';
+  next();
+});
+
 router.get('/metrics/:metric', async (req, res, next) => {
   const def = req.metricDef, root = rootOf(req);
   const current = metrics.periodOf(def, '');

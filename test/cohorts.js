@@ -76,7 +76,7 @@ function run(router, method, url, { body = {}, query = {}, sb, profile } = {}) {
       profile: Object.assign({ id: ME, username: 'me', display_name: 'Me' }, profile || {})
     };
     const res = {
-      statusCode: 200, headers: {},
+      statusCode: 200, headers: {}, locals: {},
       status(c) { this.statusCode = c; return this; },
       setHeader(k, v) { this.headers[k.toLowerCase()] = v; },
       redirect(to) { resolve({ redirect: to, status: this.statusCode }); },

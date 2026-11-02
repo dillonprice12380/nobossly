@@ -280,7 +280,7 @@ router.get('/pricing', async (req, res, next) => {
     }
     res.render('pricing', {
       title: 'Premium',
-      metaDescription: 'NoBossly is free. Premium adds five tools for getting out of your job — a quit-date planner, tax set-aside, pricing calculator, proof page and interview tracker — for $5 a month.',
+      metaDescription: 'NoBossly is free. Premium adds four tools for the practical side of building a business — tax set-aside, pricing calculator, proof page and interview tracker — for $5 a month.',
       // Each tier carries what it costs TODAY and what it normally costs. Both
       // the page and the checkout below read that from src/pricing.js, because
       // a page advertising one number while checkout charges another is the

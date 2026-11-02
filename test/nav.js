@@ -173,16 +173,38 @@ const dupes = shorts.filter((s, i) => shorts.indexOf(s) !== i);
 ok('no two tabs share a phone-bar name', dupes.length === 0, dupes.join(', ') || 'clean');
 ok('no two tabs share an href', new Set(APP_NAV.map(i => i.href)).size === APP_NAV.length);
 
-// The top nav is global-only: everything section-shaped belongs to the tab row,
-// or the same link lives in two navigations that highlight independently.
+// The header IS the main nav now (2026-11-02): Dashboard, Community and
+// Resources, the same three sections as APP_NAV, in the same order. The row
+// under it lists the current section's pages.
 const head = read('views/partials/head.ejs');
 const loggedIn = head.match(/<% if \(user\) \{ %>([\s\S]*?)<% \} else \{ %>/);
+ok('there are three sections: Dashboard, Community, Resources', APP_NAV.map(i => i.label).join(',') === 'Dashboard,Community,Resources', APP_NAV.map(i => i.label).join(', '));
 if (loggedIn) {
-  const inTop = [...loggedIn[1].matchAll(/href="(\/[a-z-]+)"/g)].map(m => m[1]);
-  const both = inTop.filter(h => APP_NAV.some(i => i.href === h) && h !== '/dashboard');
-  ok('the top nav does not duplicate section tabs', both.length === 0,
-     both.join(', ') || 'only /dashboard, which is the way home');
+  const top = loggedIn[1];
+  const order = ['>Dashboard<', '>Community<', '>Resources '].map(t => top.indexOf(t));
+  ok('the header shows the same three, in order', order.every(i => i > -1) && order[0] < order[1] && order[1] < order[2], order.join(','));
+  ok('...and marks the current one', /nav-main<%= _secDash \? ' is-active'/.test(top) && /nav-main<%= _secComm \? ' is-active'/.test(top));
+  ok('the old "Tools" menu link is gone (tools live in Workspace and Money)', !/href="\/tools"/.test(top));
 }
+const appnavSrc = read('views/partials/appnav.ejs');
+ok('the old tab row is gone on desktop (the header replaces it)', !appnavSrc.includes('appnav-tabs'));
+const css = read('public/css/style.css');
+ok('the notifications bell takes the nav bar\'s colour in both themes',
+   /\.nav-links > \.notif-menu > summary\.bell[^{]*\{ color: var\(--text\); \}/.test(css) && /body\.theme-light \.nav-links > \.notif-menu > summary\.bell[^{]*\{ color: #eafff5; \}/.test(css));
+
+console.log('\nWhat sits where:');
+const sec = k => APP_NAV.find(i => i.key === k);
+const pages = (k, all) => sec(k).subs.filter(x => all || !x.flag).map(x => x.label).join(',');
+ok('Dashboard has Overview, Workspace and Money', pages('dashboard') === 'Overview,Workspace,Money', pages('dashboard'));
+const subOf = (k, key) => sec(k).subs.find(x => x.key === key);
+const hits = (sub, href) => !(sub.not || []).some(m => href === m || href.startsWith(m + '/')) && sub.match.some(m => href === m || href.startsWith(m + '/'));
+const ws = subOf('dashboard', 'workspace'), money = subOf('dashboard', 'money');
+for (const h of ['/workspace', '/surveys', '/tasks', '/tools/interviews', '/tools/proof']) ok(`${h} is under Workspace`, hits(ws, h) && !hits(money, h));
+for (const h of ['/budget', '/tools/pricing', '/tools/tax']) ok(`${h} is under Money`, hits(money, h) && !hits(ws, h));
+ok('Groups is a Community page', !!subOf('community', 'groups') && subOf('community', 'groups').href === '/groups');
+ok('Feed and Challenges are Community pages', !!subOf('community', 'feed') && !!subOf('community', 'challenges'));
+ok('Resources has Blog, Guides, Locations and Help Center', pages('resources') === 'Blog,Guides,Locations,Help Center');
+ok('a page can mark its section page (money worksheets live under /workspace)', /_forced = \(typeof navSub !== 'undefined' && navSub\)/.test(appnavSrc));
 
 // ---------------------------------------------------------------------------
 // 3. One name per thing.
@@ -194,8 +216,8 @@ if (loggedIn) {
 
 console.log('\nThe product has one word for each thing:');
 
-const tab = APP_NAV.find(i => i.href === '/quests');
-ok('/quests is the tab, labelled "Challenges"', !!tab && tab.label === 'Challenges', tab ? `labelled "${tab.label}"` : 'no tab points there');
+const chalPage = subs.find(s => s.href === '/quests');
+ok('/quests is the Community page labelled "Challenges"', !!chalPage && chalPage.label === 'Challenges' && chalPage.section.key === 'community', chalPage ? `labelled "${chalPage.label}"` : 'no page points there');
 const trophies = subs.find(s => s.href === '/trophies');
 ok('/trophies is a Dashboard page behind its flag', !!trophies && trophies.flag === 'trophies' && trophies.section.href === '/dashboard');
 
@@ -222,6 +244,30 @@ const viewSrc = fs.readdirSync(VIEWS_DIR, { recursive: true })
 for (const [rx, why] of RETIRED) {
   const hit = viewSrc.filter(v => rx.test(v.src.replace(/<svg[\s\S]*?<\/svg>/g, '')));
   ok(why, hit.length === 0, hit.map(v => v.f).join(', ') || 'clean');
+}
+
+// ---------------------------------------------------------------------------
+// 4. Tools: money tools under Money, the rest in the Workspace, and the
+// Quit-Date Planner retired (2026-11-02).
+console.log('\nTools are where the nav says:');
+{
+  const dash = require('../src/path_dashboards');
+  ok('the Quit-Date Planner is gone from every list', !dash.TOOLS.quit && !require('../src/premium').TOOLS.some(t => t.key === 'quit')
+     && Object.values(dash.PATHS).every(c => !c.featured.concat(c.available).includes('quit')));
+  ok('...its old URL goes to Money', /router\.all\(\['\/quit-date', '\/quit-date\/\*'\], \(req, res\) => res\.redirect\(301, '\/budget'\)\)/.test(read('src/routes/tools.js')));
+  ok('...and its page is deleted', !fs.existsSync(path.join(VIEWS_DIR, 'tools/quit.ejs')));
+  const all = Object.keys(dash.PATHS).concat([null]);
+  const inWs = all.flatMap(p => { const w = dash.workspaceFor(p); return w.featured.concat(w.available, w.library).map(t => t.key); });
+  ok('no money tool is listed in the Workspace', !inWs.some(k => dash.isMoney(k)), [...new Set(inWs.filter(k => dash.isMoney(k)))].join(', ') || 'clean');
+  ok('...and "Money" is not a Workspace card any more (it is its own tab)', !dash.TOOLS.money);
+  ok('Pricing & Margin and Tax Set-Aside are on every Money page', all.every(p => ['pricing', 'tax'].every(k => dash.moneyToolsFor(p).mine.some(t => t.key === k))));
+  ok('each path\'s own cost and price worksheets come first on Money', dash.moneyToolsFor('brick_mortar').mine[0].key === 'bm_breakeven' && dash.moneyToolsFor('online_store').mine[0].key === 'shop_product');
+  ok('every money worksheet is reachable from Money', all.every(p => { const m = dash.moneyToolsFor(p); return [...dash.MONEY_WORKSHEETS].every(k => m.mine.concat(m.more).some(t => t.key === k)); }));
+  ok('Surveys, Tasks and Customer interviews are Workspace tools', ['surveys', 'tasks', 'interviews'].every(k => dash.TOOLS[k] && !dash.isMoney(k)) && /href="\/tools\/interviews"/.test(read('views/workspace/index.ejs')));
+  ok('the dashboard still features a path\'s money tools', dash.featuredFor('freelancer').some(t => t.key === 'pricing'));
+  const items = dash.pathItemsFor({ path: 'consultant', path_answers: {} });
+  ok('dollar number logs move to Money, the rest stay in the Workspace', items.moneyMetrics.every(m => m.unit === 'money') && items.metrics.every(m => m.unit !== 'money') && items.moneyMetrics.length > 0);
+  ok('money worksheets and dollar logs light up the Money tab', /router\.param\('kind'[\s\S]{0,120}navSub = 'money'/.test(read('src/routes/workspace.js')) && /router\.param\('metric'[\s\S]{0,160}navSub = 'money'/.test(read('src/routes/boards.js')));
 }
 
 console.log(fail ? `\n${fail} failing` : '\nAll good');

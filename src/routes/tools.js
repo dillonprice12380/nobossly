@@ -13,7 +13,7 @@ const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
 const today = () => new Date().toISOString().slice(0, 10);
 const back = (res, to, m) => res.redirect(to + (m ? (to.includes('?') ? '&' : '?') + 'm=' + encodeURIComponent(m) : ''));
 
-// Hub: every member sees the five tools. While FLAGS.premium is off they are
+// Hub: every member sees the tools. While FLAGS.premium is off they are
 // all open; with it on, a tool without Premium links to its
 // sales page instead of the tool.
 router.get('/', (req, res) => {
@@ -21,89 +21,10 @@ router.get('/', (req, res) => {
 });
 
 // ---------------------------------------------------------------- Quit date
-// What the income log says, in the planner's terms: profit after business
-// costs, and growth only when there are enough months to measure it.
-async function loggedPace(req) {
-  const log = await income.load(req);
-  const sum = income.summary(log.income, log.expenses);
-  return { sum, logged: sum.months && sum.avgProfit !== null ? sum : null };
-}
-
-// Typed numbers, with side income and growth replaced by the log's when the
-// member has chosen to plan from it.
-function effectiveInputs(data, logged) {
-  const inputs = calc.quitInputs(data.inputs || {});
-  if (logged && data.auto !== false) {
-    inputs.side = Math.max(0, logged.avgProfit);
-    if (logged.growth !== null) inputs.growth = Math.max(0, logged.growth);
-  }
-  return inputs;
-}
-
-router.get('/quit-date', premium.requirePremium('quit'), async (req, res, next) => {
-  try {
-    const data = await premium.load(req, 'quit');
-    const { sum, logged } = await loggedPace(req);
-    const inputs = effectiveInputs(data, logged);
-    const cur = calc.thisMonth();
-    res.render('tools/quit', {
-      title: 'Quit-Date Planner', data, inputs, logged, auto: !!logged && data.auto !== false,
-      nextRung: income.nextMoneyRung(req.profile.path, req.profile.current_level, sum),
-      checkinSide: logged ? Math.max(0, sum.profitOf(cur)) : '',
-      hasPlan: !!data.inputs, plan: data.inputs ? calc.quitPlan(inputs) : null,
-      checkins: (data.checkins || []).slice().sort((a, b) => b.month.localeCompare(a.month)),
-      monthLabel: calc.monthLabel, m: req.query.m || null
-    });
-  } catch (e) { next(e); }
-});
-
-router.post('/quit-date', premium.requirePremium('quit'), async (req, res, next) => {
-  try {
-    const data = await premium.load(req, 'quit');
-    data.inputs = calc.quitInputs(req.body);
-    // The switch is only on the form once there is a log to use; until then the
-    // choice stays unmade, so the first logged payment turns it on.
-    if (req.body.log_shown) data.auto = req.body.use_log === 'on'; else delete data.auto;
-    await premium.save(req, 'quit', data);
-    back(res, '/tools/quit-date', 'Plan saved.');
-  } catch (e) { next(e); }
-});
-
-// A monthly check-in updates the plan's starting point to what actually
-// happened, and records the dates the plan gave at that moment, so the member
-// can watch them move.
-router.post('/quit-date/checkin', premium.requirePremium('quit'), async (req, res, next) => {
-  try {
-    const data = await premium.load(req, 'quit');
-    if (!data.inputs) return back(res, '/tools/quit-date', 'Set up your plan first.');
-    const month = /^\d{4}-\d{2}$/.test(req.body.month || '') ? req.body.month : calc.thisMonth();
-    const inputs = calc.quitInputs(Object.assign({}, data.inputs, {
-      side: req.body.side, savings: req.body.savings, start: month
-    }));
-    // The dates recorded are the ones the planner shows: from the log, if the
-    // member plans from it.
-    const { logged } = await loggedPace(req);
-    const plan = calc.quitPlan(effectiveInputs(Object.assign({}, data, { inputs }), logged));
-    data.inputs = inputs;
-    data.checkins = (data.checkins || []).filter(c => c.month !== month);
-    data.checkins.push({
-      month, side: inputs.side, savings: inputs.savings, note: str(req.body.note, 300),
-      safe: plan.safe && plan.safe.month, leap: plan.leap && plan.leap.month
-    });
-    data.checkins = data.checkins.sort((a, b) => a.month.localeCompare(b.month)).slice(-120);
-    await premium.save(req, 'quit', data);
-    back(res, '/tools/quit-date', 'Check-in saved for ' + calc.monthLabel(month) + '.');
-  } catch (e) { next(e); }
-});
-
-router.post('/quit-date/checkin/:month/delete', premium.requirePremium('quit'), async (req, res, next) => {
-  try {
-    const data = await premium.load(req, 'quit');
-    data.checkins = (data.checkins || []).filter(c => c.month !== req.params.month);
-    await premium.save(req, 'quit', data);
-    back(res, '/tools/quit-date');
-  } catch (e) { next(e); }
-});
+// The Quit-Date Planner was retired (2026-11-02). Its URL is in old links and
+// bookmarks, so it goes to Money, where the income log and budget live. Saved
+// planner data is left in place, untouched.
+router.all(['/quit-date', '/quit-date/*'], (req, res) => res.redirect(301, '/budget'));
 
 // --------------------------------------------------------------------- Tax
 const TAX_LISTS = {

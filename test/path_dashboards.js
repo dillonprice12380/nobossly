@@ -90,7 +90,11 @@ for (const slug of SLUGS) {
   ok(`${slug}: its keys are prefixed, so no two paths can collide`, own.every(k => PREFIX.test(k)));
 
   const ranked = dash.workspaceFor(slug);
-  ok(`${slug}: featured and available tools all exist`, ranked.featured.length === dash.PATHS[slug].featured.length && ranked.available.length === dash.PATHS[slug].available.length);
+  // Money tools are counted under Money (2026-11-02), the rest in the Workspace.
+  const named = dash.PATHS[slug].featured.concat(dash.PATHS[slug].available);
+  ok(`${slug}: featured and available tools all exist`, named.every(k => dash.TOOLS[k])
+     && ranked.featured.length + ranked.available.length === named.filter(k => !dash.isMoney(k)).length
+     && named.filter(k => dash.isMoney(k)).every(k => dash.moneyToolsFor(slug).mine.some(t => t.key === k)));
 }
 
 {

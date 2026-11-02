@@ -8,7 +8,7 @@
   <a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>/view">View<%= def.layout === 'canvas' ? ' canvas' : '' %></a>
   <a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>/view?pdf=1">Download PDF</a>
   <% if (typeof canShare !== 'undefined' && canShare) { %><a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>/share">Share</a><% } %>
-  <a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a>
+  <% var _money = typeof navSub !== 'undefined' && navSub === 'money'; %><a class="btn btn-ghost btn-sm" href="<%= _money ? '/budget' : '/workspace' %>"><%= _money ? 'Money' : 'Workspace' %></a>
 </div></div>
 <% if (saved) { %><p class="notice">Saved.</p><% } %>
 

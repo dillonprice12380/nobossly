@@ -73,7 +73,7 @@ function run(router, method, url, { body = {}, sb, headers = {}, user = { id: ME
       profile: { id: ME, username: 'bea', display_name: 'Bea' }
     };
     const res = {
-      statusCode: 200, headers: {},
+      statusCode: 200, headers: {}, locals: {},
       status(c) { this.statusCode = c; return this; },
       set(k, v) { this.headers[k.toLowerCase()] = v; return this; },
       setHeader(k, v) { this.headers[k.toLowerCase()] = v; },

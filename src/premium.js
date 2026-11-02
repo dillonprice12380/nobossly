@@ -7,8 +7,6 @@
 // Premium, whatever this file thinks.
 
 const TOOLS = [
-  { key: 'quit',       href: '/tools/quit-date',  emoji: '🗓️', name: 'Quit-Date Planner',
-    blurb: 'Enter your costs, savings and side income to see the month you can afford to hand in your notice. Log each month and watch the date move.' },
   { key: 'tax',        href: '/tools/tax',        emoji: '🧾', name: 'Tax Set-Aside',
     blurb: 'How much of every payment to put aside, your quarterly estimates and deadlines, and a running log of deductions and miles.' },
   { key: 'pricing',    href: '/tools/pricing',    emoji: '🏷️', name: 'Pricing & Margin Calculator',
