@@ -1091,6 +1091,19 @@
       "submitted_at",
       "title",
       "user_id"
+    ],
+    "workspace_shares": [
+      "created_at",
+      "doc_id",
+      "email",
+      "expires_at",
+      "id",
+      "last_viewed_at",
+      "note",
+      "owner_id",
+      "recipient_id",
+      "revoked_at",
+      "token"
     ]
   },
   "enums": {
@@ -1204,7 +1217,8 @@
         "streak_reminder",
         "badge_earned",
         "notification_digest",
-        "custom"
+        "custom",
+        "doc_share"
       ],
       "status": [
         "sent",

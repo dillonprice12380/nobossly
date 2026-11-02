@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run in the SQL Editor in three parts; verified: table, RLS, 9 functions, grants, email type).
 --
 -- Sharing a worksheet (a canvas, a plan, a persona…) read-only, for members
 -- who are part of an accelerator cohort — a group under an organization — or
