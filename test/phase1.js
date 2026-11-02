@@ -134,7 +134,7 @@ function fakeSb(answers = {}) {
   console.log('\nThe migration (written for review):');
   {
     const sql = read('migrations/2026-11-01_phase1_public_side.sql');
-    ok('it is marked NOT APPLIED', /^-- NOT APPLIED, written for review\./.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
     ok('it does not redefine contains_personal_info (the Phase 0 one is stronger)', !/create or replace function public\.contains_personal_info/.test(sql));
     ok('it allows the help notification type, or accepting would always fail', /'system','help'\]/.test(sql.replace(/\s+/g, '')));
     ok('members can no longer write their own karma', /drop policy if exists karma_insert on public\.karma_transactions/.test(sql));

@@ -1,0 +1,248 @@
+// Path dashboards, step 2: creator, freelancer, Apps & Software, exploring.
+//
+//  - Each config's stages are exactly that path's stage answers, in order, so
+//    the member's setup answer always finds its place.
+//  - Everything a config names (boards, metrics, checklists, worksheets,
+//    featured tools) exists, for every subpath and every stage.
+//  - Links on checklists go to real pages.
+//  - The comparison matrix keeps only what it should and ranks honestly.
+//  - The dashboard panel loads, survives a missing table, and renders.
+//
+//   node test/path_dashboards.js
+
+const fs = require('fs');
+const path = require('path');
+const ejs = require('ejs');
+
+const ROOT = path.join(__dirname, '..');
+const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
+
+let fail = 0;
+const ok = (name, cond, detail) => {
+  if (!cond) fail++;
+  console.log(`  ${cond ? '✓' : '✗'} ${name}${detail !== undefined ? '  — ' + detail : ''}`);
+};
+
+const paths = require('../src/paths');
+const dash = require('../src/path_dashboards');
+const ws = require('../src/workspace/worksheets');
+const matrix = require('../src/workspace/matrix');
+const { registry } = require('../src/engines');
+const { FLAGS } = require('../src/features');
+
+const SLUGS = ['creator', 'freelancer', 'software', 'exploring'];
+
+// A stand-in for supabase-js: every query resolves to the rows given for its
+// table (or an error), whatever filters are chained on.
+function fakeSb(rows = {}, errors = {}) {
+  const calls = [];
+  const chain = table => {
+    const q = new Proxy({}, {
+      get(_, prop) {
+        if (prop === 'then') {
+          const out = errors[table] ? { data: null, error: errors[table] } : { data: rows[table] || [], error: null };
+          return (res, rej) => Promise.resolve(out).then(res, rej);
+        }
+        return (...args) => { calls.push({ table, prop, args }); return q; };
+      }
+    });
+    return q;
+  };
+  return { from: t => chain(t), calls };
+}
+
+// ---------------------------------------------------------------------------
+console.log('Each path has its own dashboard:');
+ok('the four step-2 paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
+ok('other paths have none yet (they come in steps 3 and 4)', !dash.dashboardFor('brick_mortar') && !dash.dashboardFor('consultant'));
+
+for (const slug of SLUGS) {
+  const d = dash.dashboardFor(slug);
+  const stageQ = paths.ownQuestions(slug).find(q => q.name === 'stage');
+  ok(`${slug}: stages are the path's own stage answers, in order`,
+    JSON.stringify(d.stages.map(s => s.answer)) === JSON.stringify(stageQ.options));
+  ok(`${slug}: every stage says what to do next`, d.stages.every(s => typeof s.next === 'string' && s.next.length > 20));
+
+  const subs = [null].concat(paths.subpathsOf(slug).map(s => s.slug));
+  const stages = [null].concat(d.stages.map(s => s.answer));
+  const problems = [];
+  for (const subpath of subs) for (const stage of stages) {
+    const ctx = { subpath, stage, answers: {} };
+    const north = d.northStar(ctx);
+    if (north && !registry.metric(north)) problems.push('metric ' + north);
+    if (!north && !d.northStarBoard) problems.push('no north star at ' + subpath + '/' + stage);
+    d.supporting(ctx).forEach(k => { if (!registry.metric(k)) problems.push('metric ' + k); });
+    if (north && d.supporting(ctx).includes(north)) problems.push(north + ' shown twice');
+    d.boards(ctx).forEach(k => { if (!registry.board(k)) problems.push('board ' + k); });
+    d.checklists(ctx).forEach(k => { if (!registry.checklist(k)) problems.push('checklist ' + k); });
+  }
+  if (d.northStarBoard && !registry.board(d.northStarBoard)) problems.push('board ' + d.northStarBoard);
+  (d.worksheets || []).forEach(k => { if (!ws.WORKSHEETS[k] || !dash.TOOLS[k]) problems.push('worksheet ' + k); });
+  ok(`${slug}: everything it names exists, for every subpath and stage`, !problems.length, problems.slice(0, 5).join('; ') || 'clean');
+
+  const own = [].concat(...[null].concat(paths.subpathsOf(slug).map(s => s.slug))
+    .map(subpath => d.boards({ subpath, stage: null }).concat(d.checklists({ subpath, stage: null }))));
+  ok(`${slug}: its keys are prefixed, so no two paths can collide`, own.every(k => /^(creator|fl|sw|ex)_/.test(k)));
+
+  const ranked = dash.workspaceFor(slug);
+  ok(`${slug}: featured and available tools all exist`, ranked.featured.length === dash.PATHS[slug].featured.length && ranked.available.length === dash.PATHS[slug].available.length);
+}
+
+{
+  const c = dash.dashboardFor('creator');
+  const n = sub => c.northStar({ subpath: sub });
+  ok('creator: the number follows the medium', n('youtube') === 'creator_subscribers' && n('podcast') === 'creator_downloads' && n('blog') === 'creator_visits' && n('social') === 'creator_followers' && n(null) === 'creator_followers');
+  ok('creator: newsletters also track open rate', c.supporting({ subpath: 'newsletter' }).includes('creator_open_rate') && !c.supporting({ subpath: 'youtube' }).includes('creator_open_rate'));
+  const s = dash.dashboardFor('software');
+  ok('software: before launch the number is the waitlist', s.northStar({ stage: 'Building it' }) === 'sw_waitlist');
+  ok('software: live with users, it is active users', s.northStar({ stage: 'Live with users' }) === 'sw_active');
+  ok('software: with paying customers, it is paying customers', s.northStar({ stage: 'Paying customers' }) === 'sw_paying');
+  ok('software: B2B adds a sales pipeline', s.boards({ subpath: 'saas' }).includes('sw_sales') && !s.boards({ subpath: 'consumer' }).includes('sw_sales'));
+  ok('software: churn is better when lower', registry.metric('sw_churn').higherIsBetter === false);
+  ok('exploring: the north star is experiments finished', dash.dashboardFor('exploring').northStarBoard === 'ex_experiments');
+}
+
+// ---------------------------------------------------------------------------
+console.log('\nChecklist links go somewhere real:');
+{
+  const server = read('server.js');
+  const pages = ['/tools/proof', '/tools/pricing', '/tools/tax', '/tools/interviews', '/budget', '/choose-path'];
+  const bad = [];
+  for (const c of registry.all().checklists.filter(c => /^(creator|fl|sw|ex)_/.test(c.key))) {
+    for (const it of c.items) {
+      if (!it.link) continue;
+      if (/^https:\/\//.test(it.link)) continue;
+      const m = it.link.match(/^\/workspace\/(boards|docs)\/([a-z0-9_]+)$/);
+      if (m) {
+        if (m[1] === 'boards' ? !registry.board(m[2]) : !ws.WORKSHEETS[m[2]]) bad.push(it.link);
+        continue;
+      }
+      if (!pages.includes(it.link)) bad.push(it.link);
+    }
+  }
+  ok('every internal link is a known page, board or worksheet', !bad.length, bad.join(', ') || 'clean');
+  ok('external links are https only', registry.all().checklists.every(c => c.items.every(i => !i.link || i.link.startsWith('/') || i.link.startsWith('https://'))));
+  ok('the tools those links point at are mounted', ['/tools', '/budget', '/choose-path', '/workspace'].every(m => server.includes(`'${m}'`)));
+}
+
+// ---------------------------------------------------------------------------
+console.log('\nPath worksheets:');
+{
+  ok('defining the same worksheet twice fails loudly', (() => { try { ws.defineWorksheet('fl_proposal', { label: 'x', sections: [{ key: 'a', label: 'A', type: 'text' }] }); return false; } catch (e) { return /already/.test(e.message); } })());
+  ok('a bad section type fails loudly', (() => { try { ws.defineWorksheet('zz_bad', { label: 'x', sections: [{ key: 'aa', label: 'A', type: 'colour' }] }); return false; } catch (e) { return /type/.test(e.message); } })());
+  const d = ws.clean(ws.WORKSHEETS.fl_proposal, { price: '$1,200', deposit: '400', status: 'Sent', deliverables: 'Logo\nBrand sheet\n', evil: 'x', revisions: 'two' });
+  ok('a proposal keeps prices as numbers and drops unknown fields', d.price === 1200 && d.deposit === 400 && d.status === 'Sent' && !('evil' in d) && !('revisions' in d) && d.deliverables.length === 2);
+  ok('an unknown status is dropped', !('status' in ws.clean(ws.WORKSHEETS.fl_proposal, { status: 'Won!!' })));
+  ok('the MVP scope keeps its ship date', ws.clean(ws.WORKSHEETS.sw_mvp_scope, { ship_by: '2027-01-15' }).ship_by === '2027-01-15');
+}
+
+// ---------------------------------------------------------------------------
+console.log('\nThe options matrix:');
+{
+  const def = ws.WORKSHEETS.ex_options;
+  const body = {
+    opt_0: 'Dog walking', opt_1: '', opt_2: 'Etsy prints', opt_3: 'Tutoring',
+    crit_0: 'Uses my skills', w_0: '3', crit_1: 'Low cost', w_1: '1', crit_2: '', w_2: '3', crit_3: 'Fits my hours', w_3: '9',
+    s_0_0: '2', s_0_1: '5', s_0_3: '5',
+    s_2_0: '4', s_2_1: '4', s_2_3: '3',
+    s_3_0: '5', s_3_1: '3', s_3_3: '4', s_3_2: '5',
+    s_1_0: '5', s_9_9: '5', s_0_0x: '4'
+  };
+  const data = ws.clean(def, body);
+  ok('blank options and criteria are dropped, order kept', JSON.stringify(data.options) === '["Dog walking","Etsy prints","Tutoring"]' && data.criteria.map(c => c.label).join('|') === 'Uses my skills|Low cost|Fits my hours');
+  ok('a weight outside 1–3 becomes "matters"', data.criteria[2].weight === 2 && data.criteria[0].weight === 3 && data.criteria[1].weight === 1);
+  ok('scores follow their option and criterion when blanks close up', data.scores['1:0'] === 4 && data.scores['2:2'] === 4 && data.scores['0:2'] === 5);
+  ok('scores for blank rows or columns are dropped', Object.keys(data.scores).length === 9, Object.keys(data.scores).join(','));
+  const r = matrix.results(data);
+  ok('weighted totals rank the options', r.ranked[0].label === 'Tutoring' && r.ranked[0].total === 5 * 3 + 3 * 1 + 4 * 2, r.ranked.map(x => x.label + ' ' + x.total).join(', '));
+  ok('a percentage of the best possible score', r.ranked[0].pct === Math.round(26 / 30 * 100));
+  ok('a tie at the top names no leader', matrix.results({ options: ['A', 'B'], criteria: [{ label: 'x', weight: 2 }], scores: { '0:0': 3, '1:0': 3 } }).tie === true);
+  ok('nothing scored names no leader', matrix.results({ options: ['A', 'B'], criteria: [{ label: 'x', weight: 2 }], scores: {} }).leader === null);
+  ok('progress counts fully scored options', ws.progress(def, data).done === 3);
+  ok('an empty matrix is safe', matrix.results(undefined).rows.length === 0 && ws.progress(def, {}).done === 0);
+}
+
+// ---------------------------------------------------------------------------
+async function panels() {
+  console.log('\nThe dashboard panel:');
+  const now = new Date('2026-11-15T12:00:00Z');
+  const sb = fakeSb({
+    metric_entries: [{ id: 'e1', metric: 'fl_income', period: '2026-11-01', value: 2400, note: null }, { id: 'e2', metric: 'fl_income', period: '2026-10-01', value: 1800, note: null }],
+    pipeline_items: [{ stage: 'lead', value: 500 }, { stage: 'won', value: 1200 }],
+    checklist_progress: [{ item: 'scope', done_at: '2026-11-01T00:00:00Z', due_on: null, note: null }]
+  });
+  const profile = { path: 'freelancer', subpath: 'design', path_answers: { stage: 'Some regular clients' } };
+  const p = await dash.panelFor(sb, 'me', profile, now);
+  ok('it knows the stage and the next step', p.stage.index === 2 && /testimonials/.test(p.stage.next));
+  ok('the north star is billable income', p.north && p.north.def.key === 'fl_income' && p.north.display.latest.includes('2,400'), p.north && p.north.display.latest);
+  ok('supporting numbers, boards and checklists all load', p.supporting.length === 3 && p.boards.length === 2 && p.checklists.length === 3);
+  ok('every query is the member\'s own', sb.calls.filter(c => c.prop === 'eq' && c.args[0] === 'user_id').every(c => c.args[1] === 'me') && sb.calls.some(c => c.prop === 'eq' && c.args[0] === 'user_id'));
+  ok('not "being set up" when the tables are there', p.notReady === false);
+
+  const missing = { code: 'PGRST205', message: "Could not find the table 'public.metric_entries'" };
+  const p2 = await dash.panelFor(fakeSb({}, { metric_entries: missing, pipeline_items: missing, checklist_progress: missing }), 'me', profile, now);
+  ok('a missing table marks it "being set up" instead of failing', p2 && p2.notReady === true && p2.north === null && p2.boards.length === 0);
+
+  const p3 = await dash.panelFor(fakeSb(), 'me', { path: 'exploring', path_answers: {} }, now);
+  ok('no stage answered: it asks, and points at the first step', p3.stage.index === -1 && p3.stage.current === null && /self-inventory/.test(p3.stage.next));
+  ok('exploring shows its experiments board as the number', p3.northBoard && p3.northBoard.def.key === 'ex_experiments' && p3.boards.length === 0);
+  ok('a path without a dashboard gets none', (await dash.panelFor(fakeSb(), 'me', { path: 'brick_mortar' }, now)) === null);
+  ok('a member with no path gets none', (await dash.panelFor(fakeSb(), 'me', {}, now)) === null);
+
+  const items = dash.pathItemsFor({ path: 'software', subpath: 'saas', path_answers: { stage: 'Building it' } });
+  ok('the workspace hub lists the path\'s boards, numbers and checklists', items.boards.length === 3 && items.metrics[0].key === 'sw_waitlist' && items.checklists.length === 2);
+
+  // Rendering.
+  const V = f => path.join(ROOT, 'views', f);
+  const base = {
+    title: 'T', user: { id: 'me' }, profile: { id: 'me', username: 'me', path: 'freelancer' }, plan: 'paid', currentPath: '/dashboard', canonicalUrl: 'x',
+    unreadCount: 0, unreadMsgs: 0, metaDescription: '', bodyTheme: '', settings: {}, pendingDeletion: null, reactivated: false,
+    isPremium: true, flags: FLAGS, flashErr: null, premiumTools: [],
+    affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false }
+  };
+  const render = (f, data) => ejs.render(read('views/' + f), Object.assign({}, base, data), { filename: V(f) });
+  let html = '';
+  try { html = render('partials/path_panel.ejs', { panel: p, pathInfo: { label: 'Freelancer', emoji: '💻' } }); } catch (e) { html = 'ERR ' + e.message; }
+  ok('the panel renders stage, number, boards and checklists', html.includes('Your freelancer dashboard') && html.includes('class="here"') && html.includes('Billable income') && html.includes('Client pipeline') && html.includes('Contract essentials'), html.startsWith('ERR') ? html.slice(0, 200) : undefined);
+  let html3 = '';
+  try { html3 = render('partials/path_panel.ejs', { panel: p3, pathInfo: { label: 'Still figuring it out', emoji: '🧭' } }); } catch (e) { html3 = 'ERR ' + e.message; }
+  ok('with no stage, it asks where they are', html3.includes('Tell us where you are') && html3.includes('Two-week experiments'), html3.startsWith('ERR') ? html3.slice(0, 200) : undefined);
+  let html2 = '';
+  try { html2 = render('partials/path_panel.ejs', { panel: p2, pathInfo: { label: 'Freelancer', emoji: '💻' } }); } catch (e) { html2 = 'ERR ' + e.message; }
+  ok('before the tables exist, it says so', html2.includes('being set up'), html2.startsWith('ERR') ? html2.slice(0, 200) : undefined);
+
+  const def = ws.WORKSHEETS.ex_options;
+  const data = ws.clean(def, { opt_0: 'A', opt_1: 'B', crit_0: 'Money', w_0: '3', s_0_0: '4', s_1_0: '2', decision: 'Test A first' });
+  let mx = '';
+  try {
+    mx = render('workspace/doc.ejs', { def, kind: 'ex_options', doc: { id: 'd1', title: 'Which one', updated_at: now.toISOString() }, data,
+      progress: ws.progress(def, data), score: null, pitch: null, saved: false, matrix: matrix.results(data) });
+  } catch (e) { mx = 'ERR ' + e.message; }
+  ok('the matrix page renders the grid, the leader and the decision', mx.includes('name="s_1_0"') && mx.includes('Leading: A') && mx.includes('Test A first') && mx.includes('name="crit_3"'), mx.startsWith('ERR') ? mx.slice(0, 200) : undefined);
+  let mx2 = '';
+  try {
+    mx2 = render('workspace/doc.ejs', { def, kind: 'ex_options', doc: { id: 'd1', title: '', updated_at: now.toISOString() }, data: {},
+      progress: ws.progress(def, {}), score: null, pitch: null, saved: false, matrix: matrix.results({}) });
+  } catch (e) { mx2 = 'ERR ' + e.message; }
+  ok('a new matrix suggests criteria and waits for options', mx2.includes('placeholder="Uses my skills"') && mx2.includes('scoring grid appears'), mx2.startsWith('ERR') ? mx2.slice(0, 200) : undefined);
+
+  const prop = ws.WORKSHEETS.fl_proposal;
+  let pr = '';
+  try { pr = render('workspace/doc.ejs', { def: prop, kind: 'fl_proposal', doc: { id: 'd2', title: 'Bakery site', updated_at: now.toISOString() }, data: { price: 1200 }, progress: ws.progress(prop, { price: 1200 }), score: null, pitch: null, saved: false, matrix: null }); } catch (e) { pr = 'ERR ' + e.message; }
+  ok('a path worksheet renders like any other', pr.includes('Payment terms') && pr.includes('value="1200"'), pr.startsWith('ERR') ? pr.slice(0, 200) : undefined);
+
+  let hub = '';
+  try {
+    hub = render('workspace/index.ejs', { tools: dash.workspaceFor('software'), recent: {}, notReady: false, pathDef: paths.get('software'), needsSetup: false, msg: null, pathItems: items });
+  } catch (e) { hub = 'ERR ' + e.message; }
+  ok('the workspace hub links the path\'s boards and logs', hub.includes('/workspace/boards/sw_roadmap') && hub.includes('/workspace/metrics/sw_waitlist') && hub.includes('/workspace/checklists/sw_launch') && hub.includes('MVP scope'), hub.startsWith('ERR') ? hub.slice(0, 200) : undefined);
+
+  const dashView = read('views/dashboard.ejs');
+  ok('the dashboard shows the panel', dashView.includes("include('partials/path_panel'"));
+  ok('the dashboard route loads it', read('src/routes/dashboard.js').includes('dashboards.panelFor('));
+}
+
+panels().then(() => {
+  console.log(fail ? `\n${fail} failed` : '\nAll good');
+  process.exit(fail ? 1 : 0);
+}).catch(e => { console.error(e); process.exit(1); });

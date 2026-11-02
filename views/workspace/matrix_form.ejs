@@ -1,0 +1,80 @@
+<%# A comparison matrix (src/workspace/matrix.js): options down the side,
+    weighted criteria across the top, a 1–5 score in each cell. Works without JS. %>
+<% var M = matrix;
+   var opts = (data.options || []).slice(); while (opts.length < M.MAX_OPTIONS) opts.push('');
+   var crits = (data.criteria || []).slice(); while (crits.length < M.MAX_CRITERIA) crits.push({ label: '', weight: 2 });
+   var shownCrits = Math.min(M.MAX_CRITERIA, Math.max(4, (data.criteria || []).length + 1));
+   var defaults = def.defaultCriteria || []; %>
+<% if (matrix && matrix.rows.length) { %>
+  <div class="card" style="border-left:3px solid var(--accent-2)">
+    <% if (matrix.leader) { %>
+      <p style="margin:0"><strong>Leading: <%= matrix.leader.label %></strong> — <%= matrix.leader.pct %>% of a perfect score.<% if (!matrix.leader.complete) { %> <span class="muted small">Score every box for a fair comparison.</span><% } %></p>
+    <% } else if (matrix.tie) { %>
+      <p style="margin:0"><strong>It's a tie at the top.</strong> Add a criterion that splits them, or run a small test on each.</p>
+    <% } else { %>
+      <p class="muted" style="margin:0">Score the options below to see which comes out ahead.</p>
+    <% } %>
+    <div class="mx-bars">
+      <% matrix.ranked.forEach(function (r) { %>
+        <div class="mx-bar"><span class="small"><%= r.label %></span><span class="mx-track"><span style="width:<%= r.pct %>%"></span></span><span class="small muted"><%= r.pct %>%</span></div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+
+<form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>" class="card form-card">
+  <label><%= def.titleLabel || 'Name' %><input name="title" maxlength="120" value="<%= doc.title || '' %>"></label>
+
+  <h3 style="margin:1rem 0 .3rem"><%= def.optionsLabel || 'Options' %></h3>
+  <p class="muted small" style="margin:0 0 .4rem"><%= def.optionsHelp || 'Two to five things you are choosing between.' %></p>
+  <div class="mx-list">
+    <% opts.forEach(function (o, i) { %><input name="opt_<%= i %>" maxlength="80" value="<%= o %>" placeholder="Option <%= i + 1 %>"><% }) %>
+  </div>
+
+  <h3 style="margin:1rem 0 .3rem">What matters to you</h3>
+  <p class="muted small" style="margin:0 0 .4rem">Your own criteria, and how much each one counts.</p>
+  <div class="mx-list">
+    <% for (var j = 0; j < shownCrits; j++) { var c = crits[j]; var ph = defaults[j] || ('Criterion ' + (j + 1)); %>
+      <div class="mx-crit">
+        <input name="crit_<%= j %>" maxlength="80" value="<%= c.label %>" placeholder="<%= ph %>">
+        <select name="w_<%= j %>" aria-label="Weight"><% Object.keys(M.WEIGHTS).forEach(function (w) { %><option value="<%= w %>" <%= String(c.weight) === w ? 'selected' : '' %>><%= M.WEIGHTS[w] %></option><% }) %></select>
+      </div>
+    <% } %>
+  </div>
+
+  <% if ((data.options || []).length && (data.criteria || []).length) { %>
+    <h3 style="margin:1rem 0 .3rem">Scores</h3>
+    <p class="muted small" style="margin:0 0 .4rem">1 = poor, 5 = excellent. Be honest; nobody else sees this.</p>
+    <div class="mx-scroll">
+      <table class="mx-table">
+        <thead><tr><th></th><% data.criteria.forEach(function (c) { %><th><%= c.label %></th><% }) %></tr></thead>
+        <tbody>
+          <% data.options.forEach(function (o, i) { %>
+            <tr><th scope="row"><%= o %></th>
+              <% data.criteria.forEach(function (c, j) { var v = (data.scores || {})[i + ':' + j]; %>
+                <td><select name="s_<%= i %>_<%= j %>" aria-label="<%= o %> — <%= c.label %>"><option value="">–</option><% [1,2,3,4,5].forEach(function (n) { %><option <%= v === n ? 'selected' : '' %>><%= n %></option><% }) %></select></td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="muted small">Add options and criteria, save, and the scoring grid appears.</p>
+  <% } %>
+
+  <label style="margin-top:1rem"><strong>Decision</strong> <span class="muted small">(what you will do next)</span><textarea name="decision" rows="2" maxlength="600"><%= data.decision || '' %></textarea></label>
+  <div class="cta-row" style="justify-content:flex-start;gap:.5rem"><button class="btn btn-primary">Save</button></div>
+</form>
+<style>
+  .mx-list { display: grid; gap: .4rem; }
+  .mx-crit { display: grid; grid-template-columns: 1fr auto; gap: .4rem; }
+  .mx-scroll { overflow-x: auto; }
+  .mx-table { border-collapse: collapse; min-width: 100%; }
+  .mx-table th, .mx-table td { padding: .35rem .4rem; border-bottom: 1px solid var(--border); text-align: left; font-size: .9rem; }
+  .mx-table thead th { font-weight: 600; white-space: nowrap; }
+  .mx-bars { display: grid; gap: .3rem; margin-top: .6rem; }
+  .mx-bar { display: grid; grid-template-columns: minmax(6rem, 12rem) 1fr 3rem; gap: .5rem; align-items: center; }
+  .mx-track { background: var(--border); border-radius: 99px; height: .5rem; overflow: hidden; }
+  .mx-track span { display: block; height: 100%; background: var(--accent-2); }
+</style>
