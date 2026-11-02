@@ -139,6 +139,9 @@ function defineWorksheet(key, def) {
     if (!TYPES.includes(s.type)) bad('section "' + s.key + '" type must be one of ' + TYPES.join(', '));
     if (s.type === 'select' && !(Array.isArray(s.options) && s.options.length)) bad('select "' + s.key + '" needs options');
   });
+  // Optional: data → [{ label, value, tone? }] worked out from what is filled in
+  // (a quote total, a margin). Arithmetic only; shown above the form.
+  if (def.summary !== undefined && typeof def.summary !== 'function') bad('summary must be a function');
   WORKSHEETS[key] = Object.freeze(Object.assign({ layout: 'form', multiple: true, emoji: '📝', blurb: '' }, def));
   return WORKSHEETS[key];
 }
@@ -197,4 +200,10 @@ function pitchStats(text) {
   return { words, seconds: Math.round(words / 150 * 60) };
 }
 
-module.exports = { WORKSHEETS, defineWorksheet, clean, progress, ideaScore, pitchStats };
+// The summary lines a worksheet works out, never throwing on half-filled data.
+function summaryOf(def, data) {
+  if (!def || typeof def.summary !== 'function') return [];
+  try { return (def.summary(data || {}) || []).filter(x => x && x.label && x.value !== undefined && x.value !== null); } catch (_) { return []; }
+}
+
+module.exports = { WORKSHEETS, defineWorksheet, summaryOf, clean, progress, ideaScore, pitchStats };

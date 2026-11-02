@@ -12,6 +12,15 @@
   </div>
 <% } %>
 
+<% if (typeof summary !== 'undefined' && summary && summary.length) { %>
+  <div class="card ws-summary" style="border-left:3px solid var(--accent-2);max-width:820px">
+    <% summary.forEach(function (x) { %>
+      <div class="ws-sum-row"><span class="muted small"><%= x.label %></span><strong style="<%= x.tone === 'bad' ? 'color:var(--danger)' : x.tone === 'good' ? 'color:var(--accent-2)' : '' %>"><%= x.value %></strong></div>
+    <% }) %>
+    <p class="muted small" style="margin:.4rem 0 0">Worked out from what you have filled in. Save to update.</p>
+  </div>
+  <style>.ws-sum-row { display: flex; justify-content: space-between; gap: 1rem; padding: .15rem 0; }</style>
+<% } %>
 <% if (def.layout === 'matrix') { %>
 <%- include('matrix_form', { def: def, kind: kind, doc: doc, data: data, matrix: matrix }) %>
 <% } else { %>

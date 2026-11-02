@@ -8,7 +8,7 @@
 // user_custom_milestones.
 const router = require('express').Router();
 const dashboards = require('../path_dashboards');
-const { WORKSHEETS, clean, progress, ideaScore, pitchStats } = require('../workspace/worksheets');
+const { WORKSHEETS, clean, progress, ideaScore, pitchStats, summaryOf } = require('../workspace/worksheets');
 const matrix = require('../workspace/matrix');
 const paths = require('../paths');
 const { quiet } = require('../db');
@@ -72,6 +72,7 @@ router.get('/docs/:kind/:id', async (req, res, next) => {
       progress: progress(def, doc.data || {}), score: req.params.kind === 'idea_refiner' ? ideaScore(doc.data || {}) : null,
       pitch: req.params.kind === 'elevator_pitch' ? pitchStats((doc.data || {}).pitch) : null,
       matrix: def.layout === 'matrix' ? matrix.results(doc.data || {}) : null,
+      summary: summaryOf(def, doc.data || {}),
       saved: !!req.query.saved
     });
   } catch (e) { next(e); }

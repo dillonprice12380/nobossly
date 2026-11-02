@@ -1,4 +1,5 @@
-// Path dashboards, step 2: creator, freelancer, Apps & Software, exploring.
+// Path dashboards, steps 2 and 3: creator, freelancer, Apps & Software,
+// exploring, consultant, local service, online store, physical product.
 //
 //  - Each config's stages are exactly that path's stage answers, in order, so
 //    the member's setup answer always finds its place.
@@ -30,7 +31,8 @@ const matrix = require('../src/workspace/matrix');
 const { registry } = require('../src/engines');
 const { FLAGS } = require('../src/features');
 
-const SLUGS = ['creator', 'freelancer', 'software', 'exploring'];
+const SLUGS = ['creator', 'freelancer', 'software', 'exploring', 'consultant', 'local_service', 'online_store', 'physical_product'];
+const PREFIX = /^(creator|fl|sw|ex|con|loc|shop|prod)_/;
 
 // A stand-in for supabase-js: every query resolves to the rows given for its
 // table (or an error), whatever filters are chained on.
@@ -53,8 +55,8 @@ function fakeSb(rows = {}, errors = {}) {
 
 // ---------------------------------------------------------------------------
 console.log('Each path has its own dashboard:');
-ok('the four step-2 paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
-ok('other paths have none yet (they come in steps 3 and 4)', !dash.dashboardFor('brick_mortar') && !dash.dashboardFor('consultant'));
+ok('the eight step-2 and step-3 paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
+ok('brick and mortar has none yet (step 4)', !dash.dashboardFor('brick_mortar'));
 
 for (const slug of SLUGS) {
   const d = dash.dashboardFor(slug);
@@ -70,7 +72,9 @@ for (const slug of SLUGS) {
     const ctx = { subpath, stage, answers: {} };
     const north = d.northStar(ctx);
     if (north && !registry.metric(north)) problems.push('metric ' + north);
-    if (!north && !d.northStarBoard) problems.push('no north star at ' + subpath + '/' + stage);
+    const nl = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
+    if (nl && !registry.checklist(nl)) problems.push('checklist ' + nl);
+    if (!north && !d.northStarBoard && !nl) problems.push('no north star at ' + subpath + '/' + stage);
     d.supporting(ctx).forEach(k => { if (!registry.metric(k)) problems.push('metric ' + k); });
     if (north && d.supporting(ctx).includes(north)) problems.push(north + ' shown twice');
     d.boards(ctx).forEach(k => { if (!registry.board(k)) problems.push('board ' + k); });
@@ -82,7 +86,7 @@ for (const slug of SLUGS) {
 
   const own = [].concat(...[null].concat(paths.subpathsOf(slug).map(s => s.slug))
     .map(subpath => d.boards({ subpath, stage: null }).concat(d.checklists({ subpath, stage: null }))));
-  ok(`${slug}: its keys are prefixed, so no two paths can collide`, own.every(k => /^(creator|fl|sw|ex)_/.test(k)));
+  ok(`${slug}: its keys are prefixed, so no two paths can collide`, own.every(k => PREFIX.test(k)));
 
   const ranked = dash.workspaceFor(slug);
   ok(`${slug}: featured and available tools all exist`, ranked.featured.length === dash.PATHS[slug].featured.length && ranked.available.length === dash.PATHS[slug].available.length);
@@ -102,13 +106,48 @@ for (const slug of SLUGS) {
   ok('exploring: the north star is experiments finished', dash.dashboardFor('exploring').northStarBoard === 'ex_experiments');
 }
 
+{
+  const c = dash.dashboardFor('consultant');
+  ok('consultant: health and finance coaches get the "what you can claim" list', c.checklists({ subpath: 'health' }).includes('con_claims') && c.checklists({ subpath: 'finance' }).includes('con_claims') && !c.checklists({ subpath: 'business' }).includes('con_claims'));
+  const o = dash.dashboardFor('online_store');
+  ok('online store: supplied stores get a suppliers board, makers do not', o.boards({ subpath: 'dropship' }).includes('shop_suppliers') && !o.boards({ subpath: 'handmade' }).includes('shop_suppliers'));
+  const p = dash.dashboardFor('physical_product');
+  ok('physical product: before samples, the development gates are the north star', p.northStar({ stage: 'Prototype made' }) === null && p.northStarChecklist({ stage: 'Prototype made' }) === 'prod_gates');
+  ok('physical product: at samples, pre-orders; once selling, units sold', p.northStar({ stage: 'Samples from a manufacturer' }) === 'prod_preorders' && p.northStar({ stage: 'Selling it' }) === 'prod_units' && p.northStarChecklist({ stage: 'Selling it' }) === null);
+  ok('local service: no board asks for an address', ['loc_jobs', 'loc_regulars'].every(k => registry.board(k).fields.every(f => !/address|street|phone|email/i.test(f.key))));
+}
+
+console.log('\nWorksheets that do the arithmetic:');
+{
+  const sum = (k, d) => ws.summaryOf(ws.WORKSHEETS[k], d);
+  const val = (rows, label) => (rows.find(r => r.label.startsWith(label)) || {}).value;
+  const q = sum('loc_quote', { hours: 3, rate: 45, materials: 100, markup: 10, callout: 25 });
+  ok('a quote adds labour, marked-up materials and call-out', val(q, 'Quote total') === '$270', JSON.stringify(q));
+  const qm = sum('loc_quote', { hours: 0.5, rate: 40, minimum: 60 });
+  ok('a small job is raised to the minimum', val(qm, 'Quote total') === '$60' && !!val(qm, 'Raised to your minimum'));
+  ok('an empty quote shows nothing', sum('loc_quote', {}).length === 0);
+  const sp = sum('shop_product', { price: 40, cost: 12, fee_pct: 10, shipping: 5, packaging: 1, ad_cost: 4 });
+  ok('a product\'s profit takes off fees, shipping, packaging and ads', val(sp, 'Profit per order') === '$14' && val(sp, 'Margin') === '35%', JSON.stringify(sp));
+  const sl = sum('shop_product', { price: 20, cost: 15, fee_pct: 10, shipping: 6 });
+  ok('a loss is shown as a loss', /-\$|−\$|\(\$/.test(val(sl, 'Profit per order')) && sl.find(r => r.label === 'Profit per order').tone === 'bad', val(sl, 'Profit per order'));
+  ok('handmade time is costed when given', val(sum('shop_product', { price: 40, cost: 5, hours: 1, hourly: 20 }), 'All costs') === '$25');
+  ok('low stock says reorder', val(sum('shop_product', { price: 10, stock: 3, reorder_at: 5 }), 'Stock') === 'Time to reorder');
+  const b = sum('prod_bom', { unit_cost: 6, packaging: 1, freight: 1.5, duty: 0.5, tooling: 2000, order_qty: 1000, retail: 40 });
+  ok('landed cost spreads tooling over the run', val(b, 'Landed cost') === '$11', JSON.stringify(b));
+  ok('cash needed for the run includes tooling', val(b, 'Cash needed') === '$11,000');
+  ok('wholesale defaults to half of retail', val(b, 'Margin at wholesale (half of retail)') === '45%');
+  ok('the 4× rule is checked', /^No/.test(val(b, 'Retail at least 4×')) && /^Yes/.test(val(sum('prod_bom', { unit_cost: 5, retail: 40 }), 'Retail at least 4×')));
+  ok('the offer builder says how many clients a goal needs', val(sum('con_offer', { price: 1500 }), 'Clients a month') === '4 at $1,500');
+  ok('a broken summary never breaks the page', ws.summaryOf({ summary: () => { throw new Error('x'); } }, {}).length === 0);
+}
+
 // ---------------------------------------------------------------------------
 console.log('\nChecklist links go somewhere real:');
 {
   const server = read('server.js');
-  const pages = ['/tools/proof', '/tools/pricing', '/tools/tax', '/tools/interviews', '/budget', '/choose-path'];
+  const pages = ['/tools/proof', '/tools/pricing', '/tools/tax', '/tools/interviews', '/budget', '/choose-path', '/surveys'];
   const bad = [];
-  for (const c of registry.all().checklists.filter(c => /^(creator|fl|sw|ex)_/.test(c.key))) {
+  for (const c of registry.all().checklists.filter(c => PREFIX.test(c.key))) {
     for (const it of c.items) {
       if (!it.link) continue;
       if (/^https:\/\//.test(it.link)) continue;
@@ -122,7 +161,7 @@ console.log('\nChecklist links go somewhere real:');
   }
   ok('every internal link is a known page, board or worksheet', !bad.length, bad.join(', ') || 'clean');
   ok('external links are https only', registry.all().checklists.every(c => c.items.every(i => !i.link || i.link.startsWith('/') || i.link.startsWith('https://'))));
-  ok('the tools those links point at are mounted', ['/tools', '/budget', '/choose-path', '/workspace'].every(m => server.includes(`'${m}'`)));
+  ok('the tools those links point at are mounted', ['/tools', '/budget', '/choose-path', '/workspace', '/surveys'].every(m => server.includes(`'${m}'`)));
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +275,18 @@ async function panels() {
     hub = render('workspace/index.ejs', { tools: dash.workspaceFor('software'), recent: {}, notReady: false, pathDef: paths.get('software'), needsSetup: false, msg: null, pathItems: items });
   } catch (e) { hub = 'ERR ' + e.message; }
   ok('the workspace hub links the path\'s boards and logs', hub.includes('/workspace/boards/sw_roadmap') && hub.includes('/workspace/metrics/sw_waitlist') && hub.includes('/workspace/checklists/sw_launch') && hub.includes('MVP scope'), hub.startsWith('ERR') ? hub.slice(0, 200) : undefined);
+
+  const qdef = ws.WORKSHEETS.loc_quote;
+  const qdata = { hours: 3, rate: 45, materials: 100 };
+  let qh = '';
+  try { qh = render('workspace/doc.ejs', { def: qdef, kind: 'loc_quote', doc: { id: 'd3', title: 'Fence', updated_at: now.toISOString() }, data: qdata, progress: ws.progress(qdef, qdata), score: null, pitch: null, saved: false, matrix: null, summary: ws.summaryOf(qdef, qdata) }); } catch (e) { qh = 'ERR ' + e.message; }
+  ok('a worksheet page shows its worked-out total', qh.includes('Quote total') && qh.includes('$235'), qh.startsWith('ERR') ? qh.slice(0, 200) : undefined);
+
+  const pp = await dash.panelFor(fakeSb({ checklist_progress: [{ item: 'problem', done_at: '2026-11-01T00:00:00Z' }] }), 'me', { path: 'physical_product', subpath: 'outdoor', path_answers: { stage: 'Prototype made' } }, now);
+  ok('a product in development shows its gates as the number, not twice', pp.northChecklist && pp.northChecklist.def.key === 'prod_gates' && pp.north === null && !pp.checklists.some(c => c.def.key === 'prod_gates') && pp.boards.length === 0);
+  let ph = '';
+  try { ph = render('partials/path_panel.ejs', { panel: pp, pathInfo: { label: 'Physical product', emoji: '🔧' } }); } catch (e) { ph = 'ERR ' + e.message; }
+  ok('...and renders it', ph.includes('Development gates') && ph.includes('Your numbers'), ph.startsWith('ERR') ? ph.slice(0, 200) : undefined);
 
   const dashView = read('views/dashboard.ejs');
   ok('the dashboard shows the panel', dashView.includes("include('partials/path_panel'"));

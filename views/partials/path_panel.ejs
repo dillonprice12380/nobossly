@@ -26,10 +26,11 @@
     <% } %>
   </div>
 
-  <% if (P.north || P.northBoard || P.supporting.length) { %>
+  <% if (P.north || P.northBoard || P.northChecklist || P.supporting.length) { %>
     <h3 class="pp-h">Your numbers</h3>
     <div class="grid">
       <% if (P.north) { %><div class="pp-north"><%- include('metric_card', { card: P.north }) %></div><% } %>
+      <% if (P.northChecklist) { %><div class="pp-north"><%- include('checklist_card', { progress: P.northChecklist }) %></div><% } %>
       <% if (P.northBoard) { %><div class="pp-north"><%- include('board_summary', { summary: P.northBoard }) %></div><% } %>
       <% P.supporting.forEach(function (c) { %><%- include('metric_card', { card: c }) %><% }) %>
     </div>
