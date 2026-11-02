@@ -258,10 +258,10 @@ const CANVAS = { id: DOC, user_id: ME, kind: 'business_model_canvas', title: 'En
     ok('notifications for a share link to it', require('fs').readFileSync(path.join(ROOT, 'src/routes/notifications.js'), 'utf8').includes("workspace_shares: id => '/workspace/shared/' + id"));
   }
 
-  console.log('\nThe migration (written for review):');
+  console.log('\nThe migration:');
   {
     const sql = read('migrations/2026-11-02_workspace_shares.sql');
-    ok('it is written for review', /^-- NOT APPLIED/.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
     const fns = [...sql.matchAll(/create or replace function public\.(\w+)\(/g)].map(m => m[1]);
     const open = fns.filter(f => !new RegExp(`revoke all on function public\\.${f}\\([^)]*\\)\\s+from public`).test(sql));
     ok('every function has its default access revoked', open.length === 0, open.join(', ') || fns.length + ' functions');
