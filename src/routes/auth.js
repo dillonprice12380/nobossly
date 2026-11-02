@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pwned = require('../pwned');
 const crypto = require('crypto');
 const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts } = require('../middleware/auth');
@@ -50,6 +51,9 @@ router.post('/signup', async (req, res) => {
   const sb = anonClient();
   const { data: taken } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
   if (taken) return res.render('signup', { title: 'Sign up', error: 'That username is taken — try another.', path: keepPath(req), pathDef: pathDefOf(req) });
+  // A password from a known data breach is refused (src/pwned.js).
+  const leaked = await pwned.refusal(password);
+  if (leaked) return res.render('signup', { title: 'Sign up', error: leaked, path: keepPath(req), pathDef: pathDefOf(req) });
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
   if (error) return res.render('signup', { title: 'Sign up', error: error.message, path: keepPath(req), pathDef: pathDefOf(req) });
   // Fire-and-forget: a mail failure must never block a signup.
@@ -115,6 +119,8 @@ router.post('/reset', async (req, res) => {
   if (password.length < 8) return fail('Your new password must be at least 8 characters.');
   if (password !== confirm) return fail('Those two passwords did not match. Please try again.');
   if (!req.accessToken) return fail('Your reset link has expired. Request a new one below.');
+  const leaked = await pwned.refusal(password);
+  if (leaked) return fail(leaked);
   try {
     const base = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
     const r = await fetch(base + '/auth/v1/user', {
