@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor; verified: 5 tables, 19 policies, 13 functions, anon closed).
 --
 -- Phase 3: the private side. Groups become public, private or hidden;
 -- accelerators get organizations whose staff run cohorts (hidden, invite-only
