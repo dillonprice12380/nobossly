@@ -1,6 +1,6 @@
 # Path dashboards — the map
 
-Status: proposal for Dillon's review (2026-11-01). Nothing here is built yet.
+Status: built (2026-11-02). Setup, workspace and building blocks in step 1; every path's dashboard in steps 2–4. Path configs live in `src/path_dashboards/<path>.js`.
 
 ## The idea in one paragraph
 
