@@ -54,6 +54,9 @@
     <a class="btn btn-primary" style="flex:none" href="/choose-path/setup">Set up →</a>
   </div>
 <% } %>
+<% if (typeof pathPanel !== 'undefined' && pathPanel && yourPath) { %>
+  <%- include('partials/path_panel', { panel: pathPanel, pathInfo: yourPath }) %>
+<% } %>
 <% if (typeof pathTools !== 'undefined' && pathTools.length) { %>
   <div class="card">
     <div class="page-head" style="margin:0 0 .5rem"><div><h2 style="margin:0">🧰 Your tools</h2><p class="muted small" style="margin:.15rem 0 0"><%= yourPath ? 'Picked for your path.' : 'A good place to start.' %></p></div><a class="btn btn-ghost btn-sm" href="/workspace">All tools</a></div>

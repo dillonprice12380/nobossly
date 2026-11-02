@@ -195,7 +195,7 @@ function fakeSb(answers = {}) {
   console.log('\nThe migration (written for review):');
   {
     const sql = read('migrations/2026-11-01_workspace_foundations.sql');
-    ok('it is marked NOT APPLIED', /^-- NOT APPLIED, written for review\./.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
     ok('every new table is owner-only and closed to anon',
        ['workspace_docs', 'pipeline_items', 'metric_entries', 'checklist_progress'].every(t =>
          new RegExp(`create policy ${t}_own on public\\.${t} for all to authenticated\\s+using \\(user_id = auth\\.uid\\(\\)\\) with check \\(user_id = auth\\.uid\\(\\)\\)`).test(sql)) && /revoke all on public\.workspace_docs, public\.pipeline_items, public\.metric_entries, public\.checklist_progress from anon;/.test(sql));

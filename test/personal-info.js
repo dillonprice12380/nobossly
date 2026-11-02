@@ -54,7 +54,7 @@ console.log('\nThe database agrees with the app:');
   ok('the triggers cover messages, group posts, forum threads and replies',
      ['messages', 'group_posts', 'forum_threads', 'forum_replies'].every(t => new RegExp(`before insert or update of [a-z_, ]+ on public\\.${t}\\b`).test(sql)));
   ok('filter_hits never stores the text', !/\btext_value\b|\bbody\b|\bcontent\b/.test(sql.slice(sql.indexOf('create table if not exists public.filter_hits'))));
-  ok('the migration is marked as not applied', /^-- NOT APPLIED, written for review\./.test(sql));
+  ok('the migration is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
 }
 
 // ---------------------------------------------------------------------------

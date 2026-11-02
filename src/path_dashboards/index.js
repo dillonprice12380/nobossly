@@ -10,6 +10,18 @@
 // decides what is featured, never what is allowed.
 
 const paths = require('../paths');
+const { registry, pipeline, metrics, checklists } = require('../engines');
+const { missing } = require('../engines/errors');
+const { WORKSHEETS } = require('../workspace/worksheets');
+
+// Paths with their own dashboard so far (step 2). Each file declares its
+// boards, metrics, checklists and worksheets when it loads.
+const DASHBOARDS = {
+  creator: require('./creator'),
+  freelancer: require('./freelancer'),
+  software: require('./software'),
+  exploring: require('./exploring')
+};
 
 // Shared workspace tools. `href` is where the tool lives; `kind` marks the
 // worksheet tools stored in workspace_docs.
@@ -31,6 +43,12 @@ const TOOLS = {
   proof:                 { label: 'Proof Page',             emoji: '🌟', href: '/tools/proof', blurb: 'A public page with your work, testimonials and results.' },
   interviews:            { label: 'Customer interviews',    emoji: '🎙️', href: '/tools/interviews', blurb: 'Log conversations and see which problems keep coming up.' }
 };
+// Worksheets a path config adds (a proposal builder, an MVP scope) become
+// tools like any other — featured on their path, in the library elsewhere.
+Object.values(DASHBOARDS).forEach(d => (d.worksheets || []).forEach(k => {
+  const w = WORKSHEETS[k];
+  TOOLS[k] = { label: w.label, emoji: w.emoji, href: '/workspace/docs/' + k, kind: true, blurb: w.blurb };
+}));
 
 // F = featured on the dashboard, A = available (listed), anything not named is
 // in the library only. Order within each list is the order shown.
@@ -42,8 +60,8 @@ const PATHS = {
   },
   freelancer: {
     setup: ['stage', 'service', 'client_source', 'pricing_model'],
-    featured: ['persona', 'pricing', 'elevator_pitch', 'proof'],
-    available: ['tax', 'quit', 'goals', 'money', 'tasks', 'milestones', 'lean_canvas', 'surveys']
+    featured: ['fl_proposal', 'pricing', 'persona', 'proof'],
+    available: ['elevator_pitch', 'tax', 'quit', 'goals', 'money', 'tasks', 'milestones', 'lean_canvas', 'surveys']
   },
   consultant: {
     setup: ['stage', 'expertise', 'who_you_advise', 'ticket_comfort'],
@@ -72,13 +90,13 @@ const PATHS = {
   },
   software: {
     setup: ['stage', 'problem', 'can_build', 'who_pays'],
-    featured: ['lean_canvas', 'persona', 'interviews', 'surveys'],
-    available: ['elevator_pitch', 'idea_refiner', 'business_plan', 'business_model_canvas', 'pricing', 'goals', 'tasks', 'milestones']
+    featured: ['lean_canvas', 'sw_mvp_scope', 'interviews', 'surveys'],
+    available: ['persona', 'sw_pricing', 'elevator_pitch', 'idea_refiner', 'business_plan', 'business_model_canvas', 'pricing', 'goals', 'tasks', 'milestones']
   },
   exploring: {
     setup: ['stage', 'skills', 'energizing_work'],
-    featured: ['idea_refiner', 'surveys', 'goals', 'persona'],
-    available: ['lean_canvas', 'interviews', 'tasks', 'milestones']
+    featured: ['ex_inventory', 'ex_options', 'idea_refiner', 'surveys'],
+    available: ['interviews', 'persona', 'goals', 'lean_canvas', 'tasks', 'milestones']
   }
 };
 const FALLBACK = {
@@ -117,4 +135,71 @@ function needsSetup(profile) {
   return !hasSub || (Object.prototype.hasOwnProperty.call(profile, 'path_answers') && !answered);
 }
 
-module.exports = { TOOLS, PATHS, configFor, setupQuestions, workspaceFor, needsSetup };
+// ------------------------------------------------------------------------
+// The path's own dashboard: stage, number, boards and checklists.
+
+const dashboardFor = slug => DASHBOARDS[slug] || null;
+
+function contextOf(profile) {
+  const answers = (profile && profile.path_answers && typeof profile.path_answers === 'object') ? profile.path_answers : {};
+  return { subpath: (profile && profile.subpath) || null, stage: answers.stage || null, answers };
+}
+
+// What the path declares for this member, as plain lists of definitions —
+// enough for links on the workspace hub without touching the database.
+function pathItemsFor(profile) {
+  const d = dashboardFor(profile && profile.path);
+  if (!d) return null;
+  const ctx = contextOf(profile);
+  const north = d.northStar(ctx);
+  return {
+    boards: d.boards(ctx).map(registry.board),
+    metrics: [north].concat(d.supporting(ctx)).filter(Boolean).map(registry.metric),
+    checklists: d.checklists(ctx).map(registry.checklist)
+  };
+}
+
+// Where the member is on the path's stages, and the next real-world step.
+function stageOf(d, ctx) {
+  const i = d.stages.findIndex(s => s.answer === ctx.stage);
+  return {
+    list: d.stages.map(s => s.answer),
+    index: i,
+    current: i >= 0 ? d.stages[i] : null,
+    next: i >= 0 ? d.stages[i].next : d.stages[0].next,
+    href: i >= 0 ? d.stages[i].href || null : null
+  };
+}
+
+// Everything the dashboard panel shows, loaded in one go. Any one piece that
+// fails on a missing table marks the panel "being set up" instead of failing
+// the whole dashboard; any other error is logged and that piece is skipped.
+async function panelFor(sb, userId, profile, now = new Date()) {
+  const d = dashboardFor(profile && profile.path);
+  if (!d) return null;
+  const ctx = contextOf(profile);
+  let notReady = false;
+  const safe = p => p.catch(e => {
+    if (missing(e)) notReady = true; else console.error('[path dashboard]', e.message || e);
+    return null;
+  });
+  const north = d.northStar(ctx);
+  const [northCard, supporting, northBoard, boards, lists] = await Promise.all([
+    north ? safe(metrics.card(sb, userId, north, 6, now)) : null,
+    Promise.all(d.supporting(ctx).map(k => safe(metrics.card(sb, userId, k, 6, now)))),
+    d.northStarBoard ? safe(pipeline.summary(sb, userId, d.northStarBoard)) : null,
+    Promise.all(d.boards(ctx).filter(k => k !== d.northStarBoard).map(k => safe(pipeline.summary(sb, userId, k)))),
+    Promise.all(d.checklists(ctx).map(k => safe(checklists.progress(sb, userId, k, now))))
+  ]);
+  return {
+    slug: d.slug, intro: d.intro, stage: stageOf(d, ctx),
+    north: northCard, northBoard,
+    supporting: supporting.filter(Boolean),
+    boards: boards.filter(Boolean),
+    checklists: lists.filter(Boolean),
+    notReady
+  };
+}
+
+module.exports = { TOOLS, PATHS, DASHBOARDS, configFor, setupQuestions, workspaceFor, needsSetup,
+  dashboardFor, contextOf, pathItemsFor, stageOf, panelFor };

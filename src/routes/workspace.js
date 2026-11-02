@@ -9,6 +9,7 @@
 const router = require('express').Router();
 const dashboards = require('../path_dashboards');
 const { WORKSHEETS, clean, progress, ideaScore, pitchStats } = require('../workspace/worksheets');
+const matrix = require('../workspace/matrix');
 const paths = require('../paths');
 const { quiet } = require('../db');
 
@@ -27,6 +28,7 @@ router.get('/', async (req, res, next) => {
     (docs || []).forEach(d => { (recent[d.kind] = recent[d.kind] || []).push(d); });
     res.render('workspace/index', {
       title: 'Workspace', tools: dashboards.workspaceFor(slug), recent, notReady: missing(error),
+      pathItems: dashboards.pathItemsFor(req.profile),
       pathDef: slug ? paths.get(slug) : null, needsSetup: dashboards.needsSetup(req.profile), msg: req.query.msg || null
     });
   } catch (e) { next(e); }
@@ -69,6 +71,7 @@ router.get('/docs/:kind/:id', async (req, res, next) => {
       title: (doc.title || def.label) + ' — ' + def.label, def, kind: req.params.kind, doc, data: doc.data || {},
       progress: progress(def, doc.data || {}), score: req.params.kind === 'idea_refiner' ? ideaScore(doc.data || {}) : null,
       pitch: req.params.kind === 'elevator_pitch' ? pitchStats((doc.data || {}).pitch) : null,
+      matrix: def.layout === 'matrix' ? matrix.results(doc.data || {}) : null,
       saved: !!req.query.saved
     });
   } catch (e) { next(e); }

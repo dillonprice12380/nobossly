@@ -21,6 +21,21 @@
 
 <h2 class="ws-section">For your path</h2>
 <div class="grid"><% tools.featured.forEach(function (t) { card(t); }) %></div>
+<% if (typeof pathItems !== 'undefined' && pathItems) { %>
+  <h2 class="ws-section">Boards, numbers and checklists</h2>
+  <div class="grid">
+    <% pathItems.boards.forEach(function (b) { %>
+      <a class="card ws-tool" href="/workspace/boards/<%= b.key %>"><div class="ws-head"><span class="ws-emoji"><%= b.emoji || '🗂️' %></span><strong><%= b.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Board · <%= b.stages.map(function (s) { return s.label; }).join(' → ') %></p></a>
+    <% }) %>
+    <% pathItems.metrics.forEach(function (m) { %>
+      <a class="card ws-tool" href="/workspace/metrics/<%= m.key %>"><div class="ws-head"><span class="ws-emoji">📈</span><strong><%= m.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Logged each <%= m.period %><%= m.help ? ' · ' + m.help : '' %></p></a>
+    <% }) %>
+    <% pathItems.checklists.forEach(function (c) { %>
+      <a class="card ws-tool" href="/workspace/checklists/<%= c.key %>"><div class="ws-head"><span class="ws-emoji">☑️</span><strong><%= c.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Checklist · <%= c.items.length %> steps</p></a>
+    <% }) %>
+  </div>
+  <p class="small" style="margin:.4rem 0 0"><a href="/workspace/calendar">Calendar of everything with a date →</a></p>
+<% } %>
 <% if (tools.available.length) { %>
   <h2 class="ws-section">Also useful</h2>
   <div class="grid"><% tools.available.forEach(function (t) { card(t); }) %></div>

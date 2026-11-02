@@ -6,6 +6,8 @@
 // Field types: text, longtext, list (one item per line), score (1–5), money,
 // number, date, select.
 
+const matrix = require('./matrix');
+
 const WORKSHEETS = {
   lean_canvas: {
     label: 'Lean Canvas', emoji: '🧭', layout: 'canvas', multiple: true,
@@ -116,11 +118,37 @@ const WORKSHEETS = {
   }
 };
 
+// A path config adds its own worksheet (an offer builder, an MVP scope) here.
+// Checked when the config loads, so a typo fails at boot, not on one page.
+const KIND = /^[a-z][a-z0-9_]{1,39}$/;
+const TYPES = ['text', 'longtext', 'list', 'score', 'money', 'number', 'date', 'select'];
+function defineWorksheet(key, def) {
+  const bad = why => { throw new Error('Invalid worksheet "' + key + '": ' + why); };
+  if (!KIND.test(String(key))) bad('key must match ' + KIND);
+  if (WORKSHEETS[key]) bad('that key is already defined');
+  if (!def || typeof def.label !== 'string' || !def.label.trim()) bad('needs a label');
+  if (!['form', 'canvas', 'pitch', 'matrix'].includes(def.layout || 'form')) bad('layout must be form, canvas, pitch or matrix');
+  if (def.layout === 'matrix') def = Object.assign({ sections: [] }, def);
+  else if (!Array.isArray(def.sections) || !def.sections.length) bad('needs sections');
+  const seen = new Set();
+  def.sections.forEach(s => {
+    if (!s || !KIND.test(String(s.key))) bad('section key "' + (s && s.key) + '" is not valid');
+    if (seen.has(s.key)) bad('duplicate section "' + s.key + '"');
+    seen.add(s.key);
+    if (!s.label) bad('section "' + s.key + '" needs a label');
+    if (!TYPES.includes(s.type)) bad('section "' + s.key + '" type must be one of ' + TYPES.join(', '));
+    if (s.type === 'select' && !(Array.isArray(s.options) && s.options.length)) bad('select "' + s.key + '" needs options');
+  });
+  WORKSHEETS[key] = Object.freeze(Object.assign({ layout: 'form', multiple: true, emoji: '📝', blurb: '' }, def));
+  return WORKSHEETS[key];
+}
+
 const LIMITS = { text: 200, longtext: 3000, listItem: 300, listItems: 20 };
 const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[$,\s]/g, '')); return Number.isFinite(n) ? n : null; };
 
 // A submitted form, cleaned to exactly what the worksheet allows.
 function clean(def, body) {
+  if (def.layout === 'matrix') return matrix.clean(def, body);
   const data = {};
   for (const s of def.sections) {
     const v = body[s.key];
@@ -147,6 +175,7 @@ function clean(def, body) {
 
 // How full a worksheet is, for the "3 of 11 done" line.
 function progress(def, data) {
+  if (def.layout === 'matrix') return matrix.progress(def, data);
   const done = def.sections.filter(s => data && data[s.key] !== undefined && data[s.key] !== '').length;
   return { done, total: def.sections.length };
 }
@@ -168,4 +197,4 @@ function pitchStats(text) {
   return { words, seconds: Math.round(words / 150 * 60) };
 }
 
-module.exports = { WORKSHEETS, clean, progress, ideaScore, pitchStats };
+module.exports = { WORKSHEETS, defineWorksheet, clean, progress, ideaScore, pitchStats };
