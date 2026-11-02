@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const pwned = require('../pwned');
 const { planOf, clearSessionCookies } = require('../middleware/auth');
 
 router.get('/', async (req, res, next) => {
@@ -35,6 +36,8 @@ router.post('/password', async (req, res) => {
   const { password, password2 } = req.body;
   if (!password || password.length < 8) return res.redirect('/account?e=' + encodeURIComponent('Password must be at least 8 characters.'));
   if (password !== password2) return res.redirect('/account?e=' + encodeURIComponent('Passwords do not match.'));
+  const leaked = await pwned.refusal(password);
+  if (leaked) return res.redirect('/account?e=' + encodeURIComponent(leaked));
   const { error } = await req.sb.auth.updateUser({ password });
   if (error) return res.redirect('/account?e=' + encodeURIComponent(error.message));
   res.redirect('/account?m=' + encodeURIComponent('Password updated.'));
