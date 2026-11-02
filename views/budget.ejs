@@ -1,7 +1,6 @@
 <%- include('partials/head') %>
 <div class="page-head">
-  <div><h1>💰 Income, Budget & Expenses</h1><p class="muted"><%= monthLabel %> — what came in, what went out, and what to keep aside.</p></div>
-  <a class="btn btn-ghost" href="/dashboard">← Dashboard</a>
+  <div><h1>💰 Money</h1><p class="muted"><%= monthLabel %> — what came in, what went out, what to keep aside, and the tools for prices and costs.</p></div>
 </div>
 
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
@@ -12,6 +11,36 @@
     <p style="margin:0">🏆 Your income log shows <strong><%= c.title %></strong><% if (flags.ladder) { %> — Level <%= c.level %>, <%= c.rung %> on your path<% } %>. <a href="<%= c.href %>"><%= c.kind === 'quest' ? 'Complete the quest' : 'Claim the trophy' %></a>: <%= c.how %>.</p>
   </div>
 <% }) %>
+
+<% if (typeof moneyTools !== 'undefined' && moneyTools) { %>
+  <h2 class="money-section">Money tools</h2>
+  <div class="grid money-tools">
+    <% moneyTools.mine.forEach(function (t) { %>
+      <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
+    <% }) %>
+    <% (moneyMetrics || []).forEach(function (m) { %>
+      <a class="card money-tool" href="/workspace/metrics/<%= m.key %>"><div class="money-head"><span class="money-emoji">📈</span><strong><%= m.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Logged each <%= m.period %><%= m.help ? ' · ' + m.help : '' %></p></a>
+    <% }) %>
+  </div>
+  <% if (moneyTools.more.length) { %>
+    <details class="money-more"><summary><strong>More money worksheets</strong> <span class="muted small">(<%= moneyTools.more.length %>, from other paths)</span></summary>
+      <div class="grid" style="margin-top:.6rem">
+        <% moneyTools.more.forEach(function (t) { %>
+          <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
+        <% }) %>
+      </div>
+    </details>
+  <% } %>
+  <h2 class="money-section">This month</h2>
+<% } %>
+<style>
+  .money-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .money-tool { display: block; color: inherit; text-decoration: none; }
+  .money-tool:hover { border-color: var(--accent); }
+  .money-head { display: flex; gap: .5rem; align-items: center; }
+  .money-emoji { font-size: 1.4rem; }
+  .money-more { margin: .4rem 0 1rem; }
+</style>
 
 <div class="card">
   <div class="grid-2" style="align-items:start">
@@ -30,7 +59,7 @@
         <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
         <button class="btn btn-primary">Log income</button>
       </form>
-      <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates and a quit date.<% } %></p>
+      <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates.<% } %></p>
     </div>
     <div>
       <h3 style="margin-top:0">Recent payments</h3>

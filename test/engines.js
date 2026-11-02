@@ -39,7 +39,7 @@ function run(router, method, url, { body = {}, query = {}, sb } = {}) {
   return new Promise((resolve) => {
     const req = { method, url, body, query, params: {}, sb, user: { id: 'me' }, profile: { id: 'me', username: 'me', display_name: 'Me', onboarding_completed: true } };
     const res = {
-      statusCode: 200,
+      statusCode: 200, locals: {},
       status(c) { this.statusCode = c; return this; },
       redirect(to) { resolve({ redirect: to }); },
       render(view, data) { resolve({ view, data, status: this.statusCode }); },

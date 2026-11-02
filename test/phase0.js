@@ -73,8 +73,10 @@ console.log('\nPremium is off:');
     const link = /href="\/(pricing|billing)/.test(html);
     ok(`${f}: no Premium, pricing or billing in what a member sees`, !hit && !link, hit ? `"${hit[0]}"` : link ? 'a link to /pricing or /billing' : 'clean');
   }
-  ok('the nav says Tools, not Toolkit, and drops the upgrade icon',
-     /label: 'Tools'/.test(read('views/partials/appnav.ejs')) && !/i-upgrade/.test(read('views/partials/appnav.ejs') + read('views/partials/head.ejs')));
+  // The tools now sit under Workspace and Money (2026-11-02), so no nav says
+  // Toolkit, and nothing shows the upgrade icon.
+  ok('no nav says Toolkit, and the upgrade icon is gone',
+     !/Toolkit/.test(read('views/partials/appnav.ejs') + read('views/partials/head.ejs')) && !/i-upgrade/.test(read('views/partials/appnav.ejs') + read('views/partials/head.ejs')));
   ok('no email mentions Premium', !/premium|upgrade|pricing/i.test(read('src/mailer.js')));
   ok('the Premium setup moved out of the README', !/STRIPE_SECRET_KEY/.test(read('README.md')) && /STRIPE_SECRET_KEY/.test(read('docs/premium-setup.md')));
 }

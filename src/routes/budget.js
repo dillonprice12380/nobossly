@@ -4,6 +4,7 @@ const starter = require('../starter_budget');
 const income = require('../income');
 const calc = require('../tools_calc');
 const premium = require('../premium');
+const dashboards = require('../path_dashboards');
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -30,7 +31,7 @@ async function loadBudget(req, extra = {}) {
   const [log, done, rate] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req)]);
   const sum = income.summary(log.income, log.expenses);
   return Object.assign({
-    title: 'Income, Budget & Expenses', budgets: budgets || [], expenses: expenses || [],
+    title: 'Money', budgets: budgets || [], expenses: expenses || [],
     incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
     claims: income.claimPrompts(req.profile.path, sum, done),
     spentByCat, totalSpent, totalBudget, cats,
@@ -42,7 +43,11 @@ async function loadBudget(req, extra = {}) {
     // categories someone has already set would be the app editing their budget.
     suggestion: (budgets || []).length ? [] : starter.suggest(launchBudget, req.profile.path),
     starterMonths: starter.MONTHS,
-    budgetCategories: require('../budget_categories').STANDARD
+    budgetCategories: require('../budget_categories').STANDARD,
+    // The money tools (pricing, tax, the path's cost and price worksheets) and
+    // the path's dollar number logs: Dashboard → Money is their home.
+    moneyTools: dashboards.moneyToolsFor(req.profile && req.profile.path),
+    moneyMetrics: ((dashboards.pathItemsFor(req.profile) || {}).moneyMetrics) || []
   }, extra);
 }
 

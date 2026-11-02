@@ -4,6 +4,14 @@
   <p class="muted"><% if (pathDef) { %>Arranged for your path — <%= pathDef.emoji %> <%= pathDef.label %>. <% } %>Everything here is private to you.</p>
 </div><div class="ws-actions" style="display:flex;gap:.4rem;flex-wrap:wrap"><a class="btn btn-ghost btn-sm" href="/workspace/shared">📥 Shared with you</a><% if (pathDef) { %><a class="btn btn-ghost btn-sm" href="/choose-path/setup">Path settings</a><% } %></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<nav class="ws-quick" aria-label="Workspace tools">
+  <a class="ws-quick-link" href="/tasks">✅ Tasks</a>
+  <a class="ws-quick-link" href="/surveys">📋 Surveys</a>
+  <a class="ws-quick-link" href="/tools/interviews">🎙️ Customer interviews</a>
+  <a class="ws-quick-link" href="/workspace/goals">🎯 Goals</a>
+  <a class="ws-quick-link" href="/workspace/calendar">📅 Calendar</a>
+</nav>
+<p class="muted small" style="margin:.2rem 0 0">Pricing, tax and your cost and price worksheets are under <a href="/budget">Money</a>.</p>
 <% if (needsSetup) { %>
   <div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0">Answer a few questions about your <%= pathDef.label.toLowerCase() %> work and your dashboard will show the right tools first. <a href="/choose-path/setup">Set it up →</a></p></div>
 <% } else if (!pathDef) { %>
@@ -47,6 +55,9 @@
 <% } %>
 <style>
   .ws-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .ws-quick { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 .2rem; }
+  .ws-quick-link { padding: .45rem .8rem; border: 1px solid var(--border); border-radius: 999px; color: var(--text); text-decoration: none; font-size: .9rem; background: var(--panel); }
+  .ws-quick-link:hover { border-color: var(--accent); }
   .ws-tool { display: block; color: inherit; text-decoration: none; }
   .ws-tool:hover { border-color: var(--accent); }
   .ws-head { display: flex; gap: .5rem; align-items: center; }

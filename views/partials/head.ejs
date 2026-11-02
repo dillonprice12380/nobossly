@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/style.css?v=18">
+<link rel="stylesheet" href="/css/style.css?v=19">
 <link rel="stylesheet" href="/css/list.css?v=2">
 <link rel="stylesheet" href="/css/motion.css?v=11">
 <link rel="stylesheet" href="/css/interaction.css?v=2">
@@ -46,8 +46,15 @@
   <button class="nav-toggle" id="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
   <div class="nav-links" id="nav-links">
     <% if (user) { %>
-      <a href="/dashboard">Dashboard</a>
-      <div class="nav-dropdown" data-dd>
+      <%# The main nav: the same three sections as views/partials/appnav.ejs. %>
+      <% var _cp = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
+         var _in = function (list) { return list.some(function (m) { return _cp === m || _cp.indexOf(m + '/') === 0; }); };
+         var _secDash = _in(['/dashboard', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones']);
+         var _secComm = _in(['/community', '/feed', '/groups', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations']);
+         var _secRes = _in(['/blog', '/guides', '/locations', '/help']); %>
+      <a class="nav-main<%= _secDash ? ' is-active' : '' %>" href="/dashboard"<%= _secDash ? ' aria-current="true"' : '' %>>Dashboard</a>
+      <a class="nav-main<%= _secComm ? ' is-active' : '' %>" href="/community"<%= _secComm ? ' aria-current="true"' : '' %>>Community</a>
+      <div class="nav-dropdown<%= _secRes ? ' is-active' : '' %>" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>
         <div class="nav-dd-menu">
           <a href="/blog"><svg class="icon"><use href="#i-blog"/></svg> Blog</a>
@@ -81,7 +88,6 @@
         <div class="avatar-dropdown" id="avatar-dropdown">
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
-          <a href="/tools"><svg class="icon"><use href="#i-target"/></svg> Tools</a>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>

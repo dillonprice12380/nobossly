@@ -2,7 +2,7 @@
 <div class="page-head"><div>
   <h1><%= def.emoji %> <%= def.label %></h1>
   <p class="muted"><%= def.blurb %></p>
-</div><a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a></div>
+</div><% var _money = typeof navSub !== 'undefined' && navSub === 'money'; %><a class="btn btn-ghost btn-sm" href="<%= _money ? '/budget' : '/workspace' %>"><%= _money ? 'Money' : 'Workspace' %></a></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 <% if (notReady) { %>
   <div class="card center"><p class="muted" style="margin:0">This opens shortly — the workspace is being set up.</p></div>

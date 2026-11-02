@@ -149,26 +149,17 @@ console.log('\nThe pages render with a log and without one:');
     budgets: [], expenses: [], spentByCat: {}, totalSpent: 0, totalBudget: 0, cats: [], monthLabel: 'October 2026',
     paid: true, msg: null, insights: null, launchBudget: null, launchBudgetUsd: 0, suggestion: [], starterMonths: 3,
     budgetCategories: STANDARD, incomeLog: [{ id: 'i1', amount: 1200, entry_date: '2026-09-01', source: 'Acme' }],
-    incomeSum: s, setAsideRate: 26.1, claims
+    incomeSum: s, setAsideRate: 26.1, claims,
+    moneyTools: require('../src/path_dashboards').moneyToolsFor('freelancer'), moneyMetrics: []
   });
   let html = '';
   try { html = render('budget.ejs', budgetData(income.claimPrompts('freelancer', s, new Set()))); } catch (e) { ok('the Money page renders', false, e.message); }
   ok('the Money page shows the log and the set-aside rate', html.includes('$1,200.00') && html.includes('26.1%'));
   ok('...and points at the reached rung', html.includes('Hit a $1k month') && html.includes('href="/quests"'));
 
-  const quitBase = {
-    data: { inputs: { living: 3000 } }, inputs: calc.quitInputs({ living: 3000, side: s.avgProfit, growth: s.growth }),
-    hasPlan: true, checkins: [], monthLabel: calc.monthLabel, m: null, checkinSide: 0
-  };
-  quitBase.plan = calc.quitPlan(quitBase.inputs);
-  for (const [label, extra] of [
-    ['from the log', { logged: s, auto: true, nextRung: income.nextMoneyRung('freelancer', 6, s, NOW) }],
-    ['with no log yet', { logged: null, auto: false, nextRung: null }]
-  ]) {
-    let q = '';
-    try { q = render('tools/quit.ejs', Object.assign({}, quitBase, extra)); } catch (e) { ok(`the planner renders ${label}`, false, e.message); continue; }
-    ok(`the planner renders ${label}`, extra.logged ? q.includes('From your income log') && q.includes('use_log') : q.includes('Log your payments'));
-  }
+  // The Quit-Date Planner was retired (2026-11-02); the Money page carries the
+  // money tools instead.
+  ok('the Money page lists the money tools', html.includes('Money tools') && html.includes('href="/tools/pricing"') && html.includes('href="/tools/tax"'));
 
   let t = '';
   try {

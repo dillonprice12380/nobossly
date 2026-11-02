@@ -71,8 +71,9 @@ function fakeSb(answers = {}) {
   ok('setup is short — four questions at most, plus the subpath', slugs.every(s => dash.PATHS[s].setup.length <= 4));
   const unknown = slugs.flatMap(s => dash.PATHS[s].featured.concat(dash.PATHS[s].available).filter(k => !dash.TOOLS[k]).map(k => s + ':' + k));
   ok('every featured or listed tool exists', unknown.length === 0, unknown.join(', ') || 'clean');
-  const fenced = slugs.filter(s => { const w = dash.workspaceFor(s); return w.featured.length + w.available.length + w.library.length !== Object.keys(dash.TOOLS).length; });
-  ok('every tool is reachable from every path (featured, listed, or in the library)', fenced.length === 0, fenced.join(', ') || 'clean');
+  // Money tools are listed under Money instead of the Workspace (2026-11-02).
+  const fenced = slugs.filter(s => { const w = dash.workspaceFor(s), m = dash.moneyToolsFor(s); return w.featured.length + w.available.length + w.library.length + m.mine.length + m.more.length !== Object.keys(dash.TOOLS).length; });
+  ok('every tool is reachable from every path (in the Workspace or under Money)', fenced.length === 0, fenced.join(', ') || 'clean');
   ok('paths really differ: no two paths feature the same tools in the same order',
      new Set(slugs.map(s => dash.PATHS[s].featured.join(','))).size === slugs.length);
   ok('a café leads with the business plan; a creator does not feature it',

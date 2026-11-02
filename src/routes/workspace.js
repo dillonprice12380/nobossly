@@ -47,6 +47,13 @@ router.get('/', async (req, res, next) => {
 // ------------------------------------------------------------- Worksheets
 const defOf = kind => WORKSHEETS[kind] || null;
 
+// Worksheets about money (costs, prices, break-even) belong to Dashboard →
+// Money in the nav, though their pages live here.
+router.param('kind', (req, res, next, kind) => {
+  if (dashboards.isMoney(kind)) res.locals.navSub = 'money';
+  next();
+});
+
 router.get('/docs/:kind', async (req, res, next) => {
   try {
     const def = defOf(req.params.kind);

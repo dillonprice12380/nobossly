@@ -716,3 +716,14 @@ body.theme-light .article-body a { color: #047857; }
 /* Highlighted words in formatted worksheet text stay readable on dark backgrounds. */
 .rt-edit [style*="background-color"], .sb-rich [style*="background-color"] { color: #14201c; }
 .sb-rich p { margin: .2rem 0; } .sb-rich ul, .sb-rich ol { margin: .2rem 0; padding-left: 1.2rem; }
+
+/* The main nav (Dashboard, Community, Resources): the current section is marked. */
+.nav-links > .nav-main.is-active, .nav-links > .nav-dropdown.is-active > .nav-dd-btn { color: var(--accent) !important; box-shadow: inset 0 -2px 0 currentColor; padding-bottom: .15rem; }
+body.theme-light .nav-links > .nav-main.is-active, body.theme-light .nav-links > .nav-dropdown.is-active > .nav-dd-btn { color: #6ee7b7 !important; }
+/* The notifications bell is a <summary>, not a link, so the nav's link colour
+   never reached it: on the dark bar it was drawn in the page's dark text colour
+   and all but disappeared. Every icon in the bar is now the bar's own colour. */
+.nav-links > .bell, .nav-links > .notif-menu > summary.bell, .nav-links > a[title="Admin"] { color: var(--text); }
+body.theme-light .nav-links > .bell, body.theme-light .nav-links > .notif-menu > summary.bell, body.theme-light .nav-links > a[title="Admin"] { color: #eafff5; }
+.nav-links > .notif-menu > summary.bell:hover .nav-ico, .nav-links > .notif-menu[open] > summary.bell .nav-ico { stroke: var(--accent); }
+body.theme-light .nav-links > .notif-menu > summary.bell:hover .nav-ico { stroke: #6ee7b7; }
