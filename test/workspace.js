@@ -88,8 +88,8 @@ function fakeSb(answers = {}) {
   console.log('\nThe worksheets:');
   const lean = ws.WORKSHEETS.lean_canvas;
   const d = ws.clean(lean, { problem: 'Too slow\n\n  Too costly  \n', uvp: 'x'.repeat(5000), invented: 'nope' });
-  ok('lists split by line and drop blanks', JSON.stringify(d.problem) === JSON.stringify(['Too slow', 'Too costly']));
-  ok('long text is capped', d.uvp.length === 3000);
+  ok('canvas boxes are formatted text: plain lines become paragraphs, blanks dropped', d.problem === '<p>Too slow</p><p>Too costly</p>', d.problem);
+  ok('long text is capped', require('../src/workspace/richtext').textOf(d.uvp).length === 3000);
   ok('fields a worksheet does not define are dropped', d.invented === undefined);
   ok('a Lean Canvas has its 11 boxes; the Business Model Canvas its 9', lean.sections.length === 11 && ws.WORKSHEETS.business_model_canvas.sections.length === 9);
   const plan = ws.clean(ws.WORKSHEETS.business_plan, { startup: '$12,500.505', monthly: 'lots' });

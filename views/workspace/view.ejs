@@ -1,0 +1,150 @@
+<%- include('../partials/head') %>
+<%#
+  A worksheet, read-only: the canvas as the classic poster, any other worksheet
+  as a clean document. Used three ways (mode):
+    owner  — your own, with Edit / Share / PDF
+    member — shared with you by someone in your cohort
+    link   — opened from an emailed link, no account needed
+  Formatted text goes through richHtml() (cleaned again here); everything else is escaped.
+%>
+<% var poster = def.layout === 'canvas' && def.poster;
+   var shown = function (s) { var v = data[s.key]; return !(v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)); };
+   var when = new Date(doc.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); %>
+
+<div class="page-head no-print">
+  <div>
+    <% if (mode === 'owner') { %><a class="muted small" href="/workspace/docs/<%= kind %>/<%= doc.id %>">← Back to editing</a>
+    <% } else if (mode === 'member') { %><a class="muted small" href="/workspace/shared">← Shared with you</a><% } %>
+    <p class="muted small" style="margin:.3rem 0 0"><%= mode === 'owner' ? 'Read-only view' : 'Shared with you by ' + (ownerName || 'a member') %> · last updated <%= when %></p>
+  </div>
+  <div class="ws-actions">
+    <button class="btn btn-primary btn-sm" type="button" data-pdf>Download PDF</button>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="window.print()">Print</button>
+    <% if (mode === 'owner') { %>
+      <% if (canShare) { %><a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>/share">Share</a><% } %>
+      <a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>">Edit</a>
+    <% } %>
+  </div>
+</div>
+
+<% if (typeof note !== 'undefined' && note) { %><div class="card no-print"><p class="muted small" style="margin:0">A note from <%= ownerName || 'them' %>:</p><p class="wv-pre" style="margin:.3rem 0 0"><%= note %></p></div><% } %>
+
+<article class="wv" id="wv-doc" data-filename="<%= (doc.title || def.label).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'worksheet' %>">
+  <header class="wv-head">
+    <div>
+      <p class="wv-kicker"><%= def.emoji %> <%= def.label %></p>
+      <h1 class="wv-title"><%= doc.title || def.label %></h1>
+    </div>
+    <p class="wv-meta"><% if (ownerName) { %><%= ownerName %> · <% } %><%= when %></p>
+  </header>
+
+  <% if (poster) { %>
+    <%# Area names are worksheet section keys (a-z, 0-9, _), so they are safe inside quotes. %>
+    <div class="wv-poster" style='grid-template-columns: repeat(<%= poster.columns %>, minmax(0, 1fr)); grid-template-areas: <%- poster.areas.map(function (r) { return "\"" + r.replace(/[^a-z0-9_ ]/g, "") + "\""; }).join(" ") %>;'>
+      <% def.sections.forEach(function (s) { %>
+        <section class="wv-box" style="grid-area: <%= s.key %>">
+          <h2><%= s.label %></h2>
+          <div class="wv-body"><% if (shown(s)) { %><%- richHtml(data[s.key]) %><% } else { %><p class="wv-empty">—</p><% } %></div>
+        </section>
+      <% }) %>
+    </div>
+  <% } else if (def.layout === 'matrix') { %>
+    <% var opts = data.options || [], crits = data.criteria || [], sc = data.scores || {}; %>
+    <table class="wv-table"><thead><tr><th></th><% crits.forEach(function (c) { %><th><%= c.label %> <span class="wv-muted">×<%= c.weight %></span></th><% }) %></tr></thead>
+      <tbody><% opts.forEach(function (o, i) { %><tr><th><%= o %></th><% crits.forEach(function (c, j) { %><td><%= sc[i + ':' + j] || '–' %></td><% }) %></tr><% }) %></tbody></table>
+    <% if (data.decision) { %><p><strong>Decision:</strong> <%= data.decision %></p><% } %>
+  <% } else { %>
+    <div class="wv-doc">
+      <% def.sections.filter(shown).forEach(function (s) { var v = data[s.key]; %>
+        <section class="wv-field">
+          <h2><%= s.label %></h2>
+          <% if (s.type === 'rich') { %><div class="wv-body"><%- richHtml(v) %></div>
+          <% } else if (Array.isArray(v)) { %><ul><% v.forEach(function (x) { %><li><%= x %></li><% }) %></ul>
+          <% } else if (s.type === 'money') { %><p>$<%= Number(v).toLocaleString('en-US') %></p>
+          <% } else if (s.type === 'score') { %><p><%= v %> / 5</p>
+          <% } else { %><p class="wv-pre"><%= v %></p><% } %>
+        </section>
+      <% }) %>
+      <% if (!def.sections.some(shown)) { %><p class="wv-empty">Nothing filled in yet.</p><% } %>
+    </div>
+  <% } %>
+  <footer class="wv-foot">Made with NoBossly · nobossly.com</footer>
+</article>
+
+<% if (mode === 'link') { %><p class="muted small center no-print">Planning a business of your own? <a href="/">NoBossly is free</a> — canvases, plans and a community building the same way.</p><% } %>
+
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.3/dist/html2pdf.bundle.min.js" defer></script>
+<script>
+(function () {
+  var landscape = <%= poster ? 'true' : 'false' %>;
+  function pdf() {
+    var el = document.getElementById('wv-doc');
+    if (!el) return;
+    if (!window.html2pdf) { window.print(); return; }   // library blocked or offline
+    document.body.classList.add('wv-exporting');
+    window.html2pdf().set({
+      margin: 8,
+      filename: (el.getAttribute('data-filename') || 'worksheet') + '.pdf',
+      image: { type: 'jpeg', quality: 0.96 },
+      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: landscape ? 1400 : 900 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: ['.wv-field', 'tr'] }
+    }).from(el).save().then(function () { document.body.classList.remove('wv-exporting'); }, function () { document.body.classList.remove('wv-exporting'); window.print(); });
+  }
+  function init() {
+    document.querySelectorAll('[data-pdf]').forEach(function (b) {
+      if (b.getAttribute('data-ready')) return;
+      b.setAttribute('data-ready', '1');
+      b.addEventListener('click', pdf);
+    });
+    <% if (typeof autoPdf !== 'undefined' && autoPdf) { %>
+    if (!window.__wvAutoPdf) { window.__wvAutoPdf = true; var go = function () { window.html2pdf ? pdf() : setTimeout(go, 300); }; setTimeout(go, 400); }
+    <% } %>
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('turbo:load', init);
+})();
+</script>
+<style>
+  /* The page is always light, like paper, so it looks the same on screen, in print and in the PDF. */
+  .wv { background: #ffffff; color: #14201c; border-radius: 14px; padding: 1.6rem; margin: 1rem 0 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .wv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; border-bottom: 2px solid #0f9f6e; padding-bottom: .6rem; margin-bottom: 1rem; }
+  .wv-kicker { margin: 0; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: #0f9f6e; font-weight: 700; }
+  .wv-title { margin: .15rem 0 0; font-size: 1.7rem; line-height: 1.15; color: #14201c; }
+  .wv-meta { margin: 0; color: #5b6b65; font-size: .85rem; }
+  .wv-poster { display: grid; gap: 0; border: 2px solid #14201c; }
+  .wv-box { border: 1px solid #14201c; padding: .55rem .7rem .7rem; min-height: 9rem; break-inside: avoid; }
+  .wv-box h2, .wv-field h2 { margin: 0 0 .35rem; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: #0f6e4d; }
+  .wv-body { font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+  .wv-body p { margin: 0 0 .3rem; }
+  .wv-body ul, .wv-body ol { margin: .1rem 0 .3rem; padding-left: 1.15rem; }
+  .wv-empty { color: #9aa7a2; margin: 0; }
+  .wv-doc { max-width: 46rem; }
+  .wv-field { padding: .7rem 0; border-top: 1px solid #e3e8e5; break-inside: avoid; }
+  .wv-field:first-child { border-top: 0; }
+  .wv-field p, .wv-field ul { margin: .2rem 0; }
+  .wv-pre { white-space: pre-wrap; }
+  .wv-table { border-collapse: collapse; width: 100%; }
+  .wv-table th, .wv-table td { border: 1px solid #cfd8d4; padding: .4rem .5rem; text-align: left; }
+  .wv-muted { color: #5b6b65; font-size: .8rem; }
+  .wv-foot { margin-top: 1rem; color: #8a9893; font-size: .75rem; text-align: right; }
+  /* On phones the poster becomes one column, in reading order. */
+  @media (max-width: 760px) {
+    .wv { padding: 1rem; }
+    .wv-poster { display: block; border: 0; }
+    .wv-box { border: 1px solid #cfd8d4; border-radius: 8px; margin-bottom: .6rem; min-height: 0; }
+  }
+  .ws-actions { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+  .wv-exporting .wv { box-shadow: none; }
+  @media print {
+    @page { size: <%= poster ? 'A4 landscape' : 'A4 portrait' %>; margin: 10mm; }
+    body { background: #fff !important; }
+    body * { visibility: hidden; }
+    .wv, .wv * { visibility: visible; }
+    .wv { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+    .wv-poster { display: grid !important; border: 2px solid #14201c !important; }
+    .wv-box { border: 1px solid #14201c !important; border-radius: 0 !important; min-height: 6.5rem; }
+    .no-print { display: none !important; }
+  }
+</style>
+<%- include('../partials/foot') %>

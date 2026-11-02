@@ -290,7 +290,7 @@ const GROUP = { id: GID, name: 'Spring Cohort', slug: 'spring-cohort', descripti
     const base = {
       title: 'T', user: { id: ME }, profile: { id: ME, username: 'me', is_admin: false }, plan: 'paid', currentPath: '/groups', canonicalUrl: 'x',
       unreadCount: 0, unreadMsgs: 0, metaDescription: '', bodyTheme: '', settings: {}, pendingDeletion: null, reactivated: false,
-      isPremium: true, flags: FLAGS, flashErr: null, premiumTools: [], msg: null,
+      isPremium: true, flags: FLAGS, flashErr: null, premiumTools: [], msg: null, richHtml: require('../src/workspace/richtext').clean,
       affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false }
     };
     const render = (f, data) => { try { return ejs.render(read('views/' + f), Object.assign({}, base, data), { filename: V(f) }); } catch (e) { return 'ERR ' + e.message; } };

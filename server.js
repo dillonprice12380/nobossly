@@ -61,6 +61,8 @@ app.use((req, res, next) => {
 // Feature flags, for every view: `<% if (flags.ladder) { %>`.
 const { FLAGS } = require('./src/features');
 app.use((req, res, next) => { res.locals.flags = FLAGS; next(); });
+// Formatted worksheet text (canvas boxes), cleaned again whenever it is shown.
+app.locals.richHtml = require('./src/workspace/richtext').clean;
 // `?err=` from any redirect is shown by the shared header, unless the page
 // prints its own `err`.
 app.use((req, res, next) => {
@@ -147,6 +149,7 @@ app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
+app.use('/shared', require('./src/routes/shared_link')); // a worksheet opened from an emailed link — no account needed
 app.use('/workspace', requireAuth, require('./src/routes/workspace')); // planning worksheets, goals, milestones — ordered per path
 app.use('/workspace', requireAuth, require('./src/routes/boards')); // boards, calendar, metrics, checklists (path dashboards)
 app.use('/surveys', requireAuth, require('./src/routes/surveys').router); // survey maker: build, share, results, CSV

@@ -1,0 +1,20 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>📥 Shared with you</h1>
+  <p class="muted">Worksheets people in your cohorts shared with you. Read-only, always the latest version.</p>
+</div><a class="btn btn-ghost btn-sm" href="/workspace">Workspace</a></div>
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">This opens shortly — sharing is being set up.</p></div>
+<% } else if (!items.length) { %>
+  <div class="card center"><p class="muted" style="margin:0">Nothing shared with you yet. When someone in your cohort shares a canvas or plan, it shows up here.</p></div>
+<% } else { %>
+  <div class="grid">
+    <% items.forEach(function (d) { %>
+      <a class="card ws-tool" href="/workspace/shared/<%= d.share_id %>" style="display:block;color:inherit;text-decoration:none">
+        <div class="ws-head"><span class="ws-emoji"><%= d.def.emoji %></span><strong><%= d.title || d.def.label %></strong></div>
+        <p class="muted small" style="margin:.3rem 0 0"><%= d.def.label %> · from <%= d.owner %> · updated <%= new Date(d.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('../partials/foot') %>

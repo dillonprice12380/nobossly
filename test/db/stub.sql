@@ -19,3 +19,7 @@ alter table groups enable row level security; alter table group_members enable r
 grant all on all tables in schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;
+create table workspace_docs(id uuid primary key default gen_random_uuid(), user_id uuid not null references profiles on delete cascade, kind text not null, title text, data jsonb not null default '{}', created_at timestamptz default now(), updated_at timestamptz default now());
+alter table workspace_docs enable row level security;
+create policy workspace_docs_own on workspace_docs for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create table email_log(id uuid primary key default gen_random_uuid(), user_id uuid, to_email text, email_type text, subject text, status text, constraint email_log_email_type_check check (email_type is not null));

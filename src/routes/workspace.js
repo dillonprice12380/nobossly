@@ -12,11 +12,21 @@ const { WORKSHEETS, clean, progress, ideaScore, pitchStats, summaryOf } = requir
 const matrix = require('../workspace/matrix');
 const paths = require('../paths');
 const { quiet } = require('../db');
+const mailer = require('../mailer');
 
 const enc = encodeURIComponent;
 const missing = err => !!err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|Could not find the table/i.test(err.message || ''));
 const GOAL_STATUS = { active: 'Active', done: 'Done', dropped: 'Dropped' };
 const MAX_VERSIONS = 10;
+// A share function that is not there yet (migrations/2026-11-02_workspace_shares.sql unapplied).
+const noFn = err => !!err && (missing(err) || err.code === 'PGRST202' || /Could not find the function/i.test(err.message || ''));
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// Whether this member may share (in a cohort, or on a program team). False when sharing is not set up yet.
+async function canShare(sb) {
+  const { data, error } = await sb.rpc('can_share_docs');
+  return !error && data === true;
+}
 
 // The hub: featured tools first, then the rest, then the library.
 router.get('/', async (req, res, next) => {
@@ -73,7 +83,7 @@ router.get('/docs/:kind/:id', async (req, res, next) => {
       pitch: req.params.kind === 'elevator_pitch' ? pitchStats((doc.data || {}).pitch) : null,
       matrix: def.layout === 'matrix' ? matrix.results(doc.data || {}) : null,
       summary: summaryOf(def, doc.data || {}),
-      saved: !!req.query.saved
+      saved: !!req.query.saved, canShare: await canShare(req.sb)
     });
   } catch (e) { next(e); }
 });
@@ -99,8 +109,129 @@ router.post('/docs/:kind/:id', async (req, res, next) => {
     const title = String(req.body.title || '').trim().slice(0, 120);
     const { error } = await req.sb.from('workspace_docs')
       .update(Object.assign({ data }, title ? { title } : {})).eq('id', req.params.id).eq('user_id', req.user.id);
-    if (error) return res.redirect(to + '?err=' + enc('Could not save. Please try again.'));
+    const auto = req.get('X-Autosave') === '1';   // the editor saving itself in the background
+    if (error) return auto ? res.status(500).end() : res.redirect(to + '?err=' + enc('Could not save. Please try again.'));
+    if (auto) return res.status(204).end();
     res.redirect(to + '?saved=1');
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------- Viewing, PDF and sharing
+const ownDoc = (sb, req) => sb.from('workspace_docs').select('*')
+  .eq('id', req.params.id).eq('user_id', req.user.id).eq('kind', req.params.kind).maybeSingle();
+const nameOf = p => p ? (p.display_name || p.username || 'A member') : 'A member';
+
+// The worksheet read-only: the canvas as a poster, ready to print or save as PDF.
+router.get('/docs/:kind/:id/view', async (req, res, next) => {
+  try {
+    const def = defOf(req.params.kind);
+    if (!def) return res.status(404).render('error', { title: 'Not found', message: 'That tool does not exist.' });
+    const { data: doc } = await ownDoc(req.sb, req);
+    if (!doc) return res.status(404).render('error', { title: 'Not found', message: 'That document is gone.' });
+    res.render('workspace/view', {
+      title: (doc.title || def.label) + ' — ' + def.label, def, kind: req.params.kind, doc, data: doc.data || {},
+      mode: 'owner', ownerName: nameOf(req.profile), canShare: await canShare(req.sb), autoPdf: req.query.pdf === '1'
+    });
+  } catch (e) { next(e); }
+});
+
+// Who it is shared with, and the two ways to share: a cohort member by name, or by email.
+router.get('/docs/:kind/:id/share', async (req, res, next) => {
+  try {
+    const def = defOf(req.params.kind);
+    if (!def) return res.status(404).render('error', { title: 'Not found', message: 'That tool does not exist.' });
+    const { data: doc } = await ownDoc(req.sb, req);
+    if (!doc) return res.status(404).render('error', { title: 'Not found', message: 'That document is gone.' });
+    const [cand, sh] = await Promise.all([
+      req.sb.rpc('share_candidates'),
+      req.sb.from('workspace_shares').select('id, recipient_id, email, note, created_at, expires_at, revoked_at, last_viewed_at')
+        .eq('doc_id', doc.id).is('revoked_at', null).order('created_at', { ascending: false })
+    ]);
+    const notReady = noFn(cand.error) || missing(sh.error);
+    const candidates = (cand.data || []).slice().sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    const byId = {};
+    candidates.forEach(c => { byId[c.user_id] = c; });
+    const ids = (sh.data || []).map(x => x.recipient_id).filter(id => id && !byId[id]);
+    if (ids.length) {
+      const { data: ps } = await req.sb.from('profiles').select('id, username, display_name').in('id', ids);
+      (ps || []).forEach(p => { byId[p.id] = Object.assign({ user_id: p.id }, p); });
+    }
+    const now = Date.now();
+    const shares = (sh.data || []).filter(x => !x.expires_at || new Date(x.expires_at).getTime() > now)
+      .map(x => Object.assign({}, x, { who: x.recipient_id ? byId[x.recipient_id] || null : null }));
+    const sharedWith = new Set(shares.map(x => x.recipient_id).filter(Boolean));
+    res.render('workspace/share', {
+      title: 'Share — ' + (doc.title || def.label), def, kind: req.params.kind, doc, notReady,
+      allowed: !notReady && await canShare(req.sb), candidates: candidates.filter(c => !sharedWith.has(c.user_id)),
+      shares, nameOf, link: req.query.link || null, msg: req.query.msg || null
+    });
+  } catch (e) { next(e); }
+});
+
+const shareBase = req => '/workspace/docs/' + req.params.kind + '/' + req.params.id + '/share';
+const note = b => String(b.note || '').trim().slice(0, 500) || null;
+
+router.post('/docs/:kind/:id/share/member', async (req, res, next) => {
+  try {
+    const to = shareBase(req);
+    const { data, error } = await req.sb.rpc('doc_share_member', { p_doc: req.params.id, p_recipient: String(req.body.recipient || ''), p_note: note(req.body) });
+    if (noFn(error)) return res.redirect(to + '?err=' + enc('Sharing is being set up — try again shortly.'));
+    if (error || !data) return res.redirect(to + '?err=' + enc('Could not share with that person. You can share with members of your own cohorts.'));
+    res.redirect(to + '?msg=' + enc('Shared. They have been notified and will find it under "Shared with you".'));
+  } catch (e) { next(e); }
+});
+
+router.post('/docs/:kind/:id/share/email', async (req, res, next) => {
+  try {
+    const to = shareBase(req);
+    const def = defOf(req.params.kind);
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!def || !EMAIL.test(email) || email.length > 254) return res.redirect(to + '?err=' + enc('Enter a valid email address.'));
+    const { data: token, error } = await req.sb.rpc('doc_share_email', { p_doc: req.params.id, p_email: email, p_note: note(req.body) });
+    if (noFn(error)) return res.redirect(to + '?err=' + enc('Sharing is being set up — try again shortly.'));
+    if (error || !token) return res.redirect(to + '?err=' + enc('Could not share by email. Sharing is for members of a cohort, up to 20 emails a day.'));
+    const { data: doc } = await req.sb.from('workspace_docs').select('title').eq('id', req.params.id).maybeSingle();
+    const link = mailer.SITE + '/shared/' + token;
+    const sent = await mailer.send('doc_share', email, null, {
+      userId: req.user.id,
+      template: { from: nameOf(req.profile), title: (doc && doc.title) || def.label, label: def.label.toLowerCase(), note: note(req.body), link }
+    });
+    res.redirect(to + '?link=' + enc(link) + '&msg=' + enc(sent
+      ? 'Sent to ' + email + '. The link works for 30 days, until you turn it off.'
+      : 'The link is ready, but the email could not be sent right now. Copy the link below and send it yourself.'));
+  } catch (e) { next(e); }
+});
+
+router.post('/docs/:kind/:id/share/:sid/revoke', async (req, res, next) => {
+  try {
+    await req.sb.rpc('doc_share_revoke', { p_share: req.params.sid }).then(...quiet('doc_share_revoke'));
+    res.redirect(shareBase(req) + '?msg=' + enc('Sharing turned off.'));
+  } catch (e) { next(e); }
+});
+
+// Worksheets other members shared with you.
+router.get('/shared', async (req, res, next) => {
+  try {
+    const { data, error } = await req.sb.rpc('shared_with_me');
+    res.render('workspace/shared', {
+      title: 'Shared with you', notReady: noFn(error),
+      items: (data || []).map(d => Object.assign({}, d, { def: defOf(d.kind) })).filter(d => d.def)
+    });
+  } catch (e) { next(e); }
+});
+
+router.get('/shared/:sid', async (req, res, next) => {
+  try {
+    const gone = () => res.status(404).render('error', { title: 'Not available', message: 'That worksheet is no longer shared with you.' });
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.sid)) return gone();
+    const { data: d, error } = await req.sb.rpc('shared_doc', { p_share: req.params.sid });
+    const def = d && defOf(d.kind);
+    if (error || !def) return gone();
+    res.render('workspace/view', {
+      title: (d.title || def.label) + ' — shared with you', def, kind: d.kind,
+      doc: { id: d.share_id, title: d.title, updated_at: d.updated_at }, data: d.data || {},
+      mode: 'member', ownerName: d.owner, note: d.note || null, canShare: false
+    });
   } catch (e) { next(e); }
 });
 

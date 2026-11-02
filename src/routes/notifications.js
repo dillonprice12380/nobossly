@@ -15,6 +15,7 @@ const LINKS = {
   collab_projects: () => '/collaborations',
   collaborations: () => '/collaborations',
   wins: () => '/wins',
+  workspace_shares: id => '/workspace/shared/' + id,
   peer_reviews: id => '/reviews/' + id,
   cohort_assignments: id => '/groups/a/' + id
 };

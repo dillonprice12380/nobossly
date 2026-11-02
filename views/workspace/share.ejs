@@ -1,0 +1,83 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <a class="muted small" href="/workspace/docs/<%= kind %>/<%= doc.id %>">← Back to editing</a>
+  <h1 style="margin-top:.3rem">Share “<%= doc.title || def.label %>”</h1>
+  <p class="muted">Read-only, and always the latest version. Turn it off any time.</p>
+</div><a class="btn btn-ghost btn-sm" href="/workspace/docs/<%= kind %>/<%= doc.id %>/view">View</a></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">Sharing opens shortly — it is being set up.</p></div>
+<% } else if (!allowed) { %>
+  <div class="card"><p style="margin:0">Sharing is for members of an accelerator program or cohort. Once you join one, you can share this with your cohort-mates and program team, or send it to anyone by email.</p>
+    <p class="muted small" style="margin:.5rem 0 0">You can still <a href="/workspace/docs/<%= kind %>/<%= doc.id %>/view?pdf=1">download it as a PDF</a> and send that.</p></div>
+<% } else { %>
+  <% if (link) { %>
+    <div class="card share-link"><p class="small" style="margin:0 0 .4rem"><strong>Share link</strong> — anyone with it can read this for 30 days.</p>
+      <div class="cta-row" style="justify-content:flex-start;gap:.5rem;flex-wrap:nowrap"><input readonly value="<%= link %>" id="share-link" style="flex:1;min-width:0" onclick="this.select()"><button class="btn btn-ghost btn-sm" type="button" data-copy="#share-link">Copy</button></div></div>
+  <% } %>
+  <div class="share-grid">
+    <form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>/share/member" class="card">
+      <h2 class="h3" style="margin-top:0">👥 Someone in your cohort</h2>
+      <% if (!candidates.length) { %>
+        <p class="muted small" style="margin:0">Everyone in your cohorts already has it, or your cohorts have no other members yet.</p>
+      <% } else { var groups = {}; candidates.forEach(function (c) { (groups[c.cohort || 'Your cohort'] = groups[c.cohort || 'Your cohort'] || []).push(c); }); %>
+        <label>Member
+          <select name="recipient" required>
+            <option value="">Choose a name…</option>
+            <% Object.keys(groups).sort().forEach(function (g) { %><optgroup label="<%= g %>">
+              <% groups[g].forEach(function (c) { %><option value="<%= c.user_id %>"><%= nameOf(c) %><% if (c.username && c.display_name) { %> (@<%= c.username %>)<% } %></option><% }) %>
+            </optgroup><% }) %>
+          </select></label>
+        <label>Note <span class="muted small">(optional)</span><textarea name="note" rows="2" maxlength="500" placeholder="Would love your eyes on the revenue side before Friday."></textarea></label>
+        <button class="btn btn-primary btn-sm">Share</button>
+        <p class="muted small" style="margin:.5rem 0 0">They get a notification and find it under “Shared with you”.</p>
+      <% } %>
+    </form>
+    <form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>/share/email" class="card">
+      <h2 class="h3" style="margin-top:0">✉️ By email</h2>
+      <label>Email address<input type="email" name="email" required maxlength="254" placeholder="mentor@example.com" autocomplete="off"></label>
+      <label>Note <span class="muted small">(optional)</span><textarea name="note" rows="2" maxlength="500"></textarea></label>
+      <button class="btn btn-primary btn-sm">Send link</button>
+      <p class="muted small" style="margin:.5rem 0 0">For a mentor, advisor or partner. No account needed; the link works for 30 days.</p>
+    </form>
+  </div>
+
+  <h2 class="h3">Shared with</h2>
+  <% if (!shares.length) { %><div class="card"><p class="muted" style="margin:0">Not shared with anyone yet.</p></div><% } %>
+  <% shares.forEach(function (s) { %>
+    <div class="card share-row">
+      <div style="min-width:0">
+        <strong><%= s.recipient_id ? nameOf(s.who) : s.email %></strong>
+        <span class="muted small"> · <%= s.recipient_id ? 'cohort member' : 'email link, until ' + new Date(s.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+        <p class="muted small" style="margin:.2rem 0 0">Shared <%= new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %> · <%= s.last_viewed_at ? 'last opened ' + new Date(s.last_viewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'not opened yet' %></p>
+      </div>
+      <form method="post" action="/workspace/docs/<%= kind %>/<%= doc.id %>/share/<%= s.id %>/revoke" onsubmit="return confirm('Stop sharing with this person?')"><button class="btn btn-ghost btn-sm">Turn off</button></form>
+    </div>
+  <% }) %>
+<% } %>
+<script>
+(function () {
+  function init() {
+    document.querySelectorAll('[data-copy]').forEach(function (b) {
+      if (b.getAttribute('data-ready')) return; b.setAttribute('data-ready', '1');
+      b.addEventListener('click', function () {
+        var i = document.querySelector(b.getAttribute('data-copy')); if (!i) return;
+        i.select();
+        var done = function () { b.textContent = 'Copied'; };
+        if (navigator.clipboard) navigator.clipboard.writeText(i.value).then(done, function () { document.execCommand('copy'); done(); }); else { document.execCommand('copy'); done(); }
+      });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('turbo:load', init);
+})();
+</script>
+<style>
+  .share-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+  .share-grid label { display: block; margin-bottom: .6rem; }
+  .share-grid select, .share-grid textarea, .share-grid input { width: 100%; }
+  .share-row { display: flex; justify-content: space-between; align-items: center; gap: .8rem; }
+  @media (max-width: 760px) { .share-grid { grid-template-columns: 1fr; } .share-row { flex-wrap: wrap; } }
+</style>
+<%- include('../partials/foot') %>

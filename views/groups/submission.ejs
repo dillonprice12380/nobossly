@@ -22,7 +22,8 @@
       <% sheet.sections.forEach(function (sec) { var v = data[sec.key]; if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) return; %>
         <div class="sb-field">
           <p class="muted small" style="margin:0"><%= sec.label %></p>
-          <% if (Array.isArray(v)) { %><ul style="margin:.2rem 0"><% v.forEach(function (x) { %><li><%= x %></li><% }) %></ul>
+          <% if (sec.type === 'rich') { %><div class="sb-rich"><%- richHtml(v) %></div>
+          <% } else if (Array.isArray(v)) { %><ul style="margin:.2rem 0"><% v.forEach(function (x) { %><li><%= x %></li><% }) %></ul>
           <% } else if (sec.type === 'money') { %><p style="margin:.2rem 0">$<%= Number(v).toLocaleString('en-US') %></p>
           <% } else { %><p class="pre" style="margin:.2rem 0"><%= v %></p><% } %>
         </div>
