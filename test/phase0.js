@@ -82,11 +82,9 @@ console.log('\nPremium is off:');
 // ---------------------------------------------------------------------------
 console.log('\nEach migration says whether it is live:');
 {
-  const applied = ['lock_down_all_function_grants', 'personal_info_filter', 'drop_ai_era_tables'].map(n => `migrations/2026-11-01_${n}.sql`);
-  for (const f of applied) ok(`${path.basename(f)} says it was applied`, /^-- Applied live 2026-11-02/.test(read(f)));
-  const files = ['premium_off_everyone_has_tools']
-    .map(n => `migrations/2026-11-01_${n}.sql`);
-  for (const f of files) ok(`${path.basename(f)} says NOT APPLIED`, /^-- NOT APPLIED, written for review\./.test(read(f)));
+  const applied = ['lock_down_all_function_grants', 'personal_info_filter', 'drop_ai_era_tables', 'premium_off_everyone_has_tools'].map(n => `migrations/2026-11-01_${n}.sql`);
+  for (const f of applied) ok(`${path.basename(f)} says it was applied`, /^-- Applied live 2026-11-0[12]/.test(read(f)));
+
 
   const grants = read('migrations/2026-11-01_lock_down_all_function_grants.sql');
   const KEEP_ANON = ['affiliate_go', 'increment_blog_views', 'log_app_error', 'proof_page', 'is_admin'];

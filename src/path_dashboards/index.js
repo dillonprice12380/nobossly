@@ -215,5 +215,27 @@ async function panelFor(sb, userId, profile, now = new Date()) {
   };
 }
 
-module.exports = { TOOLS, PATHS, DASHBOARDS, configFor, setupQuestions, workspaceFor, needsSetup,
+// What a path's dashboard is made of, for its public landing page: built from
+// the same config members get, so the page can never promise something else.
+// Uses the subpath-less, stage-less view (what a new member sees first).
+function previewFor(slug) {
+  const d = dashboardFor(slug);
+  if (!d) return null;
+  const ctx = { subpath: null, stage: null, answers: {} };
+  const name = (kind, key) => { const x = kind(key); return x ? x.label : null; };
+  const north = d.northStar(ctx);
+  const nb = northBoardOf(d, ctx);
+  const nl = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
+  const numbers = [north && name(registry.metric, north), nb && name(registry.board, nb), nl && name(registry.checklist, nl)]
+    .concat(d.supporting(ctx).map(k => name(registry.metric, k))).filter(Boolean);
+  return {
+    stages: d.stages.map(s => s.answer),
+    numbers,
+    boards: d.boards(ctx).filter(k => k !== nb).map(k => registry.board(k)).filter(Boolean).map(b => ({ label: b.label, emoji: b.emoji })),
+    checklists: d.checklists(ctx).filter(k => k !== nl).map(k => name(registry.checklist, k)).filter(Boolean),
+    tools: workspaceFor(slug).featured.map(t => ({ label: t.label, emoji: t.emoji }))
+  };
+}
+
+module.exports = { TOOLS, PATHS, DASHBOARDS, previewFor, configFor, setupQuestions, workspaceFor, needsSetup,
   dashboardFor, contextOf, pathItemsFor, stageOf, panelFor, northBoardOf };

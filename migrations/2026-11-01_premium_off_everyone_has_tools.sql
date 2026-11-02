@@ -1,6 +1,6 @@
--- NOT APPLIED, written for review. Apply WITH the Phase 0 deploy: until it is,
--- premium_save() still refuses tool saves from members without a subscription,
--- even though the site now opens the tools to everyone (FLAGS.premium = false).
+-- Applied live 2026-11-01 (verified 2026-11-02: has_premium() returns true for every active profile).
+-- It was needed with the Phase 0 deploy: without it, premium_save() refused tool
+-- saves from members without a subscription, though the site opened the tools to everyone.
 --
 -- has_premium() decides who may save tool data (premium_save) and whose Proof
 -- Page is public (proof_page). Premium is off, so it answers the way
