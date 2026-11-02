@@ -3,43 +3,64 @@
 // of them. A path config can add its own worksheets the same way (an offer
 // builder, an MVP scope) without new storage.
 //
-// Field types: text, longtext, list (one item per line), score (1–5), money,
+// Field types: text, longtext, list (one item per line), rich (formatted
+// text: bold, lists, colour — cleaned by ./richtext), score (1–5), money,
 // number, date, select.
 
 const matrix = require('./matrix');
+const richtext = require('./richtext');
 
 const WORKSHEETS = {
   lean_canvas: {
     label: 'Lean Canvas', emoji: '🧭', layout: 'canvas', multiple: true,
+    // The printed poster: the classic Lean Canvas grid (view and PDF).
+    poster: {
+      columns: 10,
+      areas: [
+        'problem problem solution solution uvp uvp advantage advantage segments segments',
+        'problem problem metrics metrics uvp uvp channels channels segments segments',
+        'alternatives alternatives metrics metrics uvp uvp channels channels early_adopters early_adopters',
+        'costs costs costs costs costs revenue revenue revenue revenue revenue'
+      ]
+    },
     blurb: 'Your idea on one page. Best for something new and untested — fill it fast, then test the riskiest box first.',
     sections: [
-      { key: 'problem',        label: 'Problem',                 type: 'list',     help: 'The top three problems your customer has.' },
-      { key: 'alternatives',   label: 'Existing alternatives',   type: 'list',     help: 'How they solve it today — including "a spreadsheet" or "nothing".' },
-      { key: 'segments',       label: 'Customer segments',       type: 'list',     help: 'Who has the problem.' },
-      { key: 'early_adopters', label: 'Early adopters',          type: 'longtext', help: 'The people who feel it most and would try you first.' },
-      { key: 'uvp',            label: 'Unique value proposition', type: 'longtext', help: 'One clear sentence: why you, and why it matters to them.' },
-      { key: 'solution',       label: 'Solution',                type: 'list',     help: 'The simplest thing that solves each problem.' },
-      { key: 'channels',       label: 'Channels',                type: 'list',     help: 'How you reach them.' },
-      { key: 'revenue',        label: 'Revenue streams',         type: 'list',     help: 'How you get paid, and roughly how much.' },
-      { key: 'costs',          label: 'Cost structure',          type: 'list',     help: 'What it costs to run.' },
-      { key: 'metrics',        label: 'Key metrics',             type: 'list',     help: 'The few numbers that tell you it is working.' },
-      { key: 'advantage',      label: 'Unfair advantage',        type: 'longtext', help: 'What cannot easily be copied. "Nothing yet" is an honest answer.' }
+      { key: 'problem',        label: 'Problem',                 type: 'rich',     help: 'The top three problems your customer has.' },
+      { key: 'alternatives',   label: 'Existing alternatives',   type: 'rich',     help: 'How they solve it today — including "a spreadsheet" or "nothing".' },
+      { key: 'segments',       label: 'Customer segments',       type: 'rich',     help: 'Who has the problem.' },
+      { key: 'early_adopters', label: 'Early adopters',          type: 'rich', help: 'The people who feel it most and would try you first.' },
+      { key: 'uvp',            label: 'Unique value proposition', type: 'rich', help: 'One clear sentence: why you, and why it matters to them.' },
+      { key: 'solution',       label: 'Solution',                type: 'rich',     help: 'The simplest thing that solves each problem.' },
+      { key: 'channels',       label: 'Channels',                type: 'rich',     help: 'How you reach them.' },
+      { key: 'revenue',        label: 'Revenue streams',         type: 'rich',     help: 'How you get paid, and roughly how much.' },
+      { key: 'costs',          label: 'Cost structure',          type: 'rich',     help: 'What it costs to run.' },
+      { key: 'metrics',        label: 'Key metrics',             type: 'rich',     help: 'The few numbers that tell you it is working.' },
+      { key: 'advantage',      label: 'Unfair advantage',        type: 'rich', help: 'What cannot easily be copied. "Nothing yet" is an honest answer.' }
     ]
   },
 
   business_model_canvas: {
     label: 'Business Model Canvas', emoji: '🗺️', layout: 'canvas', multiple: true,
+    // The printed poster: the classic nine-block grid (view and PDF).
+    poster: {
+      columns: 10,
+      areas: [
+        'partners partners activities activities value value relationships relationships segments segments',
+        'partners partners resources resources value value channels channels segments segments',
+        'costs costs costs costs costs revenue revenue revenue revenue revenue'
+      ]
+    },
     blurb: 'The classic nine blocks. Best once you know what you sell and want to see how the whole business fits together.',
     sections: [
-      { key: 'partners',      label: 'Key partners',           type: 'list', help: 'Suppliers, collaborators, people you depend on.' },
-      { key: 'activities',    label: 'Key activities',         type: 'list', help: 'What you must do well, every week.' },
-      { key: 'resources',     label: 'Key resources',          type: 'list', help: 'What you need to have: skills, equipment, money, premises.' },
-      { key: 'value',         label: 'Value propositions',     type: 'list', help: 'What you deliver, and why customers choose it.' },
-      { key: 'relationships', label: 'Customer relationships', type: 'list', help: 'How you win and keep customers.' },
-      { key: 'channels',      label: 'Channels',               type: 'list', help: 'How customers find you, buy, and receive what you sell.' },
-      { key: 'segments',      label: 'Customer segments',      type: 'list', help: 'Who you serve.' },
-      { key: 'costs',         label: 'Cost structure',         type: 'list', help: 'Your biggest costs, fixed and variable.' },
-      { key: 'revenue',       label: 'Revenue streams',        type: 'list', help: 'Every way money comes in, and the price.' }
+      { key: 'partners',      label: 'Key partners',           type: 'rich', help: 'Suppliers, collaborators, people you depend on.' },
+      { key: 'activities',    label: 'Key activities',         type: 'rich', help: 'What you must do well, every week.' },
+      { key: 'resources',     label: 'Key resources',          type: 'rich', help: 'What you need to have: skills, equipment, money, premises.' },
+      { key: 'value',         label: 'Value propositions',     type: 'rich', help: 'What you deliver, and why customers choose it.' },
+      { key: 'relationships', label: 'Customer relationships', type: 'rich', help: 'How you win and keep customers.' },
+      { key: 'channels',      label: 'Channels',               type: 'rich', help: 'How customers find you, buy, and receive what you sell.' },
+      { key: 'segments',      label: 'Customer segments',      type: 'rich', help: 'Who you serve.' },
+      { key: 'costs',         label: 'Cost structure',         type: 'rich', help: 'Your biggest costs, fixed and variable.' },
+      { key: 'revenue',       label: 'Revenue streams',        type: 'rich', help: 'Every way money comes in, and the price.' }
     ]
   },
 
@@ -121,7 +142,7 @@ const WORKSHEETS = {
 // A path config adds its own worksheet (an offer builder, an MVP scope) here.
 // Checked when the config loads, so a typo fails at boot, not on one page.
 const KIND = /^[a-z][a-z0-9_]{1,39}$/;
-const TYPES = ['text', 'longtext', 'list', 'score', 'money', 'number', 'date', 'select'];
+const TYPES = ['text', 'longtext', 'list', 'rich', 'score', 'money', 'number', 'date', 'select'];
 function defineWorksheet(key, def) {
   const bad = why => { throw new Error('Invalid worksheet "' + key + '": ' + why); };
   if (!KIND.test(String(key))) bad('key must match ' + KIND);
@@ -155,7 +176,10 @@ function clean(def, body) {
   const data = {};
   for (const s of def.sections) {
     const v = body[s.key];
-    if (s.type === 'list') {
+    if (s.type === 'rich') {
+      const html = richtext.clean(v);
+      if (html) data[s.key] = html;
+    } else if (s.type === 'list') {
       const items = String(v || '').split('\n').map(x => x.trim().slice(0, LIMITS.listItem)).filter(Boolean).slice(0, LIMITS.listItems);
       if (items.length) data[s.key] = items;
     } else if (s.type === 'score') {

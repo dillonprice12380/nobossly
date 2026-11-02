@@ -25,7 +25,7 @@ const esc = v => String(v == null ? '' : v)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // One shell for every email, so they all look like they came from the same place.
-function shell(heading, bodyHtml, ctaLabel, ctaHref) {
+function shell(heading, bodyHtml, ctaLabel, ctaHref, why) {
   return `<!doctype html><html><body style="margin:0;background:#f4f6f5;padding:28px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#14201c">
   <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e7e4;border-radius:14px">
     <tr><td style="padding:28px 30px 8px">
@@ -38,8 +38,8 @@ function shell(heading, bodyHtml, ctaLabel, ctaHref) {
     </td></tr>
     <tr><td style="padding:0 30px 26px;border-top:1px solid #eef2f0">
       <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#6b7a74">
-        You're getting this because you started a NoBossly account.
-        <a href="${SITE}/account" style="color:#6b7a74">Email settings</a>
+        ${why || `You're getting this because you started a NoBossly account.
+        <a href="${SITE}/account" style="color:#6b7a74">Email settings</a>`}
       </p>
     </td></tr>
   </table></body></html>`;
@@ -52,8 +52,8 @@ const TEMPLATES = {
     subject: 'Your way out starts with a path',
     html: shell(
       `Welcome, ${esc(name)}.`,
-      p('You have an account, and NoBossly is free &mdash; every path, every quest, every rung.')
-      + p('Your dashboard has your first quests waiting, matched to the path you picked. Take one on tonight, after work, and check in to start your streak. When you have something to show, the peer-review queue will get you real feedback from people on the same climb.'),
+      p('You have an account, and NoBossly is free &mdash; every path and every tool.')
+      + p('Your dashboard is set up for the path you picked: the next steps to take, the boards and planning tools for that kind of business, and a community of people building the same way. Take one step tonight, after work.'),
       'Open my dashboard', SITE + '/dashboard')
   }),
 
@@ -62,17 +62,29 @@ const TEMPLATES = {
     html: shell(
       `Pick up where you left off, ${esc(name)}.`,
       p('Your account is ready. The only thing left is choosing your path &mdash; creator, freelancer, local service, online store and more. It takes a few seconds, and you can change it later.')
-      + p('Once it is picked, your quest board and your ladder are waiting.'),
+      + p('Once it is picked, your dashboard fills in with the steps and tools for that path.'),
       'Pick my path', SITE + '/choose-path')
   }),
 
   comeback: name => ({
-    subject: 'Your quests are still waiting',
+    subject: 'Your plan is still waiting',
     html: shell(
       `Still here when you are, ${esc(name)}.`,
-      p('Your path, your quests and your board are exactly where you left them.')
-      + p('The fastest way back in is a single daily check-in &mdash; it takes a minute, keeps your streak alive, and puts the next concrete step in front of you.'),
+      p('Your path, your tasks and your workspace are exactly where you left them.')
+      + p('The fastest way back in is one small step &mdash; open your dashboard and do the next thing on it.'),
       'Open my dashboard', SITE + '/dashboard')
+  }),
+
+  // A worksheet shared by email. opts: { from, title, label, note, link }.
+  doc_share: (name, o = {}) => ({
+    subject: `${String(o.from || 'Someone').slice(0, 60)} shared "${String(o.title || 'a worksheet').slice(0, 80)}" with you`,
+    html: shell(
+      `${esc(o.from || 'Someone')} shared a ${esc(o.label || 'worksheet')} with you.`,
+      p(`<strong>${esc(o.title || 'A worksheet')}</strong> &mdash; you can read it online or download it as a PDF. No account needed.`)
+      + (o.note ? p(`&ldquo;${esc(o.note)}&rdquo;`) : '')
+      + p('The link shows the latest version and works for 30 days.'),
+      'Open it', o.link || SITE,
+      `You're getting this because ${esc(o.from || 'a NoBossly member')} entered your address to share a document. Nothing else will be sent.`)
   })
 };
 
@@ -98,7 +110,7 @@ async function send(type, to, name, opts = {}) {
   const sb = opts.sb || admin();
   const tpl = TEMPLATES[type];
   if (!tpl) return false;
-  const { subject, html } = tpl(name || 'there');
+  const { subject, html } = tpl(name || 'there', opts.template || {});
 
   if (!enabled()) {
     console.log('[mailer] RESEND_API_KEY unset — skipping "' + type + '" to ' + to);
@@ -207,4 +219,4 @@ function status() {
   };
 }
 
-module.exports = { send, runSweep, enabled, status };
+module.exports = { send, runSweep, enabled, status, SITE };

@@ -712,3 +712,7 @@ body.theme-light .article-body a { color: #047857; }
 .post-comment-form input { flex: 1; min-width: 0; }
 .feed-event { display: flex; gap: .65rem; align-items: center; padding: .7rem .9rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Highlighted words in formatted worksheet text stay readable on dark backgrounds. */
+.rt-edit [style*="background-color"], .sb-rich [style*="background-color"] { color: #14201c; }
+.sb-rich p { margin: .2rem 0; } .sb-rich ul, .sb-rich ol { margin: .2rem 0; padding-left: 1.2rem; }

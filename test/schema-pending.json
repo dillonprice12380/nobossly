@@ -5,5 +5,28 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-02_workspace_shares.sql": {
+      "workspace_shares": [
+        "id",
+        "doc_id",
+        "owner_id",
+        "recipient_id",
+        "email",
+        "token",
+        "note",
+        "created_at",
+        "expires_at",
+        "revoked_at",
+        "last_viewed_at"
+      ],
+      "_enums": {
+        "email_log": {
+          "email_type": [
+            "doc_share"
+          ]
+        }
+      }
+    }
+  }
 }
