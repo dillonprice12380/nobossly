@@ -6,6 +6,11 @@
 </div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
+<div class="card" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;border-left:3px solid var(--accent)">
+  <div><strong>🎓 Programs & courses</strong><p class="muted small" style="margin:.15rem 0 0"><%= org.provider ? 'List programs and courses in the NoBossly marketplace, review applicants and host lessons.' : 'Draft programs and courses. Publishing opens once your organization is approved as a provider.' %></p></div>
+  <a class="btn btn-primary btn-sm" href="/orgs/<%= org.slug %>/listings">Open the provider console</a>
+</div>
+
 <h2 style="font-size:1.05rem;margin:1rem 0 .5rem">Cohorts</h2>
 <% if (!cohorts.length) { %><div class="card"><p class="muted" style="margin:0">No cohorts yet. Create the first one below — it comes with an invite link to send to your founders.</p></div><% } %>
 <% cohorts.forEach(function (c) { %>

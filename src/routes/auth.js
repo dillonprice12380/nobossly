@@ -5,25 +5,32 @@ const { anonClient, userClient, serviceClient } = require('../supabase');
 const { setSessionCookies, clearSessionCookies, cookieOpts, cookieDomainOpts } = require('../middleware/auth');
 const mailer = require('../mailer');
 const pathsLib = require('../paths');
+const { relativePath } = require('../safe_back');
 function callbackBase(req) {
   const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
   return proto + '://' + req.get('host');
 }
 
+// Where to go after logging in: a path on this site only (src/safe_back.js),
+// e.g. the program someone was about to apply to.
+const nextOf = v => { const p = relativePath(v); return p && !/^\/(login|logout|signup)\b/.test(p) ? p : null; };
+
 router.get('/login', (req, res) => {
-  if (req.user) return res.redirect('/dashboard');
-  res.render('login', { title: 'Log in', error: null, message: req.query.m || null });
+  const next = nextOf(req.query.next);
+  if (req.user) return res.redirect(next || '/dashboard');
+  res.render('login', { title: 'Log in', error: null, message: req.query.m || null, next });
 });
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  const next = nextOf(req.body.next);
   const sb = anonClient();
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
-    return res.render('login', { title: 'Log in', error: error ? error.message : 'Login failed', message: null });
+    return res.render('login', { title: 'Log in', error: error ? error.message : 'Login failed', message: null, next });
   }
   setSessionCookies(res, data.session);
-  res.redirect('/dashboard');
+  res.redirect(next || '/dashboard');
 });
 
 const keepPath = req => pathsLib.isPath((req.body && req.body.path) || (req.query && req.query.path))

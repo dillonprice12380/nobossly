@@ -1,0 +1,48 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/providers">← For providers</a>
+<div class="page-head"><div><h1>Apply to be a provider</h1>
+  <p class="muted">For accelerators, incubators, nonprofits, universities and independent teachers. We review every application by hand.</p></div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (typeof err !== 'undefined' && err) { %><p class="error"><%= err %></p><% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Provider applications open shortly — this part is being set up.</p></div><% } %>
+<% var provOrgs = orgs.filter(function (o) { return o.provider; }); var pending = apps.find(function (a) { return a.status === 'pending'; }); %>
+
+<% if (provOrgs.length) { %>
+  <div class="card"><p style="margin:0">You're a provider with <strong><%= provOrgs.map(function (o) { return o.name; }).join(', ') %></strong>.</p>
+    <a class="btn btn-primary btn-sm" style="margin-top:.6rem" href="/orgs/<%= provOrgs[0].slug %>/listings">Go to your provider console</a></div>
+<% } %>
+
+<% if (apps.length) { %>
+  <h2 style="font-size:1.05rem">Your applications</h2>
+  <% apps.forEach(function (a) { %>
+    <div class="card" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center">
+      <div><strong><%= a.org_name %></strong> <span class="muted small">· sent <%= new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></span>
+        <% if (a.admin_note) { %><p class="muted small pre" style="margin:.3rem 0 0">“<%= a.admin_note %>”</p><% } %></div>
+      <span class="chip<%= a.status === 'approved' ? ' chip-success' : a.status === 'rejected' ? ' chip-danger' : '' %>"><%= { pending: 'Being reviewed', approved: 'Approved', rejected: 'Not approved' }[a.status] %></span>
+    </div>
+  <% }) %>
+<% } %>
+
+<% if (!pending && !provOrgs.length && !notReady) { %>
+<form class="card pv-form" method="post" action="/providers/apply">
+  <label>Organization name <span class="muted small">(or your own name, if you teach on your own)</span><input name="org_name" maxlength="120" required value="<%= form.org_name || '' %>"></label>
+  <label>What kind of provider are you?
+    <select name="kind" required><option value="">Choose…</option>
+      <% Object.keys(mk.ORG_KINDS).forEach(function (k) { %><option value="<%= k %>"<%= form.kind === k ? ' selected' : '' %>><%= mk.ORG_KINDS[k] %></option><% }) %>
+    </select></label>
+  <fieldset class="pv-offers"><legend>What will you list?</legend>
+    <% Object.keys(mk.KINDS).forEach(function (k) { %><label class="pv-check"><input type="checkbox" name="offers" value="<%= k %>"<%= (form.offers || []).includes(k) ? ' checked' : '' %>> <strong><%= mk.KINDS[k] %>s</strong> <span class="muted small">— <%= mk.KIND_BLURB[k] %></span></label><% }) %>
+  </fieldset>
+  <label>Website <span class="muted small">(optional)</span><input type="url" name="website_url" maxlength="300" placeholder="https://" value="<%= form.website_url || '' %>"></label>
+  <label>Contact email <span class="muted small">(optional; shown to our team only)</span><input type="email" name="contact_email" maxlength="254" value="<%= form.contact_email || '' %>"></label>
+  <label>About what you run<textarea name="about" rows="5" maxlength="2000" required placeholder="Who it's for, what people get, how long it runs, and anything that shows it works."><%= form.about || '' %></textarea></label>
+  <p class="muted small">If approved, this becomes your public profile on your listings. You can edit it later.</p>
+  <button class="btn btn-primary">Send application</button>
+</form>
+<% } %>
+<style>
+  .pv-form label { display: block; margin-bottom: .8rem; }
+  .pv-offers { border: 1px solid var(--border); border-radius: 10px; padding: .6rem .9rem; margin: 0 0 .8rem; }
+  .pv-check { display: block; margin: .3rem 0 !important; }
+</style>
+<%- include('../partials/foot') %>

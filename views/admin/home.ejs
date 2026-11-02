@@ -16,6 +16,14 @@
 </div>
 <% } %>
 
+<% if (typeof pendingProviders !== 'undefined' && pendingProviders > 0) { %>
+<div class="card" style="margin-top:1.25rem;border-left:4px solid var(--accent)">
+  <strong>🎓 <%= pendingProviders %> provider application<%= pendingProviders == 1 ? '' : 's' %> waiting</strong>
+  <p class="muted" style="margin:.35rem 0 .75rem">Accelerators, programs or teachers asking to list on NoBossly.</p>
+  <a class="btn" href="/admin/providers">Review now</a>
+</div>
+<% } %>
+
 <% if (backfilled !== null && backfilled !== undefined) { %>
 <div class="card" style="margin-top:1.25rem;border-left:4px solid var(--green,#2e7d52)">
   <strong>Backfill complete:</strong> <%= backfilled %> OAuth profile<%= backfilled == 1 ? '' : 's' %> updated. They will now appear in the member directory.

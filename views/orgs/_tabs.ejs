@@ -1,0 +1,17 @@
+<%# Console tabs for one listing. Locals: org, l, tab. %>
+<nav class="lc-tabs" aria-label="Listing">
+  <a class="<%= tab === 'details' ? 'is-on' : '' %>" href="/orgs/<%= org.slug %>/listings/<%= l.id %>">Details</a>
+  <% if (l.kind === 'course') { %><a class="<%= tab === 'lessons' ? 'is-on' : '' %>" href="/orgs/<%= org.slug %>/listings/<%= l.id %>/curriculum">Lessons</a><% } %>
+  <a class="<%= tab === 'people' ? 'is-on' : '' %>" href="/orgs/<%= org.slug %>/listings/<%= l.id %>/people"><%= l.join_mode === 'apply' ? 'Applicants & members' : 'Members' %></a>
+  <a href="/programs/<%= l.slug %>" target="_blank" rel="noopener">View page ↗</a>
+</nav>
+<style>
+  .lc-tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin: .6rem 0 1rem; border-bottom: 1px solid var(--border); }
+  .lc-tabs a { padding: .5rem .8rem; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .lc-tabs a.is-on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .lc-form label { display: block; margin-bottom: .8rem; }
+  .lc-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; }
+  .lc-row label { margin-bottom: 0; }
+  .lc-section { font-size: 1rem; margin: 1.3rem 0 .4rem; }
+  .lc-status { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+</style>

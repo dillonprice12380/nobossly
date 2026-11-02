@@ -25,6 +25,7 @@
   </div>
   <div class="divider">or use email</div>
   <form method="post" action="/login">
+    <% if (typeof next !== 'undefined' && next) { %><input type="hidden" name="next" value="<%= next %>"><% } %>
     <label>Email<input type="email" name="email" required></label>
     <label>Password<input type="password" name="password" required></label>
     <button class="btn btn-primary btn-block">Log in</button>

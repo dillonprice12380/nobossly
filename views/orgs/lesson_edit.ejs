@@ -1,0 +1,32 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>/listings/<%= l.id %>/curriculum">← Lessons of <%= l.title %></a>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<form class="card lc-form" method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/lessons/<%= lesson.id %>" data-autosave>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
+    <h1 style="margin:0;font-size:1.4rem">Edit lesson</h1>
+    <span class="muted small" data-save-status aria-live="polite"></span>
+  </div>
+  <label style="margin-top:.8rem">Title<input name="title" maxlength="160" required value="<%= lesson.title %>"></label>
+  <div class="lc-row">
+    <label>Video link <span class="muted small">(YouTube, Vimeo or Loom are shown in the lesson)</span><input type="url" name="video_url" maxlength="500" value="<%= lesson.video_url || '' %>" placeholder="https://"></label>
+    <label>Minutes <span class="muted small">(about)</span><input name="minutes" inputmode="numeric" value="<%= lesson.minutes || '' %>"></label>
+  </div>
+  <% if (lesson.video_url && !embed) { %><p class="muted small">That link can't be shown inside the lesson, so members get a "Watch the video" link instead.</p><% } %>
+  <div style="margin-top:.8rem"><div class="ws-rich-head"><strong>Lesson</strong> <span class="muted small">— select words and use 🔗 to add a link</span></div>
+    <div class="rt" data-rt data-rt-links><textarea name="body" rows="16" aria-label="Lesson"><%= lesson.body ? richHtml(lesson.body, mk.LIMITS.lesson) : '' %></textarea></div></div>
+  <label style="margin-top:.8rem">Task <span class="muted small">— a worksheet from the member's own workspace</span>
+    <select name="tool_key"><option value="">No task</option>
+      <% tools.forEach(function (t) { %><option value="<%= t.key %>"<%= lesson.tool_key === t.key ? ' selected' : '' %>><%= t.emoji %> <%= t.label %></option><% }) %>
+    </select></label>
+  <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-ghost" href="/learn/<%= l.slug %>/<%= lesson.id %>">Preview</a>
+  </div>
+</form>
+<form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/lessons/<%= lesson.id %>" onsubmit="return confirm('Delete this lesson?')" style="margin-top:.8rem">
+  <button class="btn btn-ghost btn-sm" name="action" value="delete">Delete lesson</button>
+</form>
+<script src="/js/richtext.js?v=2"></script>
+<%- include('_rt_style') %>
+<%- include('_tabs_style') %>
+<%- include('../partials/foot') %>

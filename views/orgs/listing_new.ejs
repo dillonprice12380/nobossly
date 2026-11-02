@@ -1,0 +1,13 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>/listings">← Programs & courses</a>
+<h1 style="margin:.3rem 0 .2rem">New <%= mk.KINDS[kind].toLowerCase() %></h1>
+<p class="muted"><%= mk.KIND_BLURB[kind] %> It starts as a draft; nothing is public until you publish.</p>
+<form class="card lc-form" method="post" action="/orgs/<%= org.slug %>/listings">
+  <input type="hidden" name="kind" value="<%= kind %>">
+  <label>Title<input name="title" maxlength="120" required placeholder="<%= kind === 'course' ? 'e.g. Your first ten customers' : 'e.g. Spring 2027 Accelerator' %>"></label>
+  <label>One-line summary<input name="summary" maxlength="280" required placeholder="Who it's for and what they'll come away with"></label>
+  <button class="btn btn-primary">Create draft</button>
+  <p class="muted small" style="margin:.6rem 0 0">Wanted the other kind? <a href="/orgs/<%= org.slug %>/listings/new?kind=<%= kind === 'course' ? 'program' : 'course' %>">New <%= kind === 'course' ? 'program' : 'course' %> instead</a>.</p>
+</form>
+<style>.lc-form label { display: block; margin-bottom: .8rem; }</style>
+<%- include('../partials/foot') %>

@@ -1,0 +1,44 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>">← <%= org.name %>: cohorts and team</a>
+<div class="page-head"><div>
+  <h1 style="margin:.2rem 0 0">Programs & courses</h1>
+  <p class="muted small" style="margin:.2rem 0 0"><%= org.name %> · provider console</p>
+</div><div style="display:flex;gap:.4rem;flex-wrap:wrap">
+  <a class="btn btn-primary btn-sm" href="/orgs/<%= org.slug %>/listings/new?kind=course">New course</a>
+  <a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/listings/new?kind=program">New program</a>
+</div></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Programs and courses open shortly — this part is being set up.</p></div><% } %>
+<% if (!org.provider) { %>
+  <div class="card" style="border-left:3px solid #f59e0b"><p style="margin:0"><strong>You can draft, but not publish yet.</strong> Publishing is for approved providers. <a href="/providers/apply">Apply</a>, or if we already work with you, ask us to turn on listings for <%= org.name %>.</p></div>
+<% } %>
+
+<% if (!listings.length && !notReady) { %>
+  <div class="card center"><p style="margin:0">Nothing listed yet. Start a <a href="/orgs/<%= org.slug %>/listings/new?kind=course">course</a> (lessons hosted here) or a <a href="/orgs/<%= org.slug %>/listings/new?kind=program">program</a> (applications and a private cohort).</p></div>
+<% } %>
+<% listings.forEach(function (l) { var c = counts[l.id] || { applied: 0, enrolled: 0 }; %>
+  <div class="card" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
+    <div style="min-width:0">
+      <p class="muted small" style="margin:0"><%= l.kind === 'course' ? '📚 Course' : '🚀 Program' %> · <span class="chip<%= l.status === 'published' ? ' chip-success' : '' %>"><%= mk.STATUS[l.status] %></span></p>
+      <strong><a href="/orgs/<%= org.slug %>/listings/<%= l.id %>"><%= l.title %></a></strong>
+      <p class="muted small" style="margin:.15rem 0 0"><%= c.enrolled %> enrolled<% if (l.join_mode === 'apply') { %> · <strong style="color:var(--text)"><%= c.applied %></strong> waiting for review<% } %> · edited <%= new Date(l.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p>
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+      <% if (l.kind === 'course') { %><a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/listings/<%= l.id %>/curriculum">Lessons</a><% } %>
+      <a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/listings/<%= l.id %>/people">People</a>
+      <a class="btn btn-ghost btn-sm" href="/orgs/<%= org.slug %>/listings/<%= l.id %>">Edit</a>
+    </div>
+  </div>
+<% }) %>
+
+<% if (['owner', 'admin'].includes(myRole)) { %>
+<details class="card" style="margin-top:1.2rem"><summary><strong>Public profile</strong> <span class="muted small">— shown on every listing</span></summary>
+  <form method="post" action="/orgs/<%= org.slug %>/profile" style="margin-top:.6rem">
+    <label>Tagline<input name="tagline" maxlength="160" value="<%= org.tagline || '' %>" placeholder="One line about who you help"></label>
+    <label>About<textarea name="about" rows="4" maxlength="2000"><%= org.about || '' %></textarea></label>
+    <label>Website<input type="url" name="website_url" maxlength="300" value="<%= org.website_url || '' %>" placeholder="https://"></label>
+    <button class="btn btn-primary btn-sm">Save profile</button>
+  </form>
+</details>
+<% } %>
+<%- include('../partials/foot') %>

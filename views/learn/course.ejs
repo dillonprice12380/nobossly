@@ -1,0 +1,15 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/programs/<%= l.slug %>">← About this course</a>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (preview) { %><p class="notice">Team preview — this is what enrolled members see. Progress is not recorded for you.</p><% } %>
+<div class="page-head"><div>
+  <p class="mk-kicker" style="margin:0;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700">📚 <%= l.org.name %></p>
+  <h1 style="margin:.2rem 0 .3rem"><%= l.title %></h1>
+  <p class="muted" style="margin:0"><%= doneCount %> of <%= total %> lesson<%= total === 1 ? '' : 's' %> done</p>
+</div><% if (nextLesson) { %><a class="btn btn-primary" href="/learn/<%= l.slug %>/<%= nextLesson.id %>"><%= doneCount ? 'Continue' : 'Start the course' %></a><% } %></div>
+<div class="progress" aria-label="<%= total ? Math.round(100 * doneCount / total) : 0 %>% done"><div class="progress-bar" style="width:<%= total ? Math.round(100 * doneCount / total) : 0 %>%"></div></div>
+<% if (!total) { %><div class="card center"><p class="muted" style="margin:0">No lessons yet — the team is still building this course.</p></div><% } else { %>
+  <div class="card"><%- include('_outline', { l: l, modules: modules, done: done, current: null }) %></div>
+<% } %>
+<%- include('_style') %>
+<%- include('../partials/foot') %>
