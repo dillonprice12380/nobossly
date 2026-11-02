@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-02 (run by hand in the SQL Editor; verified: archive row counts match, 18 tables dropped).
 --
 -- Removes what is left of the AI era: the Compass, generated ideas,
 -- blueprints, the questionnaire, the fit-test library, AI credits and AI
