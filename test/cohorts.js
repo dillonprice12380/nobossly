@@ -94,7 +94,7 @@ const GROUP = { id: GID, name: 'Spring Cohort', slug: 'spring-cohort', descripti
   console.log('The migration:');
   {
     const sql = read('migrations/2026-11-02_private_cohorts.sql');
-    ok('it is written for review, not applied', /^-- NOT APPLIED, written for review\./.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-02/.test(sql));
     const fns = [...sql.matchAll(/create or replace function public\.(\w+)\(/g)].map(m => m[1]);
     const guards = ['help_posts_guard', 'help_responses_guard', 'help_matches_for']; // already locked down in 2026-11-01_phase1
     const open = fns.filter(f => !guards.includes(f) && !new RegExp(`revoke all on function public\\.${f}\\([^)]*\\)\\s+from public, anon`).test(sql));

@@ -7,7 +7,8 @@
     "idea, the coach thread, and deactivating an account -- with the errors",
     "swallowed at the call site so nothing surfaced.",
     "Regenerate after any migration that adds a column or changes a CHECK.",
-    "Updated 2026-11-02 after applying income_log, personal_info_filter, phase1_public_side, workspace_foundations and lock_down_all_function_grants."
+    "Updated 2026-11-02 after applying income_log, personal_info_filter, phase1_public_side, workspace_foundations and lock_down_all_function_grants.",
+    "Updated 2026-11-02 after applying private_cohorts."
   ],
   "columns": {
     "accountability_pairs": [
@@ -516,6 +517,7 @@
       "group_id",
       "joined_at",
       "role",
+      "status",
       "user_id"
     ],
     "group_posts": [
@@ -529,9 +531,12 @@
       "created_at",
       "description",
       "id",
+      "join_policy",
       "name",
+      "org_id",
       "owner_id",
-      "slug"
+      "slug",
+      "visibility"
     ],
     "guidance_rules": [
       "active",
@@ -1327,6 +1332,61 @@
       "item",
       "note",
       "user_id"
+    ],
+    "organizations": [
+      "contact_email",
+      "created_at",
+      "created_by",
+      "id",
+      "kind",
+      "name",
+      "slug",
+      "website_url"
+    ],
+    "org_admins": [
+      "created_at",
+      "org_id",
+      "role",
+      "user_id"
+    ],
+    "group_invites": [
+      "code",
+      "created_at",
+      "created_by",
+      "expires_at",
+      "group_id",
+      "id",
+      "max_uses",
+      "uses"
+    ],
+    "cohort_assignments": [
+      "created_at",
+      "created_by",
+      "due_on",
+      "group_id",
+      "id",
+      "instructions",
+      "kind",
+      "position",
+      "title",
+      "tool_key",
+      "updated_at"
+    ],
+    "cohort_submissions": [
+      "assignment_id",
+      "body",
+      "feedback",
+      "group_id",
+      "id",
+      "link_url",
+      "reviewed_at",
+      "reviewed_by",
+      "snapshot",
+      "source_id",
+      "status",
+      "submitted_at",
+      "title",
+      "user_id"
     ]
   },
   "enums": {
@@ -1498,7 +1558,17 @@
     "group_members": {
       "role": [
         "owner",
+        "admin",
+        "moderator",
+        "mentor",
         "member"
+      ],
+      "status": [
+        "active",
+        "requested",
+        "invited",
+        "removed",
+        "left"
       ]
     },
     "guide_locations": {
@@ -1530,7 +1600,9 @@
         "mention",
         "badge",
         "system",
-        "help"
+        "help",
+        "cohort",
+        "group"
       ]
     },
     "peer_reviews": {
@@ -1639,7 +1711,8 @@
         "post",
         "post_comment",
         "help_post",
-        "help_response"
+        "help_response",
+        "group_post"
       ]
     },
     "revenue_entries": {
@@ -1768,6 +1841,49 @@
         "accepted",
         "declined",
         "withdrawn"
+      ]
+    },
+    "groups": {
+      "visibility": [
+        "public",
+        "private",
+        "hidden"
+      ],
+      "join_policy": [
+        "open",
+        "request",
+        "invite"
+      ]
+    },
+    "organizations": {
+      "kind": [
+        "accelerator",
+        "incubator",
+        "nonprofit",
+        "university",
+        "other"
+      ]
+    },
+    "org_admins": {
+      "role": [
+        "owner",
+        "admin",
+        "staff"
+      ]
+    },
+    "cohort_assignments": {
+      "kind": [
+        "worksheet",
+        "board",
+        "text",
+        "link"
+      ]
+    },
+    "cohort_submissions": {
+      "status": [
+        "submitted",
+        "returned",
+        "approved"
       ]
     }
   }
