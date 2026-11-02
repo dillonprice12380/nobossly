@@ -165,7 +165,7 @@ app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'Work Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly is a free community for people working their way out of the 9 to 5: pick one of nine paths, take on real-world challenges, run sprints, and follow other members climbing the same ladder — trading feedback, testimonials and advice as you go.' });
+  res.render('home', { title: 'Build Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly is a free community and workspace for people building a business around a job: ask questions and trade help in public, run your business from a dashboard made for your path, and work through accelerator programs in private cohorts.' });
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -267,6 +267,15 @@ setInterval(() => {
     () => {}
   );
 }, 10 * 60 * 1000);
+
+// Weekly check-in threads in groups: Mondays and Fridays from 09:00 New York
+// time (src/checkins.js). Idempotent in the database, so a 15-minute timer is fine.
+const checkins = require('./src/checkins');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  checkins.run(sc).catch(e => console.error('[checkins]', e && e.message));
+}, 15 * 60 * 1000);
 
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
 const mailer = require('./src/mailer');

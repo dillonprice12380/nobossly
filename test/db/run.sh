@@ -11,15 +11,22 @@ if [ -z "$BIN" ] || [ ! -x "$BIN/initdb" ]; then echo "Postgres not installed �
 DIR=$(mktemp -d /var/tmp/nobossly-dbtest.XXXXXX)
 RUN=""; if [ "$(id -u)" = "0" ]; then chown postgres "$DIR"; RUN="su postgres -c"; fi
 as() { if [ -n "$RUN" ]; then su postgres -c "$1"; else bash -c "$1"; fi; }
-cp test/db/stub.sql test/db/private_cohorts.sql migrations/2026-11-02_private_cohorts.sql "$DIR"/ && chmod 644 "$DIR"/*.sql
+cp test/db/stub.sql test/db/private_cohorts.sql test/db/group_checkins.sql migrations/2026-11-02_private_cohorts.sql migrations/2026-11-02_group_checkins.sql "$DIR"/ && chmod 644 "$DIR"/*.sql
 as "$BIN/initdb -D $DIR/data -A trust >/dev/null && $BIN/pg_ctl -D $DIR/data -o '-p 5498 -k $DIR -c listen_addresses=' -l $DIR/log start >/dev/null"
 trap 'as "$BIN/pg_ctl -D $DIR/data stop -m immediate >/dev/null" || true; rm -rf "$DIR"' EXIT
 P="psql -h $DIR -p 5498 -U postgres -q -t -v ON_ERROR_STOP=1"
-createdb -h "$DIR" -p 5498 -U postgres t
-$P -d t -f "$DIR/stub.sql" >/dev/null
-$P -d t -f "$DIR/2026-11-02_private_cohorts.sql" >/dev/null 2>&1
-OUT=$($P -d t -f "$DIR/private_cohorts.sql" 2>&1 | grep -E '✓|✗|\|' || true)
-echo "$OUT" | grep -E '✓|✗'
-FAILED=$(echo "$OUT" | grep -E '^\s*[0-9]+ \|' | awk -F'|' '{gsub(/ /,"",$1); print $1}')
-if [ "${FAILED:-1}" != "0" ]; then echo; echo "${FAILED:-?} failed"; exit 1; fi
+# Migrations in order, then each test file in its own fresh database.
+TOTAL_FAILED=0
+for TEST in private_cohorts group_checkins; do
+  dropdb -h "$DIR" -p 5498 -U postgres --if-exists t; createdb -h "$DIR" -p 5498 -U postgres t
+  $P -d t -f "$DIR/stub.sql" >/dev/null
+  $P -d t -f "$DIR/2026-11-02_private_cohorts.sql" >/dev/null 2>&1
+  $P -d t -f "$DIR/2026-11-02_group_checkins.sql" >/dev/null 2>&1
+  echo "$TEST:"
+  OUT=$($P -d t -f "$DIR/$TEST.sql" 2>&1 | grep -E '✓|✗|\||ERROR' || true)
+  echo "$OUT" | grep -E '✓|✗|ERROR'
+  FAILED=$(echo "$OUT" | grep -E '^\s*[0-9]+ \|' | awk -F'|' '{gsub(/ /,"",$1); print $1}')
+  TOTAL_FAILED=$((TOTAL_FAILED + ${FAILED:-1}))
+done
+if [ "$TOTAL_FAILED" != "0" ]; then echo; echo "$TOTAL_FAILED failed"; exit 1; fi
 echo; echo "All good"

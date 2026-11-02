@@ -38,20 +38,39 @@
     <% } else { %>
       <p class="notice">Join the group to post.</p>
     <% } %>
-    <% if (canSeePosts && !posts.length) { %><div class="card center"><p class="muted">No posts yet.</p></div><% } %>
-    <% (canSeePosts ? posts : []).forEach(function (p) { %>
-      <div class="card reply">
-        <p class="muted small" style="display:flex;justify-content:space-between;gap:.5rem">
-          <span><strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= name(p.user_id) %></a></strong> · <%= new Date(p.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %></span>
-          <% if (p.user_id === user.id || ctx.canModerate || ctx.isAdmin) { %>
-            <form method="post" action="/groups/<%= G.slug %>/posts/<%= p.id %>/delete" onsubmit="return confirm('Delete this post?')"><button class="linkish small">Delete</button></form>
-          <% } else { %>
+    <% var R = typeof replies !== 'undefined' ? replies : {}, threadsOn = typeof threaded !== 'undefined' && threaded;
+       var when = function (d) { return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+       var postCard = function (p, isReply) { var mine = p.user_id === user.id; %>
+      <div class="<%= isReply ? 'gp-reply' : '' %>">
+        <p class="muted small" style="display:flex;justify-content:space-between;gap:.5rem;margin:0">
+          <span><% if (p.kind === 'checkin') { %><strong>NoBossly</strong><% } else { %><strong><a href="/members/<%= (pmap[p.user_id] || {}).username || '' %>"><%= name(p.user_id) %></a></strong><% } %> · <%= when(p.created_at) %></span>
+          <% if (mine || ctx.canModerate || ctx.isAdmin) { %>
+            <form method="post" action="/groups/<%= G.slug %>/posts/<%= p.id %>/delete" onsubmit="return confirm('Delete this<%= isReply ? ' reply' : ' post' %>?')"><button class="linkish small">Delete</button></form>
+          <% } else if (p.kind !== 'checkin') { %>
             <a class="small muted" href="/report?type=group_post&id=<%= p.id %>">Report</a>
           <% } %>
         </p>
-        <p class="pre"><%= p.body %></p>
+        <p class="pre" style="margin:.3rem 0 0"><%= p.body %></p>
       </div>
-    <% }) %>
+    <% }; var thread = function (p, open) { var rs = R[p.id] || []; %>
+      <div class="card reply<%= p.kind === 'checkin' ? ' gp-checkin' : '' %>" id="p-<%= p.id %>">
+        <% if (p.kind === 'checkin') { %><p class="small" style="margin:0 0 .3rem">📌 This week's check-in</p><% } %>
+        <% postCard(p, false); %>
+        <% rs.forEach(function (r) { postCard(r, true); }); %>
+        <% if (threadsOn && ctx.isMember) { %>
+          <details class="gp-replybox" <%= open ? 'open' : '' %>><summary class="small muted"><%= rs.length ? 'Reply' : (p.kind === 'checkin' ? 'Answer' : 'Reply') %></summary>
+            <form method="post" action="/groups/<%= G.slug %>/post" style="margin-top:.4rem">
+              <input type="hidden" name="parent_id" value="<%= p.id %>">
+              <textarea name="body" rows="2" maxlength="3000" required aria-label="Your reply"></textarea>
+              <button class="btn btn-primary btn-sm">Post reply</button>
+            </form>
+          </details>
+        <% } %>
+      </div>
+    <% }; %>
+    <% if (canSeePosts && typeof pin !== 'undefined' && pin) { thread(pin, true); } %>
+    <% if (canSeePosts && !posts.length && !(typeof pin !== 'undefined' && pin)) { %><div class="card center"><p class="muted">No posts yet.</p></div><% } %>
+    <% (canSeePosts ? posts : []).forEach(function (p) { thread(p, false); }) %>
   </div>
 
   <aside>
@@ -114,6 +133,12 @@
         <form method="post" action="/groups/<%= G.slug %>/settings" style="margin-top:.5rem">
           <label>Name<input name="name" maxlength="80" value="<%= G.name %>" required></label>
           <label>Description<textarea name="description" rows="2" maxlength="600"><%= G.description || '' %></textarea></label>
+          <% if (typeof threaded !== 'undefined' && threaded) { %>
+            <fieldset class="gr-vis" style="margin:.5rem 0"><legend class="small"><strong>Weekly check-ins</strong></legend>
+              <label class="check"><input type="checkbox" name="checkin_monday" value="1" <%= G.checkin_monday ? 'checked' : '' %>> Monday 9am (New York): "What are you working on this week?"</label>
+              <label class="check"><input type="checkbox" name="checkin_friday" value="1" <%= G.checkin_friday ? 'checked' : '' %>> Friday 9am (New York): "What went well this week?"</label>
+            </fieldset>
+          <% } %>
           <% if (!G.org_id) { %>
             <label>Who can join<select name="visibility"><% Object.keys(VISIBILITY).forEach(function (k) { %><option value="<%= k %>" <%= vis === k ? 'selected' : '' %>><%= VISIBILITY[k].label %> — <%= VISIBILITY[k].help %></option><% }) %></select></label>
           <% } %>
@@ -134,6 +159,11 @@
   .gr-inline { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin: .3rem 0; }
   .gr-invite { margin: .4rem 0; }
   .gr-invite input { width: 100%; font-size: .8rem; }
+  .gp-reply { margin: .6rem 0 0 .9rem; padding-left: .7rem; border-left: 2px solid var(--border); }
+  .gp-checkin { border-color: var(--accent); }
+  .gp-replybox { margin-top: .5rem; }
+  .gp-replybox summary { cursor: pointer; }
+  .gr-vis label.check { display: flex; gap: .5rem; align-items: flex-start; margin: .3rem 0; }
   .linkish { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
 </style>
 <%- include('../partials/foot') %>

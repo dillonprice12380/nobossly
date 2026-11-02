@@ -1,21 +1,46 @@
 -- NOT APPLIED, written for review.
--- PREREQUISITE: a full database backup taken AFTER the Phase 0 code is live
--- (Supabase dashboard → Database → Backups, or pg_dump). Dropped tables do not
--- come back without one.
 --
 -- Removes what is left of the AI era: the Compass, generated ideas,
 -- blueprints, the questionnaire, the fit-test library, AI credits and AI
 -- memory. Nothing in src/ reads these tables any more (the last reads, in
 -- src/guidance.js, admin.js, members.js and budget.js, were removed in the
--- same PR as this file). Row counts on 2026-11-01: founder_compasses 1,
--- ai_credits 15, ai_credit_plans 2, ai_credit_costs 13, ai_memory 13,
--- generation_jobs 2, questionnaire_responses 2, fit_criteria_library 46,
--- business_taxonomy 144, founder_levels 10, guide_h2_backup 13; the rest 0.
+-- Phase 0 PR). Row counts on 2026-11-02: founder_compasses 1, ai_credits 15,
+-- ai_credit_plans 2, ai_credit_costs 13, ai_memory 13, generation_jobs 2,
+-- questionnaire_responses 2, fit_criteria_library 46, business_taxonomy 144,
+-- founder_levels 10, guide_h2_backup 13; the rest 0.
 --
--- No CASCADE anywhere: if something still depends on one of these, the drop
--- fails and says what, rather than taking it along silently.
+-- BACKUP: step 0 copies every table that still has rows into a private
+-- `archive` schema in the same database before anything is dropped. The API
+-- does not expose that schema and anon/authenticated have no access to it,
+-- so nothing on the site can read it; if a dropped table is ever needed, the
+-- rows are there. Drop the archive schema once you are sure (note it holds two
+-- old questionnaire answers, which are personal data).
+--
+-- Dependencies checked on the live database 2026-11-02: six foreign keys
+-- from other tables (sprints x2, collab_requests, beta_programs, surveys,
+-- revenue_entries) — those columns are dropped in step 4 — and four old
+-- views, dropped in step 2. No CASCADE anywhere: if something else still
+-- depends on one of these, the drop fails and says what.
 
 begin;
+
+-- ---------------------------------------------------------------------------
+-- 0. Keep a copy of everything that has rows, out of reach of the site.
+create schema if not exists archive;
+revoke all on schema archive from public, anon, authenticated;
+alter default privileges in schema archive revoke all on tables from public, anon, authenticated;
+create table archive.founder_compasses_2026_11       as table public.founder_compasses;
+create table archive.ai_credits_2026_11              as table public.ai_credits;
+create table archive.ai_credit_plans_2026_11         as table public.ai_credit_plans;
+create table archive.ai_credit_costs_2026_11         as table public.ai_credit_costs;
+create table archive.ai_memory_2026_11               as table public.ai_memory;
+create table archive.generation_jobs_2026_11         as table public.generation_jobs;
+create table archive.questionnaire_responses_2026_11 as table public.questionnaire_responses;
+create table archive.fit_criteria_library_2026_11    as table public.fit_criteria_library;
+create table archive.business_taxonomy_2026_11       as table public.business_taxonomy;
+create table archive.founder_levels_2026_11          as table public.founder_levels;
+create table archive.guide_h2_backup_2026_11         as table public.guide_h2_backup;
+revoke all on all tables in schema archive from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 1. Two live functions still touch these tables. Rewrite them first.

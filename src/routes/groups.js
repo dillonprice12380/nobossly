@@ -15,6 +15,7 @@ const pi = require('../personal_info_filter');
 const { quiet } = require('../db');
 const { WORKSHEETS } = require('../workspace/worksheets');
 const { registry } = require('../engines');
+const checkins = require('../checkins');
 require('../path_dashboards'); // registers every path's boards and worksheets
 
 const enc = encodeURIComponent;
@@ -178,8 +179,13 @@ router.get('/:slug', async (req, res, next) => {
     const requests = ctx.canModerate ? rows.filter(m => m.status === 'requested') : [];
     const mine = rows.find(m => m.user_id === req.user.id);
     const pmap = await profilesFor(req, rows.map(m => m.user_id).concat((posts || []).map(p => p.user_id)));
+    // Threads: the week's check-in pinned on top, then posts with their replies.
+    const all = posts || [];
+    const pin = checkins.pinned(all);
+    const t = checkins.threads(all.filter(p => !pin || p.id !== pin.id));
     res.render('groups/show', {
-      title: g.name, group: g, ctx, org: org || null, members: active, requests, posts: posts || [], pmap,
+      title: g.name, group: g, ctx, org: org || null, members: active, requests, posts: t.top, replies: checkins.threads(all).replies, pin, pmap,
+      threaded: Object.prototype.hasOwnProperty.call(g, 'checkin_monday'),
       invites: invites || [], myStatus: mine ? (mine.status || 'active') : null, canSeePosts,
       assignmentCount: assignmentCount || 0, ROLE_LABEL, VISIBILITY, origin: req.protocol + '://' + req.get('host'),
       msg: req.query.msg || null
@@ -222,8 +228,10 @@ router.post('/:slug/post', async (req, res, next) => {
     if (found) return pi.refuse(req, res, to, found, 'group_post');
     const { data: g } = await req.sb.from('groups').select('id').eq('slug', req.params.slug).maybeSingle();
     if (!g) return notFound(res);
-    const { error } = await req.sb.from('group_posts').insert({ group_id: g.id, user_id: req.user.id, body });
-    back(res, to, error ? 'Only members can post here.' : null);
+    // A reply names its parent; the database keeps it in the same group, one level deep.
+    const parent = UUID.test(String(req.body.parent_id || '')) ? req.body.parent_id : null;
+    const { error } = await req.sb.from('group_posts').insert(Object.assign({ group_id: g.id, user_id: req.user.id, body }, parent ? { parent_id: parent } : {}));
+    back(res, to + (parent && !error ? '#p-' + parent : ''), error ? 'Only members can post here.' : null);
   } catch (e) { next(e); }
 });
 
@@ -303,6 +311,10 @@ router.post('/:slug/settings', async (req, res, next) => {
     const found = pi.check(name + '\n' + description);
     if (found) return pi.refuse(req, res, to, found, 'group');
     const patch = { name, description: description || null };
+    if (Object.prototype.hasOwnProperty.call(ctx.group, 'checkin_monday')) {
+      patch.checkin_monday = req.body.checkin_monday === '1';
+      patch.checkin_friday = req.body.checkin_friday === '1';
+    }
     // A cohort stays hidden; other groups may change how people get in.
     if (!ctx.group.org_id && VISIBILITY[req.body.visibility]) {
       patch.visibility = req.body.visibility;
