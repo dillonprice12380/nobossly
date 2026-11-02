@@ -14,7 +14,7 @@ const { registry, pipeline, metrics, checklists } = require('../engines');
 const { missing } = require('../engines/errors');
 const { WORKSHEETS } = require('../workspace/worksheets');
 
-// Paths with their own dashboard so far (steps 2 and 3). Each file declares its
+// Every path's own dashboard (steps 2–4). Each file declares its
 // boards, metrics, checklists and worksheets when it loads.
 const DASHBOARDS = {
   creator: require('./creator'),
@@ -24,7 +24,8 @@ const DASHBOARDS = {
   consultant: require('./consultant'),
   local_service: require('./local_service'),
   online_store: require('./online_store'),
-  physical_product: require('./physical_product')
+  physical_product: require('./physical_product'),
+  brick_mortar: require('./brick_mortar')
 };
 
 // Shared workspace tools. `href` is where the tool lives; `kind` marks the
@@ -79,8 +80,8 @@ const PATHS = {
   },
   brick_mortar: {
     setup: ['stage', 'venue_type', 'location_status', 'rent_capacity'],
-    featured: ['business_plan', 'business_model_canvas', 'persona', 'surveys'],
-    available: ['money', 'pricing', 'goals', 'tasks', 'milestones', 'lean_canvas', 'elevator_pitch', 'tax']
+    featured: ['business_plan', 'bm_breakeven', 'bm_startup', 'surveys'],
+    available: ['bm_site_compare', 'business_model_canvas', 'persona', 'money', 'pricing', 'goals', 'tasks', 'milestones', 'lean_canvas', 'elevator_pitch', 'tax']
   },
   online_store: {
     setup: ['stage', 'product', 'goods_type', 'channel'],
@@ -175,6 +176,10 @@ function stageOf(d, ctx) {
   };
 }
 
+// A board can be the north star — fixed (exploring's experiments) or by stage
+// (brick and mortar: funding, then the opening plan).
+const northBoardOf = (d, ctx) => (typeof d.northStarBoard === 'function' ? d.northStarBoard(ctx) : d.northStarBoard) || null;
+
 // Everything the dashboard panel shows, loaded in one go. Any one piece that
 // fails on a missing table marks the panel "being set up" instead of failing
 // the whole dashboard; any other error is logged and that piece is skipped.
@@ -191,12 +196,13 @@ async function panelFor(sb, userId, profile, now = new Date()) {
   // Before there is a number to log (a product still in development), a path
   // can make a checklist its north star instead.
   const northList = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
+  const northBoardKey = northBoardOf(d, ctx);
   const [northCard, supporting, northBoard, northChecklist, boards, lists] = await Promise.all([
     north ? safe(metrics.card(sb, userId, north, 6, now)) : null,
     Promise.all(d.supporting(ctx).map(k => safe(metrics.card(sb, userId, k, 6, now)))),
-    d.northStarBoard ? safe(pipeline.summary(sb, userId, d.northStarBoard)) : null,
+    northBoardKey ? safe(pipeline.summary(sb, userId, northBoardKey)) : null,
     northList ? safe(checklists.progress(sb, userId, northList, now)) : null,
-    Promise.all(d.boards(ctx).filter(k => k !== d.northStarBoard).map(k => safe(pipeline.summary(sb, userId, k)))),
+    Promise.all(d.boards(ctx).filter(k => k !== northBoardKey).map(k => safe(pipeline.summary(sb, userId, k)))),
     Promise.all(d.checklists(ctx).filter(k => k !== northList).map(k => safe(checklists.progress(sb, userId, k, now))))
   ]);
   return {
@@ -210,4 +216,4 @@ async function panelFor(sb, userId, profile, now = new Date()) {
 }
 
 module.exports = { TOOLS, PATHS, DASHBOARDS, configFor, setupQuestions, workspaceFor, needsSetup,
-  dashboardFor, contextOf, pathItemsFor, stageOf, panelFor };
+  dashboardFor, contextOf, pathItemsFor, stageOf, panelFor, northBoardOf };

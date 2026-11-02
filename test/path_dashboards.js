@@ -31,8 +31,8 @@ const matrix = require('../src/workspace/matrix');
 const { registry } = require('../src/engines');
 const { FLAGS } = require('../src/features');
 
-const SLUGS = ['creator', 'freelancer', 'software', 'exploring', 'consultant', 'local_service', 'online_store', 'physical_product'];
-const PREFIX = /^(creator|fl|sw|ex|con|loc|shop|prod)_/;
+const SLUGS = ['creator', 'freelancer', 'software', 'exploring', 'consultant', 'local_service', 'online_store', 'physical_product', 'brick_mortar'];
+const PREFIX = /^(creator|fl|sw|ex|con|loc|shop|prod|bm)_/;
 
 // A stand-in for supabase-js: every query resolves to the rows given for its
 // table (or an error), whatever filters are chained on.
@@ -55,8 +55,8 @@ function fakeSb(rows = {}, errors = {}) {
 
 // ---------------------------------------------------------------------------
 console.log('Each path has its own dashboard:');
-ok('the eight step-2 and step-3 paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
-ok('brick and mortar has none yet (step 4)', !dash.dashboardFor('brick_mortar'));
+ok('all nine paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
+ok('only the fallback path has none', Object.keys(dash.PATHS).every(s => dash.dashboardFor(s)) && !dash.dashboardFor('default'));
 
 for (const slug of SLUGS) {
   const d = dash.dashboardFor(slug);
@@ -74,13 +74,14 @@ for (const slug of SLUGS) {
     if (north && !registry.metric(north)) problems.push('metric ' + north);
     const nl = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
     if (nl && !registry.checklist(nl)) problems.push('checklist ' + nl);
-    if (!north && !d.northStarBoard && !nl) problems.push('no north star at ' + subpath + '/' + stage);
+    const nb = dash.northBoardOf(d, ctx);
+    if (nb && !registry.board(nb)) problems.push('board ' + nb);
+    if (!north && !nb && !nl) problems.push('no north star at ' + subpath + '/' + stage);
     d.supporting(ctx).forEach(k => { if (!registry.metric(k)) problems.push('metric ' + k); });
     if (north && d.supporting(ctx).includes(north)) problems.push(north + ' shown twice');
     d.boards(ctx).forEach(k => { if (!registry.board(k)) problems.push('board ' + k); });
     d.checklists(ctx).forEach(k => { if (!registry.checklist(k)) problems.push('checklist ' + k); });
   }
-  if (d.northStarBoard && !registry.board(d.northStarBoard)) problems.push('board ' + d.northStarBoard);
   (d.worksheets || []).forEach(k => { if (!ws.WORKSHEETS[k] || !dash.TOOLS[k]) problems.push('worksheet ' + k); });
   ok(`${slug}: everything it names exists, for every subpath and stage`, !problems.length, problems.slice(0, 5).join('; ') || 'clean');
 
@@ -117,6 +118,18 @@ for (const slug of SLUGS) {
   ok('local service: no board asks for an address', ['loc_jobs', 'loc_regulars'].every(k => registry.board(k).fields.every(f => !/address|street|phone|email/i.test(f.key))));
 }
 
+{
+  const b = dash.dashboardFor('brick_mortar');
+  const at = stage => ({ north: b.northStar({ stage }), board: dash.northBoardOf(b, { stage }) });
+  ok('brick and mortar: while looking, money raised is the number', at('Looking at premises').board === 'bm_funding' && at(null).board === 'bm_funding' && at('Just an idea').north === null);
+  ok('brick and mortar: from the lease to opening, the opening plan', at('Fitting out').board === 'bm_opening' && at('Signed or about to sign a lease').board === 'bm_opening');
+  ok('brick and mortar: once open, takings, with rent share beside it', at('Open and trading').north === 'bm_takings' && at('Open and trading').board === null && b.supporting({ stage: 'Open and trading' }).includes('bm_rent_share'));
+  ok('brick and mortar: rent share and staff share are better lower', registry.metric('bm_rent_share').higherIsBetter === false && registry.metric('bm_staff_cost').higherIsBetter === false);
+  ok('brick and mortar: venue rules follow the venue', b.checklists({ subpath: 'food' }).includes('bm_food') && b.checklists({ subpath: 'bar' }).includes('bm_food') && b.checklists({ subpath: 'salon' }).includes('bm_salon') && b.checklists({ subpath: 'fitness' }).includes('bm_fitness') && !b.checklists({ subpath: 'retail' }).some(k => ['bm_food', 'bm_salon', 'bm_fitness'].includes(k)));
+  ok('brick and mortar: once open, the opening checklists step aside', !b.checklists({ stage: 'Open and trading' }).includes('bm_lease') && b.checklists({ stage: 'Looking at premises' }).includes('bm_lease'));
+  ok('brick and mortar: the site scout shows while looking, not once building', b.boards({ stage: 'Looking at premises' }).includes('bm_sites') && !b.boards({ stage: 'Fitting out' }).includes('bm_sites'));
+}
+
 console.log('\nWorksheets that do the arithmetic:');
 {
   const sum = (k, d) => ws.summaryOf(ws.WORKSHEETS[k], d);
@@ -138,6 +151,14 @@ console.log('\nWorksheets that do the arithmetic:');
   ok('wholesale defaults to half of retail', val(b, 'Margin at wholesale (half of retail)') === '45%');
   ok('the 4× rule is checked', /^No/.test(val(b, 'Retail at least 4×')) && /^Yes/.test(val(sum('prod_bom', { unit_cost: 5, retail: 40 }), 'Retail at least 4×')));
   ok('the offer builder says how many clients a goal needs', val(sum('con_offer', { price: 1500 }), 'Clients a month') === '4 at $1,500');
+  const be = sum('bm_breakeven', { rent: 3000, staff: 9000, other_fixed: 3000, avg_spend: 12, cost_pct: 30, days: 26, expected: 100 });
+  ok('break-even: customers a month and a day', val(be, 'Customers a month') === '1,786' && val(be, 'Customers a day') === '69', JSON.stringify(be));
+  ok('break-even: takings needed and rent share', val(be, 'Takings needed') === '$21,432' && val(be, 'Rent at break-even') === '14%');
+  ok('break-even: profit at the expected trade', val(be, 'At your expected customers') === 'Profit $6,840 a month');
+  ok('break-even: a sale that loses money is flagged', val(sum('bm_breakeven', { rent: 1000, avg_spend: 10, cost_pct: 120 }), 'Each sale loses money') !== undefined);
+  const st = sum('bm_startup', { deposit: 9000, fitout: 40000, equipment: 25000, stock: 4000, monthly: 15000, reserve_months: 3, have: 50000 });
+  ok('start-up: one-off costs, reserve and total', val(st, 'One-off costs') === '$78,000' && val(st, 'Running-cost reserve') === '$45,000' && val(st, 'Total needed') === '$123,000', JSON.stringify(st));
+  ok('start-up: what is still to raise, and a missing contingency', val(st, 'Still to raise') === '$73,000' && !!val(st, 'No contingency yet'));
   ok('a broken summary never breaks the page', ws.summaryOf({ summary: () => { throw new Error('x'); } }, {}).length === 0);
 }
 
@@ -225,7 +246,7 @@ async function panels() {
   const p3 = await dash.panelFor(fakeSb(), 'me', { path: 'exploring', path_answers: {} }, now);
   ok('no stage answered: it asks, and points at the first step', p3.stage.index === -1 && p3.stage.current === null && /self-inventory/.test(p3.stage.next));
   ok('exploring shows its experiments board as the number', p3.northBoard && p3.northBoard.def.key === 'ex_experiments' && p3.boards.length === 0);
-  ok('a path without a dashboard gets none', (await dash.panelFor(fakeSb(), 'me', { path: 'brick_mortar' }, now)) === null);
+  ok('a path without a dashboard gets none', (await dash.panelFor(fakeSb(), 'me', { path: 'default' }, now)) === null);
   ok('a member with no path gets none', (await dash.panelFor(fakeSb(), 'me', {}, now)) === null);
 
   const items = dash.pathItemsFor({ path: 'software', subpath: 'saas', path_answers: { stage: 'Building it' } });
@@ -287,6 +308,12 @@ async function panels() {
   let ph = '';
   try { ph = render('partials/path_panel.ejs', { panel: pp, pathInfo: { label: 'Physical product', emoji: '🔧' } }); } catch (e) { ph = 'ERR ' + e.message; }
   ok('...and renders it', ph.includes('Development gates') && ph.includes('Your numbers'), ph.startsWith('ERR') ? ph.slice(0, 200) : undefined);
+
+  const bm = await dash.panelFor(fakeSb({ pipeline_items: [{ stage: 'approved', value: 40000 }, { stage: 'drawn', value: 25000 }] }), 'me', { path: 'brick_mortar', subpath: 'food', path_answers: { stage: 'Looking at premises' } }, now);
+  ok('brick and mortar while looking: funding is the number, the site scout a board', bm.northBoard && bm.northBoard.def.key === 'bm_funding' && bm.boards.map(b => b.def.key).join() === 'bm_sites' && bm.checklists.some(c => c.def.key === 'bm_food'));
+  let bh = '';
+  try { bh = render('partials/path_panel.ejs', { panel: bm, pathInfo: { label: 'Brick and mortar', emoji: '🏪' } }); } catch (e) { bh = 'ERR ' + e.message; }
+  ok('...and renders it', bh.includes('Funding') && bh.includes('Site scout') && bh.includes('Food and drink'), bh.startsWith('ERR') ? bh.slice(0, 200) : undefined);
 
   const dashView = read('views/dashboard.ejs');
   ok('the dashboard shows the panel', dashView.includes("include('partials/path_panel'"));
