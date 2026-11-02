@@ -5,5 +5,25 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-02_group_checkins.sql": {
+      "group_posts": [
+        "kind",
+        "parent_id",
+        "checkin_key"
+      ],
+      "groups": [
+        "checkin_monday",
+        "checkin_friday"
+      ],
+      "_enums": {
+        "group_posts": {
+          "kind": [
+            "post",
+            "checkin"
+          ]
+        }
+      }
+    }
+  }
 }

@@ -314,14 +314,14 @@ router.get('/locations', async (req, res, next) => {
 
 // Help center
 router.get('/help', (req, res) => {
-  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly \u2014 quests, sprints, your ladder, and your account.' });
+  res.render('help', { title: 'Help Center', metaDescription: 'Answers to common questions about NoBossly: your path and dashboard, the workspace tools, groups and help & exchange, private cohorts, and your account.' });
 });
 
 // How it works
 router.get('/how-it-works', (req, res) => {
   res.render('how_it_works', {
     title: 'How It Works',
-    metaDescription: 'Learn how NoBossly turns your skills and passions into a real business \u2014 quests, self-directed sprints, milestones, and a founder community that gives you real feedback.'
+    metaDescription: 'How NoBossly works: pick your path, run your business from a dashboard built for it, plan in your workspace, trade help on the public side, and work through accelerator programs in private cohorts.'
   });
 });
 

@@ -108,7 +108,10 @@ console.log('\nEach migration says whether it is live:');
      && /sc\.rpc\('process_task_reminders'\)/.test(read('server.js')));
 
   const drop = read('migrations/2026-11-01_drop_ai_era_tables.sql');
-  ok('the AI-table drop says a backup comes first', /PREREQUISITE: a full database backup/.test(drop));
+  ok('the AI-table drop keeps a copy of every table with rows before dropping anything',
+     ['founder_compasses','ai_credits','ai_credit_plans','ai_credit_costs','ai_memory','generation_jobs','questionnaire_responses','fit_criteria_library','business_taxonomy','founder_levels','guide_h2_backup']
+       .every(t => drop.includes(`create table archive.${t}_2026_11`) && drop.indexOf(`create table archive.${t}_2026_11`) < drop.indexOf('drop table if exists')));
+  ok('...out of reach of the site', /revoke all on schema archive from public, anon, authenticated;/.test(drop) && /revoke all on all tables in schema archive from public, anon, authenticated;/.test(drop));
   ok('...rewrites the signup function before dropping ai_memory', drop.indexOf('create or replace function public.bootstrap_new_user') < drop.indexOf('public.ai_memory,')
      && !/insert into public\.ai_memory/i.test(drop));
   ok('...and uses no CASCADE', !/\bcascade\b/i.test(drop.replace(/^--.*$/gm, '')));
