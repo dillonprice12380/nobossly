@@ -41,15 +41,31 @@ function fromLegacy(value) {
   return /<[a-z][\s\S]*>/i.test(s) ? s : s.split('\n').map(l => l.trim()).filter(Boolean).map(l => '<p>' + esc(l) + '</p>').join('');
 }
 
+// Longer documents (a course lesson, a listing's description) may also carry
+// links: http(s) and mailto only, opened in a new tab without the referrer.
+const WITH_LINKS = Object.assign({}, OPTIONS, {
+  allowedTags: OPTIONS.allowedTags.concat(['a']),
+  allowedAttributes: Object.assign({}, OPTIONS.allowedAttributes, { a: ['href'] }),
+  allowedSchemes: ['https', 'http', 'mailto'],
+  allowedSchemesAppliedToAttributes: ['href'],
+  transformTags: Object.assign({}, OPTIONS.transformTags, {
+    a: (tag, attribs) => ({ tagName: 'a', attribs: { href: attribs.href || '', rel: 'noopener noreferrer nofollow', target: '_blank' } })
+  })
+});
+WITH_LINKS.allowedAttributes.a = ['href', 'rel', 'target'];
+
 // Clean HTML for storage or display. Returns '' when nothing visible is left.
-function clean(value) {
-  let html = sanitizeHtml(fromLegacy(value), OPTIONS)
+// opts: { maxText, maxHtml, links } for longer documents.
+function clean(value, opts) {
+  const o = (opts && typeof opts === 'object') ? opts : {};
+  const maxText = o.maxText || MAX_TEXT, maxHtml = o.maxHtml || MAX_HTML;
+  let html = sanitizeHtml(fromLegacy(value), o.links ? WITH_LINKS : OPTIONS)
     .replace(/<p>\s*(<br\s*\/?>)?\s*<\/p>/gi, '')   // empty paragraphs
     .trim();
   if (!textOf(html)) return '';
-  if (html.length > MAX_HTML || textOf(html).length > MAX_TEXT) {
+  if (html.length > maxHtml || textOf(html).length > maxText) {
     // Too long: keep the words, drop the formatting, rather than cutting a tag in half.
-    html = '<p>' + esc(textOf(html).slice(0, MAX_TEXT)) + '</p>';
+    html = '<p>' + esc(textOf(html).slice(0, maxText)) + '</p>';
   }
   return html;
 }

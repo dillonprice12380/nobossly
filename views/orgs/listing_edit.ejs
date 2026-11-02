@@ -1,0 +1,77 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>/listings">← Programs & courses</a>
+<div class="page-head" style="margin-bottom:0"><div>
+  <p class="muted small" style="margin:.3rem 0 0"><%= l.kind === 'course' ? '📚 Course' : '🚀 Program' %> · <span class="chip<%= l.status === 'published' ? ' chip-success' : '' %>"><%= mk.STATUS[l.status] %></span></p>
+  <h1 style="margin:.2rem 0 0"><%= l.title %></h1>
+</div>
+<div class="lc-status">
+  <% if (l.status !== 'published') { %><form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/status"><input type="hidden" name="status" value="published"><button class="btn btn-primary btn-sm"<%= org.provider ? '' : ' disabled title="Your organization is not approved to publish yet"' %>>Publish</button></form><% } %>
+  <% if (l.status === 'published') { %><form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/status"><input type="hidden" name="status" value="closed"><button class="btn btn-ghost btn-sm">Close to new people</button></form><% } %>
+  <% if (l.status !== 'draft') { %><form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/status"><input type="hidden" name="status" value="draft"><button class="btn btn-ghost btn-sm">Unpublish</button></form><% } %>
+</div></div>
+<%- include('_tabs', { org: org, l: l, tab: 'details' }) %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (l.kind === 'course' && !lessons) { %><div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0">Next: <a href="/orgs/<%= org.slug %>/listings/<%= l.id %>/curriculum">add your lessons</a>. A course needs at least one before it can be published.</p></div><% } %>
+<% var qs = Array.isArray(l.questions) ? l.questions : []; %>
+<form class="card lc-form" method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>">
+  <label>Title<input name="title" maxlength="120" required value="<%= l.title %>"></label>
+  <label>One-line summary <span class="muted small">— shown on the marketplace card</span><input name="summary" maxlength="280" required value="<%= l.summary %>"></label>
+  <div><div class="ws-rich-head"><strong>Description</strong> <span class="muted small">— what people get, who it's for, how it runs</span></div>
+    <div class="rt" data-rt data-rt-links><textarea name="description" rows="10" aria-label="Description"><%= l.description ? richHtml(l.description, mk.LIMITS.description) : '' %></textarea></div></div>
+
+  <h2 class="lc-section">Who it's for</h2>
+  <div class="lc-paths">
+    <% mk.PATHS.forEach(function (p) { %><label class="lc-check"><input type="checkbox" name="paths" value="<%= p.slug %>"<%= (l.paths || []).includes(p.slug) ? ' checked' : '' %>> <%= p.label %></label><% }) %>
+  </div>
+  <p class="muted small" style="margin:.2rem 0 0">Leave all unticked if it suits every path.</p>
+
+  <h2 class="lc-section">Format, dates and price</h2>
+  <div class="lc-row">
+    <label>Format<select name="format"><% Object.keys(mk.FORMATS).forEach(function (f) { %><option value="<%= f %>"<%= l.format === f ? ' selected' : '' %>><%= mk.FORMATS[f] %></option><% }) %></select></label>
+    <label>Location <span class="muted small">(in person / hybrid)</span><input name="location" maxlength="120" value="<%= l.location || '' %>" placeholder="City, state"></label>
+    <label>Starts<input type="date" name="starts_on" value="<%= l.starts_on || '' %>"></label>
+    <label>Ends<input type="date" name="ends_on" value="<%= l.ends_on || '' %>"></label>
+  </div>
+  <div class="lc-row" style="margin-top:.8rem">
+    <label>Price in dollars <span class="muted small">(blank = free)</span><input name="price" inputmode="decimal" value="<%= l.price_cents ? (l.price_cents / 100) : '' %>" placeholder="Free"></label>
+    <label>Price note<input name="price_note" maxlength="120" value="<%= l.price_note || '' %>" placeholder="per month · sliding scale · scholarships"></label>
+    <label>Link to sign up or pay <span class="muted small">(required if paid)</span><input type="url" name="external_url" maxlength="500" value="<%= l.external_url || '' %>" placeholder="https://"></label>
+  </div>
+  <p class="muted small">NoBossly doesn't take payments. Paid listings link to your own checkout; you can remove anyone who enrolls without paying.</p>
+
+  <h2 class="lc-section">How people join</h2>
+  <div class="lc-row">
+    <label class="lc-radio"><input type="radio" name="join_mode" value="apply"<%= l.join_mode === 'apply' ? ' checked' : '' %>> <strong>Apply</strong> <span class="muted small">— you review each application</span></label>
+    <label class="lc-radio"><input type="radio" name="join_mode" value="enroll"<%= l.join_mode === 'enroll' ? ' checked' : '' %>> <strong>Enroll</strong> <span class="muted small">— anyone can join straight away</span></label>
+  </div>
+  <div class="lc-row" style="margin-top:.8rem">
+    <label>Places <span class="muted small">(blank = no limit)</span><input name="capacity" inputmode="numeric" value="<%= l.capacity || '' %>"></label>
+    <label>Apply or enroll by<input type="date" name="apply_by" value="<%= l.apply_by || '' %>"></label>
+  </div>
+  <p class="small" style="margin:.8rem 0 .3rem"><strong>Application questions</strong> <span class="muted">— up to five, used when people apply</span></p>
+  <% for (var i = 0; i < 5; i++) { %><input name="questions" maxlength="300" value="<%= qs[i] || '' %>" placeholder="<%= ['What are you building?', 'How many hours a week can you give this?', 'What do you most want help with?', '', ''][i] %>" style="margin-bottom:.4rem"><% } %>
+
+  <h2 class="lc-section">Private cohort</h2>
+  <label>People who are accepted or enroll join
+    <select name="cohort">
+      <option value="">No cohort</option>
+      <% cohorts.forEach(function (c) { %><option value="<%= c.id %>"<%= l.group_id === c.id ? ' selected' : '' %>><%= c.name %></option><% }) %>
+      <option value="new">+ Create a new cohort for this</option>
+    </select></label>
+  <p class="muted small" style="margin-top:-.4rem">A cohort is a private group with check-ins, discussion and assignments. Recommended for programs.</p>
+
+  <div style="display:flex;gap:.5rem;align-items:center;margin-top:1rem"><button class="btn btn-primary">Save</button></div>
+</form>
+<% if (['owner', 'admin'].includes(myRole)) { %>
+  <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/delete" onsubmit="return confirm('Delete this <%= l.kind %>, with its lessons and its list of applicants? This cannot be undone.')" style="margin-top:1rem">
+    <button class="btn btn-ghost btn-sm">Delete this <%= l.kind %></button>
+  </form>
+<% } %>
+<script src="/js/richtext.js?v=2"></script>
+<%- include('_rt_style') %>
+<style>
+  .lc-paths { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+  .lc-check, .lc-radio { display: inline-flex !important; gap: .35rem; align-items: center; margin: 0 !important; }
+  .lc-check input, .lc-radio input { width: auto; margin: 0; }
+</style>
+<%- include('../partials/foot') %>

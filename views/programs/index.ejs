@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🎓 Programs & courses</h1>
+  <p class="muted">Accelerator programs and courses from approved providers, for people building a business around a job. Free or paid, online or in person.</p>
+</div><div class="mk-head-actions">
+  <% if (user) { %><a class="btn btn-ghost btn-sm" href="/programs/mine">My programs</a><% } %>
+  <a class="btn btn-ghost btn-sm" href="/providers">Run a program or teach?</a>
+</div></div>
+
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">Programs and courses open shortly — this part is being set up.</p></div>
+<% } else { %>
+<form class="card mk-filters" method="get" action="/programs">
+  <div class="mk-kinds" role="group" aria-label="Kind">
+    <% [['', 'All'], ['program', 'Programs'], ['course', 'Courses']].forEach(function (k) { %>
+      <label class="mk-pill<%= chosen.kind === k[0] ? ' is-on' : '' %>"><input type="radio" name="kind" value="<%= k[0] %>"<%= chosen.kind === k[0] ? ' checked' : '' %> onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()"> <%= k[1] %></label>
+    <% }) %>
+  </div>
+  <div class="mk-fields">
+    <input type="search" name="q" value="<%= chosen.q %>" placeholder="Search programs and courses" aria-label="Search">
+    <select name="path" aria-label="Path">
+      <option value="">Any path</option>
+      <% mk.PATHS.forEach(function (p) { %><option value="<%= p.slug %>"<%= chosen.path === p.slug ? ' selected' : '' %>><%= p.label %><%= p.slug === myPath ? ' (yours)' : '' %></option><% }) %>
+    </select>
+    <select name="price" aria-label="Price">
+      <option value="">Free or paid</option><option value="free"<%= chosen.price === 'free' ? ' selected' : '' %>>Free</option><option value="paid"<%= chosen.price === 'paid' ? ' selected' : '' %>>Paid</option>
+    </select>
+    <select name="format" aria-label="Format">
+      <option value="">Any format</option>
+      <% Object.keys(mk.FORMATS).forEach(function (f) { %><option value="<%= f %>"<%= chosen.format === f ? ' selected' : '' %>><%= mk.FORMATS[f] %></option><% }) %>
+    </select>
+    <% if (chosen.provider) { %><input type="hidden" name="provider" value="<%= chosen.provider %>"><% } %>
+    <button class="btn btn-primary btn-sm">Search</button>
+  </div>
+  <% if (myPath && !chosen.path) { %><p class="small" style="margin:.5rem 0 0"><a href="/programs?path=<%= myPath %><%= chosen.kind ? '&kind=' + chosen.kind : '' %>">Show what fits your path →</a></p><% } %>
+</form>
+
+<% if (!items.length) { %>
+  <div class="card center"><p class="muted" style="margin:0"><%= total ? 'Nothing matches those filters yet.' : 'The first programs and courses are on their way.' %></p>
+    <p class="small" style="margin:.5rem 0 0">Run an accelerator or teach a course? <a href="/providers">List it on NoBossly →</a></p></div>
+<% } %>
+<div class="grid mk-grid">
+  <% items.forEach(function (l) { %>
+    <a class="card mk-card" href="/programs/<%= l.slug %>">
+      <div class="mk-card-top"><span class="chip"><%= l.kind === 'course' ? '📚 Course' : '🚀 Program' %></span><span class="mk-price"><%= mk.priceAmount(l) %></span></div>
+      <h3 class="mk-title"><%= l.title %></h3>
+      <p class="muted small mk-org"><%= l.org_name %></p>
+      <p class="mk-summary"><%= l.summary %></p>
+      <p class="muted small mk-meta"><% if (l.price_note) { %><%= l.price_note %> · <% } %><%= mk.FORMATS[l.format] %><%= l.location ? ' · ' + l.location : '' %><% if (l.starts_on) { %> · starts <%= mk.dateLabel(l.starts_on) %><% } %><% if (l.kind === 'course' && l.lessons) { %> · <%= l.lessons %> lesson<%= l.lessons === 1 ? '' : 's' %><% } %> · <%= l.join_mode === 'apply' ? 'Apply' : 'Open enrollment' %></p>
+    </a>
+  <% }) %>
+</div>
+<% } %>
+<style>
+  .mk-head-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .mk-filters { display: flex; flex-direction: column; gap: .6rem; }
+  .mk-kinds { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .mk-pill { border: 1px solid var(--border); border-radius: 999px; padding: .3rem .8rem; cursor: pointer; font-size: .9rem; margin: 0; }
+  .mk-pill input { position: absolute; opacity: 0; pointer-events: none; }
+  .mk-pill.is-on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .mk-fields { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .mk-fields input[type=search] { flex: 1 1 220px; min-width: 0; margin: 0; }
+  .mk-fields select { flex: 0 1 auto; width: auto; margin: 0; }
+  .mk-grid { margin-top: 1rem; }
+  .mk-card { display: flex; flex-direction: column; color: inherit; text-decoration: none; }
+  .mk-card:hover { border-color: var(--accent); }
+  .mk-card-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+  .mk-price { font-weight: 700; font-size: .9rem; }
+  .mk-title { margin: .6rem 0 .1rem; font-size: 1.1rem; }
+  .mk-org { margin: 0 0 .4rem; }
+  .mk-summary { margin: 0 0 .6rem; flex: 1; }
+  .mk-meta { margin: 0; }
+</style>
+<%- include('../partials/foot') %>

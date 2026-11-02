@@ -33,22 +33,59 @@ const slugify = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g,
 router.get('/', async (req, res, next) => {
   try {
     const count = t => req.sb.from(t).select('id', { count: 'exact', head: true });
-    const [users, threads, contents, ideas, bare, pendingVerif] = await Promise.all([
+    const [users, threads, contents, ideas, bare, pendingVerif, pendingProv] = await Promise.all([
       count('profiles'),
       count('forum_threads'),
       count('cms_contents'),
       Promise.resolve({ count: 0 }), // generated_ideas: an AI-era table, being dropped
       req.sb.from('profiles').select('id', { count: 'exact', head: true }).is('username', null),
-      req.sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      req.sb.from('verification_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      req.sb.from('provider_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending').then(r => r, () => ({ count: 0 }))
     ]);
     res.render('admin/home', {
       title: 'Admin',
       stats: { users: users.count || 0, threads: threads.count || 0, contents: contents.count || 0, ideas: ideas.count || 0 },
       bareProfileCount: bare.count || 0,
       pendingVerifications: pendingVerif.count || 0,
+      pendingProviders: (pendingProv && pendingProv.count) || 0,
       backfilled: req.query.backfilled !== undefined ? req.query.backfilled : null,
       backfillErr: req.query.backfillErr || null
     });
+  } catch (e) { next(e); }
+});
+
+// ---------- Providers (the marketplace's other side) ----------
+// Applications to run programs or teach courses. Approving creates the
+// organization and makes the applicant its owner (provider_decide). Existing
+// organizations (e.g. a pilot cohort's) can be switched to providers here too.
+router.get('/providers', async (req, res, next) => {
+  try {
+    const mk = require('../marketplace');
+    const [{ data: apps, error }, { data: orgs }] = await Promise.all([
+      req.sb.from('provider_applications').select('*').order('created_at', { ascending: false }).limit(200),
+      req.sb.from('organizations').select('id, name, slug, kind, provider, created_at').order('name')
+    ]);
+    const ids = [...new Set((apps || []).map(a => a.user_id))];
+    const { data: people } = ids.length ? await req.sb.from('profiles').select('id, username, display_name').in('id', ids) : { data: [] };
+    const pmap = Object.fromEntries((people || []).map(p => [p.id, p]));
+    res.render('admin/providers', { title: 'Providers', mk, apps: apps || [], orgs: orgs || [], pmap, notReady: !!error, msg: req.query.msg || null });
+  } catch (e) { next(e); }
+});
+
+router.post('/providers/:id', async (req, res, next) => {
+  try {
+    const approve = req.body.action === 'approve';
+    const { data, error } = await req.sb.rpc('provider_decide', { p_application: req.params.id, p_approve: approve, p_note: String(req.body.note || '').slice(0, 500) || null });
+    const msg = error || data === null ? 'Could not decide that application (it may already be decided).'
+      : approve ? 'Approved. Their organization is at /orgs/' + data + '.' : 'Not approved; they have been told.';
+    res.redirect('/admin/providers?msg=' + encodeURIComponent(msg));
+  } catch (e) { next(e); }
+});
+
+router.post('/providers/org/:id', async (req, res, next) => {
+  try {
+    await req.sb.from('organizations').update({ provider: req.body.provider === '1' }).eq('id', req.params.id).then(...quiet('organizations.provider'));
+    res.redirect('/admin/providers?msg=' + encodeURIComponent(req.body.provider === '1' ? 'That organization can publish now.' : 'That organization can no longer publish new listings.'));
   } catch (e) { next(e); }
 });
 

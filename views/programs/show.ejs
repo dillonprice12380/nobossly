@@ -1,0 +1,109 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/programs">← Programs & courses</a>
+<% var mine = l.mine && l.mine.status; var qs = Array.isArray(l.questions) ? l.questions : []; %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<header class="mk-header">
+  <p class="mk-kicker"><%= l.kind === 'course' ? '📚 Course' : '🚀 Program' %> · <%= l.org.name %></p>
+  <h1 class="mk-h1"><%= l.title %></h1>
+  <p class="mk-lead"><%= l.summary %></p>
+  <% if (l.status === 'closed') { %><p class="notice">This is closed to new applications.</p><% } %>
+  <% if (l.status === 'draft') { %><p class="notice">Draft — only your team can see this page.</p><% } %>
+</header>
+<div class="mk-show">
+  <div class="mk-main">
+
+    <% if (desc) { %><div class="card mk-desc"><%- desc %></div><% } %>
+
+    <% if (l.kind === 'course' && l.outline && l.outline.length) { %>
+      <h2 class="mk-h2">What's inside</h2>
+      <div class="card mk-outline">
+        <% l.outline.forEach(function (m, i) { %>
+          <div class="mk-mod"><strong><%= m.title %></strong>
+            <ol class="mk-lessons"><% (m.lessons || []).forEach(function (x) { %><li><%= x.title %><% if (x.minutes) { %> <span class="muted small">· <%= x.minutes %> min</span><% } %></li><% }) %></ol>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <h2 class="mk-h2">About <%= l.org.name %></h2>
+    <div class="card">
+      <p class="muted small" style="margin:0 0 .3rem"><%= mk.ORG_KINDS[l.org.kind] || 'Provider' %><% if (l.org.website_url) { %> · <a href="<%= l.org.website_url %>" target="_blank" rel="noopener noreferrer nofollow"><%= l.org.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '') %></a><% } %></p>
+      <% if (l.org.tagline) { %><p style="margin:0 0 .3rem"><strong><%= l.org.tagline %></strong></p><% } %>
+      <% if (l.org.about) { %><p class="pre" style="margin:0"><%= l.org.about %></p><% } %>
+      <p class="small" style="margin:.5rem 0 0"><a href="/programs?provider=<%= l.org.slug %>">Everything from <%= l.org.name %> →</a></p>
+    </div>
+  </div>
+
+  <aside class="mk-side">
+    <div class="card mk-box" id="join">
+      <p class="mk-box-price"><%= mk.priceAmount(l) %></p>
+      <% if (l.price_note) { %><p class="muted small" style="margin:-.3rem 0 .6rem"><%= l.price_note %></p><% } %>
+      <ul class="mk-facts">
+        <li><%= mk.FORMATS[l.format] %><%= l.location ? ' · ' + l.location : '' %></li>
+        <% if (l.starts_on) { %><li>Starts <%= mk.dateLabel(l.starts_on) %><%= l.ends_on ? ' · ends ' + mk.dateLabel(l.ends_on) : '' %></li><% } %>
+        <% if (l.apply_by) { %><li><%= l.join_mode === 'apply' ? 'Apply' : 'Enroll' %> by <%= mk.dateLabel(l.apply_by) %></li><% } %>
+        <% if (l.seats_left !== null && l.seats_left !== undefined) { %><li><%= l.seats_left %> place<%= l.seats_left === 1 ? '' : 's' %> left</li><% } %>
+        <% if (l.has_cohort) { %><li>Includes a private cohort group</li><% } %>
+        <% if ((l.paths || []).length) { %><li>For: <%= l.paths.map(function (p) { return mk.PATH_LABEL[p]; }).filter(Boolean).join(', ') %></li><% } %>
+      </ul>
+
+      <% if (l.team) { %>
+        <p class="small" style="margin:.4rem 0">You're on this provider's team.</p>
+        <a class="btn btn-primary btn-block" href="/orgs/<%= l.org.slug %>/listings/<%= l.id %>">Edit this listing</a>
+        <% if (l.kind === 'course') { %><a class="btn btn-ghost btn-block" href="/learn/<%= l.slug %>" style="margin-top:.4rem">Preview the course</a><% } %>
+      <% } else if (mine === 'enrolled') { %>
+        <p class="mk-state">✅ You're enrolled.</p>
+        <% if (l.kind === 'course') { %><a class="btn btn-primary btn-block" href="/learn/<%= l.slug %>">Go to the course</a>
+        <% } else if (l.has_cohort) { %><a class="btn btn-primary btn-block" href="/groups">Open your cohort</a><% } %>
+        <form method="post" action="/programs/<%= l.slug %>/withdraw" onsubmit="return confirm('Leave this <%= l.kind %>?')"><button class="btn btn-ghost btn-sm btn-block" style="margin-top:.5rem">Leave</button></form>
+      <% } else if (mine === 'applied') { %>
+        <p class="mk-state">⏳ Applied — the team will let you know.</p>
+        <form method="post" action="/programs/<%= l.slug %>/withdraw" onsubmit="return confirm('Withdraw your application?')"><button class="btn btn-ghost btn-sm btn-block">Withdraw application</button></form>
+      <% } else if (mine === 'declined' || mine === 'removed') { %>
+        <p class="mk-state"><%= mk.MEMBER_STATUS[mine] %>.</p>
+        <% if (l.mine.note) { %><p class="muted small pre">“<%= l.mine.note %>”</p><% } %>
+      <% } else if (l.status !== 'published') { %>
+        <p class="muted small">Not open right now.</p>
+      <% } else if (!signedIn) { %>
+        <a class="btn btn-primary btn-block" href="/login?next=<%= encodeURIComponent('/programs/' + l.slug) %>">Log in to <%= l.join_mode === 'apply' ? 'apply' : 'enroll' %></a>
+        <p class="muted small" style="margin:.5rem 0 0">New here? <a href="/signup">Create a free account</a>, then come back.</p>
+      <% } else { %>
+        <form method="post" action="/programs/<%= l.slug %>/join">
+          <% if (l.join_mode === 'apply') { %>
+            <% qs.forEach(function (q, i) { %><label class="small"><%= q %><textarea name="answers" rows="3" maxlength="2000" required></textarea></label><% }) %>
+            <button class="btn btn-primary btn-block">Apply</button>
+            <p class="muted small" style="margin:.5rem 0 0">The team sees your answers and your NoBossly profile.</p>
+          <% } else { %>
+            <button class="btn btn-primary btn-block">Enroll<%= l.price_cents ? '' : ' — free' %></button>
+          <% } %>
+        </form>
+      <% } %>
+
+      <% if (l.external_url && !l.team) { %>
+        <a class="btn btn-ghost btn-block" href="<%= l.external_url %>" target="_blank" rel="noopener noreferrer nofollow" style="margin-top:.5rem"><%= l.price_cents ? 'Pay on ' + l.org.name + '\'s site ↗' : 'More on ' + l.org.name + '\'s site ↗' %></a>
+        <% if (l.price_cents) { %><p class="muted small" style="margin:.5rem 0 0">Payment is handled by <%= l.org.name %>, not NoBossly.</p><% } %>
+      <% } %>
+    </div>
+  </aside>
+</div>
+<style>
+  .mk-header { max-width: 760px; margin-top: .6rem; }
+  .mk-show { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1.5rem; align-items: start; }
+  .mk-main > :first-child { margin-top: 0; }
+  .mk-kicker { margin: 0; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .mk-h1 { margin: .3rem 0 .4rem; }
+  .mk-lead { font-size: 1.08rem; margin: 0 0 1rem; }
+  .mk-h2 { font-size: 1.05rem; margin: 1.3rem 0 .5rem; }
+  .mk-desc p { margin: 0 0 .6rem; }
+  .mk-desc a { text-decoration: underline; }
+  .mk-mod + .mk-mod { margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+  .mk-lessons { margin: .3rem 0 0; }
+  .mk-side { position: sticky; top: 5.5rem; margin-top: 0; }
+  .mk-box-price { font-size: 1.5rem; font-weight: 800; margin: 0 0 .5rem; font-family: var(--font-display); }
+  .mk-facts { list-style: none; padding: 0; margin: 0 0 .9rem; display: grid; gap: .3rem; font-size: .92rem; }
+  .mk-facts li::before { content: '· '; color: var(--accent); font-weight: 700; }
+  .mk-state { font-weight: 600; margin: .2rem 0 .6rem; }
+  .mk-box label { display: block; margin-bottom: .6rem; }
+  @media (max-width: 860px) { .mk-show { grid-template-columns: 1fr; } .mk-side { position: static; order: -1; } }
+</style>
+<%- include('../partials/foot') %>

@@ -13,5 +13,6 @@ const FLAGS = {
   helpBoard:    true,   // help board: asks, offers, service swaps (needs migrations/2026-11-01_phase1_public_side.sql)
   worksheets:   false,  // the workspace tools (Phase 2)
   orgs:         true,   // accelerator orgs and private cohorts (Phase 3)
+  marketplace:  true,   // programs and courses from approved providers (2026-11-03)
 };
 module.exports = { FLAGS, on: k => !!FLAGS[k] };

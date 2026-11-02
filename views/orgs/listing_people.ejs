@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>/listings">← Programs & courses</a>
+<h1 style="margin:.3rem 0 0"><%= l.title %></h1>
+<%- include('_tabs', { org: org, l: l, tab: 'people' }) %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% var applied = rows.filter(function (r) { return r.status === 'applied'; }), enrolled = rows.filter(function (r) { return r.status === 'enrolled'; }), rest = rows.filter(function (r) { return ['declined', 'withdrawn', 'removed'].includes(r.status); });
+   var who = function (r) { var p = pmap[r.user_id] || {}; return p; };
+   var when = function (d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }; %>
+
+<% if (l.join_mode === 'apply' || applied.length) { %>
+  <h2 class="lc-section">Waiting for review (<%= applied.length %>)</h2>
+  <% if (!applied.length) { %><div class="card"><p class="muted" style="margin:0">No applications waiting.</p></div><% } %>
+  <% applied.forEach(function (r) { var p = who(r); var pd = p.path ? paths.get(p.path) : null; %>
+    <div class="card">
+      <p style="margin:0"><strong><a href="/members/<%= p.username || '' %>"><%= p.display_name || p.username || 'A member' %></a></strong>
+        <span class="muted small">@<%= p.username || '?' %><%= pd ? ' · ' + pd.label : '' %><%= p.location ? ' · ' + p.location : '' %> · applied <%= when(r.created_at) %></span></p>
+      <% (r.answers || []).forEach(function (a) { %>
+        <p class="small muted" style="margin:.6rem 0 .1rem"><%= a.q %></p><p class="pre" style="margin:0"><%= a.a || '—' %></p>
+      <% }) %>
+      <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/people/<%= r.id %>" class="pp-decide">
+        <input name="note" maxlength="500" placeholder="Optional note to them" aria-label="Note">
+        <button class="btn btn-primary btn-sm" name="action" value="accept">Accept</button>
+        <button class="btn btn-ghost btn-sm" name="action" value="decline">Decline</button>
+      </form>
+    </div>
+  <% }) %>
+<% } %>
+
+<h2 class="lc-section">Enrolled (<%= enrolled.length %>)</h2>
+<% if (!enrolled.length) { %><div class="card"><p class="muted" style="margin:0">Nobody yet.<%= l.status === 'published' ? '' : ' Publish the listing so people can find it.' %></p></div><% } else { %>
+<div class="card">
+  <% enrolled.forEach(function (r) { var p = who(r); var d = done[r.user_id] || 0; %>
+    <div class="milestone-row" style="align-items:center;gap:.6rem;flex-wrap:wrap">
+      <span style="flex:1;min-width:12rem"><a href="/members/<%= p.username || '' %>"><%= p.display_name || p.username || 'A member' %></a> <span class="muted small">· since <%= when(r.decided_at || r.created_at) %></span></span>
+      <% if (l.kind === 'course' && lessons) { %><span class="small"><%= d %>/<%= lessons %> lessons</span><span class="pp-bar"><span style="width:<%= Math.round(100 * d / lessons) %>%"></span></span><% } %>
+      <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/people/<%= r.id %>" onsubmit="return confirm('Remove them from this <%= l.kind %><%= l.group_id ? ' and its cohort' : '' %>?')"><button class="btn btn-ghost btn-sm" name="action" value="remove">Remove</button></form>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<% if (rest.length) { %>
+  <details class="card" style="margin-top:1rem"><summary><strong>Past</strong> <span class="muted small">(<%= rest.length %>)</span></summary>
+    <% rest.forEach(function (r) { var p = who(r); %><p class="small" style="margin:.4rem 0 0"><%= p.display_name || p.username || 'A member' %> <span class="muted">· <%= mk.MEMBER_STATUS[r.status] %> <%= when(r.decided_at || r.created_at) %></span></p><% }) %>
+  </details>
+<% } %>
+<style>
+  .pp-decide { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; margin-top: .8rem; }
+  .pp-decide input { flex: 1; min-width: 12rem; margin: 0; }
+  .pp-bar { width: 90px; height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; display: inline-block; }
+  .pp-bar span { display: block; height: 100%; background: var(--accent); }
+</style>
+<%- include('../partials/foot') %>

@@ -1,0 +1,28 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div>
+  <h1>🎓 My programs & courses</h1>
+  <p class="muted">What you've applied to and joined.</p>
+</div><a class="btn btn-ghost btn-sm" href="/programs">Browse</a></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">This opens shortly — programs are being set up.</p></div>
+<% } else if (!items.length) { %>
+  <div class="card center"><p class="muted" style="margin:0">Nothing yet. <a href="/programs">Find a program or course →</a></p></div>
+<% } %>
+<% items.forEach(function (m) { var pct = m.lessons ? Math.round(100 * m.done / m.lessons) : 0; %>
+  <div class="card mine-row">
+    <div style="min-width:0;flex:1">
+      <p class="muted small" style="margin:0"><%= m.kind === 'course' ? '📚 Course' : '🚀 Program' %> · <%= m.org_name %></p>
+      <strong><a href="/programs/<%= m.slug %>"><%= m.title %></a></strong>
+      <p class="small" style="margin:.2rem 0 0"><span class="chip<%= m.status === 'enrolled' ? ' chip-success' : '' %>"><%= mk.MEMBER_STATUS[m.status] || m.status %></span><% if (m.starts_on) { %> <span class="muted">· starts <%= mk.dateLabel(m.starts_on) %></span><% } %></p>
+      <% if (m.note && m.status !== 'enrolled') { %><p class="muted small pre" style="margin:.3rem 0 0">“<%= m.note %>”</p><% } %>
+      <% if (m.kind === 'course' && m.status === 'enrolled' && m.lessons) { %>
+        <div class="progress" style="margin-top:.5rem" aria-label="<%= pct %>% done"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+        <p class="muted small" style="margin:.2rem 0 0"><%= m.done %> of <%= m.lessons %> lessons</p>
+      <% } %>
+    </div>
+    <% if (m.kind === 'course' && m.status === 'enrolled') { %><a class="btn btn-primary btn-sm" href="/learn/<%= m.slug %>"><%= m.done ? 'Continue' : 'Start' %></a><% } %>
+  </div>
+<% }) %>
+<style>.mine-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }</style>
+<%- include('../partials/foot') %>

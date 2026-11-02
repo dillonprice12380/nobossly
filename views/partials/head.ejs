@@ -50,7 +50,7 @@
       <% var _cp = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
          var _in = function (list) { return list.some(function (m) { return _cp === m || _cp.indexOf(m + '/') === 0; }); };
          var _secDash = _in(['/dashboard', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones']);
-         var _secComm = _in(['/community', '/feed', '/groups', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations']);
+         var _secComm = _in(['/community', '/feed', '/groups', '/programs', '/learn', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations']);
          var _secRes = _in(['/blog', '/guides', '/locations', '/help']); %>
       <a class="nav-main<%= _secDash ? ' is-active' : '' %>" href="/dashboard"<%= _secDash ? ' aria-current="true"' : '' %>>Dashboard</a>
       <a class="nav-main<%= _secComm ? ' is-active' : '' %>" href="/community"<%= _secComm ? ' aria-current="true"' : '' %>>Community</a>
@@ -88,6 +88,8 @@
         <div class="avatar-dropdown" id="avatar-dropdown">
           <span class="muted small" style="padding:.4rem .9rem;display:block">@<%= profile ? profile.username : '' %></span>
       <a href="/profile"><svg class="icon"><use href="#i-profile"/></svg> My profile</a>
+          <% if (flags && flags.marketplace) { %><a href="/programs/mine"><svg class="icon"><use href="#i-target"/></svg> My programs & courses</a>
+          <a href="/providers"><svg class="icon"><use href="#i-suitcase"/></svg> For providers</a><% } %>
           <a href="/account"><svg class="icon"><use href="#i-setting"/></svg> Account settings</a>
           <form method="post" action="/logout"><button type="submit"><svg class="icon"><use href="#i-logout"/></svg> Log out</button></form>
         </div>
@@ -96,6 +98,7 @@
       <%# The platform is free, so the public header leads with what it is — no
           second path link beside the "Find your path" button. %>
       <a href="/community">Community</a>
+      <% if (flags && flags.marketplace) { %><a href="/programs">Programs</a><% } %>
       <a href="/how-it-works">How it works</a>
       <div class="nav-dropdown" data-dd>
         <button type="button" class="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Resources <span class="caret">▾</span></button>

@@ -149,12 +149,16 @@ app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
+app.use('/programs', requireFlag('marketplace'), require('./src/routes/programs')); // the marketplace: browse and listing pages are public
+app.use('/learn', requireAuth, requireFlag('marketplace'), require('./src/routes/learn')); // taking a course
+app.use('/providers', requireFlag('marketplace'), require('./src/routes/providers')); // for people who run programs or teach
 app.use('/shared', require('./src/routes/shared_link')); // a worksheet opened from an emailed link — no account needed
 app.use('/workspace', requireAuth, require('./src/routes/workspace')); // planning worksheets, goals, milestones — ordered per path
 app.use('/workspace', requireAuth, require('./src/routes/boards')); // boards, calendar, metrics, checklists (path dashboards)
 app.use('/surveys', requireAuth, require('./src/routes/surveys').router); // survey maker: build, share, results, CSV
 app.use('/s', require('./src/routes/surveys').publicRouter);              // public survey links — anyone, no account
 app.use('/groups', requireAuth, require('./src/routes/groups')); // public, private and hidden groups; cohorts, assignments, submissions
+app.use('/orgs', requireAuth, requireFlag('orgs'), require('./src/routes/org_listings')); // a provider's programs, courses, applicants and lessons
 app.use('/orgs', requireAuth, requireFlag('orgs'), require('./src/routes/orgs')); // accelerator programs and their cohorts
 app.use('/', require('./src/routes/social')); // reports, blocks, follows, friends
 app.use('/', require('./src/routes/affiliates')); // /go/:key click-through, /toolkit, /affiliate-disclosure
@@ -179,11 +183,13 @@ app.get('/sitemap.xml', async (req, res, next) => {
   try {
     const { anonClient } = require('./src/supabase');
     const sb = anonClient();
-    const [{ data: posts }, { data: pages }, { data: threads }, { data: guides }] = await Promise.all([
+    const [{ data: posts }, { data: pages }, { data: threads }, { data: guides }, { data: listings }] = await Promise.all([
       sb.from('cms_contents').select('slug, updated_at').eq('type', 'blog').eq('status', 'published').limit(500),
       sb.from('cms_contents').select('slug, updated_at').in('type', ['page', 'custom']).eq('status', 'published').limit(200),
       sb.from('forum_threads').select('id, updated_at').order('created_at', { ascending: false }).limit(1000),
-      sb.from('cms_guides').select('slug, updated_at').eq('status', 'published').limit(500)
+      sb.from('cms_guides').select('slug, updated_at').eq('status', 'published').limit(500),
+      // Published programs and courses (an empty list before their migration).
+      FLAGS.marketplace ? sb.rpc('marketplace_listings').then(r => r, () => ({ data: [] })) : Promise.resolve({ data: [] })
     ]);
     const base = 'https://nobossly.com';
     const urls = [
@@ -199,6 +205,8 @@ app.get('/sitemap.xml', async (req, res, next) => {
       { loc: base + '/locations', pri: '0.8' },
       { loc: base + '/wins', pri: '0.7' },
       { loc: base + '/help', pri: '0.6' },
+      ...(FLAGS.marketplace ? [{ loc: base + '/programs', pri: '0.8' }, { loc: base + '/providers', pri: '0.6' }] : []),
+      ...(listings || []).map(l => ({ loc: base + '/programs/' + l.slug, mod: l.created_at, pri: '0.7' })),
       ...(FLAGS.premium ? [{ loc: base + '/pricing', pri: '0.6' }] : []),
       ...(pages || []).map(p => ({ loc: base + '/' + p.slug, mod: p.updated_at, pri: '0.5' })),
       ...(posts || []).map(p => ({ loc: base + '/blog/' + p.slug, mod: p.updated_at, pri: '0.7' })),

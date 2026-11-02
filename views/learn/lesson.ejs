@@ -1,0 +1,36 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/learn/<%= l.slug %>">← <%= l.title %></a>
+<% if (preview) { %><p class="notice">Team preview — progress is not recorded for you.</p><% } %>
+<div class="lr-wrap">
+  <article class="lr-main">
+    <p class="muted small" style="margin:.4rem 0 0">Lesson <%= position %> of <%= total %><% if (lesson.minutes) { %> · <%= lesson.minutes %> min<% } %></p>
+    <h1 class="lr-h1"><%= lesson.title %></h1>
+    <% if (embed) { %>
+      <div class="lr-video"><iframe src="<%= embed %>" title="<%= lesson.title %>" loading="lazy" allow="fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <% } else if (lesson.video_url) { %>
+      <p><a class="btn btn-ghost btn-sm" href="<%= lesson.video_url %>" target="_blank" rel="noopener noreferrer nofollow">▶ Watch the video ↗</a></p>
+    <% } %>
+    <% if (body) { %><div class="lr-body"><%- body %></div><% } %>
+    <% if (tool) { %>
+      <div class="card lr-task">
+        <p style="margin:0"><strong>Your task:</strong> fill in your <%= tool.def.emoji %> <%= tool.def.label %>.</p>
+        <p class="muted small" style="margin:.3rem 0 .6rem">It's saved in your private workspace. You can share it with the team from there.</p>
+        <a class="btn btn-primary btn-sm" href="/workspace/docs/<%= tool.key %>">Open <%= tool.def.label %></a>
+      </div>
+    <% } %>
+    <div class="lr-nav">
+      <% if (prev) { %><a class="btn btn-ghost btn-sm" href="/learn/<%= l.slug %>/<%= prev.id %>">← <%= prev.title %></a><% } else { %><span></span><% } %>
+      <% if (!preview) { %>
+        <% if (isDone) { %>
+          <span class="lr-actions"><form method="post" action="/learn/<%= l.slug %>/<%= lesson.id %>/done"><input type="hidden" name="undo" value="1"><button class="btn btn-ghost btn-sm">Mark not done</button></form>
+          <% if (next) { %><a class="btn btn-primary btn-sm" href="/learn/<%= l.slug %>/<%= next.id %>">Next: <%= next.title %> →</a><% } %></span>
+        <% } else { %>
+          <form method="post" action="/learn/<%= l.slug %>/<%= lesson.id %>/done"><button class="btn btn-primary btn-sm"><%= next ? 'Done — next lesson →' : 'Done — finish the course' %></button></form>
+        <% } %>
+      <% } else if (next) { %><a class="btn btn-primary btn-sm" href="/learn/<%= l.slug %>/<%= next.id %>">Next →</a><% } %>
+    </div>
+  </article>
+  <aside class="lr-side card"><%- include('_outline', { l: l, modules: modules, done: done, current: lesson.id }) %></aside>
+</div>
+<%- include('_style') %>
+<%- include('../partials/foot') %>

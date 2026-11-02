@@ -84,7 +84,10 @@
       ta.dispatchEvent(new Event('input', { bubbles: true }));
     };
 
-    BUTTONS.forEach(function (b) {
+    var buttons = BUTTONS.slice();
+    // Longer documents (lessons, listing descriptions) may carry links.
+    if (wrap.hasAttribute('data-rt-links')) buttons.splice(9, 0, { link: true, label: '&#128279;', title: 'Link' });
+    buttons.forEach(function (b) {
       if (b.sep) { var s = document.createElement('span'); s.className = 'rt-sep'; bar.appendChild(s); return; }
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -93,6 +96,21 @@
       btn.title = b.title;
       btn.setAttribute('aria-label', b.title);
       btn.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep the selection
+      if (b.link) {
+        btn.addEventListener('click', function () {
+          var sel = window.getSelection();
+          if (!sel || sel.isCollapsed) { alert('Select the words to turn into a link first.'); return; }
+          var range = sel.getRangeAt(0).cloneRange();
+          var href = window.prompt('Link to (https://…)', 'https://');
+          if (!href) return;
+          href = href.trim();
+          if (!/^(https?:\/\/|mailto:)\S+$/i.test(href)) { alert('Links must start with https://, http:// or mailto:'); return; }
+          ed.focus(); sel.removeAllRanges(); sel.addRange(range);
+          exec('createLink', href); sync();
+        });
+        bar.appendChild(btn);
+        return;
+      }
       if (b.menu) {
         var holder = document.createElement('span');
         holder.className = 'rt-holder';

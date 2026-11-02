@@ -1,0 +1,59 @@
+<%- include('../partials/head') %>
+<a class="muted small" href="/orgs/<%= org.slug %>/listings">← Programs & courses</a>
+<h1 style="margin:.3rem 0 0"><%= l.title %></h1>
+<%- include('_tabs', { org: org, l: l, tab: 'lessons' }) %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<p class="muted">Group lessons into modules (weeks, stages or topics). Each lesson can have formatted text, a video, and a worksheet task from the member's workspace.</p>
+
+<% if (!modules.length) { %><div class="card center"><p class="muted" style="margin:0">No modules yet. Add the first one below — for example “Week 1” or “Getting started”.</p></div><% } %>
+<% modules.forEach(function (m, i) { %>
+  <div class="card cu-mod">
+    <div class="cu-mod-head">
+      <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/modules/<%= m.id %>" class="cu-rename">
+        <input name="title" maxlength="120" value="<%= m.title %>" aria-label="Module name" required><button class="btn btn-ghost btn-sm" name="action" value="rename">Rename</button>
+      </form>
+      <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/modules/<%= m.id %>" class="cu-tools">
+        <button class="btn btn-ghost btn-sm" name="action" value="up" title="Move up"<%= i === 0 ? ' disabled' : '' %>>↑</button>
+        <button class="btn btn-ghost btn-sm" name="action" value="down" title="Move down"<%= i === modules.length - 1 ? ' disabled' : '' %>>↓</button>
+        <button class="btn btn-ghost btn-sm" name="action" value="delete" onclick="return confirm('Delete this module and its <%= m.lessons.length %> lesson(s)?')">Delete</button>
+      </form>
+    </div>
+    <ol class="cu-lessons">
+      <% m.lessons.forEach(function (x, j) { %>
+        <li>
+          <a href="/orgs/<%= org.slug %>/listings/<%= l.id %>/lessons/<%= x.id %>"><%= x.title %></a>
+          <span class="muted small"><%= [x.minutes ? x.minutes + ' min' : '', x.video_url ? 'video' : '', x.tool_key ? 'task' : ''].filter(Boolean).join(' · ') %></span>
+          <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/lessons/<%= x.id %>" class="cu-tools">
+            <button class="btn btn-ghost btn-sm" name="action" value="up" title="Move up"<%= j === 0 ? ' disabled' : '' %>>↑</button>
+            <button class="btn btn-ghost btn-sm" name="action" value="down" title="Move down"<%= j === m.lessons.length - 1 ? ' disabled' : '' %>>↓</button>
+          </form>
+        </li>
+      <% }) %>
+    </ol>
+    <form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/lessons" class="cu-add">
+      <input type="hidden" name="module" value="<%= m.id %>">
+      <input name="title" maxlength="160" required placeholder="New lesson title" aria-label="New lesson title">
+      <button class="btn btn-primary btn-sm">Add lesson</button>
+    </form>
+  </div>
+<% }) %>
+<form method="post" action="/orgs/<%= org.slug %>/listings/<%= l.id %>/modules" class="card cu-add">
+  <input name="title" maxlength="120" required placeholder="<%= modules.length ? 'Next module, e.g. Week ' + (modules.length + 1) : 'First module, e.g. Week 1' %>" aria-label="Module name">
+  <button class="btn btn-ghost btn-sm">Add module</button>
+</form>
+<p class="small"><a href="/learn/<%= l.slug %>">Preview the course as a member sees it →</a></p>
+<style>
+  .cu-mod-head { display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .cu-rename { display: flex; gap: .4rem; flex: 1; min-width: 220px; }
+  .cu-rename input { font-weight: 700; margin: 0; }
+  .cu-tools { display: inline-flex; gap: .2rem; }
+  .cu-tools .btn { padding: .2rem .5rem; }
+  .cu-lessons { margin: .7rem 0; padding-left: 1.4rem; }
+  .cu-lessons li { padding: .3rem 0; border-bottom: 1px solid var(--border); }
+  .cu-lessons li:last-child { border-bottom: 0; }
+  .cu-lessons li > * { vertical-align: middle; }
+  .cu-lessons .cu-tools { float: right; }
+  .cu-add { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .cu-add input[name=title] { flex: 1; min-width: 200px; margin: 0; }
+</style>
+<%- include('../partials/foot') %>

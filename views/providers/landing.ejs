@@ -1,0 +1,50 @@
+<%- include('../partials/head') %>
+<% var provOrgs = orgs.filter(function (o) { return o.provider; }); var pending = apps.find(function (a) { return a.status === 'pending'; }); %>
+<section class="pv-hero">
+  <p class="pv-kicker">For accelerators, incubators, nonprofits, universities and teachers</p>
+  <h1 class="pv-h1">Run a program or teach a course on NoBossly</h1>
+  <p class="pv-lead">NoBossly members are building businesses around their jobs. List your program or course where they already plan their work, take applications, run a private cohort, and host your lessons — free.</p>
+  <div class="pv-cta">
+    <% if (provOrgs.length) { %>
+      <a class="btn btn-primary" href="/orgs/<%= provOrgs[0].slug %>/listings">Go to your provider console</a>
+    <% } else if (pending) { %>
+      <a class="btn btn-primary" href="/providers/apply">Your application is being reviewed</a>
+    <% } else { %>
+      <a class="btn btn-primary" href="/providers/apply">Apply to be a provider</a>
+    <% } %>
+    <a class="btn btn-ghost" href="/programs">See programs & courses</a>
+  </div>
+</section>
+
+<h2 class="pv-h2">What you get</h2>
+<div class="grid pv-grid">
+  <div class="card"><h3>📣 A listing people find</h3><p class="muted small">Your program or course in the NoBossly marketplace, matched to the paths it suits: creators, freelancers, local services, online stores and more.</p></div>
+  <div class="card"><h3>📝 Applications or open enrollment</h3><p class="muted small">Ask up to five questions and review each applicant with their profile, or let people enroll straight away. You choose per listing.</p></div>
+  <div class="card"><h3>👥 A private cohort</h3><p class="muted small">Accepted members join a private group: check-ins, discussion, assignments built on their workspace (canvases, plans, personas), and activity at a glance.</p></div>
+  <div class="card"><h3>📚 Hosted lessons</h3><p class="muted small">Build a course from modules and lessons with formatted text, YouTube, Vimeo or Loom video, and worksheet tasks. Members' progress is tracked for you.</p></div>
+  <div class="card"><h3>💳 Your own pricing</h3><p class="muted small">Free, or show your price and link to your own checkout. NoBossly doesn't take a cut or handle payment.</p></div>
+  <div class="card"><h3>🔔 Nothing slips</h3><p class="muted small">Your team is notified about every application and enrollment, and members hear back the moment you decide.</p></div>
+</div>
+
+<h2 class="pv-h2">How it works</h2>
+<ol class="pv-steps">
+  <li><strong>Apply.</strong> Tell us who you are and what you run. We review every provider by hand.</li>
+  <li><strong>Build.</strong> Once approved, you get a provider console: add your team, then write a program or course listing.</li>
+  <li><strong>Publish.</strong> Members find it, apply or enroll, and you run it here.</li>
+</ol>
+<div class="card pv-final">
+  <p style="margin:0"><strong>Already working with us on a cohort?</strong> Your organization can publish too — ask us to turn on listings for it.</p>
+</div>
+<style>
+  .pv-hero { text-align: center; max-width: 760px; margin: 1rem auto 1.5rem; }
+  .pv-kicker { color: var(--accent); font-weight: 700; font-size: .85rem; letter-spacing: .05em; text-transform: uppercase; margin: 0; }
+  .pv-h1 { font-size: 2.2rem; margin: .4rem 0 .6rem; }
+  .pv-lead { font-size: 1.1rem; margin: 0 0 1.2rem; }
+  .pv-cta { display: flex; gap: .6rem; justify-content: center; flex-wrap: wrap; }
+  .pv-h2 { font-size: 1.2rem; margin: 2rem 0 .7rem; }
+  .pv-grid h3 { margin: 0 0 .3rem; font-size: 1.02rem; }
+  .pv-grid p { margin: 0; }
+  .pv-steps { display: grid; gap: .5rem; padding-left: 1.3rem; }
+  .pv-final { margin-top: 1.5rem; }
+</style>
+<%- include('../partials/foot') %>

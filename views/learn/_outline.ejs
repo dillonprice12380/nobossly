@@ -1,0 +1,11 @@
+<%# The course outline beside a lesson: modules, lessons, ticks. Locals: l, modules, done, current (lesson id or null). %>
+<nav class="lr-outline" aria-label="Course outline">
+  <% modules.forEach(function (m) { %>
+    <p class="lr-mod"><%= m.title %></p>
+    <ol class="lr-list">
+      <% m.lessons.forEach(function (x) { %>
+        <li class="<%= done.has(x.id) ? 'is-done' : '' %><%= current === x.id ? ' is-current' : '' %>"><a href="/learn/<%= l.slug %>/<%= x.id %>"<%= current === x.id ? ' aria-current="page"' : '' %>><span class="lr-tick" aria-hidden="true"><%= done.has(x.id) ? '✓' : '' %></span><span><%= x.title %></span></a></li>
+      <% }) %>
+    </ol>
+  <% }) %>
+</nav>

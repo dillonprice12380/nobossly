@@ -19,11 +19,12 @@
         { key: 'trophies', href: '/trophies', label: 'Trophies', match: ['/trophies', '/milestones'], flag: 'trophies' }
       ] },
     { key: 'community', href: '/community', label: 'Community', short: 'Community', icon: 'i-community',
-      match: ['/community', '/feed', '/groups', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations'],
+      match: ['/community', '/feed', '/groups', '/programs', '/learn', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations'],
       subs: [
         { key: 'feed', href: '/feed', label: 'Feed', match: ['/feed'] },
         { key: 'qa', href: '/community', label: 'Q&A', match: ['/community'], not: ['/community/collab'] },
         { key: 'groups', href: '/groups', label: 'Groups', match: ['/groups'] },
+        { key: 'programs', href: '/programs', label: 'Programs & courses', match: ['/programs', '/learn'], flag: 'marketplace' },
         { key: 'challenges', href: '/quests', label: 'Challenges', match: ['/quests', '/challenges'] },
         { key: 'results', href: '/wins', label: 'Results', match: ['/wins'], flag: 'wins' },
         { key: 'exchange', href: '/exchange', label: 'Help & exchange', match: ['/exchange'], flag: 'helpBoard' },

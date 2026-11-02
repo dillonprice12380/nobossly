@@ -1,0 +1,24 @@
+<%# The formatted-text editor's styles (public/js/richtext.js), shared with views/workspace/doc.ejs. %>
+<style>
+  .ws-rich-head { margin-bottom: .45rem; }
+  .rt { border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2, transparent); flex: 1; display: flex; flex-direction: column; }
+  .rt.focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .rt textarea { border: 0; background: transparent; min-height: 9rem; }
+  .rt-bar { display: flex; flex-wrap: wrap; gap: .1rem; padding: .25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  .rt-btn { background: transparent; border: 1px solid transparent; color: inherit; border-radius: 6px; min-width: 1.75rem; height: 1.85rem; padding: 0 .25rem; cursor: pointer; font-size: .85rem; line-height: 1; }
+  .rt-btn:hover { border-color: var(--border); }
+  .rt-btn.on { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
+  .rt-btn small { font-size: .6rem; margin-left: .1rem; }
+  .rt-sep { width: 1px; background: var(--border); margin: .3rem .1rem; }
+  .rt-a { border-bottom: 3px solid #dc2626; padding: 0 .1rem; }
+  .rt-hl { background: #fef08a; color: #14201c; padding: 0 .2rem; border-radius: 2px; }
+  .rt-holder { position: relative; display: inline-flex; }
+  .rt-menu { position: absolute; top: 2.2rem; left: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1.6rem); gap: .3rem; padding: .45rem; background: var(--panel, #fff); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .rt-menu[hidden] { display: none; }
+  .rt-swatch { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--border); cursor: pointer; color: inherit; font-size: .8rem; }
+  .rt-edit { min-height: 9rem; padding: .6rem .75rem; outline: none; line-height: 1.5; overflow-wrap: anywhere; }
+  .rt-edit:empty::before { content: 'Start typing…'; color: var(--muted); }
+  .rt-edit ul, .rt-edit ol { margin: .2rem 0; padding-left: 1.3rem; }
+  .rt-edit p { margin: 0 0 .35rem; }
+  .rt-edit a { color: var(--accent); text-decoration: underline; }
+</style>

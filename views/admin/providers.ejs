@@ -1,0 +1,44 @@
+<%- include('../partials/head') %>
+<div class="page-head"><div><h1>🎓 Providers</h1>
+  <p class="muted">People asking to run programs or teach courses on NoBossly. Approving creates their organization and makes them its owner; they can then publish listings.</p></div>
+  <a class="btn btn-ghost" href="/admin">Back to admin</a></div>
+<%- include('nav') %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (notReady) { %><div class="card"><p class="muted" style="margin:0">The marketplace migration has not been applied yet.</p></div><% } %>
+<% var pending = apps.filter(function (a) { return a.status === 'pending'; }); var done = apps.filter(function (a) { return a.status !== 'pending'; }); %>
+
+<h2>Waiting (<%= pending.length %>)</h2>
+<% if (!pending.length) { %><div class="card center"><p class="muted" style="margin:0">No applications waiting.</p></div><% } %>
+<% pending.forEach(function (a) { var u = pmap[a.user_id] || {}; %>
+  <div class="card">
+    <p style="margin:0"><strong><%= a.org_name %></strong> <span class="chip"><%= mk.ORG_KINDS[a.kind] || a.kind %></span> <span class="chip"><%= (a.offers || []).map(function (o) { return mk.KINDS[o] + 's'; }).join(' + ') %></span></p>
+    <p class="muted small" style="margin:.2rem 0 .4rem">From <a href="/members/<%= u.username || '' %>">@<%= u.username || 'unknown' %></a><%= u.display_name ? ' (' + u.display_name + ')' : '' %> · <%= new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+      <% if (a.website_url) { %> · <a href="<%= a.website_url %>" target="_blank" rel="noopener noreferrer nofollow"><%= a.website_url.replace(/^https?:\/\//, '') %></a><% } %>
+      <% if (a.contact_email) { %> · <%= a.contact_email %><% } %></p>
+    <p class="pre" style="margin:0 0 .6rem"><%= a.about %></p>
+    <form method="post" action="/admin/providers/<%= a.id %>" class="cta-row" style="align-items:center;gap:.4rem;flex-wrap:wrap">
+      <input name="note" maxlength="500" placeholder="Optional note to them" style="flex:1;min-width:12rem;margin:0">
+      <button class="btn btn-primary btn-sm" name="action" value="approve">Approve</button>
+      <button class="btn btn-ghost btn-sm" name="action" value="reject" onclick="return confirm('Turn this application down?')">Not approve</button>
+    </form>
+  </div>
+<% }) %>
+
+<h2 style="margin-top:1.5rem">Organizations</h2>
+<div class="card">
+  <% if (!orgs.length) { %><p class="muted" style="margin:0">None yet.</p><% } %>
+  <% orgs.forEach(function (o) { %>
+    <div class="milestone-row" style="align-items:center">
+      <span><a href="/orgs/<%= o.slug %>"><%= o.name %></a> <span class="muted small">· <%= mk.ORG_KINDS[o.kind] || o.kind %></span> <% if (o.provider) { %><span class="chip chip-success">Provider</span><% } %></span>
+      <form method="post" action="/admin/providers/org/<%= o.id %>"><input type="hidden" name="provider" value="<%= o.provider ? '0' : '1' %>"><button class="btn btn-ghost btn-sm"><%= o.provider ? 'Stop publishing' : 'Allow publishing' %></button></form>
+    </div>
+  <% }) %>
+</div>
+
+<% if (done.length) { %>
+  <h2 style="margin-top:1.5rem">Decided</h2>
+  <% done.slice(0, 50).forEach(function (a) { var u = pmap[a.user_id] || {}; %>
+    <div class="card" style="padding:.6rem .9rem"><strong><%= a.org_name %></strong> <span class="muted small">· @<%= u.username || '?' %> · <%= a.status %><%= a.reviewed_at ? ' ' + new Date(a.reviewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %></span></div>
+  <% }) %>
+<% } %>
+<%- include('../partials/foot') %>
