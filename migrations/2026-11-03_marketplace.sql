@@ -1,4 +1,4 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-03 (run in the SQL Editor; verified: 6 tables with RLS, 14 policies, 13 functions, 2 triggers, grants).
 --
 -- The other side of NoBossly: the people who run accelerator programs and
 -- teach courses (2026-11-03).

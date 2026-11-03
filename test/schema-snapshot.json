@@ -1038,13 +1038,16 @@
       "user_id"
     ],
     "organizations": [
+      "about",
       "contact_email",
       "created_at",
       "created_by",
       "id",
       "kind",
       "name",
+      "provider",
       "slug",
+      "tagline",
       "website_url"
     ],
     "org_admins": [
@@ -1104,6 +1107,85 @@
       "recipient_id",
       "revoked_at",
       "token"
+    ],
+    "provider_applications": [
+      "about",
+      "admin_note",
+      "contact_email",
+      "created_at",
+      "id",
+      "kind",
+      "offers",
+      "org_id",
+      "org_name",
+      "reviewed_at",
+      "reviewed_by",
+      "status",
+      "user_id",
+      "website_url"
+    ],
+    "listings": [
+      "apply_by",
+      "capacity",
+      "created_at",
+      "created_by",
+      "description",
+      "ends_on",
+      "external_url",
+      "format",
+      "group_id",
+      "id",
+      "join_mode",
+      "kind",
+      "location",
+      "org_id",
+      "paths",
+      "price_cents",
+      "price_note",
+      "questions",
+      "slug",
+      "starts_on",
+      "status",
+      "summary",
+      "title",
+      "updated_at"
+    ],
+    "listing_enrollments": [
+      "answers",
+      "created_at",
+      "decided_at",
+      "decided_by",
+      "id",
+      "listing_id",
+      "note",
+      "status",
+      "user_id"
+    ],
+    "course_modules": [
+      "created_at",
+      "id",
+      "listing_id",
+      "position",
+      "title"
+    ],
+    "course_lessons": [
+      "body",
+      "created_at",
+      "id",
+      "listing_id",
+      "minutes",
+      "module_id",
+      "position",
+      "title",
+      "tool_key",
+      "updated_at",
+      "video_url"
+    ],
+    "lesson_progress": [
+      "completed_at",
+      "lesson_id",
+      "listing_id",
+      "user_id"
     ]
   },
   "enums": {
@@ -1540,7 +1622,8 @@
         "incubator",
         "nonprofit",
         "university",
-        "other"
+        "other",
+        "educator"
       ]
     },
     "org_admins": {
