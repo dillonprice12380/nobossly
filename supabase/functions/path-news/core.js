@@ -1,5 +1,5 @@
 // The path-news job's logic, kept free of Deno and network calls so it can be
-// tested in Node (test/news.js). index.ts does the fetching and storing.
+// tested in Node (test/news.js). index.ts reads the feeds and stores results.
 
 export const MAX_AGE_HOURS = 48;       // older headlines are not stored
 export const ALERT_WITHIN_HOURS = 12;  // only fresh news becomes a notification
@@ -13,31 +13,43 @@ const decode = (s) => String(s ?? '')
   .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n))).replace(/&amp;/g, '&');
 const tag = (xml, name) => (new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, 'i').exec(xml) || [])[1] || '';
 
-// The Google News RSS search for a topic, limited to the last day.
-export function searchUrl(q) {
-  const p = new URLSearchParams({ q: `${q} when:1d`, hl: 'en-US', gl: 'US', ceid: 'US:en' });
-  return 'https://news.google.com/rss/search?' + p.toString();
-}
-
-// Headlines from a Google News answer: { url, title, publisher, seen }.
-export function parseNewsRss(xml) {
+// Headlines from an RSS or Atom feed: { url, title, publisher, seen, feed }.
+// Google News style titles ("Headline - Publisher") lose the publisher part.
+export function parseFeed(xml, feed = '', name = '') {
   const out = [];
-  for (const m of String(xml || '').matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
+  const text = String(xml || '');
+  const atom = !/<item\b/i.test(text) && /<entry\b/i.test(text);
+  for (const m of text.matchAll(atom ? /<entry\b[^>]*>([\s\S]*?)<\/entry>/gi : /<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
     const item = m[1];
-    const url = plain(decode(tag(item, 'link')));
-    const seen = new Date(plain(decode(tag(item, 'pubDate'))));
-    const publisher = plain(decode((/<source\b[^>]*>([\s\S]*?)<\/source>/i.exec(item) || [])[1] || '')).slice(0, 80);
+    let url = plain(decode(tag(item, 'link')));
+    if (!url || atom) {
+      const links = [...item.matchAll(/<link\b([^>]*)\/?>/gi)].map((l) => l[1]);
+      const alt = links.find((l) => /rel=["']alternate["']/i.test(l)) || links.find((l) => !/rel=/i.test(l)) || links[0] || '';
+      url = decode((/href=["']([^"']+)["']/i.exec(alt) || [])[1] || url);
+    }
+    const when = tag(item, 'pubDate') || tag(item, 'published') || tag(item, 'updated') || tag(item, 'dc:date');
+    const seen = new Date(plain(decode(when)));
+    const source = plain(decode((/<source\b[^>]*>([\s\S]*?)<\/source>/i.exec(item) || [])[1] || ''));
+    const publisher = (source || name).slice(0, 80);
     let title = plain(decode(tag(item, 'title')));
-    // Google News appends " - Publisher" to every headline.
-    if (publisher && title.endsWith(' - ' + publisher)) title = title.slice(0, -(publisher.length + 3)).trim();
+    if (source && title.endsWith(' - ' + source)) title = title.slice(0, -(source.length + 3)).trim();
+    url = plain(url);
     if (!/^https:\/\/\S+$/i.test(url) || isNaN(seen.getTime()) || !title) continue;
-    out.push({ url: url.slice(0, 1000), title: title.slice(0, 300), publisher, seen });
+    out.push({ url: url.slice(0, 1000), title: title.slice(0, 300), publisher, seen, feed });
   }
   return out;
 }
+export const parseNewsRss = (xml) => parseFeed(xml);
 
-// Whether a Google News answer is a feed at all (a block page is not).
-export const isFeed = (status, text) => status >= 200 && status < 300 && /<rss\b|<feed\b/i.test(String(text || '').slice(0, 2000));
+// The headlines a topic draws from: everything its feeds and anyFrom feeds
+// returned this run. byFeed: { feedKey: articles }.
+export function articlesFor(topic, byFeed) {
+  const keys = [...new Set([...(topic.feeds || []), ...(topic.anyFrom || [])])];
+  return keys.flatMap((k) => byFeed[k] || []);
+}
+
+// Whether an answer is a feed at all (a block page is not).
+export const isFeed = (status, text) => status >= 200 && status < 300 && /<rss\b|<feed\b|<rdf:RDF\b/i.test(String(text || '').slice(0, 3000));
 
 // Same story, different outlets: compare headlines without case and punctuation.
 export const headlineKey = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim().split(' ').slice(0, 12).join(' ');
@@ -58,10 +70,15 @@ export function sameStory(a, b) {
   return both / Math.min(x.size, y.size) >= 0.6;
 }
 
+// A headline belongs to a topic when it is recent and either comes from one
+// of the topic's single-subject feeds (anyFrom) or comes from one of its
+// feeds and matches its pattern.
 export function relevant(a, topic, now = new Date()) {
   const age = now.getTime() - a.seen.getTime();
   if (age > MAX_AGE_HOURS * 3600000 || age < -3600000) return false;
-  return !topic.must || new RegExp(topic.must, 'i').test(a.title);
+  if (a.feed && (topic.anyFrom || []).includes(a.feed)) return true;
+  if (a.feed && !(topic.feeds || []).includes(a.feed)) return false;
+  return !!topic.must && new RegExp(topic.must, 'i').test(a.title);
 }
 
 // Rows to store from one run: per path, newest first, no repeated links or

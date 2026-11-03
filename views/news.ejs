@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <div class="page-head"><div>
   <h1>📰 News for <%= pathDef ? pathDef.label.toLowerCase() + 's' : 'your path' %></h1>
-  <p class="muted">Headlines that affect how you build, gathered every 30 minutes from news sites. Tap one to read it at the source.</p>
+  <p class="muted">Headlines that affect how you build, gathered every 30 minutes from trade and tech news sites. Tap one to read it at the source.</p>
 </div>
 <form method="post" action="/news/alerts" class="news-switch">
   <input type="hidden" name="on" value="<%= alertsOn ? '0' : '1' %>">
@@ -36,7 +36,7 @@
       </a>
     <% }) %>
   </div>
-  <p class="muted small">Headlines come from Google News and link to the publisher. NoBossly doesn't write or check them.</p>
+  <p class="muted small">Headlines come from publishers' own feeds and link to the original article. NoBossly doesn't write or check them.</p>
 <% } %>
 <style>
   .news-switch { margin: 0; }

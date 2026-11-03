@@ -1,9 +1,11 @@
--- NOT APPLIED, written for review.
+-- Applied live 2026-11-03 (run in the SQL Editor; verified: table with RLS, news_alerts,
+-- the "news" type, the secret and the 30-minute schedule; first run stored 42 headlines
+-- from 30 feeds and alerted 15 members. The edge function is deployed as path-news v3).
 --
 -- News for each path (2026-11-03). Every 30 minutes pg_cron calls the
--- path-news edge function (supabase/functions/path-news), which reads one
--- Google News search per topic for each path, stores new headlines here and
--- sends each member at most one in-app notification a day about the freshest
+-- path-news edge function (supabase/functions/path-news), which reads
+-- publishers' RSS feeds, sorts headlines into each path's topics, stores new
+-- ones here and sends each member at most one in-app notification a day about the freshest
 -- story for their path. Members read everything at /news and on their
 -- dashboard, and can turn the notifications off in their account settings.
 

@@ -25,7 +25,7 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
 
 (async () => {
   const core = await import('../supabase/functions/path-news/core.js');
-  const { TOPICS, PATHS } = await import('../supabase/functions/path-news/topics.js');
+  const { TOPICS, PATHS, FEEDS } = await import('../supabase/functions/path-news/topics.js');
 
   console.log('Every path has news:');
   {
@@ -34,13 +34,17 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     ok('...and every member gets news for everyone too', TOPICS.all.length >= 1 && !PATHS.includes('all'));
     const all = Object.values(TOPICS).flat();
     ok('topic keys are unique and safe to store', new Set(all.map(t => t.key)).size === all.length && all.every(t => /^[a-z_]{2,60}$/.test(t.key)));
-    ok('every topic has a label, a search and a working filter', all.every(t => t.label && t.q && (() => { try { new RegExp(t.must, 'i'); return true; } catch (_) { return false; } })()));
+    ok('every topic has a label, sources, and a working filter for shared feeds', all.every(t => t.label && ((t.feeds || []).length || (t.anyFrom || []).length)
+       && (!(t.feeds || []).length || (() => { try { new RegExp(t.must, 'i'); return true; } catch (_) { return false; } })())), all.filter(t => !t.label || (t.feeds || []).length && !t.must).map(t => t.key).join(', ') || undefined);
+    const unknownFeeds = all.flatMap(t => [...(t.feeds || []), ...(t.anyFrom || [])].filter(k => !FEEDS[k]).map(k => t.key + ':' + k));
+    ok('every topic names real feeds', unknownFeeds.length === 0, unknownFeeds.join(', ') || Object.keys(FEEDS).length + ' feeds');
+    ok('feeds are https publisher feeds, each used', Object.values(FEEDS).every(f => /^https:\/\//.test(f.url) && f.name) && Object.keys(FEEDS).every(k => all.some(t => (t.feeds || []).concat(t.anyFrom || []).includes(k))));
     const badSub = Object.entries(TOPICS).filter(([p]) => p !== 'all').flatMap(([p, ts]) => ts.filter(t => t.subpaths).flatMap(t => t.subpaths.filter(s => !(paths.subpathsOf(p) || []).some(x => x.slug === s)).map(s => p + ':' + t.key + ':' + s)));
     ok('topics for some subpaths name real subpaths', badSub.length === 0, badSub.join(', ') || 'clean');
     ok('the job and the app agree on the paths', JSON.stringify(PATHS.slice().sort()) === JSON.stringify(paths.SLUGS.slice().sort()));
   }
 
-  console.log('\nReading Google News:');
+  console.log('\nReading Google-style feeds:');
   {
     const xml = rss([
       { title: 'Instagram is testing long-form videos for creators', pub: 'The Verge', url: 'https://news.google.com/a1', when: hoursAgo(2) },
@@ -53,8 +57,7 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     ok('headlines are read, with the publisher taken off the title', arts.length === 4 && arts[0].title === 'Instagram is testing long-form videos for creators' && arts[0].publisher === 'The Verge');
     ok('links that are not https are dropped', !arts.some(a => !/^https:/.test(a.url)));
     ok('a block page is not taken for a feed', !core.isFeed(200, '<html>captcha</html>') && core.isFeed(200, xml) && !core.isFeed(503, xml));
-    ok('the search covers the last day, US edition', /when%3A1d/.test(core.searchUrl('Instagram')) && /gl=US/.test(core.searchUrl('x')));
-    const topic = TOPICS.creator.find(t => t.key === 'creator_instagram');
+    const topic = { key: 'creator_instagram', label: 'Instagram', must: 'instagram', subpaths: ['social', 'other'] };
     const rows = core.collect([{ path: 'creator', topic, articles: arts }], NOW);
     ok('off-topic and old headlines are dropped', rows.every(r => /instagram/i.test(r.title)) && !rows.some(r => /2024/.test(r.title)));
     ok('the same story from a second outlet is kept once', rows.length === 1, rows.map(r => r.title).join(' | '));
@@ -62,6 +65,31 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     const many = Array.from({ length: 20 }, (_, i) => ({ title: ['Instagram', 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango'.split(' ')[i], 'w' + i, 'z' + i * 7, 'q' + i * 13].join(' '), url: 'https://n.example/' + i, publisher: 'P', seen: hoursAgo(1 + i / 10) }));
     ok('different stories are not merged', !core.sameStory('Instagram is testing long-form videos for creators', 'Instagram removes likes count from Reels in Canada'));
     ok('a few per topic per run, newest first', core.collect([{ path: 'creator', topic, articles: many }], NOW).length === core.PER_TOPIC);
+  }
+
+  console.log('\nReading publishers\' feeds:');
+  {
+    const atom = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><title>New Play policy for developers</title><link rel="replies" href="https://x.example/c"/><link rel="alternate" href="https://android-developers.googleblog.com/p1"/><published>' + hoursAgo(2).toISOString() + '</published></entry></feed>';
+    const a = core.parseFeed(atom, 'android_dev', 'Android Developers Blog');
+    ok('Atom feeds are read, using the article link', a.length === 1 && a[0].url === 'https://android-developers.googleblog.com/p1' && a[0].publisher === 'Android Developers Blog' && a[0].feed === 'android_dev');
+    const rssx = '<rss><channel><item><title><![CDATA[Instagram tests long-form video]]></title><link>https://www.socialmediatoday.com/news/ig-long/</link><pubDate>' + hoursAgo(1).toUTCString() + '</pubDate></item>'
+      + '<item><title>LinkedIn adds a new ad format</title><link>https://www.socialmediatoday.com/news/li/</link><pubDate>' + hoursAgo(1).toUTCString() + '</pubDate></item></channel></rss>';
+    const smt = core.parseFeed(rssx, 'smt', 'Social Media Today');
+    const yt = core.parseFeed('<rss><channel><item><title>Updates to how Shorts are recommended</title><link>https://blog.youtube/news/shorts/</link><pubDate>' + hoursAgo(3).toUTCString() + '</pubDate></item></channel></rss>', 'youtube_blog', 'YouTube Official Blog');
+    const byFeed = { smt, youtube_blog: yt };
+    const ig = TOPICS.creator.find(t => t.key === 'creator_instagram');
+    const ytTopic = TOPICS.creator.find(t => t.key === 'creator_youtube');
+    const li = TOPICS.consultant.find(t => t.key === 'con_linkedin');
+    const rows = core.collect([
+      { path: 'creator', topic: ig, articles: core.articlesFor(ig, byFeed) },
+      { path: 'creator', topic: ytTopic, articles: core.articlesFor(ytTopic, byFeed) },
+      { path: 'consultant', topic: li, articles: core.articlesFor(li, byFeed) }
+    ], NOW);
+    const by = k => rows.filter(r => r.topic === k).map(r => r.title).join(' | ');
+    ok('the Instagram long-form story reaches the creators\' Instagram topic', by('creator_instagram') === 'Instagram tests long-form video');
+    ok('a single-subject feed counts whole (the YouTube blog needs no keyword)', by('creator_youtube') === 'Updates to how Shorts are recommended');
+    ok('the same feed\'s LinkedIn story goes to consultants, not creators', by('con_linkedin') === 'LinkedIn adds a new ad format' && !/LinkedIn/.test(by('creator_instagram')));
+    ok('a headline from a feed the topic does not use is ignored', !core.relevant(Object.assign({}, smt[0], { feed: 'nrn' }), ig, NOW));
   }
 
   console.log('\nWho gets alerted:');
@@ -92,7 +120,8 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     const fn = read('supabase/functions/path-news/index.ts');
     ok('it refuses callers without the secret', /app_secrets"\)\.select\("value"\)\.eq\("key", "cron_path_news"\)/.test(fn) && /unauthorized" \}, 401/.test(fn));
     ok('it compares the secret in constant time', /function same\(a: string, b: string\)/.test(fn));
-    ok('it gives each search a time limit and runs a few at a time', /setTimeout\(\(\) => ctl\.abort\(\), 20000\)/.test(fn) && /pool\(jobs, 6,/.test(fn));
+    ok('it reads each feed once, with a time limit, a few at a time', /setTimeout\(\(\) => ctl\.abort\(\), 20000\)/.test(fn) && /pool\(feeds, 6,/.test(fn) && /articlesFor\(topic, byFeed\)/.test(fn));
+    ok('it reports why a feed failed', /note\(key \+ ": "/.test(fn) && /problems \}\)/.test(fn));
     ok('it never stores the same link twice for a path', /onConflict: "path,url", ignoreDuplicates: true/.test(fn));
     ok('it skips stories already stored this week from another outlet', /sameStory\(t, r\.title\)/.test(fn));
     ok('it keeps a month of news', /30 \* 86400000/.test(fn));
@@ -150,10 +179,10 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     ok('a news notification opens the story on /news', read('src/routes/notifications.js').includes("path_news: id => '/news#n-' + id"));
   }
 
-  console.log('\nThe migration (written for review):');
+  console.log('\nThe migration:');
   {
     const sql = read('migrations/2026-11-03_path_news.sql');
-    ok('it is written for review', /^-- NOT APPLIED/.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-03/.test(sql));
     ok('members can read news but never write it; anon cannot read it', /revoke all on public\.path_news from anon/.test(sql) && /revoke insert, update, delete on public\.path_news from authenticated/.test(sql) && /enable row level security/.test(sql));
     ok('links are https only', /url ~\* '\^https:\/\/'/.test(sql));
     ok('alerts are on by default and members can switch them', /add column if not exists news_alerts boolean not null default true/.test(sql));

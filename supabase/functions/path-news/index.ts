@@ -1,12 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { TOPICS } from "./topics.js";
-import { ALERT_GAP_HOURS, alertMessage, audience, collect, isFeed, parseNewsRss, pickAlerts, sameStory, searchUrl } from "./core.js";
+import { FEEDS, TOPICS } from "./topics.js";
+import { ALERT_GAP_HOURS, alertMessage, articlesFor, audience, collect, isFeed, parseFeed, pickAlerts, sameStory } from "./core.js";
 
-// News for each path, every 30 minutes (pg_cron job "path-news"). Reads one
-// Google News search per topic (supabase/functions/path-news/topics.js), stores
-// new headlines in public.path_news, and sends each member at most one
-// in-app notification a day about the freshest story for their path.
+// News for each path, every 30 minutes (pg_cron job "path-news"). Reads each
+// publisher feed once (supabase/functions/path-news/topics.js), sorts the
+// headlines into each path's topics, stores new ones in public.path_news, and
+// sends each member at most one in-app notification a day about the freshest
+// story for their path.
 // verify_jwt is off because pg_cron has no user token; the caller must send
 // the secret in public.app_secrets (key 'cron_path_news') as x-cron-secret.
 
@@ -20,13 +21,18 @@ function same(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Why searches failed, for the run's answer (a few examples are enough).
+const problems: string[] = [];
+const note = (p: string) => { if (problems.length < 5) problems.push(p.slice(0, 200)); };
+
 async function read(url: string): Promise<{ status: number; text: string } | null> {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 20000);
   try {
-    const r = await fetch(url, { signal: ctl.signal, headers: { "User-Agent": "NoBossly news (+https://nobossly.com)", Accept: "application/rss+xml, application/xml, text/xml" } });
+    const r = await fetch(url, { signal: ctl.signal, headers: { "User-Agent": "NoBossly news (+https://nobossly.com)", Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
     return { status: r.status, text: await r.text() };
-  } catch (_) {
+  } catch (e) {
+    note("fetch failed: " + String((e as Error)?.message || e));
     return null;
   } finally {
     clearTimeout(t);
@@ -44,18 +50,26 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
 }
 
 Deno.serve(async (req: Request) => {
+  problems.length = 0;
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: secretRow } = await admin.from("app_secrets").select("value").eq("key", "cron_path_news").maybeSingle();
   if (!secretRow?.value || !same(req.headers.get("x-cron-secret") || "", secretRow.value)) return json({ error: "unauthorized" }, 401);
 
   const now = new Date();
-  const jobs = Object.entries(TOPICS).flatMap(([path, topics]) => (topics as any[]).map((topic) => ({ path, topic })));
+  const feeds = Object.entries(FEEDS) as [string, { name: string; url: string }][];
   let failed = 0;
-  const reads = (await pool(jobs, 6, async ({ path, topic }) => {
-    const r = await read(searchUrl(topic.q));
-    if (!r || !isFeed(r.status, r.text)) { failed++; return null; }
-    return { path, topic, articles: parseNewsRss(r.text) };
-  })).filter(Boolean) as any[];
+  const byFeed: Record<string, any[]> = {};
+  await pool(feeds, 6, async ([key, f]) => {
+    const r = await read(f.url);
+    if (!r || !isFeed(r.status, r.text)) {
+      failed++;
+      note(key + ": " + (r ? "HTTP " + r.status + " " + r.text.replace(/\s+/g, " ").slice(0, 100) : "no answer"));
+      return;
+    }
+    byFeed[key] = parseFeed(r.text, key, f.name);
+  });
+  const reads = Object.entries(TOPICS).flatMap(([path, topics]) =>
+    (topics as any[]).map((topic) => ({ path, topic, articles: articlesFor(topic, byFeed) })));
 
   // Skip stories already stored in the last few days, even from another outlet.
   const since = new Date(now.getTime() - 3 * 86400000).toISOString();
@@ -98,5 +112,5 @@ Deno.serve(async (req: Request) => {
   // Keep a month of news.
   await admin.from("path_news").delete().lt("created_at", new Date(now.getTime() - 30 * 86400000).toISOString());
 
-  return json({ ok: true, searches: jobs.length, failed, stored: stored.length, alerted });
+  return json({ ok: true, feeds: feeds.length, failed, stored: stored.length, alerted, problems });
 });

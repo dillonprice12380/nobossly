@@ -5,31 +5,5 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {
-    "2026-11-03_path_news.sql": {
-      "path_news": [
-        "id",
-        "path",
-        "topic",
-        "label",
-        "subpaths",
-        "title",
-        "url",
-        "publisher",
-        "published_at",
-        "alerted_at",
-        "created_at"
-      ],
-      "profiles": [
-        "news_alerts"
-      ],
-      "_enums": {
-        "notifications": {
-          "type": [
-            "news"
-          ]
-        }
-      }
-    }
-  }
+  "migrations": {}
 }
