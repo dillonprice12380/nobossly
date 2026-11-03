@@ -1,0 +1,55 @@
+<%- include('partials/head') %>
+<div class="page-head"><div>
+  <h1>📰 News for <%= pathDef ? pathDef.label.toLowerCase() + 's' : 'your path' %></h1>
+  <p class="muted">Headlines that affect how you build, gathered every 30 minutes from news sites. Tap one to read it at the source.</p>
+</div>
+<form method="post" action="/news/alerts" class="news-switch">
+  <input type="hidden" name="on" value="<%= alertsOn ? '0' : '1' %>">
+  <button class="btn btn-ghost btn-sm" title="At most one notification a day"><%= alertsOn ? '🔔 Alerts on' : '🔕 Alerts off' %></button>
+</form></div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<form method="get" action="/news" class="news-filters">
+  <select name="path" aria-label="Path" onchange="this.form.submit()">
+    <% allPaths.forEach(function (p) { %><option value="<%= p.slug %>"<%= chosenPath === p.slug ? ' selected' : '' %>><%= p.label %><%= p.slug === mine ? ' (your path)' : '' %></option><% }) %>
+  </select>
+  <% if (topics.length > 1 || topic) { %>
+    <div class="news-topics">
+      <a class="news-chip<%= !topic ? ' is-on' : '' %>" href="/news<%= chosenPath && chosenPath !== mine ? '?path=' + chosenPath : '' %>">All</a>
+      <% topics.forEach(function (t) { %><a class="news-chip<%= topic === t.key ? ' is-on' : '' %>" href="/news?<%= chosenPath && chosenPath !== mine ? 'path=' + chosenPath + '&' : '' %>topic=<%= t.key %>"><%= t.label %></a><% }) %>
+    </div>
+  <% } %>
+  <noscript><button class="btn btn-ghost btn-sm">Show</button></noscript>
+</form>
+
+<% if (!mine && !notReady) { %><div class="card"><p style="margin:0"><a href="/choose-path">Pick your path</a> to get news for it. Until then, here's news for everyone working for themselves.</p></div><% } %>
+<% if (notReady) { %>
+  <div class="card center"><p class="muted" style="margin:0">News opens shortly — it's being set up.</p></div>
+<% } else if (!items.length) { %>
+  <div class="card center"><p class="muted" style="margin:0">No headlines yet. The first ones arrive within half an hour.</p></div>
+<% } else { %>
+  <div class="news-list">
+    <% items.forEach(function (n) { %>
+      <a class="card news-item" id="n-<%= n.id %>" href="<%= n.url %>" target="_blank" rel="noopener noreferrer nofollow">
+        <span class="news-meta"><span class="chip"><%= n.label %></span> <%= n.publisher || 'News' %> · <%= ago(n.published_at) %></span>
+        <strong class="news-title"><%= n.title %> <span aria-hidden="true">↗</span></strong>
+      </a>
+    <% }) %>
+  </div>
+  <p class="muted small">Headlines come from Google News and link to the publisher. NoBossly doesn't write or check them.</p>
+<% } %>
+<style>
+  .news-switch { margin: 0; }
+  .news-filters { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; }
+  .news-filters select { width: auto; margin: 0; }
+  .news-topics { display: flex; gap: .35rem; flex-wrap: wrap; }
+  .news-chip { border: 1px solid var(--border); border-radius: 999px; padding: .25rem .7rem; font-size: .85rem; color: var(--text); text-decoration: none; }
+  .news-chip.is-on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .news-list { display: grid; gap: .6rem; }
+  .news-item { display: flex; flex-direction: column; gap: .3rem; color: inherit; text-decoration: none; margin: 0; }
+  .news-item:hover { border-color: var(--accent); }
+  .news-item:target { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .news-meta { font-size: .82rem; color: var(--muted); }
+  .news-title { font-size: 1.02rem; line-height: 1.35; }
+</style>
+<%- include('partials/foot') %>

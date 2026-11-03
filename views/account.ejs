@@ -23,6 +23,16 @@
 </div>
 
 <div class="card">
+  <h3>📰 News alerts</h3>
+  <p class="muted small">Headlines that affect your path, like platform changes, fees and tax rules. With alerts on, you get at most one notification a day, for the freshest big story. Everything is always on the <a href="/news">News</a> page.</p>
+  <form method="post" action="/news/alerts" class="cta-row" style="justify-content:flex-start">
+    <input type="hidden" name="on" value="<%= p.news_alerts === false ? '1' : '0' %>">
+    <span><%= p.news_alerts === false ? '🔕 Off' : '🔔 On' %></span>
+    <button class="btn btn-ghost btn-sm"><%= p.news_alerts === false ? 'Turn on' : 'Turn off' %></button>
+  </form>
+</div>
+
+<div class="card">
   <h3>👁️ Profile visibility</h3>
   <p class="muted small">Public profiles are fully visible to everyone. Private profiles only show your username<% if (flags.ladder) { %>, level<% } %><% if (flags.trophies) { %>, awards and badges<% } %>.</p>
   <form method="post" action="/account/visibility" class="cta-row" style="justify-content:flex-start">

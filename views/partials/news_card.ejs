@@ -1,0 +1,9 @@
+<%# The dashboard's news card. Locals: news (items), ago. %>
+<div class="card">
+  <div class="page-head" style="margin:0 0 .5rem"><div><h2 style="margin:0">📰 News for your path</h2><p class="muted small" style="margin:.15rem 0 0">What changed this week, from news sites.</p></div><a class="btn btn-ghost btn-sm" href="/news">All news</a></div>
+  <% news.forEach(function (n) { %>
+    <a href="<%= n.url %>" target="_blank" rel="noopener noreferrer nofollow" style="display:block;padding:.45rem 0;border-top:1px solid var(--border);color:inherit;text-decoration:none">
+      <span class="muted small"><%= n.label %> · <%= n.publisher || 'News' %> · <%= ago(n.published_at) %></span><br><strong style="font-weight:600"><%= n.title %></strong>
+    </a>
+  <% }) %>
+</div>
