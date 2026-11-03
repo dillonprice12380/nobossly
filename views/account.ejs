@@ -24,11 +24,16 @@
 
 <div class="card">
   <h3>📰 News alerts</h3>
-  <p class="muted small">Headlines that affect your path, like platform changes, fees and tax rules. With alerts on, you get at most one notification a day, for the freshest big story. Everything is always on the <a href="/news">News</a> page.</p>
+  <p class="muted small">Headlines that affect your path, like platform changes, fees and tax rules. Notifications: at most one a day, for the freshest big story. The weekly email: the week's headlines, every Monday morning. Everything is always on the <a href="/news">News</a> page.</p>
   <form method="post" action="/news/alerts" class="cta-row" style="justify-content:flex-start">
-    <input type="hidden" name="on" value="<%= p.news_alerts === false ? '1' : '0' %>">
-    <span><%= p.news_alerts === false ? '🔕 Off' : '🔔 On' %></span>
+    <input type="hidden" name="on" value="<%= p.news_alerts === false ? '1' : '0' %>"><input type="hidden" name="from" value="account">
+    <span>Notifications: <%= p.news_alerts === false ? '🔕 Off' : '🔔 On' %></span>
     <button class="btn btn-ghost btn-sm"><%= p.news_alerts === false ? 'Turn on' : 'Turn off' %></button>
+  </form>
+  <form method="post" action="/news/digest" class="cta-row" style="justify-content:flex-start">
+    <input type="hidden" name="on" value="<%= p.weekly_digest_enabled === false ? '1' : '0' %>"><input type="hidden" name="from" value="account">
+    <span>Weekly email (Monday mornings): <%= p.weekly_digest_enabled === false ? 'Off' : 'On' %></span>
+    <button class="btn btn-ghost btn-sm"><%= p.weekly_digest_enabled === false ? 'Turn on' : 'Turn off' %></button>
   </form>
 </div>
 

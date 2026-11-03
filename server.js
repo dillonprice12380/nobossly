@@ -289,6 +289,15 @@ setInterval(() => {
   checkins.run(sc).catch(e => console.error('[checkins]', e && e.message));
 }, 15 * 60 * 1000);
 
+// The weekly news digest: Monday mornings, New York time (src/digest.js).
+// Idempotent per member, so a 30-minute timer is fine.
+const digest = require('./src/digest');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  digest.run(sc).then(r => { if (r && r.sent) console.log('weekly digest sent:', r); }, e => console.error('[digest]', e && e.message));
+}, 30 * 60 * 1000);
+
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
 const mailer = require('./src/mailer');
 const sweepEmail = () => mailer.runSweep().then(
