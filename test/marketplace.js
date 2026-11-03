@@ -323,10 +323,10 @@ const PROGRAM = Object.assign({}, PAGE, { slug: 'spring', kind: 'program', title
     ok('the admin has a providers page', /<a href="\/admin\/providers">/.test(read('views/admin/nav.ejs')));
   }
 
-  console.log('\nThe migration (written for review):');
+  console.log('\nThe migration:');
   {
     const sql = read('migrations/2026-11-03_marketplace.sql');
-    ok('it is written for review', /^-- NOT APPLIED/.test(sql));
+    ok('it is marked as applied', /^-- Applied live 2026-11-03/.test(sql));
     const fns = [...sql.matchAll(/create or replace function public\.(\w+)\(/g)].map(m => m[1]);
     const open = fns.filter(f => !new RegExp(`revoke all on function public\\.${f}\\([^)]*\\)\\s+from public`).test(sql));
     ok('every function has its default access revoked', open.length === 0, open.join(', ') || fns.length + ' functions');
