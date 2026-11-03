@@ -543,6 +543,7 @@
       "mentor_available",
       "milestone_emails_enabled",
       "needs_username",
+      "news_alerts",
       "notification_emails_enabled",
       "occupation",
       "onboarding_completed",
@@ -1186,6 +1187,19 @@
       "lesson_id",
       "listing_id",
       "user_id"
+    ],
+    "path_news": [
+      "alerted_at",
+      "created_at",
+      "id",
+      "label",
+      "path",
+      "published_at",
+      "publisher",
+      "subpaths",
+      "title",
+      "topic",
+      "url"
     ]
   },
   "enums": {
@@ -1376,7 +1390,8 @@
         "system",
         "help",
         "cohort",
-        "group"
+        "group",
+        "news"
       ]
     },
     "peer_reviews": {

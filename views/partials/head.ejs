@@ -49,7 +49,7 @@
       <%# The main nav: the same three sections as views/partials/appnav.ejs. %>
       <% var _cp = (typeof currentPath !== 'undefined' && currentPath) ? currentPath : '/';
          var _in = function (list) { return list.some(function (m) { return _cp === m || _cp.indexOf(m + '/') === 0; }); };
-         var _secDash = _in(['/dashboard', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones']);
+         var _secDash = _in(['/dashboard', '/news', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones']);
          var _secComm = _in(['/community', '/feed', '/groups', '/programs', '/learn', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations']);
          var _secRes = _in(['/blog', '/guides', '/locations', '/help']); %>
       <a class="nav-main<%= _secDash ? ' is-active' : '' %>" href="/dashboard"<%= _secDash ? ' aria-current="true"' : '' %>>Dashboard</a>

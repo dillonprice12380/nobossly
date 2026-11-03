@@ -153,6 +153,7 @@ app.use('/programs', requireFlag('marketplace'), require('./src/routes/programs'
 app.use('/learn', requireAuth, requireFlag('marketplace'), require('./src/routes/learn')); // taking a course
 app.use('/providers', requireFlag('marketplace'), require('./src/routes/providers')); // for people who run programs or teach
 app.use('/shared', require('./src/routes/shared_link')); // a worksheet opened from an emailed link — no account needed
+app.use('/news', requireAuth, require('./src/routes/news')); // headlines for the member's path (supabase/functions/path-news)
 app.use('/workspace', requireAuth, require('./src/routes/workspace')); // planning worksheets, goals, milestones — ordered per path
 app.use('/workspace', requireAuth, require('./src/routes/boards')); // boards, calendar, metrics, checklists (path dashboards)
 app.use('/surveys', requireAuth, require('./src/routes/surveys').router); // survey maker: build, share, results, CSV

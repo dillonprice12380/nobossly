@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const dashboards = require('../path_dashboards');
+const news = require('../news');
 const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const ladders = require('../ladders');
 const paths = require('../paths');
@@ -105,12 +106,15 @@ router.get('/', async (req, res, next) => {
     const checklist = await firstWeek(req.sb, req.user, p).catch(() => null);
     // The path's own dashboard: stage, number, boards, checklists.
     const pathPanel = await dashboards.panelFor(req.sb, req.user.id, p).catch(e => { console.error('[path panel]', e.message || e); return null; });
+    // The latest headlines for the member's path (src/news.js).
+    const pathNews = await news.forMember(req.sb, p, { limit: 4 }).then(r => r.items, () => []);
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
       msg: req.query.msg || null, today: new Date().toISOString().slice(0, 10),
       // The path's featured workspace tools (src/path_dashboards).
       needsSetup: dashboards.needsSetup(p), pathTools: dashboards.featuredFor(p.path), pathPanel,
+      pathNews, newsAgo: news.ago,
       levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
       needsPath, checklist,
       // Suggested first tasks for a new sprint, matched to the member's path.

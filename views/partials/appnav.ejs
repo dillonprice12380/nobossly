@@ -11,11 +11,12 @@
   // /workspace but belongs to Money).
   var APP_NAV = [
     { key: 'dashboard', href: '/dashboard', label: 'Dashboard', short: 'Dashboard', icon: 'i-suitcase',
-      match: ['/dashboard', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones'],
+      match: ['/dashboard', '/news', '/workspace', '/surveys', '/tasks', '/budget', '/tools', '/trophies', '/milestones'],
       subs: [
         { key: 'overview', href: '/dashboard', label: 'Overview', match: ['/dashboard'] },
         { key: 'workspace', href: '/workspace', label: 'Workspace', match: ['/workspace', '/surveys', '/tasks', '/tools'], not: ['/tools/pricing', '/tools/tax'] },
         { key: 'money', href: '/budget', label: 'Money', match: ['/budget', '/tools/pricing', '/tools/tax'] },
+        { key: 'news', href: '/news', label: 'News', match: ['/news'] },
         { key: 'trophies', href: '/trophies', label: 'Trophies', match: ['/trophies', '/milestones'], flag: 'trophies' }
       ] },
     { key: 'community', href: '/community', label: 'Community', short: 'Community', icon: 'i-community',

@@ -195,7 +195,7 @@ ok('the notifications bell takes the nav bar\'s colour in both themes',
 console.log('\nWhat sits where:');
 const sec = k => APP_NAV.find(i => i.key === k);
 const pages = (k, all) => sec(k).subs.filter(x => all || !x.flag).map(x => x.label).join(',');
-ok('Dashboard has Overview, Workspace and Money', pages('dashboard') === 'Overview,Workspace,Money', pages('dashboard'));
+ok('Dashboard has Overview, Workspace, Money and News', pages('dashboard') === 'Overview,Workspace,Money,News', pages('dashboard'));
 const subOf = (k, key) => sec(k).subs.find(x => x.key === key);
 const hits = (sub, href) => !(sub.not || []).some(m => href === m || href.startsWith(m + '/')) && sub.match.some(m => href === m || href.startsWith(m + '/'));
 const ws = subOf('dashboard', 'workspace'), money = subOf('dashboard', 'money');
