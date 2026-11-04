@@ -98,7 +98,7 @@ export const TOPICS = {
     { key: 'fl_freelance', label: 'Freelance work', feeds: BIZ.concat(['hrdive', 'accountingtoday', 'cpa']),
       must: 'freelanc|solopreneur|independent (work|professional)s?|gig (economy|work)|fractional|(raise|set) your rates|clients? (pay|trust)|what clients|late payments?|invoic' },
     { key: 'fl_ai_design', label: 'AI and creative tools', feeds: ['verge', 'tc_apps', 'engadget', 'fastcompany', 'inc', 'smallbiztrends', 'ninetofivemac', 'smexaminer'],
-      must: 'adobe|canva|figma|photoshop|lightroom|premiere|affinity|capcut|davinci|final cut|midjourney|\\bsora\\b|\\bveo\\b|claude design|ai (video|image|design)',
+      must: 'adobe|canva|figma|photoshop|lightroom|premiere (pro|rush|mobile)|affinity|capcut|davinci|final cut|midjourney|\\bsora\\b|\\bveo\\b|claude design|ai (video|image|design)',
       subpaths: ['design', 'video', 'marketing'] },
     { key: 'fl_marketing', label: 'Search and ads', feeds: SEARCH,
       must: 'google ads|\\bseo\\b|\\bgeo\\b|ai mode|ai overviews?|search console|core update|ranking|content|chatgpt|pmax|meta ads|tiktok (search )?ads',
@@ -130,7 +130,7 @@ export const TOPICS = {
     { key: 'bm_retail', label: 'Independent retail', feeds: ['retaildive', 'smallbiztrends', 'inc', 'cnbc_smallbiz', 'modernretail'],
       must: 'small business(es)?|independent (shop|store|retail|bookstore|business)|shop small|small business saturday|local (shop|store|retail|business)|main street|small retailers|holiday shop+ers|store experience|foot traffic|shoplifting|retail theft',
       not: CHAINS + '|' + CORPORATE, subpaths: ['retail', 'salon', 'fitness', 'other'] },
-    { key: 'bm_rent', label: 'Commercial rent', feeds: ['retaildive', 'restaurantdive', 'smallbiztrends', 'cnbc_smallbiz', 'nrn'], must: '\\brent\\b|lease|commercial real estate|landlord|storefront vacanc|mall' },
+    { key: 'bm_rent', label: 'Commercial rent', feeds: ['retaildive', 'restaurantdive', 'smallbiztrends', 'cnbc_smallbiz', 'nrn'], must: '\\brent\\b|lease|commercial real estate|landlord|storefront vacanc|\\bmalls?\\b' },
     { key: 'bm_wages', label: 'Wages and staffing', feeds: ['hrdive', 'restaurantdive', 'nrn', 'retaildive', 'accountingtoday'],
       must: 'wage|\\btips?\\b|tip credit|overtime|staffing|labor (shortage|costs?)|hiring|scheduling|\\bflsa\\b|paid leave|health (insurance )?premiums|employee engagement',
       not: CHAINS + '|' + CORPORATE },
@@ -165,7 +165,7 @@ export const TOPICS = {
       not: '\\bbetas?\\b|hello developer|design awards?|wwdc\\d* survey|today @ wwdc|app deals|freebies|\\brc\\b|release candidate|spyware|scotus|supreme court|\\bdeals\\b' },
     { key: 'sw_ai', label: 'AI platforms', feeds: ['tc_apps', 'verge', 'engadget', 'fastcompany', 'ninetofivemac', 'ninetofivegoogle'],
       must: 'openai|anthropic|gemini|chatgpt|claude|\\bllm\\b|ai agents?|\\bapi\\b|copilot|app skills|siri ai',
-      not: 'bubble|billionaire|heist|lawsuit|stock|election',
+      not: 'bubble|billionaire|heist|lawsuit|stock|election|earnings|profit|margins',
       subpaths: ['ai', 'saas', 'consumer', 'other'] },
     { key: 'sw_payments', label: 'Payments', feeds: ['paymentsdive', 'tc_apps', 'verge', 'ninetofivemac'],
       must: 'stripe|paddle|lemon squeezy|paypal|\\bsquare\\b|merchant (fees|tools|of record)|chargebacks?|payment (processor|links?)|subscriptions? (pricing|billing|plan)|billing|agentic (commerce|payments)|agents (won.t )?pay|apple pay|google (pay|wallet)',
@@ -173,7 +173,7 @@ export const TOPICS = {
     { key: 'sw_browsers', label: 'Browser extensions', feeds: ['verge', 'engadget', 'tc_apps', 'ninetofivemac', 'ninetofivegoogle'],
       must: 'chrome (web store|extension)|extensions?\\b|browser|safari|firefox|\\bedge\\b|chrome', subpaths: ['extension'] },
     { key: 'sw_indie', label: 'Indie software', feeds: ['tc_apps', 'inc', 'fastcompany', 'entrepreneur', 'ninetofivemac', 'ninetofivegoogle', 'podnews'],
-      must: 'indie (app|dev|developer|hacker|maker|software)|indie app spotlight|bootstrap|solo founder|one-person|\\bsaas\\b|micro-saas|without (any )?venture capital|side project|buys the indie|acquires .* app\\b|app (is )?shutting down|shuts? down' }
+      must: 'indie (app|dev|developer|hacker|maker|software)|indie app spotlight|bootstrap|solo founder|one-person|\\bsaas\\b|micro-saas|without (any )?venture capital|side project|buys the indie|acquires .* app\\b|app (is )?shutting down' }
   ],
   exploring: [
     { key: 'ex_sidehustle', label: 'Side businesses', feeds: BIZ,

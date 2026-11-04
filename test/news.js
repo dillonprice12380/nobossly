@@ -92,6 +92,56 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     ok('a headline from a feed the topic does not use is ignored', !core.relevant(Object.assign({}, smt[0], { feed: 'nrn' }), ig, NOW));
   }
 
+  console.log('\nTuned on real headlines (2026-11-04):');
+  {
+    const find = k => Object.values(TOPICS).flat().find(t => t.key === k);
+    const takes = (k, feed, title) => core.relevant({ feed, title, seen: hoursAgo(2), url: 'https://x.example/' + feed }, find(k), NOW);
+    const yes = [
+      ['bm_restaurants', 'nrn', 'The cookie conundrum: When viral demand meets permanent costs'],
+      ['bm_restaurants', 'restaurantdive', 'FTC, states sue Toast over fees'],
+      ['bm_retail', 'inc', 'Holiday Shoppers Plan to Spend More at Small Businesses. Many Owners Overlook 1 Key Priority'],
+      ['shop_tariffs', 'practicalecom', 'USPS Can Bill Sellers for Foreign Duties'],
+      ['shop_amazon', 'practicalecom', 'Amazon raises FBA fees for the holidays'],
+      ['all_tax', 'entrepreneur', 'That ‘100% Tax Write-Off’ on Your Company Car Isn’t What You Think'],
+      ['con_coaching', 'cpa', 'Selling Advice, Not Hours: Packaging Advisory Services Clients Understand'],
+      ['creator_youtube', 'tubefilter', 'YouTube is giving some creators a 30-day fix-it period before terminating their channels'],
+      ['creator_economy', 'tubefilter', 'X, like YouTube, is offering bonuses to creators who consistently upload new videos'],
+      ['sw_appstores', 'apple_dev', 'Upcoming: New age rating content descriptors in App Store Connect'],
+      ['fl_marketing', 'seroundtable', 'Google AI Mode Now With Up To Four Ads'],
+      ['loc_google', 'seroundtable', 'Google Business Profile adds new review reporting tools'],
+      ['shop_growth', 'practicalecom', 'Marketers’ Guide to Late BFCM Email'],
+      ['ex_sidehustle', 'entrepreneur', 'He Left Google to Fix a ‘Really Stupid’ Household Product']
+    ];
+    const no = [
+      ['bm_restaurants', 'nrn', 'McDonald’s U.S. same-store sales decline on weak traffic'],
+      ['bm_restaurants', 'nrn', 'Red Robin reports best same-store sales since 2023'],
+      ['bm_restaurants', 'restaurantdive', 'Outback’s largest U.S. franchisee goes bankrupt'],
+      ['shop_amazon', 'modernretail', 'What DoorDash’s proposed acquisition of Instacart means for Uber, Amazon and the rest'],
+      ['shop_amazon', 'modernretail', 'Amazon says more than 400M customers have used Alexa for Shopping'],
+      ['shop_tariffs', 'smallbiztrends', 'UPS Unveils Groundbreaking RFID Tech for Enhanced Package Tracking'],
+      ['shop_tariffs', 'supplychaindive', 'FedEx Network 2.0 headed to Los Angeles, other markets post-holidays'],
+      ['prod_tariffs', 'supplychaindive', '3M closes 16 factories, plans changes at 10 more in network revamp'],
+      ['con_coaching', 'inc', 'An NBA Championship Coach Uses AI Every Day. His Reason Is Surprisingly Simple'],
+      ['creator_youtube', 'tubefilter', 'Top 50 Most Subscribed YouTube Channels Worldwide • Week Of 11/01/2026'],
+      ['creator_podcast', 'podnews', 'The Podcast Show London 2027 tickets go on sale: new stages announced'],
+      ['sw_appstores', 'ninetofivemac', 'Apple releases first iOS 27.3 developer beta for iPhone'],
+      ['sw_appstores', 'apple_dev', 'Get ready with the latest beta releases'],
+      ['all_tax', 'accountingtoday', 'Democrats press IRS for tax gap accounting after midterm election'],
+      ['bm_rent', 'smallbiztrends', 'Small Businesses Risk Losing Holiday Shoppers Due to Engagement Gap'],
+      ['fl_ai_design', 'ninetofivemac', '‘Stick’ season 2 premieres on Apple TV'],
+      ['sw_indie', 'ninetofivegoogle', 'Google shuts down a sneaky malware backdoor on millions of Android TV boxes'],
+      ['creator_instagram', 'smt', 'Deals: Instagram creators get 20% off ring lights']
+    ];
+    const missed = yes.filter(([k, f, t]) => !takes(k, f, t)).map(x => x[0] + ': ' + x[2]);
+    const leaked = no.filter(([k, f, t]) => takes(k, f, t)).map(x => x[0] + ': ' + x[2]);
+    ok('useful headlines reach their topic', missed.length === 0, missed.join(' | ') || yes.length + ' headlines');
+    ok('chains, earnings, betas, listicles, sports coaches and event tickets stay out', leaked.length === 0, leaked.join(' | ') || no.length + ' headlines');
+    ok('Search Engine Journal bylines come off titles', core.parseFeed('<rss><item><title>Google Says X via @sejournal, @MattGSouthern</title><link>https://sej.example/a</link><pubDate>' + hoursAgo(1).toUTCString() + '</pubDate></item></rss>', 'sej', 'SEJ')[0].title === 'Google Says X');
+    const thin = paths.SLUGS.flatMap(p => (paths.subpathsOf(p) || []).map(x => x.slug).concat([null])
+      .filter(sub => (TOPICS[p] || []).filter(t => !sub || !t.subpaths || t.subpaths.includes(sub)).length < 2).map(sub => p + ':' + sub));
+    ok('members on every subpath have at least two topics', thin.length === 0, thin.join(', ') || 'clean');
+  }
+
   console.log('\nWho gets alerted:');
   {
     const row = { id: 'n1', path: 'creator', topic: 'creator_instagram', label: 'Instagram', subpaths: ['social', 'other'], title: 'Instagram is testing long-form videos', published_at: hoursAgo(2).toISOString() };
