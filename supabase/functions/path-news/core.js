@@ -33,6 +33,7 @@ export function parseFeed(xml, feed = '', name = '') {
     const publisher = (source || name).slice(0, 80);
     let title = plain(decode(tag(item, 'title')));
     if (source && title.endsWith(' - ' + source)) title = title.slice(0, -(source.length + 3)).trim();
+    title = title.replace(/\s+via @\w+(,\s*@\w+)*,?\s*$/i, '');   // Search Engine Journal's bylines
     url = plain(url);
     if (!/^https:\/\/\S+$/i.test(url) || isNaN(seen.getTime()) || !title) continue;
     out.push({ url: url.slice(0, 1000), title: title.slice(0, 300), publisher, seen, feed });
@@ -70,12 +71,19 @@ export function sameStory(a, b) {
   return both / Math.min(x.size, y.size) >= 0.6;
 }
 
-// A headline belongs to a topic when it is recent and either comes from one
-// of the topic's single-subject feeds (anyFrom) or comes from one of its
-// feeds and matches its pattern.
+// Never news, whatever the topic: deals posts, listicles, rankings, quizzes,
+// daily recaps and event logistics.
+export const NOISE = '^deals?:|\\bdeals:|doorbusters|\\btop \\d+ (most|branded)|\\bweek of \\d|news-about-news quiz|\\bquiz\\b|daily search forum recap|9to5mac daily|9to5mac overtime|\\bthe sideload \\d|tickets? (go|goes|went) on sale|\\bsponsored\\b';
+
+// A headline belongs to a topic when it is recent, is not noise or excluded
+// by the topic's `not`, and either comes from one of the topic's
+// single-subject feeds (anyFrom) or comes from one of its feeds and matches
+// its pattern.
 export function relevant(a, topic, now = new Date()) {
   const age = now.getTime() - a.seen.getTime();
   if (age > MAX_AGE_HOURS * 3600000 || age < -3600000) return false;
+  if (new RegExp(NOISE, 'i').test(a.title)) return false;
+  if (topic.not && new RegExp(topic.not, 'i').test(a.title)) return false;
   if (a.feed && (topic.anyFrom || []).includes(a.feed)) return true;
   if (a.feed && !(topic.feeds || []).includes(a.feed)) return false;
   return !!topic.must && new RegExp(topic.must, 'i').test(a.title);
