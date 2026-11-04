@@ -75,6 +75,33 @@ const TEMPLATES = {
       'Open my dashboard', SITE + '/dashboard')
   }),
 
+  // The weekly news digest (src/digest.js). opts: { items, pathLabel }; each
+  // item is a path_news row. Headlines link to the publisher.
+  weekly_brief: (name, o = {}) => {
+    const items = Array.isArray(o.items) ? o.items : [];
+    const who = o.pathLabel ? o.pathLabel.toLowerCase() + 's' : 'people building their own thing';
+    const groups = [];
+    items.forEach(n => {
+      let g = groups.find(x => x.label === n.label);
+      if (!g) groups.push(g = { label: n.label, items: [] });
+      g.items.push(n);
+    });
+    const safeUrl = u => (/^https:\/\/\S+$/i.test(String(u || '')) ? u : SITE + '/news');
+    const list = groups.map(g =>
+      `<p style="margin:18px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#10b981;font-weight:700">${esc(g.label)}</p>`
+      + g.items.map(n => `<p style="margin:0 0 10px;font-size:15px;line-height:1.45"><a href="${esc(safeUrl(n.url))}" style="color:#14201c;font-weight:600;text-decoration:none">${esc(n.title)}</a><br><span style="font-size:12px;color:#6b7a74">${esc(n.publisher || 'News')}</span></p>`).join('')
+    ).join('');
+    const top = items[0] ? String(items[0].title) : 'your week in news';
+    return {
+      subject: 'This week for ' + who + ': ' + (top.length > 70 ? top.slice(0, 67).trim() + '…' : top),
+      html: shell(
+        `Your week, ${esc(name)}.`,
+        p(`The news that matters to ${esc(who)}, from the last seven days.`) + list,
+        'See all the news', SITE + '/news',
+        `You're getting this because the weekly digest is on. <a href="${SITE}/account" style="color:#6b7a74">Turn it off</a> in account settings.`)
+    };
+  },
+
   // A worksheet shared by email. opts: { from, title, label, note, link }.
   doc_share: (name, o = {}) => ({
     subject: `${String(o.from || 'Someone').slice(0, 60)} shared "${String(o.title || 'a worksheet').slice(0, 80)}" with you`,
@@ -219,4 +246,4 @@ function status() {
   };
 }
 
-module.exports = { send, runSweep, enabled, status, SITE };
+module.exports = { send, runSweep, enabled, status, emailOf, SITE };
