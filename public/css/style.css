@@ -727,3 +727,23 @@ body.theme-light .nav-links > .nav-main.is-active, body.theme-light .nav-links >
 body.theme-light .nav-links > .bell, body.theme-light .nav-links > .notif-menu > summary.bell, body.theme-light .nav-links > a[title="Admin"] { color: #eafff5; }
 .nav-links > .notif-menu > summary.bell:hover .nav-ico, .nav-links > .notif-menu[open] > summary.bell .nav-ico { stroke: var(--accent); }
 body.theme-light .nav-links > .notif-menu > summary.bell:hover .nav-ico { stroke: #6ee7b7; }
+
+/* Dashboard overview: the work on the left, quick glances on the right. */
+.dash { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.dash > * > .card, .dash > * > section.card { margin-bottom: 1.2rem; }
+.dash-main, .dash-side { min-width: 0; }
+@media (max-width: 900px) { .dash { grid-template-columns: 1fr; gap: 0; } }
+.dash-first-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .4rem .8rem; margin-top: .6rem; }
+.dash-step { display: flex; justify-content: space-between; gap: .6rem; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: 8px; color: inherit; text-decoration: none; font-size: .9rem; }
+.dash-step:hover { border-color: var(--accent); }
+.dash-step-cta { color: var(--accent); white-space: nowrap; font-size: .85rem; }
+.dash-tools { display: flex; flex-wrap: wrap; gap: .45rem; }
+.dash-tool { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .75rem; border: 1px solid var(--border); border-radius: 99px; color: inherit; text-decoration: none; font-size: .9rem; }
+.dash-tool:hover { border-color: var(--accent); }
+.dash-paid label { display: block; font-size: .85rem; }
+.dash-paid input { width: 100%; }
+.dash-paid-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+details.analytics > summary { cursor: pointer; list-style: none; }
+details.analytics > summary::-webkit-details-marker { display: none; }
+details.analytics > summary::after { content: ' ▾'; color: var(--muted); }
+details.analytics[open] > summary::after { content: ' ▴'; }
