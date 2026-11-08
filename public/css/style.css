@@ -728,11 +728,48 @@ body.theme-light .nav-links > .bell, body.theme-light .nav-links > .notif-menu >
 .nav-links > .notif-menu > summary.bell:hover .nav-ico, .nav-links > .notif-menu[open] > summary.bell .nav-ico { stroke: var(--accent); }
 body.theme-light .nav-links > .notif-menu > summary.bell:hover .nav-ico { stroke: #6ee7b7; }
 
-/* Dashboard overview: the work on the left, quick glances on the right. */
-.dash { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
-.dash > * > .card, .dash > * > section.card { margin-bottom: 1.2rem; }
+/* Dashboard overview: the work on the left, quick glances on the right.
+   Money and the week ahead run across the top. Each section sits in a
+   .dash-sec wrapper whose --m-order sets its place on a phone. */
+.dash { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0 1.2rem; align-items: start; }
+.dash-top { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 1.2rem; align-items: stretch; }
+.dash-top.one { grid-template-columns: minmax(0, 1fr); }
+.dash-top > .dash-sec { display: flex; }
+.dash-top > .dash-sec > .card { flex: 1; }
+.dash-sec > .card, .dash-sec > section.card { margin-bottom: 1.2rem; }
 .dash-main, .dash-side { min-width: 0; }
-@media (max-width: 900px) { .dash { grid-template-columns: 1fr; gap: 0; } }
+.dash-money-row { display: flex; flex-wrap: wrap; gap: .4rem 1.6rem; }
+.dash-money-row > div { display: flex; flex-direction: column; }
+.dash-money-num { font-size: 1.55rem; font-weight: 700; line-height: 1.2; }
+.dash-due { list-style: none; margin: 0; padding: 0; }
+.dash-due li { display: grid; grid-template-columns: 6.2rem minmax(0, 1fr) auto; gap: .6rem; align-items: baseline; padding: .32rem 0; border-top: 1px solid var(--border); font-size: .92rem; }
+.dash-due li:first-child { border-top: 0; }
+.dash-due a { color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-due-when { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+.dash-due li.today .dash-due-when { color: var(--accent); font-weight: 600; }
+.dash-due li.late .dash-due-when { color: var(--danger); font-weight: 600; }
+.dash-customize { text-align: center; margin: 0 0 1.2rem; }
+.dash-custom-wide { grid-column: 1 / -1; }
+.dash-custom-list { list-style: none; margin: 0; padding: 0; }
+.dash-custom-list li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding: .45rem 0; border-top: 1px solid var(--border); }
+.dash-custom-list li:first-child { border-top: 0; }
+.dash-custom-list li.off .dash-custom-name { color: var(--muted); }
+.dash-custom-btns { display: flex; gap: .3rem; flex: none; }
+.dash-custom-btns button[disabled] { opacity: .35; cursor: default; }
+/* A phone: one column. The column wrappers step aside so every section is a
+   flex item of .dash, and --m-order puts them in the phone order. */
+@media (max-width: 900px) {
+  .dash { display: flex; flex-direction: column; }
+  .dash-top, .dash-main, .dash-side { display: contents; }
+  .dash-sec { order: var(--m-order, 99); }
+  .dash-top > .dash-sec { display: block; }
+}
+@media (max-width: 600px) {
+  .dash-sec > .card, .dash-sec > section.card { margin-bottom: .8rem; }
+  .dash-money-num { font-size: 1.3rem; }
+  .dash-due li { grid-template-columns: 5.2rem minmax(0, 1fr); }
+  .dash-due-kind { grid-column: 2; margin-top: -.2rem; }
+}
 .dash-first-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .4rem .8rem; margin-top: .6rem; }
 .dash-step { display: flex; justify-content: space-between; gap: .6rem; padding: .45rem .6rem; border: 1px solid var(--border); border-radius: 8px; color: inherit; text-decoration: none; font-size: .9rem; }
 .dash-step:hover { border-color: var(--accent); }

@@ -223,7 +223,7 @@ const rss = items => '<?xml version="1.0"?><rss><channel>' + items.map(i =>
     ok('the page renders, with links out and the alert switch', !html.startsWith('ERR') && html.includes('href="https://x/1"') && html.includes('rel="noopener noreferrer nofollow"') && html.includes('action="/news/alerts"'));
     const card = render('partials/news_card.ejs', { news: rows, ago: news.ago });
     ok('the dashboard card renders', !card.startsWith('ERR') && card.includes('All news'));
-    ok('the dashboard shows it', /pathNews = await news\.forMember\(req\.sb, p, \{ limit: 4 \}\)/.test(read('src/routes/dashboard.js')) && read('views/dashboard.ejs').includes("include('partials/news_card'"));
+    ok('the dashboard shows it', /pathNews = await news\.forMember\(req\.sb, p, \{ limit: 4 \}\)/.test(read('src/routes/dashboard.js')) && read('views/dashboard/sections/news.ejs').includes("include('../../partials/news_card'"));
     ok('account settings have the switch', read('views/account.ejs').includes('action="/news/alerts"'));
     ok('News is a Dashboard page', /key: 'news', href: '\/news', label: 'News'/.test(read('views/partials/appnav.ejs')));
     ok('a news notification opens the story on /news', read('src/routes/notifications.js').includes("path_news: id => '/news#n-' + id"));

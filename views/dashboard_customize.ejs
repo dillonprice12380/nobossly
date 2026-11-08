@@ -1,0 +1,42 @@
+<%- include('partials/head') %>
+<%# Reorder and hide the dashboard's sections (src/routes/dashboard.js,
+    src/dashboard_layout.js). One small form per button: no JavaScript needed. %>
+<div class="page-head">
+  <div>
+    <h1>⚙️ Customize your dashboard</h1>
+    <p class="muted">Put what you look at most at the top of each column, and hide what you never use. Hidden sections can come back any time.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/dashboard">← Dashboard</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (!ready) { %><p class="notice">Customizing is being switched on. Check back shortly.</p><% } %>
+
+<div class="grid-2 dash-custom">
+<% ['top', 'main', 'side'].forEach(function (col) {
+     var rows = layout.all.filter(function (s) { return s.col === col; });
+     if (!rows.length) return; %>
+  <div class="card<%= col === 'top' ? ' dash-custom-wide' : '' %>">
+    <h2 style="margin-top:0"><%= cols[col] %></h2>
+    <ul class="dash-custom-list">
+      <% rows.forEach(function (s, i) { %>
+        <li id="sec-<%= s.key %>" class="<%= s.shown ? '' : 'off' %>">
+          <span class="dash-custom-name"><%= s.label %><% if (!s.shown) { %> <span class="chip" style="font-size:.7rem">hidden</span><% } %></span>
+          <span class="dash-custom-btns">
+            <form method="post" action="/dashboard/layout" class="inline"><input type="hidden" name="key" value="<%= s.key %>"><input type="hidden" name="action" value="up"><button class="btn btn-ghost btn-sm" <%= i === 0 || !ready ? 'disabled' : '' %> aria-label="Move <%= s.label %> up">↑</button></form>
+            <form method="post" action="/dashboard/layout" class="inline"><input type="hidden" name="key" value="<%= s.key %>"><input type="hidden" name="action" value="down"><button class="btn btn-ghost btn-sm" <%= i === rows.length - 1 || !ready ? 'disabled' : '' %> aria-label="Move <%= s.label %> down">↓</button></form>
+            <form method="post" action="/dashboard/layout" class="inline"><input type="hidden" name="key" value="<%= s.key %>"><input type="hidden" name="action" value="<%= s.shown ? 'hide' : 'show' %>"><button class="btn btn-ghost btn-sm" <%= ready ? '' : 'disabled' %>><%= s.shown ? 'Hide' : 'Show' %></button></form>
+          </span>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+<% }) %>
+</div>
+<p class="muted small">On a phone the dashboard is one column: the top cards first, then Got paid, then the left column, then the rest of the right column, each in the order set here. Sections with nothing in them yet (no challenges, no news) stay out of the way by themselves.</p>
+<% if (ready && layout.customized) { %>
+  <form method="post" action="/dashboard/layout" onsubmit="return confirm('Go back to the standard layout?')">
+    <input type="hidden" name="action" value="reset">
+    <button class="btn btn-ghost btn-sm">Reset to the standard layout</button>
+  </form>
+<% } %>
+<%- include('partials/foot') %>

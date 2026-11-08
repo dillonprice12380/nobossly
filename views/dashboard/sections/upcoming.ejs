@@ -1,0 +1,24 @@
+<%# Everything dated in the next seven days, overdue first
+    (src/dashboard_data.js upcoming). %>
+<% if (typeof upcoming !== 'undefined' && upcoming) { %>
+  <div class="card dash-upcoming">
+    <div class="page-head" style="margin:0 0 .4rem">
+      <div><h2 style="margin:0">📅 Coming up this week</h2></div>
+      <a class="btn btn-ghost btn-sm" href="/workspace/calendar">Calendar</a>
+    </div>
+    <% if (!upcoming.items.length) { %>
+      <p class="muted small" style="margin:0">Nothing dated in the next seven days. Cards, tasks and renewals with a due date show up here.</p>
+    <% } else { %>
+      <ul class="dash-due">
+        <% upcoming.items.forEach(function (it) { %>
+          <li class="<%= it.overdue ? 'late' : (it.today ? 'today' : '') %>">
+            <span class="dash-due-when"><%= whenLabel(it.when) %></span>
+            <a href="<%= it.href %>"><%= it.title %></a>
+            <span class="muted small dash-due-kind"><%= it.kind %></span>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (upcoming.more) { %><p class="muted small" style="margin:.4rem 0 0">and <%= upcoming.more %> more · <a href="/workspace/calendar">see the calendar</a></p><% } %>
+    <% } %>
+  </div>
+<% } %>

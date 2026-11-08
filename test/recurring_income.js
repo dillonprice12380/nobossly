@@ -126,7 +126,7 @@ const pay = (amount, date, rec) => ({ user_id: 'me', entry_type: 'revenue', amou
 
   console.log('\nWhat members see:');
   {
-    const budget = read('views/budget.ejs'), dash = read('views/dashboard.ejs');
+    const budget = read('views/budget.ejs'), dash = read('views/dashboard/sections/paid.ejs');
     ok('the Money page and the dashboard both have the Recurring tick box', /name="recurring"/.test(budget) && /name="recurring"/.test(dash));
     ok('recurring payments are tagged in the payments list', /e\.is_recurring[\s\S]{0,80}Recurring/.test(budget));
     const base = { flags: FLAGS };

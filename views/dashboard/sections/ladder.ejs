@@ -1,0 +1,48 @@
+<% if (flags.ladder && typeof ladder !== 'undefined' && ladder) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2><%= ladder.next.emoji %> Next rung: Level <%= ladder.next.level %> — <%= ladder.next.title %></h2>
+      <p class="muted small" style="margin:.15rem 0 0">
+        <% if (ladder.blocker === 'both') { %>Needs <%= ladder.xpNeeded %> more XP and the quests below.
+        <% } else if (ladder.blocker === 'quests') { %>You have the XP. These are what's left.
+        <% } else if (ladder.blocker === 'xp') { %>Quests done — <%= ladder.xpNeeded %> XP to go.
+        <% } else { %>Everything is done. Your next action levels you up.<% } %>
+      </p></div>
+      <span class="chip"><%= ladder.doneCount %>/<%= ladder.needMin %> quests</span>
+    </div>
+
+    <% if (ladder.quests.length) { %>
+      <ul class="task-list" style="margin:0">
+        <% ladder.quests.forEach(function (q) { %>
+          <li class="task <%= q.done ? 'done' : '' %>">
+            <span class="task-check" aria-hidden="true" style="cursor:default"><%= q.done ? '✓' : '' %></span>
+            <div style="flex:1">
+              <strong><%= q.title %></strong>
+              <p class="muted small" style="margin:.1rem 0 0"><%= q.type === 'challenge' ? 'Quest' : 'Real-world trophy' %><%= q.done ? ' · done' : '' %></p>
+            </div>
+            <% if (!q.done) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= q.href %>"><%= q.cta || 'Go' %></a><% } %>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (ladder.needMin < ladder.quests.length) { %>
+        <p class="muted small" style="margin:.5rem 0 0">Any <%= ladder.needMin %> of these <%= ladder.quests.length %> will do.</p>
+      <% } %>
+    <% } %>
+
+    <% if ((ladder.unlocks || []).length || ladder.next.unlock_text) { %>
+      <div style="border-top:1px solid var(--border);margin:.7rem 0 0;padding-top:.6rem">
+        <% if ((ladder.unlocks || []).length) { %>
+          <% ladder.unlocks.forEach(function (u) { %>
+            <p class="small" style="margin:.25rem 0">
+              <%= u.kind === 'live' ? '🎁' : '🤝' %> <strong><%= u.label %></strong>
+              <span class="muted"><%= u.detail %></span>
+              <% if (u.kind !== 'live') { %><span class="chip" style="font-size:.68rem">arranged with you</span><% } %>
+            </p>
+          <% }) %>
+        <% } else { %>
+          <p class="muted small" style="margin:0">🎁 <%= ladder.next.unlock_text %></p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+<% } %>
