@@ -26,6 +26,7 @@
 <div class="cta-row" style="justify-content:flex-start;margin:0 0 .8rem">
   <a class="chip <%= scope === 'everyone' ? 'chip-active' : '' %>" href="/feed">Everyone</a>
   <a class="chip <%= scope === 'following' ? 'chip-active' : '' %>" href="/feed?scope=following">Following<%= following ? ' (' + following + ')' : '' %></a>
+  <% if (typeof myPathLabel !== 'undefined' && myPathLabel) { %><a class="chip <%= scope === 'path' ? 'chip-active' : '' %>" href="/feed?scope=path">On my path · <%= myPathLabel %></a><% } %>
 </div>
 
 <% if (!following && suggestions.length) { %>

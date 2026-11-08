@@ -30,7 +30,7 @@ async function firstWeek(sb, user, profile) {
     { done: Object.keys(answers).length > 0, label: 'Set up your dashboard', href: '/choose-path/setup', cta: 'Set up' },
     { done: numbers + cards > 0, label: 'Log a number or add a card to a board', href: '/workspace', cta: 'Open workspace' },
     { done: intros > 0, label: 'Introduce yourself to the community', href: '/community/c/introductions', cta: 'Say hello' },
-    { done: replies > 0 || threads > intros, label: 'Ask or answer a question in Q&A', href: '/community', cta: 'Open Q&A' },
+    { done: replies > 0 || threads > intros, label: 'Ask or answer a question in Q&A', href: '/community/qa', cta: 'Open Q&A' },
     { done: follows >= 3, label: 'Follow three members', href: '/members', cta: 'Find people', note: follows ? follows + ' of 3' : null }
   ];
   const done = steps.filter(s => s.done).length;

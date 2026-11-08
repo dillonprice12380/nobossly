@@ -138,6 +138,7 @@ app.use('/quests', requireAuth, require('./src/routes/challenges'));
 app.use('/challenges', requireAuth, require('./src/routes/challenges'));   // former name
 app.use('/feed', requireAuth, require('./src/routes/feed')); // the social feed: member posts and shared results
 app.use('/exchange', requireAuth, requireFlag('helpBoard'), require('./src/routes/exchange')); // help & exchange board
+app.use('/community/coworking', require('./src/routes/coworking')); // co-working sessions (members only)
 app.use('/community', require('./src/routes/community'));
 app.use('/reviews', requireAuth, require('./src/routes/reviews')); // peer review queue — the on-platform route to "Get 3 Feedback Sessions"
 app.use('/wins', require('./src/routes/wins')); // public wins wall + member submissions + admin review
@@ -306,6 +307,14 @@ setInterval(() => {
   try { sc = serviceClient(); } catch (_) { return; }
   stripeSync.runAll(sc).then(r => { if (r && r.imported) console.log('stripe sync:', r); }, e => console.error('[stripe sync]', e && e.message));
 }, 30 * 60 * 1000);
+
+// Co-working reminders, about an hour before each session (src/coworking.js).
+const coworking = require('./src/coworking');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  coworking.remind(sc).then(r => { if (r && r.reminded) console.log('co-working reminders:', r); }, e => console.error('[coworking]', e && e.message));
+}, 10 * 60 * 1000);
 
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
 const mailer = require('./src/mailer');

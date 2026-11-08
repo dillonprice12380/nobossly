@@ -158,7 +158,8 @@ for (const href of ['/feed', '/wins', '/exchange', '/members', '/reviews', '/bud
   ok(`${href} keeps the section nav`, covers(href), 'opening it used to make the whole tab row disappear');
 }
 // Every page a section lists is a real page, and is matched by that section.
-const subs = APP_NAV.flatMap(i => (i.subs || []).map(s => Object.assign({ section: i }, s)));
+// Second-row pages (kids) count as section pages too.
+const subs = APP_NAV.flatMap(i => (i.subs || []).flatMap(s => [s].concat(s.kids || [])).map(s => Object.assign({ section: i }, s)));
 ok('every section page is a real page', subs.every(s => resolves(s.href)),
    subs.filter(s => !resolves(s.href)).map(s => s.href).join(', ') || subs.length + ' pages');
 ok('...and sits inside its own section', subs.every(s => s.section.match.some(m => s.href === m || s.href.startsWith(m + '/'))));
@@ -196,13 +197,16 @@ console.log('\nWhat sits where:');
 const sec = k => APP_NAV.find(i => i.key === k);
 const pages = (k, all) => sec(k).subs.filter(x => all || !x.flag).map(x => x.label).join(',');
 ok('Dashboard has Overview, Workspace, Money and News', pages('dashboard') === 'Overview,Workspace,Money,News', pages('dashboard'));
-const subOf = (k, key) => sec(k).subs.find(x => x.key === key);
+const subOf = (k, key) => sec(k).subs.flatMap(x => [x].concat(x.kids || [])).find(x => x.key === key);
 const hits = (sub, href) => !(sub.not || []).some(m => href === m || href.startsWith(m + '/')) && sub.match.some(m => href === m || href.startsWith(m + '/'));
 const ws = subOf('dashboard', 'workspace'), money = subOf('dashboard', 'money');
 for (const h of ['/workspace', '/surveys', '/tasks', '/tools/interviews', '/tools/proof']) ok(`${h} is under Workspace`, hits(ws, h) && !hits(money, h));
 for (const h of ['/budget', '/tools/pricing', '/tools/tax']) ok(`${h} is under Money`, hits(money, h) && !hits(ws, h));
 ok('Groups is a Community page', !!subOf('community', 'groups') && subOf('community', 'groups').href === '/groups');
 ok('Feed and Challenges are Community pages', !!subOf('community', 'feed') && !!subOf('community', 'challenges'));
+ok('Community has six tabs: Home, Feed, Q&A, Co-working, Groups & challenges, People', pages('community') === 'Home,Feed,Q&A,Co-working,Groups & challenges,People', pages('community'));
+ok('...with Members, Results, Help & exchange, Get feedback and Collaborators under People', subOf('community', 'people').kids.map(k => k.label).join(',') === 'Members,Results,Help & exchange,Get feedback,Collaborators');
+ok('Home is the community landing page alone, not every /community page', subOf('community', 'home').exact === true && /if \(item\.exact\)/.test(appnavSrc));
 ok('Resources has Blog, Guides, Locations and Help Center', pages('resources') === 'Blog,Guides,Locations,Help Center');
 ok('a page can mark its section page (money worksheets live under /workspace)', /_forced = \(typeof navSub !== 'undefined' && navSub\)/.test(appnavSrc));
 

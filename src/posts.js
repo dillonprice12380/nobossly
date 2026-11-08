@@ -81,7 +81,9 @@ async function decorate(sb, me, posts, hidden, { allComments = false } = {}) {
  * The timeline. `scope` is 'everyone' (all members' posts and shared results)
  * or 'following' (people you follow, plus yourself).
  */
-async function timeline(sb, me, { scope = 'everyone', limit = 40 } = {}) {
+// scope: 'everyone', 'following', or 'path' (members on the same path as
+// `path`, the viewer's own).
+async function timeline(sb, me, { scope = 'everyone', limit = 40, path = null } = {}) {
   const blocks = await blockSets(sb, me);
   const hidden = hiddenBy(blocks);
   const { data: follows } = await sb.from('follows').select('following_id').eq('follower_id', me);
@@ -89,6 +91,12 @@ async function timeline(sb, me, { scope = 'everyone', limit = 40 } = {}) {
 
   let q = sb.from('posts').select('id, user_id, post_type, content, link_url, link_title, like_count, comment_count, created_at')
     .order('created_at', { ascending: false }).limit(limit);
+  let onPath = null;
+  if (scope === 'path') {
+    const { data: ps } = path ? await sb.from('profiles').select('id').eq('path', path).eq('account_status', 'active').limit(1000) : { data: [] };
+    onPath = new Set((ps || []).map(p => p.id).concat(me));
+    q = q.in('user_id', [...onPath]);
+  }
   if (scope === 'following') q = q.in('user_id', followingIds.concat(me));
   const { data: rawPosts } = await q;
   const posts = await decorate(sb, me, (rawPosts || []).filter(p => !hidden(p.user_id)), hidden);
@@ -105,7 +113,7 @@ async function timeline(sb, me, { scope = 'everyone', limit = 40 } = {}) {
     const people = await profilesById(sb, (data || []).map(e => e.user_id));
     events = (data || []).filter(e => people[e.user_id]).map(e => ({ ...e, who: people[e.user_id] }));
   }
-  events = events.filter(e => !hidden(e.user_id) && ['win', 'challenge'].includes(e.kind));
+  events = events.filter(e => !hidden(e.user_id) && ['win', 'challenge'].includes(e.kind) && (!onPath || onPath.has(e.user_id)));
 
   const items = posts.map(p => ({ item: 'post', at: p.created_at, post: p }))
     .concat(events.map(e => ({ item: 'event', at: e.created_at, event: e })))

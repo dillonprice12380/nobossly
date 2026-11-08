@@ -7,7 +7,7 @@
   <% if (user) { %><a class="btn btn-ghost" href="/members"><svg class="icon"><use href="#i-profile"/></svg> Members</a><% } else { %><a class="btn btn-primary" href="/signup">Join the community</a><% } %>
 </div>
 
-<form method="get" action="/community" class="card forum-search">
+<form method="get" action="/community/qa" class="card forum-search">
   <input name="q" value="<%= q %>" placeholder="Search topics…" maxlength="80">
   <select name="cat">
     <option value="">All categories</option>
@@ -15,22 +15,29 @@
   </select>
   <input name="tag" value="<%= filterTag %>" placeholder="Tag (e.g. marketing)" maxlength="24">
   <button class="btn btn-primary">Search</button>
-  <% if (q || filterTag || filterCat) { %><a class="btn btn-ghost" href="/community">Clear</a><% } %>
+  <% if (q || filterTag || filterCat) { %><a class="btn btn-ghost" href="/community/qa">Clear</a><% } %>
 </form>
+
+<nav class="cta-row qa-filters" aria-label="Show">
+  <a class="chip <%= !results ? 'chip-active' : '' %>" href="/community/qa">Categories</a>
+  <a class="chip <%= show === 'unanswered' && !myPath ? 'chip-active' : '' %>" href="/community/qa?show=unanswered">Unanswered<%= unanswered ? ' (' + unanswered + ')' : '' %></a>
+  <% if (typeof profile !== 'undefined' && profile && profile.path && pathLabel(profile.path)) { %><a class="chip <%= myPath && !show ? 'chip-active' : '' %>" href="/community/qa?path=mine">Asked by <%= pathLabel(profile.path).toLowerCase() %> members</a><% } %>
+</nav>
 
 <div class="forum-layout">
   <div class="forum-main">
     <% if (results) { %>
-      <h3><%= results.length %> result<%= results.length === 1 ? '' : 's' %><%= q ? ' for \"' + q + '\"' : '' %><%= filterTag ? ' tagged #' + filterTag : '' %></h3>
-      <% results.forEach(t => { %>
+      <h3><%= show === 'unanswered' ? 'Waiting for an answer' : (myPath && !q && !filterTag ? 'Asked by ' + pathLabel(myPath).toLowerCase() + ' members' : results.length + ' result' + (results.length === 1 ? '' : 's') + (q ? ' for "' + q + '"' : '') + (filterTag ? ' tagged #' + filterTag : '')) %></h3>
+      <% results.forEach(t => { var au = pmap[t.user_id]; %>
         <a class="card thread-row" href="/community/t/<%= t.id %>">
-          <div><strong><%= t.title %></strong>
+          <div><strong><%= t.title %></strong><% if (t.accepted_reply_id) { %> <span class="chip chip-success" style="font-size:.7rem">✓ answered</span><% } %>
           <p class="muted small"><%= (t.body || '').slice(0, 120) %><%= (t.body || '').length > 120 ? '…' : '' %></p>
+          <% if (au) { %><p class="muted small" style="margin:.15rem 0 0"><%= au.display_name || au.username %><%= au.path && pathLabel(au.path) ? ' · ' + pathLabel(au.path) : '' %> · <%= new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p><% } %>
           <% if (t.tags && t.tags.length) { %><p class="tag-row"><% t.tags.forEach(tg => { %><span class="chip tag-chip">#<%= tg %></span><% }) %></p><% } %></div>
           <div class="thread-meta"><span class="chip">💬 <%= t.reply_count || 0 %></span></div>
         </a>
       <% }) %>
-      <% if (!results.length) { %><div class="card center"><p>No threads matched. Try different keywords.</p></div><% } %>
+      <% if (!results.length) { %><div class="card center"><p><%= show === 'unanswered' ? 'Every question has an answer. Nice.' : (myPath && !q && !filterTag ? 'Nobody on your path has asked anything yet.' : 'No threads matched. Try different keywords.') %></p></div><% } %>
     <% } else { %>
       <div class="forum-cats">
         <% cats.forEach(c => { %>
@@ -44,6 +51,19 @@
           </a>
         <% }) %>
       </div>
+    <% } %>
+    <% if (typeof user !== 'undefined' && user && cats.some(function (c) { return !c.is_locked; })) { %>
+      <form class="card" id="ask" method="post" action="/community/qa/ask" style="margin-top:1rem">
+        <h2 style="margin-top:0">Ask a question</h2>
+        <label>Your question<input name="title" maxlength="160" required placeholder="e.g. How did you price your first logo project?"></label>
+        <label>More detail<textarea name="body" rows="4" required placeholder="What you have tried, what you are stuck on. Others on a 9 to 5 will recognise it."></textarea></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 .8rem">
+          <label>Category<select name="cat"><% cats.filter(function (c) { return !c.is_locked; }).forEach(function (c) { %><option value="<%= c.slug %>"><%= c.emoji %> <%= c.name %></option><% }) %></select></label>
+          <label>Tags <span class="muted small">(optional, comma separated)</span><input name="tags" maxlength="120" placeholder="pricing, clients"></label>
+        </div>
+        <p class="muted small" style="margin:.2rem 0 .6rem">You'll be told when someone answers. Mark the reply that helped and it shows first.</p>
+        <button class="btn btn-primary">Post the question</button>
+      </form>
     <% } %>
   </div>
   <aside class="forum-side">
@@ -59,4 +79,5 @@
     </div>
   </aside>
 </div>
+<style>.qa-filters { justify-content: flex-start; gap: .35rem; margin: .2rem 0 1rem; }</style>
 <%- include('../partials/foot') %>

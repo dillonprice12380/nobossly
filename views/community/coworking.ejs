@@ -1,0 +1,66 @@
+<%- include('../partials/head') %>
+<%# Co-working sessions (src/routes/coworking.js): members post a time to
+    work alongside each other. Peer-run; nobody teaches. %>
+<% var dayDefault = new Date(Date.now() + 86400000).toISOString().slice(0, 10); %>
+<div class="page-head">
+  <div>
+    <h1>💻 Co-working</h1>
+    <p class="muted">Work alongside other members for an hour: say what you are working on, cameras optional, then get on with it. Anyone can host.</p>
+  </div>
+  <a class="btn btn-primary" href="#host">Host a session</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="notice" style="border-color:var(--danger)"><%= err %></p><% } %>
+<% if (notReady) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Co-working is being switched on. Check back shortly.</p></div>
+<% } else { %>
+  <% if (pathOf) { %>
+    <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0 0 .8rem">
+      <a class="chip <%= !myPath ? 'chip-active' : '' %>" href="/community/coworking">Everyone</a>
+      <a class="chip <%= myPath ? 'chip-active' : '' %>" href="/community/coworking?path=mine">For <%= pathOf.label.toLowerCase() %> members</a>
+    </div>
+  <% } %>
+  <% if (!sessions.length) { %>
+    <div class="card center"><p class="muted" style="margin:0">Nothing booked yet<%= myPath ? ' for your path' : '' %>. Host the first one below: an evening hour after work is a good start.</p></div>
+  <% } else { %>
+    <div class="grid cw-grid">
+      <% sessions.forEach(function (s) { %>
+        <a class="card cw-card<%= s.attending ? ' is-going' : '' %>" href="/community/coworking/<%= s.id %>">
+          <span class="muted small"><time datetime="<%= s.starts_at %>" data-local><%= s.when %></time> · <%= s.minutes %> min</span>
+          <strong><%= s.title %></strong>
+          <span class="muted small">Hosted by <%= s.host ? (s.host.display_name || s.host.username) : 'a member' %><%= s.pathLabel ? ' · for ' + s.pathLabel.toLowerCase() + ' members' : '' %></span>
+          <span class="small"><%= s.attending ? '✓ You are going' : (s.full ? 'Full' : s.count + ' going' + (s.capacity ? ' of ' + s.capacity : '')) %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <form class="card" id="host" method="post" action="/community/coworking" style="max-width:720px;margin-top:1.2rem">
+    <h2 style="margin-top:0">Host a session</h2>
+    <label>What is it?<input name="title" maxlength="120" required placeholder="e.g. Tuesday evening focus hour"></label>
+    <div class="cw-row">
+      <label>Day<input type="date" name="date" required value="<%= dayDefault %>"></label>
+      <label>Time<input type="time" name="time" required value="19:00"></label>
+      <label>How long
+        <select name="minutes"><% [30, 45, 60, 90, 120, 180].forEach(function (m) { %><option value="<%= m %>" <%= m === 60 ? 'selected' : '' %>><%= m < 60 ? m + ' min' : (m / 60) + (m === 60 ? ' hour' : ' hours') %></option><% }) %></select>
+      </label>
+    </div>
+    <input type="hidden" name="tz" data-tz-offset>
+    <label>Video link <span class="muted small">(Zoom, Google Meet, Jitsi… only people who RSVP see it)</span><input name="link" type="url" required maxlength="300" placeholder="https://meet.google.com/…"></label>
+    <div class="cw-row">
+      <label>Up to how many people? <span class="muted small">(optional)</span><input name="capacity" type="number" min="2" max="50" placeholder="No limit"></label>
+      <% if (pathOf) { %><label>Who is it for?<select name="path"><option value="">Everyone</option><option value="<%= pathOf.slug %>"><%= pathOf.label %> members</option></select></label><% } %>
+    </div>
+    <label>Anything else? <span class="muted small">(optional)</span><textarea name="about" rows="3" maxlength="1000" placeholder="e.g. 5 minutes to say what we're working on, 50 minutes heads down, 5 minutes to say how it went."></textarea></label>
+    <p class="muted small" style="margin:.2rem 0 .6rem">The time is in your own time zone; everyone sees it in theirs. Up to five upcoming sessions each.</p>
+    <button class="btn btn-primary">Post it</button>
+  </form>
+<% } %>
+<style>
+  .cw-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .cw-card { display: flex; flex-direction: column; gap: .25rem; color: inherit; text-decoration: none; }
+  .cw-card:hover { border-color: var(--accent); }
+  .cw-card.is-going { border-left: 3px solid var(--accent); }
+  .cw-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 .8rem; }
+</style>
+<%- include('../partials/foot') %>

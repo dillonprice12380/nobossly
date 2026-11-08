@@ -1,0 +1,127 @@
+<%- include('../partials/head') %>
+<%# The community home (src/routes/community.js, src/community.js): what is
+    happening this week, in one place. Peer to peer: questions, co-working,
+    results, groups and people doing the same kind of thing. Empty sections
+    stay away; the Q&A card is always there because asking is always possible. %>
+<% var who = function (id) { var p = people[id]; return p ? (p.display_name || p.username) : 'A member'; }; %>
+<div class="page-head">
+  <div>
+    <h1><svg class="icon icon-lg"><use href="#i-community"/></svg> Community</h1>
+    <p class="muted">People building a business around a 9 to 5. Ask, answer, work alongside each other, and share what is working.</p>
+  </div>
+  <div class="cta-row" style="margin:0">
+    <% if (signedIn) { %><a class="btn btn-primary" href="/community/qa#ask">Ask a question</a><a class="btn btn-ghost" href="/community/coworking">Co-work</a>
+    <% } else { %><a class="btn btn-primary" href="/signup">Join the community</a><% } %>
+  </div>
+</div>
+
+<div class="ch">
+  <div class="ch-main">
+    <% if (challenge) { %>
+      <a class="card ch-challenge" href="/quests">
+        <span class="ch-kicker"><%= challenge.running ? "This week's community challenge" : 'Next community challenge' %></span>
+        <strong><%= challenge.emoji || '🏁' %> <%= challenge.title %></strong>
+        <% if (challenge.description) { %><span class="muted small"><%= String(challenge.description).slice(0, 160) %><%= String(challenge.description).length > 160 ? '…' : '' %></span><% } %>
+        <span class="small ch-cta"><%= challenge.running ? 'Join in →' : 'Get a reminder →' %></span>
+      </a>
+    <% } %>
+
+    <section class="card">
+      <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0">❓ Questions</h2></div><a class="btn btn-ghost btn-sm" href="/community/qa">All Q&amp;A</a></div>
+      <% if (unanswered.length) { %>
+        <p class="ch-label">Waiting for an answer</p>
+        <% unanswered.forEach(function (t) { %>
+          <a class="ch-row" href="/community/t/<%= t.id %>"><span><%= t.title %></span><span class="muted small"><%= who(t.user_id) %> · <%= ago(t.created_at) %></span></a>
+        <% }) %>
+      <% } %>
+      <% var answered = questions.filter(function (t) { return t.reply_count > 0; }); %>
+      <% if (answered.length) { %>
+        <p class="ch-label">Recently active</p>
+        <% answered.forEach(function (t) { %>
+          <a class="ch-row" href="/community/t/<%= t.id %>"><span><%= t.title %></span><span class="muted small">💬 <%= t.reply_count %> · <%= ago(t.last_reply_at || t.created_at) %></span></a>
+        <% }) %>
+      <% } %>
+      <% if (!questions.length && !unanswered.length) { %><p class="muted small" style="margin:0">No questions yet. Be the first: pricing, first customers, fitting it around work, anything.</p><% } %>
+    </section>
+
+    <% if (posts.length) { %>
+      <section class="card">
+        <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0">📰 From the feed</h2></div><a class="btn btn-ghost btn-sm" href="/feed">Open the feed</a></div>
+        <% posts.forEach(function (p) { %>
+          <a class="ch-row" href="/feed/p/<%= p.id %>"><span><strong><%= who(p.user_id) %></strong> <%= String(p.content || '').slice(0, 120) %><%= String(p.content || '').length > 120 ? '…' : '' %></span><span class="muted small"><%= ago(p.created_at) %></span></a>
+        <% }) %>
+      </section>
+    <% } %>
+
+    <% if (wins.length) { %>
+      <section class="card">
+        <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0">🎉 Results</h2></div><a class="btn btn-ghost btn-sm" href="/wins">All results</a></div>
+        <% wins.forEach(function (w) { %>
+          <a class="ch-row" href="/wins"><span><strong><%= who(w.user_id) %></strong> <%= w.title %></span><% if (w.amount_usd) { %><span class="chip chip-success">$<%= Number(w.amount_usd).toLocaleString() %></span><% } %></a>
+        <% }) %>
+      </section>
+    <% } %>
+  </div>
+
+  <aside class="ch-side">
+    <% if (signedIn) { %>
+      <section class="card">
+        <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0">💻 Co-working</h2></div><a class="btn btn-ghost btn-sm" href="/community/coworking">All</a></div>
+        <% if (sessions.length) { %>
+          <% sessions.forEach(function (s) { %>
+            <a class="ch-row ch-session" href="/community/coworking/<%= s.id %>">
+              <span><strong><%= s.title %></strong><br><span class="muted small"><time datetime="<%= s.starts_at %>" data-local><%= s.when %></time> · <%= s.minutes %> min</span></span>
+              <span class="muted small"><%= s.attending ? '✓ going' : s.count + ' going' %></span>
+            </a>
+          <% }) %>
+        <% } else { %>
+          <p class="muted small" style="margin:0 0 .5rem">Nothing booked yet. Post an hour and work alongside other members: everyone on their own thing, cameras optional.</p>
+          <a class="btn btn-ghost btn-sm" href="/community/coworking#host">Host a session</a>
+        <% } %>
+      </section>
+    <% } %>
+
+    <% if (myPath && onPath.length) { %>
+      <section class="card">
+        <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0"><%= myPath.emoji %> On your path</h2></div><a class="btn btn-ghost btn-sm" href="/members?path=mine">See all</a></div>
+        <p class="muted small" style="margin:0 0 .4rem">Other <%= myPath.label.toLowerCase() %> members, most recently active first.</p>
+        <% onPath.forEach(function (m) { %>
+          <a class="ch-row" href="/members/<%= m.username %>"><span><strong><%= m.display_name || m.username %></strong><% if (m.headline) { %><br><span class="muted small"><%= m.headline %></span><% } %></span></a>
+        <% }) %>
+      </section>
+    <% } %>
+
+    <% if (groups.length) { %>
+      <section class="card">
+        <div class="page-head" style="margin:0 0 .4rem"><div><h2 style="margin:0">👥 Groups</h2></div><a class="btn btn-ghost btn-sm" href="/groups">All groups</a></div>
+        <% groups.forEach(function (g) { %>
+          <a class="ch-row" href="/groups/<%= g.slug %>"><span><strong><%= g.name %></strong><% if (g.description) { %><br><span class="muted small"><%= String(g.description).slice(0, 80) %></span><% } %></span></a>
+        <% }) %>
+      </section>
+    <% } %>
+
+    <section class="card">
+      <h2 style="margin:0 0 .4rem">🤝 Help each other</h2>
+      <a class="ch-row" href="/members"><span>Find members who can help</span><span class="muted">→</span></a>
+      <% if (flags.helpBoard) { %><a class="ch-row" href="/exchange"><span>Help &amp; exchange board</span><span class="muted">→</span></a><% } %>
+      <a class="ch-row" href="/reviews"><span>Get feedback on your work</span><span class="muted">→</span></a>
+      <% if (flags.collabs) { %><a class="ch-row" href="/community/collab"><span>Find collaborators</span><span class="muted">→</span></a><% } %>
+    </section>
+  </aside>
+</div>
+<style>
+  .ch { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0 1.2rem; align-items: start; }
+  .ch-main > *, .ch-side > * { margin-bottom: 1.2rem; }
+  @media (max-width: 900px) { .ch { grid-template-columns: 1fr; } }
+  .ch-challenge { display: flex; flex-direction: column; gap: .2rem; color: inherit; text-decoration: none; border-left: 3px solid var(--accent-2); }
+  .ch-challenge:hover { border-color: var(--accent); }
+  .ch-kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .ch-cta { color: var(--accent); }
+  .ch-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: .6rem 0 .1rem; }
+  .ch-row { display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; padding: .45rem 0; border-top: 1px solid var(--border); color: inherit; text-decoration: none; }
+  .ch-label + .ch-row, h2 + .ch-row, .page-head + .ch-row, p + .ch-row { border-top: 0; }
+  .ch-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+  .ch-row > span:last-child { flex: none; white-space: nowrap; }
+  .ch-row:hover > span:first-child { color: var(--accent); }
+</style>
+<%- include('../partials/foot') %>

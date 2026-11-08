@@ -1,9 +1,10 @@
 <%- include('../partials/head') %>
-<a class="muted" href="/community/c/<%= cat ? cat.slug : '' %>">← <%= cat ? cat.name : 'Back' %></a>
+<a class="muted" href="<%= cat ? '/community/c/' + cat.slug : '/community/qa' %>">← <%= cat ? cat.name : 'Q&A' %></a>
+<% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
 <div class="card">
   <h1 class="thread-title"><%= thread.is_locked ? '🔒 ' : '' %><%= thread.title %></h1>
   <p class="muted small">by <%= (pmap[thread.user_id] || {}).display_name || 'a member' %> · <%= new Date(thread.created_at).toLocaleString() %><% if (thread.edited_at) { %> · edited<% } %><% if (user && thread.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_thread&id=<%= thread.id %>">⚑ report</a><% } %></p>
-  <% if (thread.tags && thread.tags.length) { %><p class="tag-row"><% thread.tags.forEach(tg => { %><a class="chip tag-chip" href="/community?tag=<%= encodeURIComponent(tg) %>">#<%= tg %></a><% }) %></p><% } %>
+  <% if (thread.tags && thread.tags.length) { %><p class="tag-row"><% thread.tags.forEach(tg => { %><a class="chip tag-chip" href="/community/qa?tag=<%= encodeURIComponent(tg) %>">#<%= tg %></a><% }) %></p><% } %>
   <% if (thread.body_html) { %><div class="article-body rt-content"><%- thread.body_html %></div><% } else { %><p class="pre"><%= thread.body %></p><% } %>
   <%- include('../partials/reactions', { rkey: 'thread:' + thread.id, entityType: 'thread', entityId: thread.id, reactions, REACTIONS, user, backUrl: '/community/t/' + thread.id }) %>
   <% if (user && (thread.user_id === user.id || (profile && profile.is_admin))) { %>
@@ -12,13 +13,27 @@
       <form method="post" action="/community/t/<%= thread.id %>/delete" class="inline" onsubmit="return confirm('Delete this thread and all its replies?')"><button class="btn btn-ghost btn-sm btn-danger">🗑 Delete</button></form>
     </div>
   <% } %>
+  <% if (typeof canFollow !== 'undefined' && canFollow) { %>
+    <form method="post" action="/community/t/<%= thread.id %>/follow" class="qa-follow">
+      <% if (following) { %><input type="hidden" name="stop" value="1"><button class="btn btn-ghost btn-sm">🔔 Following · stop</button><span class="muted small">You'll be told about new replies.</span>
+      <% } else { %><button class="btn btn-ghost btn-sm">🔕 Follow</button><span class="muted small">Get told about new replies.</span><% } %>
+    </form>
+  <% } %>
 </div>
-<h3><%= replies.length %> replies</h3>
-<% replies.forEach(r => { %>
-  <div class="card reply">
+<h3><%= replies.length %> repl<%= replies.length === 1 ? 'y' : 'ies' %></h3>
+<% if (typeof canAccept !== 'undefined' && canAccept && replies.length && !accepted) { %><p class="muted small" style="margin:-.4rem 0 .6rem">Did one of these help? Mark it, and it shows first for the next person with the same question.</p><% } %>
+<% replies.forEach(r => { var isAccepted = typeof accepted !== 'undefined' && accepted && accepted.id === r.id; %>
+  <div class="card reply<%= isAccepted ? ' qa-accepted' : '' %>" id="r-<%= r.id %>">
+    <% if (isAccepted) { %><p class="qa-accepted-tag">✓ This helped the asker</p><% } %>
     <p class="muted small"><strong><%= (pmap[r.user_id] || {}).display_name || 'a member' %></strong><% if (flags.ladder) { %> · lvl <%= (pmap[r.user_id] || {}).current_level || 1 %><% } %> · <%= new Date(r.created_at).toLocaleString() %><% if (r.edited_at) { %> · edited<% } %><% if (user && r.user_id !== user.id) { %> · <a class="muted" href="/report?type=forum_reply&id=<%= r.id %>">⚑ report</a><% } %></p>
     <% if (r.body_html) { %><div class="article-body rt-content"><%- r.body_html %></div><% } else { %><p class="pre"><%= r.body %></p><% } %>
     <%- include('../partials/reactions', { rkey: 'reply:' + r.id, entityType: 'reply', entityId: r.id, reactions, REACTIONS, user, backUrl: '/community/t/' + thread.id }) %>
+    <% if (typeof canAccept !== 'undefined' && canAccept && r.user_id !== thread.user_id) { %>
+      <form method="post" action="/community/t/<%= thread.id %>/accept" class="inline qa-accept">
+        <input type="hidden" name="reply_id" value="<%= isAccepted ? '' : r.id %>">
+        <button class="btn btn-ghost btn-sm"><%= isAccepted ? 'Unmark' : '✓ This helped' %></button>
+      </form>
+    <% } %>
     <% if (user && (r.user_id === user.id || (profile && profile.is_admin))) { %>
       <details class="reply-edit">
         <summary class="muted small">✏️ Edit reply</summary>
@@ -44,5 +59,11 @@
     </form>
   </div>
 <% } else if (!user) { %><div class="card center"><p>Want to join the conversation?</p><a class="btn btn-primary" href="/signup">Join NoBossly free</a></div><% } else { %><p class="notice">This thread is locked.</p><% } %>
+<style>
+  .qa-follow { display: flex; align-items: center; gap: .5rem; margin: .7rem 0 0; flex-wrap: wrap; }
+  .qa-accepted { border-left: 3px solid var(--accent); }
+  .qa-accepted-tag { margin: 0 0 .3rem; font-size: .8rem; font-weight: 600; color: var(--accent); }
+  .qa-accept { margin-top: .3rem; }
+</style>
 <script src="/js/forum.js?v=2"></script>
 <%- include('../partials/foot') %>
