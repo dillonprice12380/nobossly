@@ -1,0 +1,43 @@
+<%# Monthly costs (src/money.js): set once, logged each month on the day
+    chosen, until stopped. %>
+<div class="card" id="monthly">
+  <h3 style="margin-top:0">🔁 Monthly costs</h3>
+  <p class="muted small" style="margin:0 0 .6rem">Software, hosting, rent: anything you pay every month. It's added to your expenses for you each month once the day comes round.</p>
+  <% if (typeof rulesReady !== 'undefined' && !rulesReady) { %>
+    <p class="muted small" style="margin:0">Being switched on. Check back shortly.</p>
+  <% } else { %>
+    <% var $c = function (n) { return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+       var nth = function (n) { return n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'); }; %>
+    <% var R = typeof rules !== 'undefined' && rules ? rules : []; %>
+    <% if (R.length) { %>
+      <table class="table small" style="width:100%;margin-bottom:.8rem">
+        <% R.forEach(function (r) { %>
+          <tr>
+            <td><strong><%= r.category %></strong><% if (r.note) { %><br><span class="muted small"><%= r.note %></span><% } %></td>
+            <td><%= $c(r.amount) %> <span class="muted">on the <%= nth(r.day_of_month) %></span></td>
+            <td style="text-align:right"><form method="post" action="/budget/recurring/<%= r.id %>/stop" class="inline" onsubmit="return confirm('Stop logging this each month? What was already logged stays.')"><button class="btn btn-ghost btn-sm">Stop</button></form></td>
+          </tr>
+        <% }) %>
+        <tr><td class="muted">Each month</td><td colspan="2"><strong><%= $c(R.reduce(function (a, r) { return a + Number(r.amount); }, 0)) %></strong></td></tr>
+      </table>
+    <% } %>
+    <form method="post" action="/budget/recurring" class="money-monthly-form">
+      <label>Amount ($)<input name="amount" inputmode="decimal" required placeholder="29.00"></label>
+      <label>Category
+        <select name="category" required>
+          <% (budgetCategories || []).forEach(function (c) { %><option value="<%= c %>"><%= c %></option><% }) %>
+        </select>
+      </label>
+      <label>What is it?<input name="note" maxlength="200" placeholder="e.g. Canva Pro, studio rent"></label>
+      <label>Day of the month
+        <select name="day_of_month"><% for (var d = 1; d <= 28; d++) { %><option value="<%= d %>" <%= d === 1 ? 'selected' : '' %>><%= nth(d) %></option><% } %></select>
+      </label>
+      <button class="btn btn-ghost btn-sm">Add monthly cost</button>
+    </form>
+    <p class="muted small" style="margin:.4rem 0 0">Up to the 28th, so every month has the day. If this month's day has already passed, this month's is added straight away.</p>
+  <% } %>
+</div>
+<style>
+  .money-monthly-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 .7rem; align-items: end; }
+  .money-monthly-form button { margin-bottom: .7rem; }
+</style>

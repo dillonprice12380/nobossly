@@ -5,5 +5,24 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-08_recurring_expenses.sql": {
+      "recurring_expenses": [
+        "id",
+        "user_id",
+        "category",
+        "amount",
+        "note",
+        "day_of_month",
+        "starts_on",
+        "logged_through",
+        "stopped_at",
+        "created_at"
+      ],
+      "expenses": [
+        "recurring_id",
+        "recurring_period"
+      ]
+    }
+  }
 }

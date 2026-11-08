@@ -1,0 +1,51 @@
+<%# This month at a glance and twelve months of income against expenses
+    (src/money.js overview and chart). The chart is plain SVG drawn on the
+    server; every bar has a title for its exact numbers. %>
+<% if (typeof overview !== 'undefined' && overview) {
+  var ov = overview, t = ov.thisMonth, l = ov.lastMonth;
+  var $d = function (n) { return (n < 0 ? '−' : '') + '$' + Math.abs(Math.round(Number(n) || 0)).toLocaleString('en-US'); };
+  var vs = function (a, b) { var d = a - b; return d === 0 ? 'same as last month' : $d(Math.abs(d)).replace('−', '') + (d > 0 ? ' more' : ' less') + ' than last month'; }; %>
+<div class="card money-ov">
+  <div class="money-ov-stats">
+    <div><span class="money-ov-num"><%= $d(t.in) %></span><span class="muted small">came in · <%= vs(t.in, l.in) %></span></div>
+    <div><span class="money-ov-num"><%= $d(t.out) %></span><span class="muted small">went out · <%= vs(t.out, l.out) %></span></div>
+    <div><span class="money-ov-num <%= t.profit < 0 ? 'neg' : '' %>"><%= $d(t.profit) %></span><span class="muted small">profit in <%= ov.monthLabel %></span></div>
+    <div><span class="money-ov-num"><%= $d(t.in * setAsideRate / 100) %></span><span class="muted small">to put aside for tax (<%= Math.round(setAsideRate * 10) / 10 %>%)</span></div>
+  </div>
+  <% if (!ov.empty) { var c = chart; %>
+    <div class="money-chart">
+      <svg viewBox="0 0 <%= c.width %> <%= c.height %>" role="img" aria-label="Income and expenses for the last twelve months">
+        <% c.grid.forEach(function (g) { %>
+          <line x1="44" x2="<%= c.width %>" y1="<%= g.y %>" y2="<%= g.y %>" class="mc-grid"></line>
+          <text x="38" y="<%= g.y + 4 %>" text-anchor="end" class="mc-axis"><%= g.label %></text>
+        <% }) %>
+        <% c.bars.forEach(function (b) { %>
+          <g><title><%= b.label %>: <%= $d(b.in) %> in, <%= $d(b.out) %> out, <%= $d(b.profit) %> profit</title>
+            <rect x="<%= b.inX %>" y="<%= b.inY %>" width="<%= b.w %>" height="<%= b.inH %>" rx="2" class="mc-in"></rect>
+            <rect x="<%= b.outX %>" y="<%= b.outY %>" width="<%= b.w %>" height="<%= b.outH %>" rx="2" class="mc-out"></rect>
+          </g>
+          <text x="<%= b.labelX %>" y="<%= c.labelY %>" text-anchor="middle" class="mc-axis"><%= b.label %></text>
+        <% }) %>
+      </svg>
+      <p class="muted small money-chart-key"><span class="mc-dot mc-in"></span> Income <span class="mc-dot mc-out"></span> Expenses · <%= ov.month.slice(0, 4) %> so far: <%= $d(ov.yearToDate.in) %> in, <%= $d(ov.yearToDate.out) %> out, <strong><%= $d(ov.yearToDate.profit) %></strong> profit · <a href="/budget/history">History</a></p>
+    </div>
+  <% } else { %>
+    <p class="muted small" style="margin:.6rem 0 0">Log a payment or an expense below, or <a href="/budget/import">import a CSV</a>, and the last twelve months build up here.</p>
+  <% } %>
+</div>
+<style>
+  .money-ov-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .6rem 1.2rem; }
+  .money-ov-stats > div { display: flex; flex-direction: column; }
+  .money-ov-num { font-size: 1.55rem; font-weight: 700; line-height: 1.2; }
+  .money-ov-num.neg { color: var(--danger); }
+  .money-chart { margin-top: 1rem; }
+  .money-chart svg { width: 100%; height: auto; display: block; }
+  .mc-grid { stroke: var(--border); stroke-width: 1; }
+  .mc-axis { fill: var(--muted); font-size: 11px; }
+  .mc-in { fill: var(--accent); }
+  .mc-out { fill: #f59e0b; }
+  .money-chart-key { margin: .4rem 0 0; }
+  .mc-dot { display: inline-block; width: .7em; height: .7em; border-radius: 2px; vertical-align: -.05em; }
+  span.mc-in { background: var(--accent); } span.mc-out { background: #f59e0b; margin-left: .5rem; }
+</style>
+<% } %>

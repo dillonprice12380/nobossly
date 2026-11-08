@@ -56,3 +56,8 @@ create policy forum_replies_insert on forum_replies for insert with check (auth.
 create policy forum_replies_update on forum_replies for update using (auth.uid() = user_id or is_admin());
 create policy forum_replies_delete on forum_replies for delete using (auth.uid() = user_id or is_admin());
 grant select, insert, update, delete on forum_categories, forum_threads, forum_replies to anon, authenticated;
+-- Business expenses on the Money page, as live.
+create table expenses(id uuid primary key default gen_random_uuid(), user_id uuid not null references profiles on delete cascade, category text not null, amount numeric not null, note text, spent_at date not null default current_date, created_at timestamptz not null default now());
+alter table expenses enable row level security;
+create policy expenses_own on expenses for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on expenses to authenticated;

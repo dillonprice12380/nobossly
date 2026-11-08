@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<%# A year's money as CSV (src/money.js transactionsCsv, summaryCsv). %>
+<div class="page-head">
+  <div><h1>📤 Export for tax time</h1><p class="muted">Your income and expenses for a year, as spreadsheet files you can open in Excel, Numbers or Google Sheets, or hand to whoever does your taxes.</p></div>
+  <a class="btn btn-ghost btn-sm" href="/budget">← Money</a>
+</div>
+<div class="grid-2">
+  <form class="card" method="get" action="/budget/export/summary.csv">
+    <h2 style="margin-top:0">The year in totals</h2>
+    <p class="muted small">Income, expenses and profit for each month, then expenses by category and income by source. The quickest thing to hand over.</p>
+    <label>Year<select name="year"><% years.forEach(function (y) { %><option><%= y %></option><% }) %></select></label>
+    <button class="btn btn-primary">Download summary</button>
+  </form>
+  <form class="card" method="get" action="/budget/export/transactions.csv">
+    <h2 style="margin-top:0">Every entry</h2>
+    <p class="muted small">One row per payment and expense: date, type, amount (expenses as negatives), who it was from or what it was for, and your note.</p>
+    <label>Year<select name="year"><% years.forEach(function (y) { %><option><%= y %></option><% }) %></select></label>
+    <button class="btn btn-primary">Download every entry</button>
+  </form>
+</div>
+<p class="muted small">These are your own numbers as you logged them. NoBossly does not file anything or give tax advice; an accountant can tell you which expenses count for your business.</p>
+<%- include('partials/foot') %>

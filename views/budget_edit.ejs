@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<%# Edit one payment or expense (src/routes/budget.js /entry/:kind/:id). %>
+<a class="muted" href="<%= back %>">← Back</a>
+<% if (err) { %><p class="notice" style="border-color:var(--danger)"><%= err %></p><% } %>
+<form class="card" method="post" action="/budget/entry/<%= kind %>/<%= e.id %>" style="max-width:560px;margin-top:.6rem">
+  <h1 style="margin-top:0;font-size:1.4rem"><%= kind === 'in' ? '💵 Edit payment' : '🧾 Edit expense' %></h1>
+  <input type="hidden" name="back" value="<%= back %>">
+  <div class="form-grid-2">
+    <label>Amount ($)<input name="amount" inputmode="decimal" required value="<%= Number(e.amount).toFixed(2) %>"></label>
+    <label>Date<input type="date" name="date" required value="<%= String(kind === 'in' ? e.entry_date : e.spent_at).slice(0, 10) %>"<%= kind === 'in' ? ' max=' + today : '' %>></label>
+  </div>
+  <% if (kind === 'in') { %>
+    <label>From<input name="source" maxlength="80" value="<%= e.source || '' %>" placeholder="Client, platform, sale…"></label>
+    <label>Note<input name="note" maxlength="200" value="<%= e.description || '' %>"></label>
+    <label class="check" style="display:flex;gap:.45rem;align-items:center;margin:.2rem 0 .6rem"><input type="checkbox" name="recurring" value="1" style="width:auto" <%= e.is_recurring ? 'checked' : '' %>> Recurring <span class="muted small">(a subscription or retainer payment)</span></label>
+    <% if (e.external_id) { %><p class="muted small">Brought in from <%= /^stripe:/.test(e.external_id) ? 'Stripe' : 'an import' %>. Changing it here does not change it there.</p><% } %>
+  <% } else { %>
+    <label>Category
+      <select name="category">
+        <% var std = budgetCategories.slice(); if (e.category && std.indexOf(e.category) === -1) std.unshift(e.category); %>
+        <% std.forEach(function (c) { %><option value="<%= c %>" <%= c === e.category ? 'selected' : '' %>><%= c %></option><% }) %>
+        <option value="__other">Other…</option>
+      </select>
+    </label>
+    <label>Custom category <span class="muted small">(if Other)</span><input name="category_other" maxlength="40"></label>
+    <label>Note<input name="note" maxlength="200" value="<%= e.note || '' %>"></label>
+    <% if (e.recurring_id) { %><p class="muted small">Logged by a monthly cost. Changing this one does not change the others.</p><% } %>
+  <% } %>
+  <div class="cta-row" style="justify-content:space-between;margin:.6rem 0 0">
+    <button class="btn btn-primary">Save</button>
+    <button class="btn btn-ghost btn-sm btn-danger" name="delete" value="1" formnovalidate onclick="return confirm('Delete this <%= kind === 'in' ? 'payment' : 'expense' %>?')">Delete</button>
+  </div>
+</form>
+<%- include('partials/foot') %>
