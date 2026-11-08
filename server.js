@@ -298,6 +298,15 @@ setInterval(() => {
   digest.run(sc).then(r => { if (r && r.sent) console.log('weekly digest sent:', r); }, e => console.error('[digest]', e && e.message));
 }, 30 * 60 * 1000);
 
+// Stripe → income log (src/stripe_sync.js): each connection is synced when it
+// has not been for six hours; the timer only checks every 30 minutes.
+const stripeSync = require('./src/stripe_sync');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  stripeSync.runAll(sc).then(r => { if (r && r.imported) console.log('stripe sync:', r); }, e => console.error('[stripe sync]', e && e.message));
+}, 30 * 60 * 1000);
+
 // Re-engagement email sweep: finish-your-questionnaire and come-back nudges.
 const mailer = require('./src/mailer');
 const sweepEmail = () => mailer.runSweep().then(

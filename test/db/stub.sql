@@ -29,3 +29,16 @@ create table cohort_waitlist(user_id uuid not null, cohort_id uuid not null refe
 insert into challenges(slug, title, description, emoji, is_cohort, starts_at, ends_at) values
   ('weekly-cohort-2026-11-02', 'Weekly Sprint Cohort — week of Nov 2', 'Start a 7-day sprint on Monday alongside everyone else in the cohort. Pick one thing that moves your business forward, break it into tasks, and check in as you go.', '🏃', true, '2026-11-02', '2026-11-09'),
   ('validate', 'Validate your idea', 'Curated quest.', '🔬', false, null, null);
+-- Supabase Vault, just enough of it (migrations/2026-11-08_stripe_connection.sql).
+create schema vault;
+create table vault.secrets(id uuid primary key default gen_random_uuid(), name text unique, description text, secret text not null);
+create view vault.decrypted_secrets as select id, name, description, secret as decrypted_secret from vault.secrets;
+create function vault.create_secret(new_secret text, new_name text default null, new_description text default '') returns uuid language sql as $$ insert into vault.secrets(secret, name, description) values (new_secret, new_name, new_description) returning id $$;
+create function vault.update_secret(secret_id uuid, new_secret text default null) returns void language sql as $$ update vault.secrets set secret = coalesce(new_secret, secret) where id = secret_id $$;
+revoke all on schema vault from public;
+-- The income log (revenue_entries), as live.
+create table if not exists revenue_entries(id uuid primary key default gen_random_uuid(), user_id uuid references profiles on delete cascade, entry_type text default 'revenue', amount numeric, currency text, entry_date date, source text, description text, is_recurring boolean default false, created_at timestamptz default now(), updated_at timestamptz default now());
+alter table revenue_entries enable row level security;
+create policy revenue_own on revenue_entries for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+grant select, insert, update, delete on revenue_entries to authenticated;
+alter role service_role bypassrls;  -- as on Supabase

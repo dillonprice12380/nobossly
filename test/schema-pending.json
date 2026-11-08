@@ -5,5 +5,24 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-08_stripe_connection.sql": {
+      "revenue_entries": [
+        "external_id"
+      ],
+      "payment_connections": [
+        "id",
+        "user_id",
+        "provider",
+        "key_hint",
+        "secret_id",
+        "status",
+        "last_error",
+        "last_synced_at",
+        "synced_through",
+        "imported_count",
+        "created_at"
+      ]
+    }
+  }
 }

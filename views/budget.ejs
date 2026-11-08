@@ -61,6 +61,10 @@
         <button class="btn btn-primary">Log income</button>
       </form>
       <p class="small" style="margin:.5rem 0 0"><a href="/budget/import">📥 Import payments from a CSV</a> <span class="muted">(bank, Stripe, PayPal, Etsy, Shopify…)</span></p>
+      <p class="small" style="margin:.3rem 0 0">
+        <% if (typeof stripeConn !== 'undefined' && stripeConn) { %>💳 <a href="/budget/connect/stripe">Stripe connected</a> <span class="muted">· <%= stripeConn.status === 'error' ? 'needs attention' : 'last synced ' + (stripeConn.last_synced_at ? new Date(stripeConn.last_synced_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'soon') %></span>
+        <% } else { %>💳 <a href="/budget/connect/stripe">Connect Stripe</a> <span class="muted">to log Stripe payments by themselves</span><% } %>
+      </p>
       <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates.<% } %></p>
     </div>
     <div>
