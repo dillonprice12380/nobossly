@@ -1,4 +1,5 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; verified: ensure_weekly_cohorts() has the
+-- new words and no sprint wording, and the three listed weeks read "Weekly challenge — week of …").
 --
 -- NoBossly is a workspace and a community, not a program (2026-11-08). The
 -- weekly cohort stays as a community challenge, but its words still talked

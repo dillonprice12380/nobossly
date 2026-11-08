@@ -86,7 +86,7 @@ function run(router, method, url, body, sb) {
   console.log('\nThe weekly challenge words (migration):');
   {
     const sql = read('migrations/2026-11-08_weekly_challenge_wording.sql');
-    ok('the migration is marked as not applied yet', /^-- NOT APPLIED/.test(sql));
+    ok('the migration is marked as applied', /^-- Applied live 2026-11-08/.test(sql));
     const fn = sql.slice(sql.indexOf('create or replace function'), sql.indexOf('$function$;'));
     ok('new weeks no longer talk about sprints or tell members how to work', !/sprint|break it into tasks|check in as you go/i.test(fn) && /Pick one goal of your own/.test(fn));
     ok('the weeks already listed are reworded too', /update challenges[\s\S]*Weekly challenge — week of/.test(sql));
