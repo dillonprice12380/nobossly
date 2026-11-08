@@ -23,7 +23,8 @@
         </select></label>
     <% } else if (q.type === 'checks') { %>
       <fieldset class="setup-q"><legend><strong><%= q.label %></strong> <span class="muted small">(pick any)</span></legend>
-        <% (q.options || []).forEach(function (o) { %><label class="check"><input type="checkbox" name="<%= q.name %>" value="<%= o %>" <%= Array.isArray(a) && a.includes(o) ? 'checked' : '' %>> <%= o %></label><% }) %>
+        <% var picked = Array.isArray(a) ? a : (a ? [a] : []); /* an answer saved when this was a single choice */ %>
+        <% (q.options || []).forEach(function (o) { %><label class="check"><input type="checkbox" name="<%= q.name %>" value="<%= o %>" <%= picked.includes(o) ? 'checked' : '' %>> <%= o %></label><% }) %>
       </fieldset>
     <% } else if (q.type === 'textarea') { %>
       <label><strong><%= q.label %></strong><textarea name="<%= q.name %>" rows="3" maxlength="600" placeholder="<%= q.placeholder || '' %>"><%= a || '' %></textarea></label>

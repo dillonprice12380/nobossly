@@ -54,6 +54,14 @@ function fakeSb(rows = {}, errors = {}) {
 }
 
 // ---------------------------------------------------------------------------
+console.log('Setup questions:');
+{
+  const wp = dash.setupQuestions('software').find(q => q.name === 'who_pays');
+  ok('apps and software: "who pays for it" takes more than one answer', wp && wp.type === 'checks' && wp.options.includes('Consumers') && wp.options.includes('Small businesses'));
+  const form = read('views/choose_path_setup.ejs');
+  ok('...and an answer saved when it was a single choice still shows ticked', /Array\.isArray\(a\) \? a : \(a \? \[a\] : \[\]\)/.test(form));
+}
+
 console.log('Each path has its own dashboard:');
 ok('all nine paths are configured', SLUGS.every(s => dash.dashboardFor(s)), Object.keys(dash.DASHBOARDS).join(', '));
 ok('only the fallback path has none', Object.keys(dash.PATHS).every(s => dash.dashboardFor(s)) && !dash.dashboardFor('default'));
