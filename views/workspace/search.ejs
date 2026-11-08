@@ -1,0 +1,32 @@
+<%- include('../partials/head') %>
+<%# Search across the member's docs, notes, board cards and tasks (src/workspace_hub.js). %>
+<div class="page-head">
+  <div><h1>🔎 Search your workspace</h1><p class="muted">Docs and notes (titles and what is in them), board cards and tasks. Only your own.</p></div>
+  <a class="btn btn-ghost btn-sm" href="/workspace">← Workspace</a>
+</div>
+<form class="ws-search card" method="get" action="/workspace/search" role="search" style="display:flex;gap:.4rem;max-width:640px">
+  <input type="search" name="q" maxlength="80" value="<%= found.q %>" placeholder="Search…" aria-label="Search your workspace" style="flex:1;margin:0" autofocus>
+  <button class="btn btn-primary btn-sm">Search</button>
+</form>
+<% if (found.tooShort) { %>
+  <p class="muted">Type at least two letters.</p>
+<% } else if (found.q && !found.results.length) { %>
+  <div class="card center"><p class="muted" style="margin:0">Nothing matches “<%= found.q %>”.</p></div>
+<% } else if (found.results.length) { %>
+  <p class="muted small"><%= found.count %> result<%= found.count === 1 ? '' : 's' %><%= found.count > found.results.length ? ', showing the first ' + found.results.length : '' %></p>
+  <div class="card ws-results">
+    <% found.results.forEach(function (r) { %>
+      <a class="ws-result" href="<%= r.href %>">
+        <span><strong><%= r.title %></strong> <span class="muted small"><%= r.kind %></span></span>
+        <% if (r.snippet) { %><span class="muted small"><%= r.snippet %></span><% } %>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<style>
+  .ws-results { padding: .3rem 1rem; }
+  .ws-result { display: flex; flex-direction: column; gap: .1rem; padding: .6rem 0; border-top: 1px solid var(--border); color: inherit; text-decoration: none; }
+  .ws-result:first-child { border-top: 0; }
+  .ws-result:hover strong { color: var(--accent); }
+</style>
+<%- include('../partials/foot') %>

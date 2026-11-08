@@ -101,7 +101,7 @@ for (const slug of SLUGS) {
   // Money tools are counted under Money (2026-11-02), the rest in the Workspace.
   const named = dash.PATHS[slug].featured.concat(dash.PATHS[slug].available);
   ok(`${slug}: featured and available tools all exist`, named.every(k => dash.TOOLS[k])
-     && ranked.featured.length + ranked.available.length === named.filter(k => !dash.isMoney(k)).length
+     && ranked.featured.length + ranked.available.length === named.filter(k => !dash.isMoney(k)).length + (named.includes('notes') ? 0 : 1)   // Notes, for everyone
      && named.filter(k => dash.isMoney(k)).every(k => dash.moneyToolsFor(slug).mine.some(t => t.key === k)));
 }
 
@@ -305,7 +305,7 @@ async function panels() {
 
   let hub = '';
   try {
-    hub = render('workspace/index.ejs', { tools: dash.workspaceFor('software'), recent: {}, notReady: false, pathDef: paths.get('software'), needsSetup: false, msg: null, pathItems: items });
+    hub = render('workspace/index.ejs', { hub: require('../src/workspace_hub').arrange(require('../src/workspace_hub').tilesOf(dash.workspaceFor('software'), items), null), live: {}, recent: [], canArrange: true, notReady: false, pathDef: paths.get('software'), needsSetup: false, msg: null });
   } catch (e) { hub = 'ERR ' + e.message; }
   ok('the workspace hub links the path\'s boards and logs', hub.includes('/workspace/boards/sw_roadmap') && hub.includes('/workspace/metrics/sw_waitlist') && hub.includes('/workspace/checklists/sw_launch') && hub.includes('MVP scope'), hub.startsWith('ERR') ? hub.slice(0, 200) : undefined);
 

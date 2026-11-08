@@ -103,6 +103,17 @@ const WORKSHEETS = {
     ]
   },
 
+  // A blank page: meeting notes, ideas, how-tos. One long formatted-text field
+  // that saves itself as you type.
+  notes: {
+    label: 'Notes', emoji: '📝', layout: 'form', multiple: true, autosave: true,
+    blurb: 'A blank page for anything: meeting notes, ideas, how you do things. Saves as you type.',
+    titleLabel: 'Title', titlePlaceholder: 'e.g. Call with Bloom Studio', newTitle: 'Untitled note',
+    sections: [
+      { key: 'body', label: 'Note', type: 'rich', long: true }
+    ]
+  },
+
   idea_refiner: {
     label: 'Idea refiner', emoji: '🔬', layout: 'form', multiple: true,
     blurb: 'Pressure-test an idea before you spend months on it. Score it honestly; the weakest score is your next test.',
@@ -167,7 +178,7 @@ function defineWorksheet(key, def) {
   return WORKSHEETS[key];
 }
 
-const LIMITS = { text: 200, longtext: 3000, listItem: 300, listItems: 20 };
+const LIMITS = { text: 200, longtext: 3000, listItem: 300, listItems: 20, longRich: 20000 };
 const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[$,\s]/g, '')); return Number.isFinite(n) ? n : null; };
 
 // A submitted form, cleaned to exactly what the worksheet allows.
@@ -177,7 +188,7 @@ function clean(def, body) {
   for (const s of def.sections) {
     const v = body[s.key];
     if (s.type === 'rich') {
-      const html = richtext.clean(v);
+      const html = richtext.clean(v, s.long ? { maxText: LIMITS.longRich, maxHtml: LIMITS.longRich * 4 } : undefined);
       if (html) data[s.key] = html;
     } else if (s.type === 'list') {
       const items = String(v || '').split('\n').map(x => x.trim().slice(0, LIMITS.listItem)).filter(Boolean).slice(0, LIMITS.listItems);
