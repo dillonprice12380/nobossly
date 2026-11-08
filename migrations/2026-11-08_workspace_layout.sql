@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; returned true).
 --
 -- Pin and hide workspace tools (2026-11-08). A member can pin the tools they
 -- use most to the top of the workspace and hide the ones they never open;

@@ -570,6 +570,7 @@
       "website_url",
       "weekly_digest_enabled",
       "working_on",
+      "workspace_layout",
       "xp_total",
       "years_experience"
     ],
