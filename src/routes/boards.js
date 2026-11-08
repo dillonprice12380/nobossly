@@ -165,7 +165,12 @@ router.get('/metrics/:metric', async (req, res, next) => {
       metrics.series(req.sb, req.user.id, def.key, 12),
       metrics.entries(req.sb, req.user.id, def.key, 120)
     ]);
-    res.render('workspace/metric', Object.assign(view, { card: metrics.present(def, s), history }));
+    // Months the income log filled in show in the history too, marked as such.
+    const typed = new Set(history.map(h => h.period));
+    const filled = s.filter(p => p.source === 'income' && !typed.has(p.period))
+      .map(p => ({ id: null, period: p.period, value: p.value, label: metrics.periodLabel(def, p.period), note: def.fromIncome === 'recurring' ? 'From your income log (recurring)' : 'From your income log' }));
+    const all = history.concat(filled).sort((a, b) => String(b.period).localeCompare(String(a.period)));
+    res.render('workspace/metric', Object.assign(view, { card: metrics.present(def, s), history: all }));
   } catch (e) {
     if (!missing(e)) return next(e);
     const blank = [];

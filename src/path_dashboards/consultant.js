@@ -6,7 +6,7 @@ const { defineWorksheet } = require('../workspace/worksheets');
 
 registry.defineMetric({ key: 'con_clients', label: 'Paying clients', unit: 'count', period: 'month',
   help: 'Clients you were paid by (or who were mid-package) this month.' });
-registry.defineMetric({ key: 'con_revenue', label: 'Revenue', unit: 'money', period: 'month' });
+registry.defineMetric({ key: 'con_revenue', label: 'Revenue', unit: 'money', period: 'month', fromIncome: 'all' });
 registry.defineMetric({ key: 'con_calls', label: 'Discovery calls held', unit: 'count', period: 'month',
   help: 'Calls with someone who might buy — not chats with existing clients.' });
 registry.defineMetric({ key: 'con_close_rate', label: 'Close rate', unit: 'percent', period: 'month',

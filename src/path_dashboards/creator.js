@@ -12,7 +12,7 @@ registry.defineMetric({ key: 'creator_downloads', label: 'Downloads per episode'
   help: 'Average downloads per episode in its first 30 days — the number sponsors ask for.' });
 registry.defineMetric({ key: 'creator_visits', label: 'Monthly visits', unit: 'count', period: 'month',
   help: 'Visits to the blog in the month, from your analytics.' });
-registry.defineMetric({ key: 'creator_income', label: 'Creator income', unit: 'money', period: 'month',
+registry.defineMetric({ key: 'creator_income', label: 'Creator income', unit: 'money', period: 'month', fromIncome: 'all',
   help: 'Everything the audience earned you this month: sponsors, affiliate, products, memberships, ads.' });
 registry.defineMetric({ key: 'creator_published', label: 'Pieces published', unit: 'count', period: 'week',
   help: 'What actually went out this week. Consistency is the honest number before money arrives.' });

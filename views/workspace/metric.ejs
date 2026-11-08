@@ -20,6 +20,7 @@
     <h1><%= def.label %></h1>
     <% if (def.help) { %><p class="muted"><%= def.help %></p><% } %>
     <p class="muted small">Logged <%= def.period === 'week' ? 'weekly' : 'monthly' %><%= def.higherIsBetter ? '' : ' · lower is better' %></p>
+    <% if (def.fromIncome) { %><p class="notice" style="margin-top:.6rem">💵 This fills in from your <a href="/budget#income">income log</a>: <%= def.fromIncome === 'recurring' ? 'each month adds up the payments you ticked <strong>Recurring</strong>' : 'each month adds up every payment you logged' %>. Type a number below only to use something else for a month; it replaces the income log's figure for that month.</p><% } %>
   </div>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
@@ -48,7 +49,7 @@
       <label><%= unitWord %> <input name="value" required inputmode="decimal" placeholder="0"></label>
       <label>Note <span class="muted small">(optional)</span> <input name="note" maxlength="200"></label>
       <button class="btn btn-primary" type="submit">Save</button>
-      <p class="muted small" style="margin:.4rem 0 0">Logging a <%= def.period %> again replaces its number. This <%= def.period %>: <%= periodLabel %>.</p>
+      <p class="muted small" style="margin:.4rem 0 0">Logging a <%= def.period %> again replaces its number<%= def.fromIncome ? ', and a typed number replaces the income log for that month (delete it to go back)' : '' %>. This <%= def.period %>: <%= periodLabel %>.</p>
     </form>
   </div>
 
@@ -75,7 +76,7 @@
               <td><%= h.label %></td>
               <td><strong><%= fmt.byUnit(def.unit, h.value) %></strong></td>
               <td class="muted small"><%= h.note || '' %></td>
-              <td><form method="post" action="<%= base %>/<%= h.id %>/delete" onsubmit="return confirm('Delete this entry?')"><button class="btn btn-ghost btn-sm" type="submit">Delete</button></form></td>
+              <td><% if (h.id) { %><form method="post" action="<%= base %>/<%= h.id %>/delete" onsubmit="return confirm('Delete this entry?')"><button class="btn btn-ghost btn-sm" type="submit">Delete</button></form><% } else { %><a class="small" href="/budget#income">Income log</a><% } %></td>
             </tr>
           <% }) %>
         </tbody>

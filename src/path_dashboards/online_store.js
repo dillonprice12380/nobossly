@@ -5,7 +5,7 @@ const { registry, format: { money, percent } } = require('../engines');
 const { defineWorksheet } = require('../workspace/worksheets');
 
 registry.defineMetric({ key: 'shop_orders', label: 'Orders', unit: 'count', period: 'month' });
-registry.defineMetric({ key: 'shop_revenue', label: 'Revenue', unit: 'money', period: 'month' });
+registry.defineMetric({ key: 'shop_revenue', label: 'Revenue', unit: 'money', period: 'month', fromIncome: 'all' });
 registry.defineMetric({ key: 'shop_aov', label: 'Average order value', unit: 'money', period: 'month',
   help: 'Revenue ÷ orders.' });
 registry.defineMetric({ key: 'shop_margin', label: 'Margin after costs', unit: 'percent', period: 'month',

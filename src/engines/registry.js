@@ -101,9 +101,12 @@ function defineMetric(d) {
   if (!PERIODS.includes(d.period)) bad('metric', d.key, `period must be one of ${PERIODS.join(', ')}`);
   if (d.higherIsBetter !== undefined && typeof d.higherIsBetter !== 'boolean') bad('metric', d.key, 'higherIsBetter must be true or false');
   if (!optText(d.help, 600)) bad('metric', d.key, 'help must be a short string');
+  // fromIncome: a money number the income log can fill in. 'all' sums every
+  // payment in the month, 'recurring' only those ticked Recurring.
+  if (d.fromIncome !== undefined && !(['all', 'recurring'].includes(d.fromIncome) && d.unit === 'money' && d.period === 'month')) bad('metric', d.key, "fromIncome must be 'all' or 'recurring', on a monthly money number");
   return register('metric', {
     key: d.key, label: d.label, unit: d.unit, period: d.period,
-    higherIsBetter: d.higherIsBetter !== false, help: d.help || ''
+    higherIsBetter: d.higherIsBetter !== false, help: d.help || '', fromIncome: d.fromIncome || null
   });
 }
 

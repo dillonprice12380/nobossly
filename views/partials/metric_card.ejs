@@ -4,19 +4,22 @@
   `root` defaults to /workspace.
 %>
 <% var _root = typeof root !== 'undefined' && root ? root : '/workspace';
-   var _d = card.def, _s = card.summary, _x = card.display; %>
+   var _d = card.def, _s = card.summary, _x = card.display;
+   var _last = (card.series || []).filter(function (p) { return p.value !== null && p.value !== undefined; }).pop();
+   var _fromLog = _last && _last.source === 'income'; %>
 <div class="card">
   <div class="milestone-row" style="border-top:0;padding:0">
     <span class="muted small"><%= _d.label %></span>
-    <a class="small" href="<%= _root %>/metrics/<%= _d.key %>"><%= _s.latest ? 'Log' : 'Log your first' %> →</a>
+    <% if (_d.fromIncome) { %><a class="small" href="<%= _root %>/metrics/<%= _d.key %>">Open →</a><% } else { %><a class="small" href="<%= _root %>/metrics/<%= _d.key %>"><%= _s.latest ? 'Log' : 'Log your first' %> →</a><% } %>
   </div>
   <div style="font-size:1.6rem;font-weight:800;font-family:var(--font-display);line-height:1.15"><%= _x.latest %></div>
+  <% if (_fromLog) { %><p class="muted small" style="margin:.1rem 0 0">From your income log<%= _d.fromIncome === 'recurring' ? ' (recurring payments)' : '' %></p><% } %>
   <% if (_x.change) { %>
     <p class="small" style="margin:.1rem 0 0;color:<%= _s.good === true ? 'var(--accent-2)' : _s.good === false ? 'var(--danger)' : 'var(--muted)' %>">
       <%= _s.direction === 'up' ? '▲' : _s.direction === 'down' ? '▼' : '•' %> <%= _x.change %><%= _x.changePct ? ' (' + _x.changePct + ')' : '' %> vs previous
     </p>
   <% } else { %>
-    <p class="muted small" style="margin:.1rem 0 0"><%= _s.latest ? _x.latestPeriod : 'Nothing logged yet' %></p>
+    <p class="muted small" style="margin:.1rem 0 0"><%= _s.latest ? _x.latestPeriod : (_d.fromIncome === 'recurring' ? 'Tick Recurring when you log a subscription payment' : _d.fromIncome ? 'Fills in from your income log' : 'Nothing logged yet') %></p>
   <% } %>
   <div aria-hidden="true" style="display:flex;align-items:flex-end;gap:2px;height:28px;margin-top:.45rem">
     <% card.bars.forEach(function (b) { %>

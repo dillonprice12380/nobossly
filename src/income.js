@@ -144,12 +144,25 @@ function nextMoneyRung(path, level, sum, now = new Date()) {
 
 // Everything the pages need, read with the member's own client (RLS keeps it to
 // their rows). Twenty-four months is enough for every number shown.
+// Payments since a date, newest first. is_recurring arrived with
+// migrations/2026-11-08_recurring_income.sql; until that has run, the read
+// falls back to the columns that were always there (nothing is recurring).
+async function payments(sb, userId, since, until) {
+  const read = cols => {
+    let q = sb.from('revenue_entries').select(cols).eq('user_id', userId).eq('entry_type', 'revenue').gte('entry_date', since);
+    if (until) q = q.lt('entry_date', until);
+    return q.order('entry_date', { ascending: false }).limit(1000);
+  };
+  const first = await read('id, amount, entry_date, source, description, is_recurring');
+  if (!first.error) return first.data || [];
+  const plain = await read('id, amount, entry_date, source, description');
+  return plain.error ? [] : (plain.data || []);
+}
+
 async function load(req) {
   const since = addMonths(thisMonth(), -24) + '-01';
-  const [{ data: income }, { data: expenses }] = await Promise.all([
-    req.sb.from('revenue_entries').select('id, amount, entry_date, source, description')
-      .eq('user_id', req.user.id).eq('entry_type', 'revenue').gte('entry_date', since)
-      .order('entry_date', { ascending: false }).limit(1000),
+  const [income, { data: expenses }] = await Promise.all([
+    payments(req.sb, req.user.id, since),
     req.sb.from('expenses').select('amount, category, spent_at')
       .eq('user_id', req.user.id).gte('spent_at', since).limit(2000)
   ]);
@@ -169,4 +182,4 @@ async function doneTitles(req) {
   return out;
 }
 
-module.exports = { MONEY_GATES, byMonth, summary, gatesOnPath, claimPrompts, nextMoneyRung, load, doneTitles, addMonths, thisMonth };
+module.exports = { MONEY_GATES, byMonth, summary, gatesOnPath, claimPrompts, nextMoneyRung, load, payments, doneTitles, addMonths, thisMonth };

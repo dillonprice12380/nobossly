@@ -138,11 +138,16 @@ router.post('/income', async (req, res, next) => {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') && req.body.date <= today() ? req.body.date : today();
     const to = backTo(req);
     if (!(amount > 0)) return res.redirect(to + '?msg=' + encodeURIComponent('Enter the amount you were paid.'));
-    const { error } = await req.sb.from('revenue_entries').insert({
+    const row = {
       user_id: req.user.id, entry_type: 'revenue', amount, entry_date: date,
       source: String(req.body.source || '').trim().slice(0, 80) || null,
       description: String(req.body.note || '').trim().slice(0, 200) || null
-    });
+    };
+    // Ticked "Recurring": a subscription or retainer payment. It feeds monthly
+    // recurring revenue (src/engines/metrics.js). Before the column exists
+    // (migrations/2026-11-08_recurring_income.sql) the payment saves without it.
+    let { error } = await req.sb.from('revenue_entries').insert(Object.assign({ is_recurring: !!req.body.recurring }, row));
+    if (error && /is_recurring/.test(error.message || '')) ({ error } = await req.sb.from('revenue_entries').insert(row));
     if (error) return res.redirect(to + '?msg=' + encodeURIComponent('Could not save that payment. Please try again.'));
 
     // Say what to put aside, and whether that payment just reached a money

@@ -6,7 +6,7 @@
 const { registry, format: { money, percent } } = require('../engines');
 const { defineWorksheet } = require('../workspace/worksheets');
 
-registry.defineMetric({ key: 'bm_takings', label: 'Takings', unit: 'money', period: 'month',
+registry.defineMetric({ key: 'bm_takings', label: 'Takings', unit: 'money', period: 'month', fromIncome: 'all',
   help: 'Everything through the till this month, before costs.' });
 registry.defineMetric({ key: 'bm_rent_share', label: 'Rent as a share of takings', unit: 'percent', period: 'month', higherIsBetter: false,
   help: 'Monthly rent ÷ takings. Under about 10% is healthy for most venues.' });
