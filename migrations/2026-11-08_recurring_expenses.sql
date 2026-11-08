@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; returned true. Verified: recurring_expenses with RLS on and no anon access, expenses.recurring_id and recurring_period, the unique constraint and the ownership trigger).
 --
 -- Recurring expenses on the Money page (2026-11-08). A member marks a cost
 -- that comes round every month (software, hosting, studio rent) and NoBossly

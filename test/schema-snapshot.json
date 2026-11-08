@@ -265,6 +265,8 @@
       "created_at",
       "id",
       "note",
+      "recurring_id",
+      "recurring_period",
       "spent_at",
       "user_id"
     ],
@@ -1243,6 +1245,18 @@
       "created_at",
       "reminded_at",
       "session_id",
+      "user_id"
+    ],
+    "recurring_expenses": [
+      "amount",
+      "category",
+      "created_at",
+      "day_of_month",
+      "id",
+      "logged_through",
+      "note",
+      "starts_on",
+      "stopped_at",
       "user_id"
     ]
   },
