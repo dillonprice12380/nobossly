@@ -167,4 +167,84 @@ router.post('/income/:id/delete', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ------------------------------------------------------------ CSV import
+// Upload an export from a bank, Stripe, PayPal, Etsy, Shopify or a sheet;
+// see what would come in (src/csv_import.js), adjust the columns, then save.
+// Nothing is stored between the steps: the preview carries the file's text
+// back in a multipart form, and saving re-reads it from scratch.
+const multer = require('multer');
+const csv = require('../csv_import');
+const CSV_MAX = 2 * 1024 * 1024;
+const csvForm = multer({ storage: multer.memoryStorage(), limits: { fileSize: CSV_MAX, fieldSize: CSV_MAX * 1.5, files: 1, fields: 20 } });
+const takeCsv = (req, res, next) => csvForm.single('file')(req, res, err => {
+  if (err) return res.redirect('/budget/import?msg=' + encodeURIComponent(err.code === 'LIMIT_FILE_SIZE' ? 'That file is over 2 MB. Export a shorter date range and try again.' : 'That upload did not work. Please try again.'));
+  next();
+});
+
+// A file's text: UTF-8, or Latin-1 when it is not valid UTF-8 (older bank exports).
+function textOf(buf) {
+  const u = buf.toString('utf8');
+  return u.includes('�') ? buf.toString('latin1') : u;
+}
+
+const signed = n => (n < 0 ? '−' + money(-n) : money(n));
+const colOf = v => (/^-?\d+$/.test(String(v)) ? Math.max(-1, Math.min(200, parseInt(v, 10))) : undefined);
+function optsOf(req, existing) {
+  const b = req.body || {};
+  const columns = {};
+  for (const k of ['date', 'amount', 'debit', 'description', 'status', 'type']) { const c = colOf(b['col_' + k]); if (c !== undefined) columns[k] = c; }
+  return {
+    columns, existing, today: today(),
+    source: b.source === undefined ? undefined : String(b.source).slice(0, 40),
+    recurring: ['none', 'matching', 'all'].includes(b.recurring) ? b.recurring : 'matching',
+    skipPayouts: b.skip_payouts === '1'
+  };
+}
+async function existingOf(req) {
+  const { data } = await req.sb.from('revenue_entries').select('entry_date, amount, source')
+    .eq('user_id', req.user.id).eq('entry_type', 'revenue').order('entry_date', { ascending: false }).limit(20000);
+  return data || [];
+}
+
+router.get('/import', (req, res) => {
+  res.render('budget_import', { title: 'Import payments', step: 'upload', msg: req.query.msg || null });
+});
+
+router.post('/import', takeCsv, async (req, res, next) => {
+  try {
+    const text = req.file ? textOf(req.file.buffer) : String((req.body && req.body.csv) || '');
+    if (!text.trim()) return res.redirect('/budget/import?msg=' + encodeURIComponent('Choose a CSV file to import.'));
+    if (text.length > CSV_MAX * 1.5) return res.redirect('/budget/import?msg=' + encodeURIComponent('That file is too large. Export a shorter date range and try again.'));
+    const result = csv.plan(text, optsOf(req, await existingOf(req)));
+    if (!result.rows.length) return res.redirect('/budget/import?msg=' + encodeURIComponent('No rows found in that file. Is it a CSV export?'));
+    res.render('budget_import', { title: 'Import payments', step: 'preview', msg: null, csvText: text, result, labels: csv.SKIP_LABEL, $m: signed });
+  } catch (e) { next(e); }
+});
+
+router.post('/import/save', takeCsv, async (req, res, next) => {
+  try {
+    const text = String((req.body && req.body.csv) || '');
+    if (!text.trim()) return res.redirect('/budget/import');
+    const result = csv.plan(text, optsOf(req, await existingOf(req)));
+    const rows = result.rows.filter(r => !r.skip).map(r => ({
+      user_id: req.user.id, entry_type: 'revenue', amount: r.amount, entry_date: r.date,
+      source: r.source, description: r.description, is_recurring: r.recurring
+    }));
+    let saved = 0;
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await req.sb.from('revenue_entries').insert(rows.slice(i, i + 500));
+      if (error) {
+        const m = saved ? 'Imported ' + saved + ' payments, then something went wrong. Import the same file again to add the rest; the ones already in are skipped.' : 'Could not import that file. Please try again.';
+        return res.redirect('/budget?msg=' + encodeURIComponent(m));
+      }
+      saved += Math.min(500, rows.length - i);
+    }
+    const skipped = result.counts.total - saved;
+    const m = saved
+      ? 'Imported ' + saved + ' payment' + (saved === 1 ? '' : 's') + ' (' + money(result.counts.total_amount) + ')' + (result.counts.recurring ? ', ' + result.counts.recurring + ' ticked Recurring' : '') + '.' + (skipped ? ' ' + skipped + ' row' + (skipped === 1 ? ' was' : 's were') + ' skipped.' : '')
+      : 'Nothing new to import from that file.';
+    res.redirect('/budget?msg=' + encodeURIComponent(m) + '#income');
+  } catch (e) { next(e); }
+});
+
 module.exports = router;
