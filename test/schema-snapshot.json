@@ -303,6 +303,7 @@
       "user_id"
     ],
     "forum_threads": [
+      "accepted_reply_id",
       "body",
       "body_html",
       "category_id",
@@ -1215,6 +1216,33 @@
       "secret_id",
       "status",
       "synced_through",
+      "user_id"
+    ],
+    "forum_follows": [
+      "created_at",
+      "thread_id",
+      "user_id"
+    ],
+    "coworking_sessions": [
+      "about",
+      "cancelled_at",
+      "capacity",
+      "created_at",
+      "host_id",
+      "id",
+      "minutes",
+      "path",
+      "starts_at",
+      "title"
+    ],
+    "coworking_links": [
+      "link",
+      "session_id"
+    ],
+    "coworking_rsvps": [
+      "created_at",
+      "reminded_at",
+      "session_id",
       "user_id"
     ]
   },

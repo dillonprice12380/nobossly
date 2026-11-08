@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor on the second try; returned true. Verified: accepted_reply_id, forum_follows and the three co-working tables exist with RLS on, all seven functions and six triggers are in place, anon cannot read co-working sessions, and the six existing threads are followed by their askers).
 --
 -- Community, round 1 (2026-11-08): a better Q&A and co-working sessions.
 --
