@@ -1,4 +1,7 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; returned true. Verified: external_id and its
+-- unique constraint, payment_connections with RLS, members can connect but cannot run
+-- payment_connection_secret, read secret_id or update the table; anon cannot connect; the
+-- service role can read keys).
 --
 -- Connect Stripe to the income log (2026-11-08). A member pastes a read-only
 -- restricted key (rk_live_…) they made in their own Stripe dashboard; NoBossly
