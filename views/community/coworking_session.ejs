@@ -1,0 +1,37 @@
+<%- include('../partials/head') %>
+<a class="muted" href="/community/coworking">← Co-working</a>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="notice" style="border-color:var(--danger)"><%= err %></p><% } %>
+<div class="card" style="max-width:760px">
+  <p class="muted small" style="margin:0"><%= s.cancelled_at ? 'Cancelled' : (s.over ? 'Finished' : (s.live ? '🟢 On now' : 'Co-working')) %><%= s.pathLabel ? ' · for ' + s.pathLabel.toLowerCase() + ' members' : '' %></p>
+  <h1 style="margin:.2rem 0"><%= s.title %></h1>
+  <p style="margin:0"><strong><time datetime="<%= s.starts_at %>" data-local><%= s.when %></time></strong> · <%= s.minutes %> minutes</p>
+  <p class="muted small" style="margin:.2rem 0 0">Hosted by <% if (s.host) { %><a href="/members/<%= s.host.username %>"><%= s.host.display_name || s.host.username %></a><% } else { %>a member<% } %></p>
+  <% if (s.about) { %><p class="pre" style="margin:.8rem 0 0"><%= s.about %></p><% } %>
+
+  <% if (!s.cancelled_at && !s.over) { %>
+    <div style="margin-top:1rem">
+      <% if (s.attending || s.mine) { %>
+        <% if (s.link) { %><p style="margin:0 0 .6rem">Join here: <a href="<%= s.link %>" target="_blank" rel="noopener nofollow"><%= s.link %></a></p><% } %>
+        <div class="cta-row" style="justify-content:flex-start;gap:.4rem;margin:0">
+          <a class="btn btn-ghost btn-sm" href="/community/coworking/<%= s.id %>.ics">📅 Add to calendar</a>
+          <% if (!s.mine) { %><form method="post" action="/community/coworking/<%= s.id %>/leave" class="inline"><button class="btn btn-ghost btn-sm">I can't make it</button></form><% } %>
+          <% if (s.mine) { %><form method="post" action="/community/coworking/<%= s.id %>/cancel" class="inline" onsubmit="return confirm('Cancel this session? Everyone going will be told.')"><button class="btn btn-ghost btn-sm btn-danger">Cancel the session</button></form><% } %>
+        </div>
+      <% } else if (s.full) { %>
+        <p class="muted" style="margin:0">This one is full.</p>
+      <% } else { %>
+        <form method="post" action="/community/coworking/<%= s.id %>/rsvp"><button class="btn btn-primary">I'll be there</button></form>
+        <p class="muted small" style="margin:.4rem 0 0">You'll see the link once you're in, and get a reminder about an hour before.</p>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+<div class="card" style="max-width:760px">
+  <h2 style="margin-top:0"><%= s.count %> going<%= s.capacity ? ' of ' + s.capacity : '' %></h2>
+  <% if (!s.going.length) { %><p class="muted small" style="margin:0">Nobody yet.</p><% } %>
+  <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0">
+    <% s.going.forEach(function (p) { %><a class="chip" href="/members/<%= p.username %>"><%= p.display_name || p.username %><%= p.id === s.host_id ? ' · host' : '' %></a><% }) %>
+  </div>
+</div>
+<%- include('../partials/foot') %>

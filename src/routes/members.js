@@ -6,6 +6,7 @@ const { on } = require('../features');
 const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL, isMentor, MENTOR_LEVEL } = require('../unlocks');
 const activity = require('../activity');
+const paths = require('../paths');
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
 // Uses the service role key so it bypasses RLS entirely. Fast no-op once every
@@ -64,7 +65,10 @@ router.get('/', async (req, res, next) => {
       .order(on('ladder') ? 'xp_total' : 'last_active_at', { ascending: false, nullsFirst: false })
       .limit(200);
     const help = helpCats.KEYS.includes(req.query.help) ? req.query.help : '';
-    const members = (rows || []).filter(m => !help || (m.profile_is_public !== false && (m.help_offer || []).includes(help)));
+    // "On my path": other members building the same kind of business.
+    const myPath = req.query.path === 'mine' && req.profile.path && req.profile.path !== 'default' ? req.profile.path : null;
+    const members = (rows || []).filter(m => (!help || (m.profile_is_public !== false && (m.help_offer || []).includes(help)))
+      && (!myPath || (m.path === myPath && m.profile_is_public !== false)));
     // A rung is named differently on every path, so each member's title has to
     // be read from THEIR ladder. One shared lookup would show a plumber a
     // creator's word for the level they reached.
@@ -75,7 +79,9 @@ router.get('/', async (req, res, next) => {
     // Mentors first. The Level 7 unlock is "anyone on a lower rung can find
     // you", and 200 members ordered by XP is not findable — it is a wall.
     const mentors = withRung.filter(m => m.mentor);
-    res.render('members', { title: 'Members', members: withRung, mentors, mentorLevel: MENTOR_LEVEL, help, helpCats });
+    const pathDef = req.profile.path && req.profile.path !== 'default' ? paths.get(req.profile.path) : null;
+    res.render('members', { title: 'Members', members: withRung, mentors, mentorLevel: MENTOR_LEVEL, help, helpCats,
+      myPath, myPathLabel: pathDef ? pathDef.label : null, pathOf: slug => { const p = slug && slug !== 'default' ? paths.get(slug) : null; return p ? p.emoji + ' ' + p.label : ''; } });
   } catch (e) { next(e); }
 });
 

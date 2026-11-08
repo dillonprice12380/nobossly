@@ -28,8 +28,9 @@ const nameOf = req => req.profile.display_name || req.profile.username || 'Someo
 
 router.get('/', async (req, res, next) => {
   try {
-    const scope = req.query.scope === 'following' ? 'following' : 'everyone';
-    const { items, following } = await posts.timeline(req.sb, req.user.id, { scope, limit: 50 });
+    const myPath = req.profile.path && paths.get(req.profile.path) && req.profile.path !== 'default' ? req.profile.path : null;
+    const scope = req.query.scope === 'following' ? 'following' : (req.query.scope === 'path' && myPath ? 'path' : 'everyone');
+    const { items, following } = await posts.timeline(req.sb, req.user.id, { scope, limit: 50, path: myPath });
 
     // Someone new to the feed is shown people to follow.
     let suggestions = [];
@@ -42,7 +43,7 @@ router.get('/', async (req, res, next) => {
     }
 
     res.render('feed', {
-      title: 'Feed', items, following, suggestions, scope,
+      title: 'Feed', items, following, suggestions, scope, myPathLabel: myPath ? paths.get(myPath).label : null,
       types: posts.TYPES, maxPost: posts.MAX_POST, maxComment: posts.MAX_COMMENT,
       msg: req.query.msg || null,
       pathLabel: slug => { const p = paths.get(slug); return p ? p.label : ''; }

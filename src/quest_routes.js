@@ -14,7 +14,7 @@ const BY_AUTO_KIND = {
   streak:          { href: '/dashboard',     cta: 'Check in' },
   followers:       { href: '/members',       cta: 'Find members' },
   challenges:      { href: '/quests',        cta: 'Take one on' },
-  posts:           { href: '/community',     cta: 'Post' },
+  posts:           { href: '/community/qa',     cta: 'Post' },
   profile:         { href: '/members/me/edit', cta: 'Fill it in' }
 };
 

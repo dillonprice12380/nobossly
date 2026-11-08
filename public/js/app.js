@@ -497,3 +497,30 @@
   if (document.readyState !== 'loading') onPage();
   else document.addEventListener('DOMContentLoaded', onPage);
 })();
+
+// Co-working times: the server writes New York time; show each reader their
+// own (<time datetime="…" data-local>), and fill the form's time zone field.
+(function () {
+  var run = function () {
+    document.querySelectorAll('time[data-local]').forEach(function (el) {
+      var d = new Date(el.getAttribute('datetime'));
+      if (isNaN(d)) return;
+      el.textContent = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' +
+        d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      el.title = 'Your time';
+    });
+    // The offset on the day picked, not today: daylight saving may differ.
+    document.querySelectorAll('input[data-tz-offset]').forEach(function (el) {
+      var form = el.form; if (!form || form.getAttribute('data-tz-ready')) return;
+      form.setAttribute('data-tz-ready', '1');
+      var set = function () {
+        var d = form.elements.date && form.elements.date.value, t = form.elements.time && form.elements.time.value;
+        var at = d && t ? new Date(d + 'T' + t) : new Date();
+        el.value = String(isNaN(at) ? new Date().getTimezoneOffset() : at.getTimezoneOffset());
+      };
+      set(); form.addEventListener('submit', set);
+    });
+  };
+  document.addEventListener('turbo:load', run);
+  if (document.readyState !== 'loading') run(); else document.addEventListener('DOMContentLoaded', run);
+})();

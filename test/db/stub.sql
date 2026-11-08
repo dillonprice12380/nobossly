@@ -42,3 +42,17 @@ alter table revenue_entries enable row level security;
 create policy revenue_own on revenue_entries for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 grant select, insert, update, delete on revenue_entries to authenticated;
 alter role service_role bypassrls;  -- as on Supabase
+-- The Q&A forum, as live (2026-11-08): anyone reads, authors write their own.
+create table forum_categories(id uuid primary key default gen_random_uuid(), slug text unique, name text, position int default 0, is_locked bool default false);
+create table forum_threads(id uuid primary key default gen_random_uuid(), category_id uuid references forum_categories, user_id uuid references profiles on delete cascade, title text not null, body text, body_html text, tags text[] default '{}', is_pinned bool default false, is_locked bool default false, reply_count int default 0, view_count int default 0, last_reply_at timestamptz, created_at timestamptz default now(), updated_at timestamptz default now(), edited_at timestamptz);
+create table forum_replies(id uuid primary key default gen_random_uuid(), thread_id uuid references forum_threads on delete cascade, user_id uuid references profiles on delete cascade, body text, body_html text, created_at timestamptz default now(), updated_at timestamptz default now(), edited_at timestamptz);
+alter table forum_threads enable row level security; alter table forum_replies enable row level security;
+create policy forum_threads_read on forum_threads for select using (true);
+create policy forum_threads_insert on forum_threads for insert with check (auth.uid() = user_id);
+create policy forum_threads_update on forum_threads for update using (auth.uid() = user_id or is_admin());
+create policy forum_threads_delete on forum_threads for delete using (auth.uid() = user_id or is_admin());
+create policy forum_replies_read on forum_replies for select using (true);
+create policy forum_replies_insert on forum_replies for insert with check (auth.uid() = user_id);
+create policy forum_replies_update on forum_replies for update using (auth.uid() = user_id or is_admin());
+create policy forum_replies_delete on forum_replies for delete using (auth.uid() = user_id or is_admin());
+grant select, insert, update, delete on forum_categories, forum_threads, forum_replies to anon, authenticated;

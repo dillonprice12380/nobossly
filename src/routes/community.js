@@ -8,6 +8,7 @@ const { requireAuth } = require('../middleware/auth');
 const { anonClient } = require('../supabase');
 const { quiet } = require('../db');
 const db = req => req.sb || anonClient();
+const community = require('../community');
 
 const REACTIONS = [
   { key: 'thumbs_up', emoji: '\ud83d\udc4d', label: 'Thumbs up' },
@@ -40,15 +41,29 @@ async function loadReactions(req, threadId, replyIds) {
   return { counts, mine };
 }
 
-// Forum home: categories with thread counts
+// The community home: the week's challenge, co-working, questions (the ones
+// nobody has answered yet first), the feed, results, groups and people on your
+// path. Signed-out visitors see what is public.
 router.get('/', async (req, res, next) => {
+  try {
+    const data = await community.home(db(req), req.user ? Object.assign({ id: req.user.id }, req.profile || {}) : null, { coworking: require('../coworking') });
+    res.render('community/home', Object.assign({ title: 'Community', pathLabel: community.pathLabel, ago: community.ago }, data));
+  } catch (e) { next(e); }
+});
+
+// Q&A home: categories with thread counts, or a filtered list of questions:
+// a search, a tag, the ones nobody has answered yet, or the ones asked by
+// people on your path.
+router.get('/qa', async (req, res, next) => {
   try {
     const q = (req.query.q || '').trim().slice(0, 80);
     const filterCat = (req.query.cat || '').trim();
     const filterTag = (req.query.tag || '').trim().toLowerCase().slice(0, 24);
+    const show = req.query.show === 'unanswered' ? 'unanswered' : '';
+    const myPath = req.query.path === 'mine' && req.profile && req.profile.path ? req.profile.path : null;
     const [{ data: cats }, { data: threads }, sidebar] = await Promise.all([
       db(req).from('forum_categories').select('*').order('position'),
-      db(req).from('forum_threads').select('id, category_id, title, created_at, user_id').order('created_at', { ascending: false }).limit(200),
+      db(req).from('forum_threads').select('id, category_id, title, created_at, user_id, reply_count').order('created_at', { ascending: false }).limit(200),
       loadForumSidebar(req)
     ]);
     const counts = {}, latest = {};
@@ -56,30 +71,39 @@ router.get('/', async (req, res, next) => {
       counts[t.category_id] = (counts[t.category_id] || 0) + 1;
       if (!latest[t.category_id]) latest[t.category_id] = t;
     });
-    // search results
+    const unanswered = (threads || []).filter(t => !t.reply_count).length;
     let results = null;
-    if (q || filterTag) {
-      let qy = db(req).from('forum_threads').select('id, category_id, title, body, tags, created_at, reply_count').order('created_at', { ascending: false }).limit(50);
+    if (q || filterTag || show || myPath) {
+      let qy = db(req).from('forum_threads').select('*').order('created_at', { ascending: false }).limit(50);
       if (q) {
         const safe = q.replace(/[%_,()]/g, ' ').trim();
         if (safe) qy = qy.or('title.ilike.%' + safe + '%,body.ilike.%' + safe + '%');
       }
       if (filterTag) qy = qy.contains('tags', [filterTag]);
+      if (show === 'unanswered') qy = qy.eq('reply_count', 0);
       if (filterCat) {
         const c = (cats || []).find(x => x.slug === filterCat);
         if (c) qy = qy.eq('category_id', c.id);
       }
+      if (myPath) {
+        const ids = await community.peopleOnPath(db(req), myPath);
+        qy = qy.in('user_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+      }
       const { data } = await qy;
       results = data || [];
     }
-    res.render('community/forum', { title: 'Q&A', cats: cats || [], counts, latest, sidebar, q, filterCat, filterTag, results });
+    const pmap = await community.profilesOf(db(req), (results || []).map(t => t.user_id));
+    res.render('community/forum', {
+      title: 'Q&A', cats: cats || [], counts, latest, sidebar, q, filterCat, filterTag, results, show, myPath, unanswered, pmap,
+      pathLabel: community.pathLabel
+    });
   } catch (e) { next(e); }
 });
 
 router.get('/c/:slug', async (req, res, next) => {
   try {
     const { data: cat } = await db(req).from('forum_categories').select('*').eq('slug', req.params.slug).maybeSingle();
-    if (!cat) return res.redirect('/community');
+    if (!cat) return res.redirect('/community/qa');
     const { data: threads } = await db(req).from('forum_threads').select('*')
       .eq('category_id', cat.id).order('is_pinned', { ascending: false }).order('last_reply_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(100);
     const userIds = [...new Set((threads || []).map(t => t.user_id))];
@@ -89,10 +113,14 @@ router.get('/c/:slug', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/c/:slug/thread', requireAuth, async (req, res, next) => {
+// Ask from the Q&A page itself: the category comes from the form.
+router.post('/qa/ask', requireAuth, (req, res, next) => askIn(req, res, next, String(req.body.cat || '')));
+router.post('/c/:slug/thread', requireAuth, (req, res, next) => askIn(req, res, next, req.params.slug));
+
+async function askIn(req, res, next, slug) {
   try {
-    const { data: cat } = await req.sb.from('forum_categories').select('id, slug, is_locked').eq('slug', req.params.slug).maybeSingle();
-    if (!cat || cat.is_locked) return res.redirect('/community');
+    const { data: cat } = await req.sb.from('forum_categories').select('id, slug, is_locked').eq('slug', slug).maybeSingle();
+    if (!cat || cat.is_locked) return res.redirect('/community/qa');
     const title = (req.body.title || '').trim();
     const rawHtml = (req.body.body_html || '').trim();
     let body = (req.body.body || '').trim();
@@ -113,12 +141,12 @@ router.post('/c/:slug/thread', requireAuth, async (req, res, next) => {
     await notifySocial(req.sb, req.user.id, (req.profile.display_name || req.profile.username || 'A member') + ' posted in the forum: "' + title.slice(0, 60) + '"', 'forum_threads', thread.id);
     res.redirect('/community/t/' + thread.id);
   } catch (e) { next(e); }
-});
+}
 
 router.get('/t/:id', async (req, res, next) => {
   try {
     const { data: thread } = await db(req).from('forum_threads').select('*').eq('id', req.params.id).maybeSingle();
-    if (!thread) return res.redirect('/community');
+    if (!thread) return res.redirect('/community/qa');
     const [{ data: cat }, { data: replies }] = await Promise.all([
       db(req).from('forum_categories').select('name, slug').eq('id', thread.category_id).maybeSingle(),
       db(req).from('forum_replies').select('*').eq('thread_id', thread.id).order('created_at')
@@ -132,16 +160,34 @@ router.get('/t/:id', async (req, res, next) => {
     const userIds = [...new Set([thread.user_id, ...visibleReplies.map(r => r.user_id)])];
     const { data: profiles } = req.sb ? await req.sb.from('profiles').select('id, display_name, username, current_level').in('id', userIds) : { data: [] };
     const pmap = {}; (profiles || []).forEach(p => pmap[p.id] = p);
-    if (req.sb) req.sb.from('forum_threads').update({ view_count: (thread.view_count || 0) + 1 }).eq('id', thread.id).then(() => {});
+    // Views are counted by the database (forum_thread_viewed) once
+    // migrations/2026-11-08_community.sql has run; before that only the
+    // author's own client could update the row.
+    const dbKeeps = community.dbKeepsThreads(thread);
+    if (dbKeeps) db(req).rpc('forum_thread_viewed', { p_id: thread.id }).then(...quiet('forum_thread_viewed'));
+    else if (req.sb) req.sb.from('forum_threads').update({ view_count: (thread.view_count || 0) + 1 }).eq('id', thread.id).then(() => {});
+    // The reply that helped the asker goes first.
+    const accepted = dbKeeps && thread.accepted_reply_id ? visibleReplies.find(r => r.id === thread.accepted_reply_id) || null : null;
+    const ordered = accepted ? [accepted].concat(visibleReplies.filter(r => r !== accepted)) : visibleReplies;
+    let following = false;
+    if (dbKeeps && req.user && req.sb) {
+      const { data: f } = await req.sb.from('forum_follows').select('thread_id').eq('user_id', req.user.id).eq('thread_id', thread.id).maybeSingle();
+      following = !!f;
+    }
     const reactions = await loadReactions(req, thread.id, visibleReplies.map(r => r.id));
-    res.render('community/thread', { title: thread.title, thread, cat, replies: visibleReplies, pmap, reactions, REACTIONS });
+    res.render('community/thread', {
+      title: thread.title, thread, cat, replies: ordered, pmap, reactions, REACTIONS,
+      accepted, canAccept: dbKeeps && !!req.user && thread.user_id === req.user.id, canFollow: dbKeeps && !!req.user, following,
+      msg: req.query.msg || null
+    });
   } catch (e) { next(e); }
 });
 
 router.post('/t/:id/reply', requireAuth, async (req, res, next) => {
   try {
-    const { data: thread } = await req.sb.from('forum_threads').select('id, is_locked, reply_count').eq('id', req.params.id).maybeSingle();
-    if (!thread || thread.is_locked) return res.redirect('/community');
+    const { data: thread } = await req.sb.from('forum_threads').select('*').eq('id', req.params.id).maybeSingle();
+    if (!thread || thread.is_locked) return res.redirect('/community/qa');
+    const dbKeeps = community.dbKeepsThreads(thread);
     const rawHtml = (req.body.body_html || '').trim();
     let body = (req.body.body || '').trim();
     let bodyHtml = null;
@@ -152,15 +198,53 @@ router.post('/t/:id/reply', requireAuth, async (req, res, next) => {
     const found = pi.check(body, bodyHtml);
     if (found) return pi.refuse(req, res, '/community/t/' + thread.id, found, 'forum_reply');
     if (body || bodyHtml) {
-      await req.sb.from('forum_replies').insert({ thread_id: thread.id, user_id: req.user.id, body, body_html: bodyHtml });
-      await req.sb.from('forum_threads').update({ reply_count: (thread.reply_count || 0) + 1, last_reply_at: new Date().toISOString() }).eq('id', thread.id);
+      const { error: insErr } = await req.sb.from('forum_replies').insert({ thread_id: thread.id, user_id: req.user.id, body, body_html: bodyHtml });
+      if (insErr) throw insErr;
       await awardXP(req.sb, req.user.id, req.profile, 'forum_reply', 'Replied in the forum', 'forum_replies', null);
-      const { data: full } = await req.sb.from('forum_threads').select('user_id, title').eq('id', thread.id).maybeSingle();
-      if (full && full.user_id !== req.user.id) {
-        await req.sb.rpc('push_notification', { target_user: full.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'Someone') + ' replied to your thread "' + (full.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(...quiet('push_notification:forum_reply'));
+      // With migrations/2026-11-08_community.sql the database keeps the count
+      // and tells everyone following the thread. Before it, the old way.
+      if (!dbKeeps) {
+        await req.sb.from('forum_threads').update({ reply_count: (thread.reply_count || 0) + 1, last_reply_at: new Date().toISOString() }).eq('id', thread.id);
+        if (thread.user_id !== req.user.id) {
+          await req.sb.rpc('push_notification', { target_user: thread.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'Someone') + ' replied to your thread "' + (thread.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(...quiet('push_notification:forum_reply'));
+        }
       }
     }
     res.redirect('/community/t/' + thread.id);
+  } catch (e) { next(e); }
+});
+
+// The asker marks the reply that helped (or takes the mark off). The answerer
+// hears about it.
+router.post('/t/:id/accept', requireAuth, async (req, res, next) => {
+  try {
+    const to = '/community/t/' + req.params.id;
+    const { data: thread } = await req.sb.from('forum_threads').select('*').eq('id', req.params.id).maybeSingle();
+    if (!thread || thread.user_id !== req.user.id || !community.dbKeepsThreads(thread)) return res.redirect(to);
+    const replyId = String(req.body.reply_id || '');
+    if (!replyId) {
+      await req.sb.from('forum_threads').update({ accepted_reply_id: null }).eq('id', thread.id).eq('user_id', req.user.id);
+      return res.redirect(to);
+    }
+    const { data: reply } = await req.sb.from('forum_replies').select('id, user_id').eq('id', replyId).eq('thread_id', thread.id).maybeSingle();
+    if (!reply) return res.redirect(to);
+    const { error } = await req.sb.from('forum_threads').update({ accepted_reply_id: reply.id }).eq('id', thread.id).eq('user_id', req.user.id);
+    if (error) return res.redirect(to + '?msg=' + encodeURIComponent('That did not save. Try again.'));
+    if (reply.user_id !== req.user.id && thread.accepted_reply_id !== reply.id) {
+      await req.sb.rpc('push_notification', { target_user: reply.user_id, ntype: 'forum_reply', nmessage: (req.profile.display_name || 'The asker') + ' marked your answer as the one that helped in "' + String(thread.title || '').slice(0, 60) + '"', nentity_type: 'forum_threads', nentity_id: thread.id }).then(...quiet('push_notification:forum_accept'));
+    }
+    res.redirect(to + '#r-' + reply.id);
+  } catch (e) { next(e); }
+});
+
+// Follow a thread to hear about new replies, or stop.
+router.post('/t/:id/follow', requireAuth, async (req, res, next) => {
+  try {
+    const to = '/community/t/' + req.params.id;
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.redirect('/community/qa');
+    if (req.body.stop) await req.sb.from('forum_follows').delete().eq('user_id', req.user.id).eq('thread_id', req.params.id);
+    else await req.sb.from('forum_follows').upsert({ user_id: req.user.id, thread_id: req.params.id }, { onConflict: 'user_id,thread_id', ignoreDuplicates: true });
+    res.redirect(to);
   } catch (e) { next(e); }
 });
 
@@ -204,7 +288,7 @@ router.post('/t/:id/delete', requireAuth, async (req, res, next) => {
       const { data: cat } = await req.sb.from('forum_categories').select('slug').eq('id', thread.category_id).maybeSingle();
       return res.redirect(cat ? '/community/c/' + cat.slug : '/community');
     }
-    res.redirect('/community');
+    res.redirect('/community/qa');
   } catch (e) { next(e); }
 });
 
@@ -224,7 +308,7 @@ router.post('/r/:id/edit', requireAuth, async (req, res, next) => {
       if (body || bodyHtml) await req.sb.from('forum_replies').update({ body, body_html: bodyHtml, edited_at: new Date().toISOString() }).eq('id', reply.id);
       return res.redirect('/community/t/' + reply.thread_id);
     }
-    res.redirect('/community');
+    res.redirect('/community/qa');
   } catch (e) { next(e); }
 });
 
@@ -237,7 +321,7 @@ router.post('/r/:id/delete', requireAuth, async (req, res, next) => {
       if (th) await req.sb.from('forum_threads').update({ reply_count: Math.max(0, (th.reply_count || 1) - 1) }).eq('id', reply.thread_id);
       return res.redirect('/community/t/' + reply.thread_id);
     }
-    res.redirect('/community');
+    res.redirect('/community/qa');
   } catch (e) { next(e); }
 });
 
@@ -247,7 +331,7 @@ router.post('/react', requireAuth, async (req, res, next) => {
     const entityType = req.body.entity_type === 'reply' ? 'reply' : 'thread';
     const entityId = req.body.entity_id;
     const reaction = String(req.body.reaction || '');
-    const back = safeBack(req, '/community');
+    const back = safeBack(req, '/community/qa');
     if (!entityId || !REACTIONS.some(r => r.key === reaction)) return res.redirect(back);
     const { data: existing } = await req.sb.from('forum_reactions').select('id')
       .eq('user_id', req.user.id).eq('entity_type', entityType).eq('entity_id', entityId).eq('reaction', reaction).maybeSingle();

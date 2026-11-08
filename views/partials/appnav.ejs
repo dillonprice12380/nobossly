@@ -21,17 +21,27 @@
       ] },
     { key: 'community', href: '/community', label: 'Community', short: 'Community', icon: 'i-community',
       match: ['/community', '/feed', '/groups', '/programs', '/learn', '/quests', '/challenges', '/wins', '/exchange', '/members', '/reviews', '/collaborations'],
+      // Six tabs. Groups & challenges and People each open a second row with
+      // their own pages, so nothing is more than two clicks away.
       subs: [
+        { key: 'home', href: '/community', label: 'Home', match: ['/community'], exact: true },
         { key: 'feed', href: '/feed', label: 'Feed', match: ['/feed'] },
-        { key: 'qa', href: '/community', label: 'Q&A', match: ['/community'], not: ['/community/collab'] },
-        { key: 'groups', href: '/groups', label: 'Groups', match: ['/groups'] },
-        { key: 'programs', href: '/programs', label: 'Programs & courses', match: ['/programs', '/learn'], flag: 'marketplace' },
-        { key: 'challenges', href: '/quests', label: 'Challenges', match: ['/quests', '/challenges'] },
-        { key: 'results', href: '/wins', label: 'Results', match: ['/wins'], flag: 'wins' },
-        { key: 'exchange', href: '/exchange', label: 'Help & exchange', match: ['/exchange'], flag: 'helpBoard' },
-        { key: 'members', href: '/members', label: 'Members', match: ['/members'] },
-        { key: 'reviews', href: '/reviews', label: 'Get feedback', match: ['/reviews'] },
-        { key: 'collab', href: '/community/collab', label: 'Collaborators', match: ['/community/collab', '/collaborations'], flag: 'collabs' }
+        { key: 'qa', href: '/community/qa', label: 'Q&A', match: ['/community/qa', '/community/t', '/community/c'] },
+        { key: 'coworking', href: '/community/coworking', label: 'Co-working', match: ['/community/coworking'] },
+        { key: 'groups', href: '/groups', label: 'Groups & challenges', match: ['/groups', '/quests', '/challenges', '/programs', '/learn'],
+          kids: [
+            { key: 'groups', href: '/groups', label: 'Groups', match: ['/groups'] },
+            { key: 'challenges', href: '/quests', label: 'Challenges', match: ['/quests', '/challenges'] },
+            { key: 'programs', href: '/programs', label: 'Programs & courses', match: ['/programs', '/learn'], flag: 'marketplace' }
+          ] },
+        { key: 'people', href: '/members', label: 'People', match: ['/members', '/wins', '/exchange', '/reviews', '/community/collab', '/collaborations'],
+          kids: [
+            { key: 'members', href: '/members', label: 'Members', match: ['/members'] },
+            { key: 'results', href: '/wins', label: 'Results', match: ['/wins'], flag: 'wins' },
+            { key: 'exchange', href: '/exchange', label: 'Help & exchange', match: ['/exchange'], flag: 'helpBoard' },
+            { key: 'reviews', href: '/reviews', label: 'Get feedback', match: ['/reviews'] },
+            { key: 'collab', href: '/community/collab', label: 'Collaborators', match: ['/community/collab', '/collaborations'], flag: 'collabs' }
+          ] }
       ] },
     { key: 'resources', href: '/blog', label: 'Resources', short: 'Resources', icon: 'i-blog',
       match: ['/blog', '/guides', '/locations', '/help'],
@@ -45,6 +55,7 @@
   var _hit = function (m) { return _p === m || _p.indexOf(m + '/') === 0; };
   var _active = function (item) {
     if ((item.not || []).some(_hit)) return false;
+    if (item.exact) return item.match.indexOf(_p) !== -1;
     return item.match.some(_hit);
   };
   var _shown = function (sub) { return !sub.flag || _f[sub.flag]; };
@@ -53,6 +64,8 @@
   var _subs = _section ? _section.subs.filter(_shown) : [];
   var _forced = (typeof navSub !== 'undefined' && navSub) ? navSub : null;
   var _subOn = function (sub) { return _forced ? sub.key === _forced : _active(sub); };
+  var _openSub = _subs.filter(_subOn)[0];
+  var _kids = _openSub && _openSub.kids ? _openSub.kids.filter(_shown) : [];
 %>
 <% if (_inApp) { %>
 <% if (_subs.length > 1) { %>
@@ -62,6 +75,13 @@
       <a class="appnav-sub <%= _subOn(sub) ? 'is-active' : '' %>" href="<%= sub.href %>"<%= _subOn(sub) ? ' aria-current="page"' : '' %>><%= sub.label %></a>
     <% }) %>
   </div>
+  <% if (_kids.length > 1) { %>
+    <div class="appnav-kids">
+      <% _kids.forEach(function (k) { var on = _active(k); %>
+        <a class="appnav-kid <%= on ? 'is-active' : '' %>" href="<%= k.href %>"<%= on ? ' aria-current="page"' : '' %>><%= k.label %></a>
+      <% }) %>
+    </div>
+  <% } %>
 </nav>
 <% } %>
 
@@ -82,6 +102,10 @@
   .appnav-sub { padding: .3rem .7rem; border-radius: 999px; color: var(--muted); text-decoration: none; font-size: .88rem; border: 1px solid transparent; }
   .appnav-sub:hover { color: var(--text); }
   .appnav-sub.is-active { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .appnav-kids { display: flex; flex-wrap: wrap; justify-content: center; gap: .2rem .9rem; padding: 0 .5rem .5rem; max-width: 1280px; margin: 0 auto; }
+  .appnav-kid { color: var(--muted); text-decoration: none; font-size: .82rem; padding: .1rem 0; border-bottom: 2px solid transparent; }
+  .appnav-kid:hover { color: var(--text); }
+  .appnav-kid.is-active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 
   .appbar { display: none; }
   @media (max-width: 820px) {
