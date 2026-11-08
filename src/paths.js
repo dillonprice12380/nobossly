@@ -602,7 +602,7 @@ const PATHS = [
         options: ['Yes, I code', 'Partly — with no-code tools', 'Partly — with AI help', 'No, I would need someone'] },
       { name: 'platform_target', label: 'Where it runs', type: 'select', required: true,
         options: ['Web app', 'iOS', 'Android', 'Both mobile platforms', 'Browser extension', 'Desktop', 'API or integration'] },
-      { name: 'who_pays', label: 'Who pays for it', type: 'select', required: true,
+      { name: 'who_pays', label: 'Who pays for it', type: 'checks',
         options: ['Consumers', 'Small businesses', 'Larger companies', 'Not sure yet'] },
       { name: 'expected_price', label: 'What one customer would pay a month', type: 'select', required: true,
         options: ['Under $10', '$10–30', '$30–100', '$100–500', '$500+', 'A one-off price, not monthly', 'Not sure yet'],
