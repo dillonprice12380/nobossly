@@ -65,10 +65,10 @@ module.exports = {
   slug: 'exploring',
   intro: 'Find the business that fits you — then leave this path for it.',
   stages: [
-    { answer: 'Just curious', next: 'Fill in your self-inventory — twenty minutes, no commitment.' },
-    { answer: 'Serious, but no idea yet', next: 'Write down three options and score them against what matters to you.' },
-    { answer: 'Weighing up a few options', next: 'Run one two-week experiment on your top option.' },
-    { answer: 'Ready to commit once I pick', next: 'Pick the path that won, and switch your dashboard to it.', href: '/choose-path' }
+    { answer: 'Just curious' },
+    { answer: 'Serious, but no idea yet' },
+    { answer: 'Weighing up a few options' },
+    { answer: 'Ready to commit once I pick' }
   ],
   northStar: () => null,
   northStarBoard: 'ex_experiments',

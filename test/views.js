@@ -126,8 +126,10 @@ for (const def of paths.MARKETED) {
     if (!html.includes(esc(def.marketing.truth))) missing.push('truth');
     for (const p of def.marketing.pains) if (!html.includes(esc(p))) missing.push('a pain line');
     if (!html.includes('/signup?path=' + def.slug)) missing.push('the signup CTA');
-    if (challenges.length && !html.includes(esc(challenges[0].title))) missing.push('the quest');
-    if (!html.includes(esc(def.marketing.bar))) missing.push('the traction bar');
+    // Curated quests and the "rules of thumb" bar were retired (2026-11-08):
+    // NoBossly is a workspace and community, not a program telling you what to do.
+    if (challenges.length && html.includes(esc(challenges[0].title))) missing.push('no curated quest');
+    if (def.marketing.bar || /The number this path turns on/.test(html)) missing.push('no traction bar');
     const dash = require('../src/path_dashboards').previewFor(def.slug);
     if (!html.includes('Your dashboard on this path') || !dash.stages.every(st => html.includes(esc(st)))) missing.push('the dashboard preview');
     if (/\bXP\b|\brungs?\b|\bladder\b/.test(html.replace(/<style[\s\S]*?<\/style>/g, ''))) missing.push('no retired XP/ladder wording');
@@ -178,7 +180,7 @@ const marketing = {
   'home.ejs': { paths: paths.MARKETED },
   'how_it_works.ejs': {},
   'paths_index.ejs': { paths: paths.MARKETED },
-  'pricing.ejs': { tiers: TIERS, freeFeatures: ['Your Compass — archetype, territories & fit test'],
+  'pricing.ejs': { tiers: TIERS, freeFeatures: ['Every path, tool and the whole community'],
                    paidFeatures: ['Everything in Free'], plan: null, upgrade: null, msg: null }
 };
 for (const def of paths.MARKETED) {
@@ -212,6 +214,8 @@ const FOUNDER_OK = /(?!)/g;   // matches nothing
 // this has drifted back to being about founders in general.
 const JOB_WORDS = /\b(9 to 5|day job|your job|a job|the job|jobs|boss|paycheck|payslip|salary|employer|after work|evenings|notice|full-time|quit)\b/i;
 
+const COACHING = /\b(quests?|electives?|next (real )?step|fit test|playbooks?|step-by-step|curriculum|the tools an accelerator|worksheets an accelerator|we('ll| will) (guide|coach|teach))\b/i;
+
 for (const [name, data] of Object.entries(marketing)) {
   const file = name.split(':')[0];
   let html;
@@ -226,6 +230,11 @@ for (const [name, data] of Object.entries(marketing)) {
 
   ok(`${name}: says what the reader is getting out of`, JOB_WORDS.test(text),
      (text.match(JOB_WORDS) || ['—'])[0]);
+
+  // A workspace and a community, not an accelerator: no curriculum, no quests
+  // to accept, no "next step" handed down, nothing that tests your plan.
+  const coaching = text.match(COACHING);
+  ok(`${name}: no program or coaching framing`, !coaching, coaching ? coaching[0] : 'clean');
 }
 
 // The two names that were retired outright, checked across the source so a

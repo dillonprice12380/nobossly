@@ -270,11 +270,11 @@ module.exports = {
   slug: 'brick_mortar',
   intro: 'Open a place people walk into — and keep the rent a small share of what comes through the till.',
   stages: [
-    { answer: 'Just an idea', next: 'Work out break-even: how many customers a day the rent you can afford would need.' },
-    { answer: 'Looking at premises', next: 'Score your shortlist side by side, and have the full start-up budget before you make an offer.' },
-    { answer: 'Signed or about to sign a lease', next: 'Have a lawyer review the lease, then get the permit list from your city — some take months.' },
-    { answer: 'Fitting out', next: 'Put every task between now and day one on the opening plan, with deadlines.' },
-    { answer: 'Open and trading', next: 'Log takings every month and get rent under about 10% of them.' }
+    { answer: 'Just an idea' },
+    { answer: 'Looking at premises' },
+    { answer: 'Signed or about to sign a lease' },
+    { answer: 'Fitting out' },
+    { answer: 'Open and trading' }
   ],
   northStar: ({ stage }) => (stage === OPEN ? 'bm_takings' : null),
   northStarBoard: ({ stage }) => (stage === OPEN ? null : BUILDING.includes(stage) ? 'bm_opening' : 'bm_funding'),

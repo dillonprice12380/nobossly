@@ -63,7 +63,7 @@ for (const slug of SLUGS) {
   const stageQ = paths.ownQuestions(slug).find(q => q.name === 'stage');
   ok(`${slug}: stages are the path's own stage answers, in order`,
     JSON.stringify(d.stages.map(s => s.answer)) === JSON.stringify(stageQ.options));
-  ok(`${slug}: every stage says what to do next`, d.stages.every(s => typeof s.next === 'string' && s.next.length > 20));
+  ok(`${slug}: stages are statuses, with no advice attached`, d.stages.length >= 3 && d.stages.every(s => typeof s.answer === 'string' && !('next' in s) && !('href' in s)));
 
   const subs = [null].concat(paths.subpathsOf(slug).map(s => s.slug));
   const stages = [null].concat(d.stages.map(s => s.answer));
@@ -237,9 +237,9 @@ async function panels() {
   });
   const profile = { path: 'freelancer', subpath: 'design', path_answers: { stage: 'Some regular clients' } };
   const p = await dash.panelFor(sb, 'me', profile, now);
-  ok('it knows the stage and the next step', p.stage.index === 2 && /testimonials/.test(p.stage.next));
+  ok('it knows the stage, and hands down no next step', p.stage.index === 2 && p.stage.current === 'Some regular clients' && !('next' in p.stage));
   ok('the north star is billable income', p.north && p.north.def.key === 'fl_income' && p.north.display.latest.includes('2,400'), p.north && p.north.display.latest);
-  ok('supporting numbers, boards and checklists all load', p.supporting.length === 3 && p.boards.length === 2 && p.checklists.length === 3);
+  ok('supporting numbers and boards load; checklists stay in the workspace', p.supporting.length === 3 && p.boards.length === 2 && !('checklists' in p));
   ok('every query is the member\'s own', sb.calls.filter(c => c.prop === 'eq' && c.args[0] === 'user_id').every(c => c.args[1] === 'me') && sb.calls.some(c => c.prop === 'eq' && c.args[0] === 'user_id'));
   ok('not "being set up" when the tables are there', p.notReady === false);
 
@@ -248,7 +248,7 @@ async function panels() {
   ok('a missing table marks it "being set up" instead of failing', p2 && p2.notReady === true && p2.north === null && p2.boards.length === 0);
 
   const p3 = await dash.panelFor(fakeSb(), 'me', { path: 'exploring', path_answers: {} }, now);
-  ok('no stage answered: it asks, and points at the first step', p3.stage.index === -1 && p3.stage.current === null && /self-inventory/.test(p3.stage.next));
+  ok('no stage answered: it just has none', p3.stage.index === -1 && p3.stage.current === null);
   ok('exploring shows its experiments board as the number', p3.northBoard && p3.northBoard.def.key === 'ex_experiments' && p3.boards.length === 0);
   ok('a path without a dashboard gets none', (await dash.panelFor(fakeSb(), 'me', { path: 'default' }, now)) === null);
   ok('a member with no path gets none', (await dash.panelFor(fakeSb(), 'me', {}, now)) === null);
@@ -267,10 +267,10 @@ async function panels() {
   const render = (f, data) => ejs.render(read('views/' + f), Object.assign({}, base, data), { filename: V(f) });
   let html = '';
   try { html = render('partials/path_panel.ejs', { panel: p, pathInfo: { label: 'Freelancer', emoji: '💻' } }); } catch (e) { html = 'ERR ' + e.message; }
-  ok('the panel renders stage, number, boards and checklists', html.includes('Your freelancer dashboard') && html.includes('class="here"') && html.includes('Billable income') && html.includes('Client pipeline') && html.includes('Contract essentials'), html.startsWith('ERR') ? html.slice(0, 200) : undefined);
+  ok('the panel renders the stage as a label, the numbers and the boards, and no advice', html.includes('Your freelancer dashboard') && html.includes('Where you are:') && html.includes('Some regular clients') && html.includes('Billable income') && html.includes('Client pipeline') && !html.includes('Contract essentials') && !/Next:/.test(html), html.startsWith('ERR') ? html.slice(0, 200) : undefined);
   let html3 = '';
   try { html3 = render('partials/path_panel.ejs', { panel: p3, pathInfo: { label: 'Still figuring it out', emoji: '🧭' } }); } catch (e) { html3 = 'ERR ' + e.message; }
-  ok('with no stage, it asks where they are', html3.includes('Tell us where you are') && html3.includes('Two-week experiments'), html3.startsWith('ERR') ? html3.slice(0, 200) : undefined);
+  ok('with no stage, it points at path settings', html3.includes('path settings') && html3.includes('Two-week experiments'), html3.startsWith('ERR') ? html3.slice(0, 200) : undefined);
   let html2 = '';
   try { html2 = render('partials/path_panel.ejs', { panel: p2, pathInfo: { label: 'Freelancer', emoji: '💻' } }); } catch (e) { html2 = 'ERR ' + e.message; }
   ok('before the tables exist, it says so', html2.includes('being set up'), html2.startsWith('ERR') ? html2.slice(0, 200) : undefined);
@@ -308,16 +308,16 @@ async function panels() {
   ok('a worksheet page shows its worked-out total', qh.includes('Quote total') && qh.includes('$235'), qh.startsWith('ERR') ? qh.slice(0, 200) : undefined);
 
   const pp = await dash.panelFor(fakeSb({ checklist_progress: [{ item: 'problem', done_at: '2026-11-01T00:00:00Z' }] }), 'me', { path: 'physical_product', subpath: 'outdoor', path_answers: { stage: 'Prototype made' } }, now);
-  ok('a product in development shows its gates as the number, not twice', pp.northChecklist && pp.northChecklist.def.key === 'prod_gates' && pp.north === null && !pp.checklists.some(c => c.def.key === 'prod_gates') && pp.boards.length === 0);
+  ok('a product in development: no number yet, and no checklist pushed onto the dashboard', pp.north === null && !('northChecklist' in pp) && pp.boards.length === 0);
   let ph = '';
   try { ph = render('partials/path_panel.ejs', { panel: pp, pathInfo: { label: 'Physical product', emoji: '🔧' } }); } catch (e) { ph = 'ERR ' + e.message; }
-  ok('...and renders it', ph.includes('Development gates') && ph.includes('Your numbers'), ph.startsWith('ERR') ? ph.slice(0, 200) : undefined);
+  ok('...and renders without it', !ph.startsWith('ERR') && !ph.includes('Development gates') && ph.includes('Checklist templates are in'), ph.startsWith('ERR') ? ph.slice(0, 200) : undefined);
 
   const bm = await dash.panelFor(fakeSb({ pipeline_items: [{ stage: 'approved', value: 40000 }, { stage: 'drawn', value: 25000 }] }), 'me', { path: 'brick_mortar', subpath: 'food', path_answers: { stage: 'Looking at premises' } }, now);
-  ok('brick and mortar while looking: funding is the number, the site scout a board', bm.northBoard && bm.northBoard.def.key === 'bm_funding' && bm.boards.map(b => b.def.key).join() === 'bm_sites' && bm.checklists.some(c => c.def.key === 'bm_food'));
+  ok('brick and mortar while looking: funding is the number, the site scout a board', bm.northBoard && bm.northBoard.def.key === 'bm_funding' && bm.boards.map(b => b.def.key).join() === 'bm_sites');
   let bh = '';
   try { bh = render('partials/path_panel.ejs', { panel: bm, pathInfo: { label: 'Brick and mortar', emoji: '🏪' } }); } catch (e) { bh = 'ERR ' + e.message; }
-  ok('...and renders it', bh.includes('Funding') && bh.includes('Site scout') && bh.includes('Food and drink'), bh.startsWith('ERR') ? bh.slice(0, 200) : undefined);
+  ok('...and renders it', bh.includes('Funding') && bh.includes('Site scout') && !bh.includes('Food and drink'), bh.startsWith('ERR') ? bh.slice(0, 200) : undefined);
 
   const dashView = read('views/dashboard.ejs');
   ok('the dashboard shows the panel', dashView.includes("include('partials/path_panel'"));

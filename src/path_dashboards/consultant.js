@@ -138,11 +138,11 @@ module.exports = {
   slug: 'consultant',
   intro: 'Turn what you know into paid outcomes for clients.',
   stages: [
-    { answer: 'Not started', next: 'Write the outcome you sell in one sentence, and offer three free sessions to test it.' },
-    { answer: 'Advised a few people informally', next: 'Ask one of them to pay for the next session — even a small amount.' },
-    { answer: 'Been paid for it once or twice', next: 'Package it: one signature offer with a clear outcome and price.' },
-    { answer: 'Regular paying clients', next: 'Record every client\'s result and turn the best three into case studies.' },
-    { answer: 'This is my main income', next: 'Raise your price, or add a group or bigger offer so income is not capped by your hours.' }
+    { answer: 'Not started' },
+    { answer: 'Advised a few people informally' },
+    { answer: 'Been paid for it once or twice' },
+    { answer: 'Regular paying clients' },
+    { answer: 'This is my main income' }
   ],
   northStar: () => 'con_clients',
   supporting: () => ['con_revenue', 'con_calls', 'con_close_rate'],

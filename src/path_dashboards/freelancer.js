@@ -109,11 +109,11 @@ module.exports = {
   slug: 'freelancer',
   intro: 'Sell a skill to clients — and keep the calendar full at a rate worth working for.',
   stages: [
-    { answer: 'Not started', next: 'Define one service with a price, and message five people who might need it.' },
-    { answer: 'A few one-off jobs', next: 'Turn one client into a repeat: ask what they need next before the job ends.' },
-    { answer: 'Some regular clients', next: 'Collect five testimonials and raise your rate for new clients.' },
-    { answer: 'Fully booked', next: 'Raise prices or move clients to retainers so income stops depending on hours.' },
-    { answer: 'Turning work away', next: 'Pass overflow to someone you trust, or productise your most common job.' }
+    { answer: 'Not started' },
+    { answer: 'A few one-off jobs' },
+    { answer: 'Some regular clients' },
+    { answer: 'Fully booked' },
+    { answer: 'Turning work away' }
   ],
   northStar: () => 'fl_income',
   supporting: () => ['fl_hours', 'fl_active_clients', 'fl_outreach'],

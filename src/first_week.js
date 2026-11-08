@@ -1,6 +1,5 @@
-// The first-week checklist on the dashboard. A new member used to land on four
-// empty widgets with no obvious first move; this gives them five small ones,
-// each of which also puts something into the community for the next person.
+// The first-week checklist on the dashboard: five small ways into the
+// workspace and the community, so a new member does not land on empty widgets.
 //
 // Counts only, read with the member's own client, and never allowed to break
 // the dashboard: any failed read just leaves that step unticked.
@@ -15,21 +14,24 @@ async function firstWeek(sb, user, profile) {
   const { data: intro } = await sb.from('forum_categories').select('id').eq('slug', 'introductions').maybeSingle()
     .then(r => r, () => ({ data: null }));
 
-  const [checkins, intros, follows, sprints, tasks, sprintTasks] = await Promise.all([
-    head(sb.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+  const [intros, threads, replies, follows, numbers, cards] = await Promise.all([
     intro ? head(sb.from('forum_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('category_id', intro.id)) : 0,
+    head(sb.from('forum_threads').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+    head(sb.from('forum_replies').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
     head(sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('follower_id', user.id)),
-    head(sb.from('sprints').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
-    head(sb.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
-    head(sb.from('sprint_tasks').select('id', { count: 'exact', head: true }).eq('user_id', user.id))
+    head(sb.from('metric_entries').select('id', { count: 'exact', head: true }).eq('user_id', user.id)),
+    head(sb.from('pipeline_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id))
   ]);
+  const answers = profile && profile.path_answers && typeof profile.path_answers === 'object' ? profile.path_answers : {};
 
+  // Setting up the workspace and meeting the community. None of these tell a
+  // member how to run their business; they just open the parts of NoBossly.
   const steps = [
-    { done: checkins > 0, label: 'Do your first daily check-in', href: '/dashboard/checkin', cta: 'Check in' },
+    { done: Object.keys(answers).length > 0, label: 'Set up your dashboard', href: '/choose-path/setup', cta: 'Set up' },
+    { done: numbers + cards > 0, label: 'Log a number or add a card to a board', href: '/workspace', cta: 'Open workspace' },
     { done: intros > 0, label: 'Introduce yourself to the community', href: '/community/c/introductions', cta: 'Say hello' },
-    { done: follows >= 3, label: 'Follow three people on the same climb', href: '/members', cta: 'Find people', note: follows ? follows + ' of 3' : null },
-    { done: sprints > 0, label: 'Start your first 7-day sprint', href: '#sprint', cta: 'Start one' },
-    { done: tasks + sprintTasks >= 3, label: 'Add three tasks', href: '/tasks', cta: 'Add tasks', note: (tasks + sprintTasks) ? Math.min(3, tasks + sprintTasks) + ' of 3' : null }
+    { done: replies > 0 || threads > intros, label: 'Ask or answer a question in Q&A', href: '/community', cta: 'Open Q&A' },
+    { done: follows >= 3, label: 'Follow three members', href: '/members', cta: 'Find people', note: follows ? follows + ' of 3' : null }
   ];
   const done = steps.filter(s => s.done).length;
   if (done === steps.length) return null;

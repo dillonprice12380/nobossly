@@ -286,14 +286,13 @@ const PATHS = [
     blurb: 'You build an audience first — video, writing, podcasting, streaming — and money follows attention.',
     marketing: {
       headline: 'You are not short of ideas. You are short of a plan that survives week three.',
-      subhead: 'NoBossly asks what kind of creator you are and then measures you in the right unit — followers if you are on social, monthly visitors if you publish — against the sizes where each actually starts paying: around 10,000 followers, around 50,000 visits a month. Then a dashboard that tracks it: your audience number each month, a content pipeline with a publish calendar, brand deals, and what each income source brings in.',
+      subhead: 'A workspace set up for creators: your audience number each month, a content pipeline with a publish calendar, brand deals, and what each income source brings in. Plus a community of people fitting it around a job too.',
       pains: [
         'You have posted before and stopped, and you are not sure why it did not stick.',
         'Everyone says "be consistent" without asking what time you get home.',
         'The advice is written for people who already have an audience — and it measures a blogger and an influencer with the same ruler.'
       ],
-      truth: 'An audience is a slow asset, and a salary is what buys you the time to build one. Sponsorship money starts around 10,000 followers; ad and affiliate money starts around 50,000 visits a month. If your runway is three months, the plan has to earn well before either — and your fit test will say so out loud.',
-      bar: 'Sponsorship money starts around 10,000 followers. Ad and affiliate money starts around 50,000 visits a month. Your fit test holds you to whichever one you are actually measured in.'
+      truth: 'Your numbers, your content plan and your deals in one place. What you post, and when, is up to you.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -334,14 +333,13 @@ const PATHS = [
     blurb: 'You sell a skill and do the work yourself — design, writing, development, editing, admin.',
     marketing: {
       headline: 'Freelancing is a business. Most freelancing advice treats it like a hobby with invoices.',
-      subhead: 'NoBossly holds your rate against the hours you have outside your job and the income that would actually replace it, tells you plainly when the arithmetic does not work — then gives you the client pipeline, proposals and invoices to fix it.',
+      subhead: 'A workspace set up for freelancing: billable income and hours, a client pipeline, proposals and invoices, and a pricing calculator that works with the hours you actually have.',
       pains: [
         'You are busy in the evenings and still nowhere near replacing the salary.',
         'Every month starts from zero because the work is all one-off.',
         'You have never raised your rate because you do not know what happens if you do.'
       ],
-      truth: 'Hours times rate is a hard ceiling, and while you have a job those hours are few. We do that multiplication in front of you — including what the number has to be before handing in your notice is arithmetic rather than nerve.',
-      bar: 'At ten hours a week, a $1,000 month is about $39 an hour — because only around six of those ten are billable. We do that multiplication with your hours, not a generic rate.'
+      truth: 'Your rate, your hours and your clients in one place you can see at a glance, next to other people freelancing around a job.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -372,14 +370,13 @@ const PATHS = [
     blurb: 'You sell judgement rather than hours — advising, coaching, or fixing a problem others cannot.',
     marketing: {
       headline: 'You already know things people pay for. The hard part is charging for the outcome.',
-      subhead: 'The job that is wearing you out is also where your expertise came from. NoBossly turns it into an offer with a named result and a price that follows it — then tests that offer against the evenings you actually have.',
+      subhead: 'A workspace for coaches and consultants: your clients and engagements, proposals, a pipeline of conversations, and a proof page for the results you have delivered.',
       pains: [
         'You give away the good advice on the call and get paid for the paperwork.',
         'You price by the hour because naming a number for the result feels like nerve.',
         'You have a decade of results at work and nothing written down that is yours.'
       ],
-      truth: 'An offer described as sessions and calls gets priced like sessions and calls. Your fit test asks whether you can name the outcome — because that one question decides your rate.',
-      bar: 'At $2,000 an engagement, a $1,000 month is one client every month. At $250 it is four. Your fit test uses the price you said you could name without flinching.'
+      truth: 'Your offers, clients and results in one place, and other members who advise for a living to trade notes with.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -417,14 +414,13 @@ const PATHS = [
     blurb: 'You go to the customer — trades, cleaning, landscaping, mobile grooming, repairs.',
     marketing: {
       headline: 'The work is local. Almost none of the advice is.',
-      subhead: 'NoBossly builds your fit test around the things that actually decide a local trade: your travel radius, your licensing, your kit, whether there is enough of the work near you — and whether enough of it happens outside your working hours to start before you quit.',
+      subhead: 'A workspace for local trades and services: a jobs board, regular customers on a repeat cycle with next-visit dates on one calendar, and quotes in a minute.',
       pains: [
-        'You can do the work. Finding it — around a shift pattern — is the part nobody teaches.',
+        'You can do the work. Finding it, around a shift pattern, is the part that eats the time.',
         'You are quoting blind because you do not know your win rate.',
         'Half the day goes on driving you do not get paid for.'
       ],
-      truth: 'Drive time is unpaid. A job type that only comes up twice a month within range cannot fill a week, and your fit test will ask that before you buy the van.',
-      bar: 'At $250 a job, a $1,000 month is four jobs. At $100 it is ten — about three a week, every week. Your fit test uses your own average job, not a national one.'
+      truth: 'The jobs, the customers and the money in one place, built around the hours you have outside work.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -460,14 +456,13 @@ const PATHS = [
     blurb: 'A place people come to — a shop, café, salon, studio, gym or bar.',
     marketing: {
       headline: 'The lease is the point of no return. Everything useful happens before you sign it.',
-      subhead: 'This is the one path that usually asks you to quit first, so NoBossly puts the numbers in front of you before you sign anything — your break-even day, your rent ceiling at half the takings you hope for — and gives you ways to test the concept while you are still being paid.',
+      subhead: 'A workspace for shops, cafés and studios: compare premises side by side, plan opening day, track funding, and run break-even with your own numbers before you sign anything.',
       pains: [
         'The landlord\'s footfall figure is the only footfall figure you have.',
         'You have a fit-out budget, no break-even number, and a salary you would be giving up.',
         'Everyone is encouraging and nobody has done the arithmetic with you.'
       ],
-      truth: 'Rent is due whether anyone walks in or not. A concept that only breaks even when it is full is a concept that fails on a quiet Tuesday — so we ask about half capacity, not best case.',
-      bar: 'Rent should sit under 10% of takings. So $1,500 of rent is $15,000 a month through the till — every month, whatever the weather. Your fit test does that sum before you sign anything.'
+      truth: 'The sums, the shortlist and the opening plan in one place, with other members opening places of their own.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -503,14 +498,13 @@ const PATHS = [
     blurb: 'You run the shop — sourcing, curating or reselling products rather than inventing them.',
     marketing: {
       headline: 'Selling is easy. Selling at a margin that survives advertising is the business.',
-      subhead: 'NoBossly makes you cost a unit properly — product, shipping, packaging, fees, returns — and then asks the two questions that decide everything: is there anything left to find a buyer with, and can it be packed and posted in the hours you have?',
+      subhead: 'A workspace for online stores: real margin after fees, shipping and returns, landed cost, suppliers side by side, and your orders each month.',
       pains: [
         'Orders are coming in, the bank account is not growing, and you still need the job.',
         'You are one of ten identical listings and price is the only lever left.',
         'You do not know your real margin, only your rough one.'
       ],
-      truth: 'This is how online stores die: a product that sells fine and still loses money once ads are counted. Your fit test asks about it on day one, not in month nine.',
-      bar: 'At a $40 order keeping 50%, a $1,000 month is 50 orders. At a sub-$20 order keeping under 30%, it is nearly 700. Your fit test costs it with your numbers, not a hopeful average.'
+      truth: 'Your costs, margins and orders in one place, so the numbers are there when you need them.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -590,14 +584,13 @@ const PATHS = [
     blurb: 'You build a product people use — a web app, mobile app, tool or plugin.',
     marketing: {
       headline: 'Building it was never the hard part.',
-      subhead: 'NoBossly keeps the scope inside what you can actually build in evenings — your hands, no-code, or a budget — and weighs distribution as hard as the build, because that is what ends most software long before the day job does.',
+      subhead: 'A workspace for apps and software: scope the first version, log sign-ups and paying customers, run a beta list, and keep a board of what users ask for.',
       pains: [
         'The feature list keeps growing, the launch keeps moving, and Monday keeps arriving.',
         'You could build it. You have no idea how anyone would find it.',
         'You are not sure whether people use something else already, or nothing at all.'
       ],
-      truth: '"Nothing" is usually wrong and always worth checking — a spreadsheet counts. Software with no distribution plan is a hobby with a deployment pipeline.',
-      bar: 'At $5 a month you need 200 paying customers for a $1,000 month. At $30 you need 34. At $500 you need two. Who you sell to changes the whole shape of the work, so your fit test asks first.'
+      truth: 'The build, the users and the requests in one place, with other members shipping software around a job.'
     },
     core: [
       stageQuestion('Where are you with it?', [
@@ -634,14 +627,13 @@ const PATHS = [
     blurb: 'You know you want to build something, but not what yet. Start here: weigh up a few options, run small tests, and let real conversations narrow it down.',
     marketing: {
       headline: 'Knowing you want out is enough to start. You do not need the idea yet.',
-      subhead: 'Start on the exploring path: a self-inventory, an options matrix to compare ideas, two-week experiments, and conversations with members that rule ideas in or out fast. It never picks for you — it helps you find out.',
+      subhead: 'A workspace for comparing ideas: a self-inventory, an options matrix, a board for small experiments, and members to talk them through with. It never picks for you.',
       pains: [
         'You want out of your job and every list of business ideas feels written for someone else.',
         'You have skills your employer profits from and no obvious way to sell them yourself.',
         'You are worried about picking wrong and losing a year of evenings to it.'
       ],
-      truth: 'Most people do not need more ideas. They need a way to rule ideas out quickly, because the scarce thing is not inspiration — it is the evenings between now and getting out.',
-      bar: 'Every path here has one number it turns on — followers, jobs a week, paying customers, takings through the till. Choosing a path is choosing which number your life gets measured by.'
+      truth: 'Compare your ideas side by side, write down what you try, and switch to a path whenever one fits.'
     },
     core: [
       stageQuestion('How set are you on doing something?', [

@@ -3,19 +3,8 @@ const paths = require('../paths');
 const dashboards = require('../path_dashboards');
 
 // Public landing pages, one per path.
-//
-// The quests on these pages are pulled LIVE from the same table the product
-// uses, filtered by the same path tag, so a curated row edited in the pool
-// changes the landing page too.
 
 const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
-
-async function challengesFor(sb, slug) {
-  const { data } = await sb.from('tailored_challenges')
-    .select('title, description, emoji, suggested_days, paths')
-    .eq('is_active', true).eq('source', 'curated').limit(200);
-  return (data || []).filter(c => (c.paths || []).includes(slug)).slice(0, 5);
-}
 
 router.get('/', (req, res) => {
   res.render('paths_index', {
@@ -33,8 +22,6 @@ router.get('/:slug', async (req, res, next) => {
     // public site, so it must not resolve to a half-empty page.
     if (!def || !def.marketing) return res.redirect('/paths');
 
-    const challenges = await challengesFor(req.sb, def.slug).catch(() => []);
-
     res.render('path_landing', {
       title: def.label + ' — your path',
       metaDescription: def.marketing.subhead.slice(0, 300),
@@ -43,7 +30,6 @@ router.get('/:slug', async (req, res, next) => {
       // What this path's dashboard is made of, from the same config members get.
       dash: dashboards.previewFor(def.slug),
       subpaths: paths.subpathsOf(def.slug),
-      challenges,
       others: paths.MARKETED.filter(p => p.slug !== def.slug)
     });
   } catch (e) { next(e); }

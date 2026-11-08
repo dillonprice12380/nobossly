@@ -2,9 +2,9 @@
 <div class="page-head">
   <div>
     <h1><svg class="icon icon-lg"><use href="#i-community"/></svg> Peer review</h1>
-    <p class="muted">Review someone else's work, get yours reviewed. Three reviews received clears “Get 3 Feedback Sessions” — the same quest you can also clear by talking to three people off-site.</p>
+    <p class="muted">Post your idea, page or pitch for other members to look over, and look over theirs.</p>
   </div>
-  <span class="chip <%= received >= needed ? 'chip-success' : '' %>"><%= received %>/<%= needed %> received</span>
+  <span class="chip"><%= received %> review<%= received === 1 ? '' : 's' %> received</span>
 </div>
 
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
@@ -13,7 +13,7 @@
   <p style="margin:0"><strong>👋 Founder-reviewed while we grow.</strong> NoBossly is new, so the queue is thin. Until there are enough members to keep it moving, the founder personally reviews every request posted here — usually within two days.</p>
 </div>
 <% if (typeof claimed !== 'undefined' && claimed) { %>
-  <p class="notice">🎯 Quest complete: <strong><%= claimed.title %></strong><% if (flags.ladder) { %> — +<%= claimed.xp_reward %> XP<% } %>. Three peers reviewed your work.</p>
+  <p class="notice">👥 Three members have now reviewed your work.</p>
 <% } %>
 
 <%# The queue first. A review queue with nothing in it teaches nobody anything,
@@ -69,19 +69,6 @@
         <% } %>
       </div>
     <% }) %>
-  </div>
-<% } %>
-
-<% if (typeof gate !== 'undefined' && gate && gateStatus !== 'completed') { %>
-  <div class="card" style="margin-top:1rem">
-    <h2 style="margin-top:0">🗣️ Or do it off-site — it counts the same</h2>
-    <p class="muted">“Get 3 Feedback Sessions” doesn't have to happen here. Talk to three real people about your idea — a potential customer, someone already doing what you want to do, and someone who will be honest with you. A call, a coffee or a long message thread all count.</p>
-    <p class="muted small">Then mark the quest complete with a short proof note: who you spoke to (role, not name), what they said, and what you'll change.</p>
-    <% if (gateStatus === 'active') { %>
-      <a class="btn btn-primary btn-sm" href="/quests">Log it on the quest →</a>
-    <% } else { %>
-      <form method="post" action="/quests/<%= gate.id %>/accept" class="inline"><input type="hidden" name="duration_days" value="30"><button class="btn btn-primary btn-sm">Take on the quest</button></form>
-    <% } %>
   </div>
 <% } %>
 

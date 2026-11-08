@@ -23,3 +23,9 @@ create table workspace_docs(id uuid primary key default gen_random_uuid(), user_
 alter table workspace_docs enable row level security;
 create policy workspace_docs_own on workspace_docs for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create table email_log(id uuid primary key default gen_random_uuid(), user_id uuid, to_email text, email_type text, subject text, status text, constraint email_log_email_type_check check (email_type is not null));
+-- Challenges (the weekly community challenge, migrations/2026-11-08).
+create table challenges(id uuid primary key default gen_random_uuid(), slug text unique, title text, description text, emoji text, challenge_type text, xp_reward integer, badge_id uuid, criteria jsonb, starts_at timestamptz, ends_at timestamptz, is_active boolean default true, position smallint, created_at timestamptz default now(), is_cohort boolean default false, requires_proof boolean default false, min_level integer default 1, max_level integer default 10);
+create table cohort_waitlist(user_id uuid not null, cohort_id uuid not null references challenges(id) on delete cascade, created_at timestamptz not null default now(), primary key (user_id, cohort_id));
+insert into challenges(slug, title, description, emoji, is_cohort, starts_at, ends_at) values
+  ('weekly-cohort-2026-11-02', 'Weekly Sprint Cohort — week of Nov 2', 'Start a 7-day sprint on Monday alongside everyone else in the cohort. Pick one thing that moves your business forward, break it into tasks, and check in as you go.', '🏃', true, '2026-11-02', '2026-11-09'),
+  ('validate', 'Validate your idea', 'Curated quest.', '🔬', false, null, null);

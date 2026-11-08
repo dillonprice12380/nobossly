@@ -35,30 +35,6 @@
 </section>
 <% } %>
 
-<% if (mk.bar) { %>
-<section class="card bar-card">
-  <h2>📐 The number this path turns on</h2>
-  <p class="pl-bar"><%= mk.bar %></p>
-  <p class="muted small" style="margin:.6rem 0 0">Rules of thumb, not laws &mdash; but a plan with no number in it is not a plan you can tell you are winning.</p>
-</section>
-<% } %>
-
-<% if (challenges.length) { %>
-<section>
-  <h2>⚔️ Challenges for this path</h2>
-  <p class="muted">Take one on alone or with a public cohort, then share your results.</p>
-  <div class="grid">
-    <% challenges.forEach(function (c) { %>
-      <div class="card ch-card">
-        <div class="ch-top"><span class="ch-emoji"><%= c.emoji %></span><% if (c.suggested_days) { %><span class="chip"><%= c.suggested_days %> days</span><% } %></div>
-        <h3><%= c.title %></h3>
-        <p class="muted small"><%= c.description %></p>
-      </div>
-    <% }) %>
-  </div>
-</section>
-<% } %>
-
 <% if (typeof dash !== 'undefined' && dash) { %>
 <section class="card">
   <h2>📊 Your dashboard on this path</h2>
@@ -67,14 +43,14 @@
     <div>
       <h3>Where you are</h3>
       <ol class="stage-list"><% dash.stages.forEach(function (s) { %><li><%= s %></li><% }) %></ol>
-      <p class="muted small" style="margin:.4rem 0 0">Your dashboard shows your stage and the next real step to take.</p>
+      <p class="muted small" style="margin:.4rem 0 0">Say which fits and your dashboard shows the numbers and boards for it.</p>
     </div>
     <div>
       <% if (dash.numbers.length) { %><h3>Your numbers</h3><ul class="dash-list"><% dash.numbers.forEach(function (n) { %><li><%= n %></li><% }) %></ul><% } %>
       <% if (dash.boards.length) { %><h3>Boards</h3><ul class="dash-list"><% dash.boards.forEach(function (b) { %><li><%= b.emoji %> <%= b.label %></li><% }) %></ul><% } %>
     </div>
     <div>
-      <% if (dash.checklists.length) { %><h3>Checklists</h3><ul class="dash-list"><% dash.checklists.forEach(function (c) { %><li><%= c %></li><% }) %></ul><% } %>
+      <% if (dash.checklists.length) { %><h3>Checklist templates</h3><ul class="dash-list"><% dash.checklists.forEach(function (c) { %><li><%= c %></li><% }) %></ul><% } %>
       <% if (dash.tools.length) { %><h3>Tools up front</h3><ul class="dash-list"><% dash.tools.forEach(function (t) { %><li><%= t.emoji %> <%= t.label %></li><% }) %></ul><% } %>
     </div>
   </div>
@@ -110,18 +86,12 @@
     margin: 1rem 0 0; padding: .85rem 1rem; border-left: 3px solid var(--accent);
     background: rgba(16,185,129,.08); border-radius: 0 10px 10px 0; font-weight: 500;
   }
-  .bar-card { border-left: 3px solid var(--accent); }
-  .pl-bar { margin: .6rem 0 0; font-size: 1.05rem; line-height: 1.55; }
   .sub-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .9rem; }
   .sub-chip {
     font-size: .88rem; padding: .35rem .7rem; border-radius: 999px;
     background: var(--panel-2); border: 1px solid var(--border);
   }
   .sub-chip:last-child { border-style: dashed; color: var(--muted); }
-  .ch-card { display: flex; flex-direction: column; gap: .3rem; }
-  .ch-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-  .ch-emoji { font-size: 1.5rem; }
-  .ch-card h3 { margin: 0; font-size: 1.02rem; }
   .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin-top: .8rem; }
   .dash-grid h3 { font-size: .95rem; margin: .2rem 0 .4rem; }
   .dash-list, .stage-list { margin: 0 0 .6rem; padding-left: 1.2rem; }

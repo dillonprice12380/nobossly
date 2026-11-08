@@ -1,5 +1,6 @@
 // The dashboard overview (views/dashboard.ejs): onboarding on top, then two
-// columns, the work on the left and quick glances on the right.
+// columns, the work on the left and quick glances on the right. A workspace,
+// not a coach: nothing on it tells a member what to do next.
 //
 //   node test/dashboard.js            (DASH_OUT=dir also writes the pages as HTML)
 
@@ -44,11 +45,11 @@ function fakeSb(rows = {}) {
     { id: 'n3', label: 'Freelance work', publisher: 'Entrepreneur', title: 'What Clients Need Before They Trust You With Sensitive Work', url: 'https://example.com/3', published_at: ago(26) }
   ];
   const checklist = { done: 3, total: 5, steps: [
-    { label: 'Pick your path', done: true, href: '/choose-path', cta: 'Pick' },
     { label: 'Set up your dashboard', done: true, href: '/choose-path/setup', cta: 'Set up' },
-    { label: 'Log your first number', done: true, href: '/workspace', cta: 'Log' },
-    { label: 'Accept your first quest', done: false, href: '/quests', cta: 'Browse quests' },
-    { label: 'Follow three members', done: false, href: '/members', cta: 'Find members' }
+    { label: 'Log a number or add a card to a board', done: true, href: '/workspace', cta: 'Open workspace' },
+    { label: 'Introduce yourself to the community', done: true, href: '/community/c/introductions', cta: 'Say hello' },
+    { label: 'Ask or answer a question in Q&A', done: false, href: '/community', cta: 'Open Q&A' },
+    { label: 'Follow three members', done: false, href: '/members', cta: 'Find people' }
   ] };
   const pinned = [{ id: 'a1', challenge_id: 'c1', duration_days: 7, due_date: '2026-11-09', challenge: { title: 'Send three cold pitches', emoji: '📨', xp_reward: 50, requires_proof: false } }];
   const coach = [
@@ -79,18 +80,18 @@ function fakeSb(rows = {}) {
   const main = html.slice(at(html, 'class="dash-main"'), at(html, 'class="dash-side"'));
   const side = html.slice(at(html, 'class="dash-side"'));
   ok('onboarding comes before the columns', at(html, 'Your first week') > 0 && at(html, 'Your first week') < at(html, 'class="dash"'));
-  ok('the checklist only lists what is left', !html.includes('Pick your path</span>') && html.includes('Accept your first quest') && html.includes('3 of 5 done'));
-  ok('the work is on the left: quests, your path, tools', ['Your freelancer dashboard', 'Active quests', 'Your tools'].every(s => main.includes(s)), ['Your freelancer dashboard', 'Active quests', 'Your tools'].map(s => at(main, s)).join(','));
-  ok('...in that order', at(main, 'Active quests') < at(main, 'Your freelancer dashboard') && at(main, 'Your freelancer dashboard') < at(main, 'Your tools'));
-  ok('glances are on the right: Got paid, nudges, news, your people', ['Got paid?', 'Nudges', 'News for your path', 'Your people'].every(s => side.includes(s)) && at(side, 'Got paid?') < at(side, 'Nudges') && at(side, 'Nudges') < at(side, 'News for your path') && at(side, 'News for your path') < at(side, 'Your people'));
-  ok('three nudges at most', html.includes('Three members on your path') && !html.includes('A fourth nudge'));
+  ok('the checklist only lists what is left', !html.includes('Set up your dashboard</span>') && html.includes('Ask or answer a question in Q&amp;A') && html.includes('3 of 5 done'));
+  ok('the work is on the left: your challenges, your path, tools', ['Your challenges', 'Your freelancer dashboard', 'Your tools'].every(s => main.includes(s)), ['Your challenges', 'Your freelancer dashboard', 'Your tools'].map(s => at(main, s)).join(','));
+  ok('...in that order', at(main, 'Your challenges') < at(main, 'Your freelancer dashboard') && at(main, 'Your freelancer dashboard') < at(main, 'Your tools'));
+  ok('glances are on the right: Got paid, news, your people', ['Got paid?', 'News for your path', 'Your people'].every(s => side.includes(s)) && at(side, 'Got paid?') < at(side, 'News for your path') && at(side, 'News for your path') < at(side, 'Your people'));
+  ok('no coaching: no nudges, no "Next:" step, no quests', !html.includes('Nudges') && !html.includes('Three members on your path') && !/Next:/.test(html) && !/\bquests?\b/i.test(html.replace(/\/quests/g, '')));
   ok('no lone "tasks done" tile when the ladder and sprints are off', !html.includes('class="stat-row"'));
   ok('Got paid still logs to the income log', side.includes('action="/budget/income"') && side.includes('name="from" value="dashboard"'));
 
   console.log('\nNew members and the switched-off features:');
   const fresh = render({ needsPath: true, yourPath: null, pathPanel: null, pathTools: dash.featuredFor(null), checklist: null, pinned: [], coach: [], feedPeek: [], following: false, pathNews: [] });
   ok('no path yet: "pick your path" leads the page', !fresh.startsWith('ERR') && fresh.includes('Start here: pick your path') && at(fresh, 'pick your path') < at(fresh, 'class="dash"'));
-  ok('...and empty cards stay away', !fresh.includes('Active quests') && !fresh.includes('Nudges') && !fresh.includes('News for your path'));
+  ok('...and empty cards stay away', !fresh.includes('Your challenges') && !fresh.includes('News for your path'));
   ok('...but Got paid and finding people are there', fresh.includes('Got paid?') && fresh.includes('Find members'));
   const flagsOn = Object.assign({}, FLAGS, { ladder: true, sprints: true, analytics: true });
   const weeks = Array.from({ length: 8 }, (_, i) => ({ label: 'W' + i, tasksDone: i, xp: i * 10 }));

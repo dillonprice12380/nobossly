@@ -124,12 +124,12 @@ module.exports = {
   slug: 'physical_product',
   intro: 'Design a real product, get it made, and get it into people\'s hands.',
   stages: [
-    { answer: 'Just an idea', next: 'Find twenty people who say they would buy it — and ask them what they use today.' },
-    { answer: 'Sketches or a concept', next: 'Make a rough working prototype, by hand or 3D printed.' },
-    { answer: 'Prototype made', next: 'Put it in ten people\'s hands, fix what they struggle with, and work out the landed cost.' },
-    { answer: 'Samples from a manufacturer', next: 'Pre-sell the first run, so customers fund the order.' },
-    { answer: 'Selling it', next: 'Get it into your first five independent shops.' },
-    { answer: 'In shops or retailers', next: 'Get reorders — the sign it sells without you there.' }
+    { answer: 'Just an idea' },
+    { answer: 'Sketches or a concept' },
+    { answer: 'Prototype made' },
+    { answer: 'Samples from a manufacturer' },
+    { answer: 'Selling it' },
+    { answer: 'In shops or retailers' }
   ],
   northStar: ({ stage }) => (SELLING.includes(stage) ? 'prod_units' : LATE.includes(stage) ? 'prod_preorders' : null),
   northStarChecklist: ({ stage }) => (SELLING.includes(stage) || LATE.includes(stage) ? null : 'prod_gates'),

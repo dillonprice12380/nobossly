@@ -1,5 +1,5 @@
-<%# The path's own dashboard (src/path_dashboards panelFor): where you are, your
-    number, your boards and your checklists. Pass it as `panel`, with `pathInfo`
+<%# The path's own dashboard (src/path_dashboards panelFor): where you say you
+    are, your numbers and your boards. Pass it as `panel`, with `pathInfo`
     ({ label, emoji }). %>
 <% var P = panel; %>
 <section class="card path-panel">
@@ -13,24 +13,15 @@
 
   <% if (P.notReady) { %><p class="muted small">Your boards and logs are being set up — they open shortly.</p><% } %>
 
-  <div class="pp-stage">
-    <ol class="pp-steps" aria-label="Stages">
-      <% P.stage.list.forEach(function (s, i) { %>
-        <li class="<%= i < P.stage.index ? 'done' : i === P.stage.index ? 'here' : '' %>"><span><%= s %></span></li>
-      <% }) %>
-    </ol>
-    <% if (P.stage.current) { %>
-      <p style="margin:.5rem 0 0"><strong>Next:</strong> <%= P.stage.next %><% if (P.stage.href) { %> <a href="<%= P.stage.href %>">Go →</a><% } %></p>
-    <% } else { %>
-      <p style="margin:.5rem 0 0"><a href="/choose-path/setup">Tell us where you are</a> and this shows your next real-world step.</p>
-    <% } %>
-  </div>
+  <p class="small" style="margin:.2rem 0 0">
+    <% if (P.stage.current) { %>Where you are: <span class="chip"><%= P.stage.current %></span> <a class="muted" href="/choose-path/setup">change</a>
+    <% } else { %><span class="muted">Say where you are in <a href="/choose-path/setup">path settings</a> and your numbers and boards fit it.</span><% } %>
+  </p>
 
-  <% if (P.north || P.northBoard || P.northChecklist || P.supporting.length) { %>
+  <% if (P.north || P.northBoard || P.supporting.length) { %>
     <h3 class="pp-h">Your numbers</h3>
     <div class="grid">
       <% if (P.north) { %><div class="pp-north"><%- include('metric_card', { card: P.north }) %></div><% } %>
-      <% if (P.northChecklist) { %><div class="pp-north"><%- include('checklist_card', { progress: P.northChecklist }) %></div><% } %>
       <% if (P.northBoard) { %><div class="pp-north"><%- include('board_summary', { summary: P.northBoard }) %></div><% } %>
       <% P.supporting.forEach(function (c) { %><%- include('metric_card', { card: c }) %><% }) %>
     </div>
@@ -41,18 +32,10 @@
     <div class="grid"><% P.boards.forEach(function (b) { %><%- include('board_summary', { summary: b }) %><% }) %></div>
   <% } %>
 
-  <% if (P.checklists.length) { %>
-    <h3 class="pp-h">Checklists</h3>
-    <div class="grid"><% P.checklists.forEach(function (c) { %><%- include('checklist_card', { progress: c }) %><% }) %></div>
-  <% } %>
+  <p class="muted small" style="margin:.8rem 0 0">Checklist templates are in <a href="/workspace">your workspace</a> when you want one.</p>
 </section>
 <style>
   .path-panel { border-top: 3px solid var(--accent); }
   .pp-h { font-size: 1rem; margin: 1rem 0 .4rem; display: flex; gap: .6rem; align-items: baseline; }
-  .pp-steps { list-style: none; padding: 0; margin: .3rem 0 0; display: flex; flex-wrap: wrap; gap: .3rem; counter-reset: st; }
-  .pp-steps li { counter-increment: st; font-size: .82rem; padding: .25rem .6rem; border: 1px solid var(--border); border-radius: 99px; color: var(--muted); }
-  .pp-steps li::before { content: counter(st) ". "; }
-  .pp-steps li.done { color: inherit; border-color: var(--accent-2); }
-  .pp-steps li.here { color: inherit; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
   .pp-north > .card { border-color: var(--accent); }
 </style>

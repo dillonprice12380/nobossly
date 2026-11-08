@@ -49,11 +49,11 @@ const p = t => `<p style="margin:0 0 13px;font-size:15px;line-height:1.62;color:
 
 const TEMPLATES = {
   welcome: name => ({
-    subject: 'Your way out starts with a path',
+    subject: 'Your NoBossly workspace is ready',
     html: shell(
       `Welcome, ${esc(name)}.`,
       p('You have an account, and NoBossly is free &mdash; every path and every tool.')
-      + p('Your dashboard is set up for the path you picked: the next steps to take, the boards and planning tools for that kind of business, and a community of people building the same way. Take one step tonight, after work.'),
+      + p('Your workspace is set up for the path you picked: the numbers, boards and tools for that kind of business, and a community of people building the same way.'),
       'Open my dashboard', SITE + '/dashboard')
   }),
 
@@ -62,16 +62,16 @@ const TEMPLATES = {
     html: shell(
       `Pick up where you left off, ${esc(name)}.`,
       p('Your account is ready. The only thing left is choosing your path &mdash; creator, freelancer, local service, online store and more. It takes a few seconds, and you can change it later.')
-      + p('Once it is picked, your dashboard fills in with the steps and tools for that path.'),
+      + p('Once it is picked, your workspace is set up with the numbers, boards and tools for that path.'),
       'Pick my path', SITE + '/choose-path')
   }),
 
   comeback: name => ({
-    subject: 'Your plan is still waiting',
+    subject: 'Your workspace is where you left it',
     html: shell(
       `Still here when you are, ${esc(name)}.`,
       p('Your path, your tasks and your workspace are exactly where you left them.')
-      + p('The fastest way back in is one small step &mdash; open your dashboard and do the next thing on it.'),
+      + p('Everything opens where you left it.'),
       'Open my dashboard', SITE + '/dashboard')
   }),
 

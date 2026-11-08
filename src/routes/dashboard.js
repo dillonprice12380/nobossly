@@ -4,7 +4,6 @@ const news = require('../news');
 const { awardXP, bumpStreak, ladderStatus } = require('../xp');
 const ladders = require('../ladders');
 const paths = require('../paths');
-const { getGuidance } = require('../guidance');
 const { sweepMilestones } = require('../milestones_engine');
 const { forLevel } = require('../unlocks');
 const { claimFeedbackGate } = require('./reviews');
@@ -58,14 +57,6 @@ router.get('/', async (req, res, next) => {
       tasks = t || [];
     }
 
-    // The Coach: rule-based, real-time guidance matched to exactly where this
-    // founder is — no AI calls, so it costs nothing and renders instantly.
-    const allActive = (acc || []).concat(customAcc || []);
-    const coach = await getGuidance(req.sb, req.user, p, {
-      sprint, acceptances: allActive, checkinToday: !!checkinToday,
-      ideasCount: 0, plan: res.locals.plan
-    });
-
     const lvls = ladders.ladderFor(p.path);
     const pathDef = paths.get(p.path);
     const yourPath = pathDef ? { label: pathDef.label, emoji: pathDef.emoji } : null;
@@ -115,7 +106,7 @@ router.get('/', async (req, res, next) => {
       // The path's featured workspace tools (src/path_dashboards).
       needsSetup: dashboards.needsSetup(p), pathTools: dashboards.featuredFor(p.path), pathPanel,
       pathNews, newsAgo: news.ago,
-      levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics, coach,
+      levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics,
       needsPath, checklist,
       // Suggested first tasks for a new sprint, matched to the member's path.
       sprintSuggestions: sprint ? [] : starter.forPath(p.path).slice(0, 5),
