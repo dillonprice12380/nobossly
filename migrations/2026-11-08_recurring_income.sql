@@ -1,4 +1,6 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; returned true). The column turned out to
+-- exist already from an older schema (nullable, default false), so this was a no-op; the
+-- code treats null as unticked.
 --
 -- A "Recurring" tick box on the income log (2026-11-08). Subscription and
 -- retainer payments are ticked; monthly recurring revenue on the Apps &
