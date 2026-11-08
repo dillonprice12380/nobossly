@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-08 (run in the SQL Editor; returned true).
 --
 -- Customize the dashboard (2026-11-08). A member can reorder and hide the
 -- dashboard's sections; their choice is kept on their profile as
