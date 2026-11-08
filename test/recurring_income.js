@@ -145,8 +145,8 @@ const pay = (amount, date, rec) => ({ user_id: 'me', entry_type: 'revenue', amou
   console.log('\nThe migration:');
   {
     const sql = read('migrations/2026-11-08_recurring_income.sql');
-    ok('it adds one column, unticked by default', /add column if not exists is_recurring boolean not null default false/.test(sql));
-    ok('it is marked as not applied yet, and listed as pending', /^-- NOT APPLIED/.test(sql) && JSON.parse(read('test/schema-pending.json')).migrations['2026-11-08_recurring_income.sql']);
+    ok('it adds one column, unticked by default (a no-op where it already exists)', /add column if not exists is_recurring boolean not null default false/.test(sql));
+    ok('it is marked as applied, and the column is in the schema snapshot', /^-- Applied live 2026-11-08/.test(sql) && !JSON.parse(read('test/schema-pending.json')).migrations['2026-11-08_recurring_income.sql'] && JSON.parse(read('test/schema-snapshot.json')).columns.revenue_entries.includes('is_recurring'));
   }
 
   console.log(fail ? `\n${fail} failed` : '\nAll good');
