@@ -5,5 +5,38 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-08_community.sql": {
+      "forum_threads": [
+        "accepted_reply_id"
+      ],
+      "forum_follows": [
+        "user_id",
+        "thread_id",
+        "created_at"
+      ],
+      "coworking_sessions": [
+        "id",
+        "host_id",
+        "title",
+        "about",
+        "starts_at",
+        "minutes",
+        "capacity",
+        "path",
+        "cancelled_at",
+        "created_at"
+      ],
+      "coworking_links": [
+        "session_id",
+        "link"
+      ],
+      "coworking_rsvps": [
+        "session_id",
+        "user_id",
+        "created_at",
+        "reminded_at"
+      ]
+    }
+  }
 }

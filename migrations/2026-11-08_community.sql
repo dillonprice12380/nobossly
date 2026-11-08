@@ -1,4 +1,4 @@
--- Applied live 2026-11-08 (run in the SQL Editor; returned true. Verified: five triggers, RLS on the co-working tables, anon cannot read forum_follows, existing threads followed by their askers).
+-- NOT APPLIED
 --
 -- Community, round 1 (2026-11-08): a better Q&A and co-working sessions.
 --
