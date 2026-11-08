@@ -160,11 +160,11 @@ module.exports = {
   slug: 'local_service',
   intro: 'Do good work for people nearby — and fill the week with it.',
   stages: [
-    { answer: 'Not started', next: 'Set your prices and minimum job, then do three jobs for people you know — and ask each for a review.' },
-    { answer: 'A few jobs for people I know', next: 'Get your first job from a stranger: a Google Business Profile and five reviews usually do it.' },
-    { answer: 'Regular work coming in', next: 'Turn one-off customers into regulars on a cycle — it smooths out the weeks.' },
-    { answer: 'Booked out', next: 'Raise your prices for new customers, or narrow your area so less of the day is driving.' },
-    { answer: 'Running it with help', next: 'Write down how each job is done so a helper can do it without you.' }
+    { answer: 'Not started' },
+    { answer: 'A few jobs for people I know' },
+    { answer: 'Regular work coming in' },
+    { answer: 'Booked out' },
+    { answer: 'Running it with help' }
   ],
   northStar: () => 'loc_jobs',
   supporting: () => ['loc_revenue', 'loc_repeat', 'loc_reviews'],

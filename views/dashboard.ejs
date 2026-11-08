@@ -24,12 +24,12 @@
 <%# Onboarding first: until a member has a path and a set-up dashboard, that is
     the one thing to do. The first-week checklist only lists what is left. %>
 <%# Picking a path is the only onboarding step left. It sits above everything
-    else because the quests, the ladder and the electives are all matched to it. %>
+    else because the dashboard, the tools and the news are all set up for it. %>
 <% if (typeof needsPath !== 'undefined' && needsPath) { %>
   <div class="card" style="border-color:var(--accent);display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
     <div style="flex:1;min-width:16rem">
       <h2 style="margin:0 0 .2rem">🧭 Start here: pick your path</h2>
-      <p class="muted small" style="margin:0">This is what your quests<% if (flags.ladder) { %>, ladder<% } %> and electives are matched to. Takes ten seconds.</p>
+      <p class="muted small" style="margin:0">Your dashboard, workspace tools and news are set up for the kind of business you pick. Takes ten seconds.</p>
     </div>
     <a class="btn btn-primary" style="flex:none" href="/choose-path">Choose →</a>
   </div>
@@ -74,22 +74,22 @@
 <div class="dash-main">
 <% if (typeof pinned !== 'undefined' && pinned.length) { %>
   <div class="card challenge-pin">
-    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Active quests</h2>
+    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Your challenges</h2>
     <% (typeof pinned !== 'undefined' ? pinned : []).forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/quests/custom/' + a.id : '/quests/' + a.challenge_id; const needsProof = !a.custom && a.challenge.requires_proof; %>
       <div class="milestone-row">
-        <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Quest' %></strong>
-        <p class="muted small"><%= a.duration_days %>-day quest · due <%= a.due_date %> · <%= days >= 0 ? days + ' days left' : Math.abs(days) + ' days overdue' %><% if (flags.ladder) { %> · ⚡ <%= a.challenge.xp_reward || 0 %> XP<% } %><%= a.custom ? ' · 🎯 elective' : '' %><%= needsProof ? ' · 🎮 proof needed' : '' %></p>
+        <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
+        <p class="muted small">ends <%= a.due_date %> · <%= days >= 0 ? days + (days === 1 ? ' day left' : ' days left') : Math.abs(days) + (days === -1 ? ' day past' : ' days past') %></p>
         <% if (needsProof) { %>
           <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
             <input type="hidden" name="from" value="dashboard">
-            <textarea name="proof_note" rows="2" required minlength="25" placeholder="Proof note to complete: who, what, result — a few honest sentences."></textarea>
-            <button class="btn btn-primary btn-sm" style="margin-top:.35rem">Done!</button>
+            <textarea name="proof_note" rows="2" required minlength="25" placeholder="What you set out to do, and what got done. A few honest sentences."></textarea>
+            <button class="btn btn-primary btn-sm" style="margin-top:.35rem">Finish</button>
           </form>
         <% } %>
         </div>
         <div class="cta-row" style="margin:0">
-          <% if (!needsProof) { %><form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Done!</button></form><% } %>
-          <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('Abandon this quest? It comes off your board and you can re-accept it later.')"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Abandon</button></form>
+          <% if (!needsProof) { %><form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Finish</button></form><% } %>
+          <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('Leave this challenge?')"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Leave</button></form>
         </div>
       </div>
     <% }) %>
@@ -179,20 +179,6 @@
     </div>
   </form>
 </div>
-
-<%# Rule-matched nudges for exactly where this member is right now — no AI, just
-    rules matched to their rung, sprint and streak. %>
-<% if (typeof coach !== 'undefined' && coach && coach.length) { %>
-  <div class="card coach-card" style="border-left:3px solid var(--accent)">
-    <h2>🎙️ Nudges</h2>
-    <% coach.slice(0, 3).forEach(function (t) { %>
-      <div class="milestone-row">
-        <p style="margin:.25rem 0"><%= t.message %></p>
-        <% if (t.cta_href) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= t.cta_href %>"><%= t.cta_label || 'Go' %></a><% } %>
-      </div>
-    <% }) %>
-  </div>
-<% } %>
 
 <% if (typeof pathNews !== 'undefined' && pathNews && pathNews.length) { %>
   <%- include('partials/news_card', { news: pathNews, ago: newsAgo }) %>

@@ -1,78 +1,55 @@
 const router = require('express').Router();
 const pi = require('../personal_info_filter');
 const { awardXP } = require('../xp');
-const ladders = require('../ladders');
 const { notifySocial } = require('../notify');
 const activity = require('../activity');
-const { planOf } = require('../middleware/auth');
-const { getElectives } = require('../tailor');
 
 const { quiet } = require('../db');
-const isPaid = req => planOf(req.profile) === 'paid';
 const nameOf = req => (req.profile.display_name || req.profile.username || 'A member');
 const cleanDuration = v => [30, 60, 90].includes(parseInt(v, 10)) ? parseInt(v, 10) : 30;
 
+// Challenges are community events now: the weekly cohorts members join
+// together. The curated quest library and the electives were retired
+// (2026-11-08) because NoBossly is a workspace and a community, not a program
+// that tells people what to do next; anything a member already has open stays
+// here until they finish or leave it.
 router.get('/', async (req, res, next) => {
   try {
-    const paid = isPaid(req);
-    const level = req.profile.current_level || 1;
-
-    const [{ data: challenges }, { data: acc }, { data: custom }, { data: sprint }] = await Promise.all([
-      req.sb.from('challenges').select('*').eq('is_active', true).order('position'),
+    const [{ data: challenges }, { data: acc }, { data: custom }] = await Promise.all([
+      req.sb.from('challenges').select('*').order('position'),
       req.sb.from('challenge_acceptances').select('*').eq('user_id', req.user.id),
-      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).order('created_at'),
-      req.sb.from('sprints').select('*').eq('user_id', req.user.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      req.sb.from('user_custom_challenges').select('*').eq('user_id', req.user.id).order('created_at')
     ]);
     const accMap = {};
     (acc || []).forEach(a => accMap[a.challenge_id] = a);
-
-    // Core challenges are for everyone, but only the ones that fit this
-    // founder's current level — plus anything they've already accepted or
-    // completed, which stays visible regardless of the band it came from.
-    const inBand = c => c.min_level <= level && level <= c.max_level;
-    // A gate written for another path is not this member's quest. Anything they
-    // already accepted stays visible either way — a board that removes work
-    // someone is part-way through is worse than one showing a stray card.
-    const foreign = ladders.foreignGateTitles(req.profile.path, 'challenge');
-    const mine = c => !foreign.has(String(c.title || '').trim().toLowerCase());
-    const all = (challenges || []).filter(c => (c.is_cohort || accMap[c.id] || inBand(c)) && (accMap[c.id] || mine(c)));
-
-    // Accepted-and-active challenges float to the top, completed sink to the
-    // bottom, everything else keeps its curated position in between.
-    const rank = c => {
-      const a = accMap[c.id];
-      if (a && a.status === 'active') return 0;
-      if (a && a.status === 'completed') return 2;
-      return 1;
-    };
-    const sorted = arr => arr.slice().sort((x, y) => rank(x) - rank(y) || (x.position || 0) - (y.position || 0));
-
-    // Electives, matched to path/subpath and business tags — no AI, just the
-    // curated pool in tailored_challenges.
-    let electives = [], unclassified = false;
-    try { ({ electives, unclassified } = await getElectives(req.sb, { ...req.profile, id: req.user.id }, level)); }
-    catch (e) { console.error('electives', e); }
+    const byId = {};
+    (challenges || []).forEach(c => byId[c.id] = c);
 
     // Cohorts: an ended one is only worth showing to someone who took part.
     // Everyone else sees what is live or coming up next.
     const now = Date.now();
     const ended = c => c.ends_at && new Date(c.ends_at).getTime() < now;
-    const cohorts = all.filter(c => c.is_cohort && (!ended(c) || accMap[c.id]))
-      .sort((x, y) => rank(x) - rank(y) || String(x.starts_at || '').localeCompare(String(y.starts_at || '')));
+    const cohorts = (challenges || []).filter(c => c.is_cohort && c.is_active && (!ended(c) || accMap[c.id]))
+      .sort((x, y) => String(x.starts_at || '').localeCompare(String(y.starts_at || '')));
     const { data: waits } = await req.sb.from('cohort_waitlist').select('cohort_id').eq('user_id', req.user.id);
     const waiting = new Set((waits || []).map(w => w.cohort_id));
 
+    // What this member has open, whichever kind it is.
+    const open = (acc || []).filter(a => a.status === 'active' && byId[a.challenge_id])
+      .map(a => ({ kind: byId[a.challenge_id].is_cohort ? 'cohort' : 'core', ch: byId[a.challenge_id], due: a.due_date }))
+      .concat((custom || []).filter(c => c.status === 'active').map(c => ({ kind: 'custom', ch: c, due: c.due_date })))
+      .sort((x, y) => String(x.due || '9999').localeCompare(String(y.due || '9999')));
+    const finished = (acc || []).filter(a => a.status === 'completed' && byId[a.challenge_id]).map(a => byId[a.challenge_id])
+      .concat((custom || []).filter(c => c.status === 'completed'));
+
     res.render('challenges', {
-      title: 'Challenges',
-      challenges: sorted(all.filter(c => !c.is_cohort)),
-      cohorts, waiting,
-      accMap, paid, custom: custom || [], sprint: sprint || null,
-      electives, unclassified, level,
-      msg: req.query.msg || null,
-      streak: { days: req.profile.streak_days || 0, longest: req.profile.longest_streak || 0 }
+      title: 'Challenges', cohorts, waiting, accMap, open, finished,
+      msg: req.query.msg || null
     });
   } catch (e) { next(e); }
 });
+
+const RETIRED = '/quests?msg=' + encodeURIComponent('That challenge has been retired. The weekly community challenges are below.');
 
 // ---------- Quest soundbites ----------
 const SOUND_KEYS = {
@@ -141,6 +118,7 @@ router.post('/:id/accept', async (req, res, next) => {
   try {
     let duration = cleanDuration(req.body.duration_days);
     const { data: ch } = await req.sb.from('challenges').select('id, title, is_cohort, starts_at, ends_at').eq('id', req.params.id).maybeSingle();
+    if (ch && !ch.is_cohort) return res.redirect(RETIRED);
     if (ch) {
       let due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
       if (ch.is_cohort) {
@@ -158,8 +136,8 @@ router.post('/:id/accept', async (req, res, next) => {
       } else {
         await req.sb.from('challenge_acceptances').insert({ user_id: req.user.id, challenge_id: ch.id, duration_days: duration, due_date: due });
       }
-      await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + ch.title, 'challenges', ch.id);
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest “' + ch.title + '”', 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Joined challenge: ' + ch.title, 'challenges', ch.id);
+      await notifySocial(req.sb, req.user.id, nameOf(req) + ' joined the challenge “' + ch.title + '”', 'challenges', ch.id);
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
   } catch (e) { next(e); }
@@ -186,21 +164,21 @@ router.post('/:id/finish', async (req, res, next) => {
     });
     if (doneErr) console.error('[db] complete_quest_for failed:', doneErr.message);
     if (done && done.reason === 'needs_proof') {
-      return res.redirect('/quests?msg=' + encodeURIComponent('“' + done.title + '” is a quest — add a short proof note (who, what, result) to complete it. A few honest sentences is all it takes.'));
+      return res.redirect('/quests?msg=' + encodeURIComponent('To finish “' + done.title + '”, add a short note on what you set out to do and what got done.'));
     }
     if (done && done.ok) {
       const ch = { id: req.params.id, title: done.title, emoji: done.emoji,
                    badge_id: done.badge_id, requires_proof: done.requires_proof };
       if (ch.requires_proof && proof) {
         await req.sb.from('wins').insert({
-          user_id: req.user.id, title: '🏆 Quest complete: ' + ch.title,
+          user_id: req.user.id, title: '🏆 Challenge done: ' + ch.title,
           category: 'challenge', story: proof.slice(0, 1000)
         }).then(...quiet('wins.insert'));
       }
-      await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed quest: ' + ch.title, 'challenges', ch.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'quest_completed', 'Completed challenge: ' + ch.title, 'challenges', ch.id);
       // Every completion is now visible on the feed — seeing what people you
       // follow are working on is the point of the community, not a paid perk.
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest “' + ch.title + '” 🎉', 'challenges', ch.id);
+      await notifySocial(req.sb, req.user.id, nameOf(req) + ' finished the challenge “' + ch.title + '” 🎉', 'challenges', ch.id);
       await activity.record(req.sb, req.user.id, 'challenge', 'completed “' + ch.title + '”', { emoji: ch.emoji || '🏁', entityType: 'challenges', entityId: ch.id });
       if (ch.badge_id) {
         const { data: hasBadge } = await req.sb.from('user_badges').select('id').eq('user_id', req.user.id).eq('badge_id', ch.badge_id).maybeSingle();
@@ -222,50 +200,19 @@ router.post('/:id/abandon', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ---------- Tailored electives ----------
-router.post('/tailored/:id/accept', async (req, res, next) => {
-  try {
-    const { data: t } = await req.sb.from('tailored_challenges').select('*').eq('id', req.params.id).eq('is_active', true).maybeSingle();
-    if (!t) return res.redirect('/quests');
-    const { data: existing } = await req.sb.from('user_custom_challenges').select('id, status').eq('user_id', req.user.id).eq('tailored_id', t.id).maybeSingle();
-    if (existing) return res.redirect('/quests');
-    const duration = cleanDuration(req.body.duration_days || t.suggested_days);
-    await req.sb.from('user_custom_challenges').insert({
-      user_id: req.user.id, tailored_id: t.id,
-      title: t.title, description: t.description, emoji: t.emoji,
-      xp_reward: t.xp_reward, suggested_days: t.suggested_days,
-      status: 'active', duration_days: duration,
-      due_date: new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10),
-      accepted_at: new Date().toISOString()
-    });
-    await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + t.title, 'tailored_challenges', t.id);
-    await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest “' + t.title + '”', 'tailored_challenges', t.id);
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
-  } catch (e) { next(e); }
-});
-
-// Accept/finish/abandon a personal challenge (an accepted elective).
-router.post('/custom/:id/accept', async (req, res, next) => {
-  try {
-    const duration = cleanDuration(req.body.duration_days);
-    const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
-    if (c && c.status !== 'completed') {
-      const due = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 10);
-      await req.sb.from('user_custom_challenges').update({ status: 'active', duration_days: duration, due_date: due, accepted_at: new Date().toISOString(), completed_at: null }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, 'quest_accepted', 'Accepted quest: ' + c.title, 'user_custom_challenges', c.id);
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' took on the quest “' + c.title + '”', 'user_custom_challenges', c.id);
-    }
-    res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');
-  } catch (e) { next(e); }
-});
+// ---------- Electives (retired 2026-11-08) ----------
+// Taking on a new elective, or re-opening one, is no longer offered. Members
+// can still finish or leave the ones they have open.
+router.post('/tailored/:id/accept', (req, res) => res.redirect(RETIRED));
+router.post('/custom/:id/accept', (req, res) => res.redirect(RETIRED));
 
 router.post('/custom/:id/finish', async (req, res, next) => {
   try {
     const { data: c } = await req.sb.from('user_custom_challenges').select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
     if (c && c.status === 'active') {
       await req.sb.from('user_custom_challenges').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', c.id);
-      await awardXP(req.sb, req.user.id, req.profile, 'custom_quest_completed', 'Completed quest: ' + c.title, 'user_custom_challenges', c.id);
-      await notifySocial(req.sb, req.user.id, nameOf(req) + ' completed the quest “' + c.title + '” 🎉', 'user_custom_challenges', c.id);
+      await awardXP(req.sb, req.user.id, req.profile, 'custom_quest_completed', 'Completed challenge: ' + c.title, 'user_custom_challenges', c.id);
+      await notifySocial(req.sb, req.user.id, nameOf(req) + ' finished the challenge “' + c.title + '” 🎉', 'user_custom_challenges', c.id);
       await activity.record(req.sb, req.user.id, 'challenge', 'completed “' + c.title + '”', { emoji: c.emoji || '🏁', entityType: 'user_custom_challenges', entityId: c.id });
     }
     res.redirect(req.body.from === 'dashboard' ? '/dashboard' : '/quests');

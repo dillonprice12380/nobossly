@@ -10,7 +10,7 @@
 // decides what is featured, never what is allowed.
 
 const paths = require('../paths');
-const { registry, pipeline, metrics, checklists } = require('../engines');
+const { registry, pipeline, metrics } = require('../engines');
 const { missing } = require('../engines/errors');
 const { WORKSHEETS } = require('../workspace/worksheets');
 
@@ -162,7 +162,7 @@ function needsSetup(profile) {
 }
 
 // ------------------------------------------------------------------------
-// The path's own dashboard: stage, number, boards and checklists.
+// The path's own dashboard: your stage, your numbers and your boards.
 
 const dashboardFor = slug => DASHBOARDS[slug] || null;
 
@@ -187,16 +187,12 @@ function pathItemsFor(profile) {
   };
 }
 
-// Where the member is on the path's stages, and the next real-world step.
+// Where the member says they are on the path. A status they set in path
+// settings (it picks which numbers and boards show), never advice on what to
+// do next.
 function stageOf(d, ctx) {
   const i = d.stages.findIndex(s => s.answer === ctx.stage);
-  return {
-    list: d.stages.map(s => s.answer),
-    index: i,
-    current: i >= 0 ? d.stages[i] : null,
-    next: i >= 0 ? d.stages[i].next : d.stages[0].next,
-    href: i >= 0 ? d.stages[i].href || null : null
-  };
+  return { list: d.stages.map(s => s.answer), index: i, current: i >= 0 ? d.stages[i].answer : null };
 }
 
 // A board can be the north star — fixed (exploring's experiments) or by stage
@@ -216,24 +212,20 @@ async function panelFor(sb, userId, profile, now = new Date()) {
     return null;
   });
   const north = d.northStar(ctx);
-  // Before there is a number to log (a product still in development), a path
-  // can make a checklist its north star instead.
-  const northList = d.northStarChecklist ? d.northStarChecklist(ctx) : null;
   const northBoardKey = northBoardOf(d, ctx);
-  const [northCard, supporting, northBoard, northChecklist, boards, lists] = await Promise.all([
+  // Checklists are optional templates in the workspace, so the dashboard shows
+  // only the member's own numbers and boards.
+  const [northCard, supporting, northBoard, boards] = await Promise.all([
     north ? safe(metrics.card(sb, userId, north, 6, now)) : null,
     Promise.all(d.supporting(ctx).map(k => safe(metrics.card(sb, userId, k, 6, now)))),
     northBoardKey ? safe(pipeline.summary(sb, userId, northBoardKey)) : null,
-    northList ? safe(checklists.progress(sb, userId, northList, now)) : null,
-    Promise.all(d.boards(ctx).filter(k => k !== northBoardKey).map(k => safe(pipeline.summary(sb, userId, k)))),
-    Promise.all(d.checklists(ctx).filter(k => k !== northList).map(k => safe(checklists.progress(sb, userId, k, now))))
+    Promise.all(d.boards(ctx).filter(k => k !== northBoardKey).map(k => safe(pipeline.summary(sb, userId, k))))
   ]);
   return {
     slug: d.slug, intro: d.intro, stage: stageOf(d, ctx),
-    north: northCard, northBoard, northChecklist,
+    north: northCard, northBoard,
     supporting: supporting.filter(Boolean),
     boards: boards.filter(Boolean),
-    checklists: lists.filter(Boolean),
     notReady
   };
 }

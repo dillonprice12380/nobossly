@@ -116,11 +116,11 @@ module.exports = {
   slug: 'creator',
   intro: 'Make things people come back for, then turn that attention into income.',
   stages: [
-    { answer: 'Not started — no audience yet', next: 'Publish your first piece this week, then one more every week for a month.' },
-    { answer: 'Posting occasionally', next: 'Pick a cadence you can keep and hit it four weeks running.' },
-    { answer: 'Posting consistently, no income', next: 'Earn your first dollar: one affiliate link, one small product, or one brand pitch.' },
-    { answer: 'Earning something', next: 'Hit a $1,000 month — usually a second income source, not more of the first.' },
-    { answer: 'This is my main income', next: 'Three $1,000+ months in a row, and write down how you make each piece so someone could help.' }
+    { answer: 'Not started — no audience yet' },
+    { answer: 'Posting occasionally' },
+    { answer: 'Posting consistently, no income' },
+    { answer: 'Earning something' },
+    { answer: 'This is my main income' }
   ],
   northStar: ({ subpath }) => AUDIENCE[subpath] || 'creator_followers',
   supporting: ({ subpath }) => ['creator_income', 'creator_published']

@@ -5,6 +5,10 @@ const income = require('../income');
 const calc = require('../tools_calc');
 const premium = require('../premium');
 const dashboards = require('../path_dashboards');
+const { FLAGS } = require('../features');
+// "Your income log shows a money rung: claim it" belongs to the levels system;
+// with levels off there is nothing to claim.
+const claimsFor = (path, sum, done) => (FLAGS.ladder || FLAGS.trophies ? income.claimPrompts(path, sum, done) : []);
 
 const isPaid = req => planOf(req.profile) === 'paid';
 
@@ -33,7 +37,7 @@ async function loadBudget(req, extra = {}) {
   return Object.assign({
     title: 'Money', budgets: budgets || [], expenses: expenses || [],
     incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
-    claims: income.claimPrompts(req.profile.path, sum, done),
+    claims: claimsFor(req.profile.path, sum, done),
     spentByCat, totalSpent, totalBudget, cats,
     monthLabel: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
     paid: isPaid(req), msg: req.query.msg || null, insights: null,
@@ -144,7 +148,7 @@ router.post('/income', async (req, res, next) => {
     // Say what to put aside, and whether that payment just reached a money
     // rung the member has not recorded yet.
     const [log, done, rate] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req)]);
-    const claims = income.claimPrompts(req.profile.path, income.summary(log.income, log.expenses), done);
+    const claims = claimsFor(req.profile.path, income.summary(log.income, log.expenses), done);
     let m = 'Logged ' + money(amount) + '. Put about ' + money(amount * rate / 100) + ' of it aside for tax.';
     if (claims.length) m += ' Your income log shows “' + claims[0].title + '” — ' + claims[0].how + '.';
     res.redirect(to + '?msg=' + encodeURIComponent(m));

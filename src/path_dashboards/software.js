@@ -127,12 +127,12 @@ module.exports = {
   slug: 'software',
   intro: 'Build software people use — and then pay for.',
   stages: [
-    { answer: 'Just an idea', next: 'Talk to ten people with the problem before writing any code.' },
-    { answer: 'Designing it', next: 'Cut it to the smallest version that solves the problem, and set a ship date.' },
-    { answer: 'Building it', next: 'Ship something usable within 30 days, even if it is rough.' },
-    { answer: 'Live with no users', next: 'Get five real users and watch them use it without helping.' },
-    { answer: 'Live with users', next: 'Make your first sale — ask your most active user to pay.' },
-    { answer: 'Paying customers', next: 'Reach ten paying customers, then $1,000 MRR.' }
+    { answer: 'Just an idea' },
+    { answer: 'Designing it' },
+    { answer: 'Building it' },
+    { answer: 'Live with no users' },
+    { answer: 'Live with users' },
+    { answer: 'Paying customers' }
   ],
   northStar: ({ stage }) => (stage === 'Paying customers' ? 'sw_paying' : LIVE.includes(stage) ? 'sw_active' : 'sw_waitlist'),
   supporting: ({ stage }) => (stage === 'Paying customers' ? ['sw_mrr', 'sw_active', 'sw_churn']

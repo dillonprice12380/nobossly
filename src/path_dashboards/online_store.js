@@ -131,11 +131,11 @@ module.exports = {
   slug: 'online_store',
   intro: 'Sell products online — and keep enough of each sale to make it worth it.',
   stages: [
-    { answer: 'Just an idea', next: 'Choose one product and work out what is left after every cost before you buy stock.' },
-    { answer: 'Product chosen, nothing listed', next: 'List it on one channel with three good photos this week.' },
-    { answer: 'Listed, no sales yet', next: 'Make your first sale: share it with ten people who would genuinely want it.' },
-    { answer: 'A few sales', next: 'Find the one channel that sells, and run small marketing tests there.' },
-    { answer: 'Selling regularly', next: 'Hit a $1,000 profit month, then a second product for the customers you already have.' }
+    { answer: 'Just an idea' },
+    { answer: 'Product chosen, nothing listed' },
+    { answer: 'Listed, no sales yet' },
+    { answer: 'A few sales' },
+    { answer: 'Selling regularly' }
   ],
   northStar: () => 'shop_orders',
   supporting: () => ['shop_revenue', 'shop_margin', 'shop_aov'],
