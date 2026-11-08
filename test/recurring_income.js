@@ -139,6 +139,16 @@ const pay = (amount, date, rec) => ({ user_id: 'me', entry_type: 'revenue', amou
     ok('...and, before there is one, how to get one', html2.includes('Tick Recurring when you log a subscription payment'));
     const page = read('views/workspace/metric.ejs');
     ok('the number\'s own page explains where it comes from, and that typing replaces it', /This fills in from your/.test(page) && /replaces the income log/.test(page));
+    const fmt = require('../src/engines/format');
+    const pageBase = { title: 'T', user: { id: 'me' }, profile: { id: 'me', username: 'me' }, plan: 'free', currentPath: '/workspace/metrics/sw_mrr', canonicalUrl: 'x', unreadCount: 0, unreadMsgs: 0, metaDescription: '', bodyTheme: '', settings: {}, pendingDeletion: null, reactivated: false, isPremium: false, flags: FLAGS, flashErr: null, premiumTools: [], msg: null, affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false } };
+    for (const key of ['sw_mrr', 'fl_income']) {
+      const d = registry.metric(key);
+      let out;
+      try {
+        out = ejs.render(page, Object.assign({}, pageBase, { def: d, root: '/workspace', fmt, notReady: false, periodValue: '2026-11', periodLabel: 'November 2026', card: metrics.present(d, [{ period: '2026-11-01', label: 'Nov', value: 58, source: 'income' }]), history: [{ id: null, period: '2026-11-01', value: 58, label: 'November 2026', note: 'From your income log' }] }), { filename: path.join(ROOT, 'views/workspace/metric.ejs') });
+      } catch (e) { out = 'ERR ' + e.message; }
+      ok(`${key}: the page renders its explanation as text, with no HTML tags showing`, !out.startsWith('ERR') && /This fills in from your/.test(out) && !/&lt;\/?strong&gt;/.test(out), out.startsWith('ERR') ? out.slice(0, 200) : undefined);
+    }
     ok('months filled from the log show in its history, without a delete button', /From your income log/.test(read('src/routes/boards.js')) && /<% if \(h\.id\) \{ %>/.test(page));
   }
 
