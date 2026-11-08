@@ -1,0 +1,23 @@
+<%# What the people you follow have been doing. Five rows; the rest is /feed. %>
+<% if (typeof feedPeek !== 'undefined' && feedPeek && feedPeek.length) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2 style="margin:0">👥 Your people</h2></div>
+      <a class="btn btn-ghost btn-sm" href="/feed">See all</a>
+    </div>
+    <% feedPeek.forEach(function (ev) { %>
+      <div class="milestone-row">
+        <p style="margin:.25rem 0">
+          <a href="/members/<%= ev.who.username %>"><strong><%= ev.who.display_name || ev.who.username %></strong></a>
+          <%= ev.emoji ? ' ' + ev.emoji : '' %> <%= ev.title %>
+        </p>
+      </div>
+    <% }) %>
+  </div>
+<% } else if (typeof following !== 'undefined' && !following) { %>
+  <div class="card">
+    <h2>👥 Your people</h2>
+    <p class="muted small" style="margin:.3rem 0 0">Follow a few members and their real wins land here: first customer, first non-salary dollar, the day they hand in their notice.</p>
+    <a class="btn btn-ghost btn-sm" style="margin-top:.7rem;display:inline-block" href="/members">Find members →</a>
+  </div>
+<% } %>

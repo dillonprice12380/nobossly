@@ -182,4 +182,11 @@ async function doneTitles(req) {
   return out;
 }
 
-module.exports = { MONEY_GATES, byMonth, summary, gatesOnPath, claimPrompts, nextMoneyRung, load, payments, doneTitles, addMonths, thisMonth };
+// The share of each payment to put aside for tax: the member's own rates if they
+// set them in Tax Set-Aside, otherwise self-employment tax plus the 12% bracket.
+async function setAsideRate(req) {
+  const tax = await require('./premium').load(req, 'tax');
+  return require('./tools_calc').taxRate(tax.settings || {});
+}
+
+module.exports = { MONEY_GATES, byMonth, summary, gatesOnPath, claimPrompts, nextMoneyRung, load, payments, doneTitles, addMonths, thisMonth, setAsideRate };

@@ -1,0 +1,10 @@
+<% if (typeof pathTools !== 'undefined' && pathTools.length) { %>
+  <div class="card">
+    <div class="page-head" style="margin:0 0 .5rem"><div><h2 style="margin:0">🧰 Your tools</h2><p class="muted small" style="margin:.15rem 0 0"><%= yourPath ? 'Picked for your path.' : 'A good place to start.' %></p></div><a class="btn btn-ghost btn-sm" href="/workspace">All tools</a></div>
+    <div class="dash-tools">
+      <% pathTools.forEach(function (t) { %>
+        <a class="dash-tool" href="<%= t.href %>" title="<%= t.blurb %>"><span><%= t.emoji %></span> <%= t.label %></a>
+      <% }) %>
+    </div>
+  </div>
+<% } %>

@@ -68,197 +68,28 @@
 </div>
 <% } %>
 
-<%# Two columns: the work on the left, quick glances on the right. On a phone
-    the right column follows the left. %>
+<%# The sections, in the member's own order (src/dashboard_layout.js; they
+    choose it at /dashboard/customize). Across the top: money and the week
+    ahead. Below: the work on the left, quick glances on the right. On a phone
+    it is one column, ordered by --m-order: the top cards, Got paid, the work,
+    then the rest. A section with nothing to show leaves no gap. %>
+<% var L = (typeof layout !== 'undefined' && layout) ? layout : { top: [], main: [], side: [], mobileOrder: {} };
+   var section = function (k) {
+     var h = include('dashboard/sections/' + k);
+     return h.trim() ? '<div class="dash-sec dash-sec-' + k + '" style="--m-order:' + (L.mobileOrder[k] || 99) + '">' + h + '</div>' : '';
+   };
+   var top = L.top.map(section).filter(Boolean); %>
 <div class="dash">
+<% if (top.length) { %><div class="dash-top<%= top.length === 1 ? ' one' : '' %>"><%- top.join('\n') %></div><% } %>
 <div class="dash-main">
-<% if (typeof pinned !== 'undefined' && pinned.length) { %>
-  <div class="card challenge-pin">
-    <h2><svg class="icon icon-lg"><use href="#i-challenge"/></svg> Your challenges</h2>
-    <% (typeof pinned !== 'undefined' ? pinned : []).forEach(a => { const days = Math.ceil((new Date(a.due_date) - Date.now()) / 86400000); const base = a.custom ? '/quests/custom/' + a.id : '/quests/' + a.challenge_id; const needsProof = !a.custom && a.challenge.requires_proof; %>
-      <div class="milestone-row">
-        <div style="flex:1"><strong><%= (a.challenge.emoji || '🏁') %> <%= a.challenge.title || 'Challenge' %></strong>
-        <p class="muted small">ends <%= a.due_date %> · <%= days >= 0 ? days + (days === 1 ? ' day left' : ' days left') : Math.abs(days) + (days === -1 ? ' day past' : ' days past') %></p>
-        <% if (needsProof) { %>
-          <form method="post" action="<%= base %>/finish" style="margin:.35rem 0 0">
-            <input type="hidden" name="from" value="dashboard">
-            <textarea name="proof_note" rows="2" required minlength="25" placeholder="What you set out to do, and what got done. A few honest sentences."></textarea>
-            <button class="btn btn-primary btn-sm" style="margin-top:.35rem">Finish</button>
-          </form>
-        <% } %>
-        </div>
-        <div class="cta-row" style="margin:0">
-          <% if (!needsProof) { %><form method="post" action="<%= base %>/finish" class="inline"><input type="hidden" name="from" value="dashboard"><button class="btn btn-primary btn-sm">Finish</button></form><% } %>
-          <form method="post" action="<%= base %>/abandon" class="inline" onsubmit="return confirm('Leave this challenge?')"><input type="hidden" name="from" value="dashboard"><button class="btn btn-ghost btn-sm">Leave</button></form>
-        </div>
-      </div>
-    <% }) %>
-  </div>
-<% } %>
-
-<% if (flags.sprints) { %>
-<a id="sprint"></a>
-<% if (sprint) { %>
-  <div class="card" id="sprint-card">
-    <div class="page-head">
-      <div><h2><svg class="icon icon-lg"><use href="#i-target"/></svg> Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></h2>
-      <p class="muted"><%= sprint.goal %> · <%= sprint.start_date %> → <%= sprint.end_date %></p></div>
-      <span class="chip"><%= sprint.tasks_done %>/<%= sprint.tasks_total %> done</span>
-    </div>
-    <div class="progress"><div class="progress-bar" style="width:<%= sprint.velocity_pct || 0 %>%"></div></div>
-    <ul class="task-list">
-      <% tasks.forEach(t => { %>
-        <li class="task <%= t.status === 'done' ? 'done' : '' %>" data-id="<%= t.id %>">
-          <button class="task-check" title="Toggle"><%= t.status === 'done' ? '✓' : '' %></button>
-          <div><strong><%= t.title %></strong> <span class="tag tag-<%= t.priority %>"><%= t.priority %></span>
-          <% if (t.description) { %><p class="muted small"><%= t.description %></p><% } %></div>
-        </li>
-      <% }) %>
-    </ul>
-    <form method="post" action="/dashboard/sprint/task/add" style="margin-top:.7rem;display:flex;gap:.4rem">
-      <input type="text" name="title" maxlength="200" placeholder="Add a task to this sprint…" required style="flex:1">
-      <button class="btn btn-ghost btn-sm">Add</button>
-    </form>
-    <form method="post" action="/dashboard/sprint/end" style="margin-top:.5rem" onsubmit="return confirm('End this sprint?')">
-      <button class="btn btn-ghost btn-sm">End sprint</button>
-    </form>
-  </div>
-<% } else { %>
-  <div class="card center">
-    <h2>No active sprint</h2>
-    <% if (typeof needsPath !== 'undefined' && needsPath) { %>
-      <p>Pick your path first, then start your first 7-day sprint.</p>
-      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/choose-path">Choose your path</a>
-    <% } else { %>
-      <p>A sprint is a 7-day push toward one thing, with your own tasks on it. Name it and get moving.</p>
-      <form method="post" action="/dashboard/sprint/start" style="max-width:28rem;margin:.9rem auto 0;text-align:left">
-        <label>What's this sprint about?<input type="text" name="theme" maxlength="120" placeholder="e.g. Get my first 3 customer conversations" required></label>
-        <label>Goal (optional)<textarea name="goal" rows="2" maxlength="400" placeholder="What does done look like?"></textarea></label>
-        <% if (typeof sprintSuggestions !== 'undefined' && sprintSuggestions.length) { %>
-          <p class="small" style="margin:.6rem 0 .2rem"><strong>Start with these tasks?</strong> <span class="muted">Picked for your path — untick any that don't fit.</span></p>
-          <% sprintSuggestions.forEach(function (t) { %>
-            <label class="check" style="display:flex;gap:.5rem;align-items:flex-start;margin:.2rem 0"><input type="checkbox" name="task" value="<%= t %>" checked> <span class="small"><%= t %></span></label>
-          <% }) %>
-        <% } %>
-        <button class="btn btn-primary" style="margin-top:.5rem">Start sprint</button>
-      </form>
-    <% } %>
-  </div>
-<% } %>
-<% } %>
-
-<% if (typeof pathPanel !== 'undefined' && pathPanel && yourPath) { %>
-  <%- include('partials/path_panel', { panel: pathPanel, pathInfo: yourPath }) %>
-<% } %>
-
-<% if (typeof pathTools !== 'undefined' && pathTools.length) { %>
-  <div class="card">
-    <div class="page-head" style="margin:0 0 .5rem"><div><h2 style="margin:0">🧰 Your tools</h2><p class="muted small" style="margin:.15rem 0 0"><%= yourPath ? 'Picked for your path.' : 'A good place to start.' %></p></div><a class="btn btn-ghost btn-sm" href="/workspace">All tools</a></div>
-    <div class="dash-tools">
-      <% pathTools.forEach(function (t) { %>
-        <a class="dash-tool" href="<%= t.href %>" title="<%= t.blurb %>"><span><%= t.emoji %></span> <%= t.label %></a>
-      <% }) %>
-    </div>
-  </div>
-<% } %>
+<%- L.main.map(section).join('\n') %>
 </div>
 <aside class="dash-side">
-<div class="card dash-paid">
-  <h2 style="margin:0 0 .15rem">💵 Got paid?</h2>
-  <p class="muted small" style="margin:0 0 .6rem">Log it to see what to put aside for tax.</p>
-  <form method="post" action="/budget/income">
-    <input type="hidden" name="from" value="dashboard">
-    <div class="dash-paid-row">
-      <label>Amount ($)<input name="amount" inputmode="decimal" required></label>
-      <label>Date<input type="date" name="date" value="<%= today %>" max="<%= today %>"></label>
-    </div>
-    <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
-    <label class="check" style="display:flex;gap:.45rem;align-items:center;margin:.35rem 0 0"><input type="checkbox" name="recurring" value="1" style="width:auto"> Recurring <span class="muted small">(subscription or retainer)</span></label>
-    <div class="cta-row" style="justify-content:space-between;align-items:center;margin:.5rem 0 0">
-      <button class="btn btn-primary btn-sm">Log income</button>
-      <a class="muted small" href="/budget">Income log →</a>
-    </div>
-  </form>
-</div>
-
-<% if (typeof pathNews !== 'undefined' && pathNews && pathNews.length) { %>
-  <%- include('partials/news_card', { news: pathNews, ago: newsAgo }) %>
-<% } %>
-
-<%# What the people you follow have been doing. Five rows; the rest is /feed. %>
-<% if (typeof feedPeek !== 'undefined' && feedPeek && feedPeek.length) { %>
-  <div class="card">
-    <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2 style="margin:0">👥 Your people</h2></div>
-      <a class="btn btn-ghost btn-sm" href="/feed">See all</a>
-    </div>
-    <% feedPeek.forEach(function (ev) { %>
-      <div class="milestone-row">
-        <p style="margin:.25rem 0">
-          <a href="/members/<%= ev.who.username %>"><strong><%= ev.who.display_name || ev.who.username %></strong></a>
-          <%= ev.emoji ? ' ' + ev.emoji : '' %> <%= ev.title %>
-        </p>
-      </div>
-    <% }) %>
-  </div>
-<% } else if (typeof following !== 'undefined' && !following) { %>
-  <div class="card">
-    <h2>👥 Your people</h2>
-    <p class="muted small" style="margin:.3rem 0 0">Follow a few members and their real wins land here: first customer, first non-salary dollar, the day they hand in their notice.</p>
-    <a class="btn btn-ghost btn-sm" style="margin-top:.7rem;display:inline-block" href="/members">Find members →</a>
-  </div>
-<% } %>
-
-<% if (flags.ladder && typeof ladder !== 'undefined' && ladder) { %>
-  <div class="card">
-    <div class="page-head" style="margin:0 0 .5rem">
-      <div><h2><%= ladder.next.emoji %> Next rung: Level <%= ladder.next.level %> — <%= ladder.next.title %></h2>
-      <p class="muted small" style="margin:.15rem 0 0">
-        <% if (ladder.blocker === 'both') { %>Needs <%= ladder.xpNeeded %> more XP and the quests below.
-        <% } else if (ladder.blocker === 'quests') { %>You have the XP. These are what's left.
-        <% } else if (ladder.blocker === 'xp') { %>Quests done — <%= ladder.xpNeeded %> XP to go.
-        <% } else { %>Everything is done. Your next action levels you up.<% } %>
-      </p></div>
-      <span class="chip"><%= ladder.doneCount %>/<%= ladder.needMin %> quests</span>
-    </div>
-
-    <% if (ladder.quests.length) { %>
-      <ul class="task-list" style="margin:0">
-        <% ladder.quests.forEach(function (q) { %>
-          <li class="task <%= q.done ? 'done' : '' %>">
-            <span class="task-check" aria-hidden="true" style="cursor:default"><%= q.done ? '✓' : '' %></span>
-            <div style="flex:1">
-              <strong><%= q.title %></strong>
-              <p class="muted small" style="margin:.1rem 0 0"><%= q.type === 'challenge' ? 'Quest' : 'Real-world trophy' %><%= q.done ? ' · done' : '' %></p>
-            </div>
-            <% if (!q.done) { %><a class="btn btn-ghost btn-sm" style="flex:none" href="<%= q.href %>"><%= q.cta || 'Go' %></a><% } %>
-          </li>
-        <% }) %>
-      </ul>
-      <% if (ladder.needMin < ladder.quests.length) { %>
-        <p class="muted small" style="margin:.5rem 0 0">Any <%= ladder.needMin %> of these <%= ladder.quests.length %> will do.</p>
-      <% } %>
-    <% } %>
-
-    <% if ((ladder.unlocks || []).length || ladder.next.unlock_text) { %>
-      <div style="border-top:1px solid var(--border);margin:.7rem 0 0;padding-top:.6rem">
-        <% if ((ladder.unlocks || []).length) { %>
-          <% ladder.unlocks.forEach(function (u) { %>
-            <p class="small" style="margin:.25rem 0">
-              <%= u.kind === 'live' ? '🎁' : '🤝' %> <strong><%= u.label %></strong>
-              <span class="muted"><%= u.detail %></span>
-              <% if (u.kind !== 'live') { %><span class="chip" style="font-size:.68rem">arranged with you</span><% } %>
-            </p>
-          <% }) %>
-        <% } else { %>
-          <p class="muted small" style="margin:0">🎁 <%= ladder.next.unlock_text %></p>
-        <% } %>
-      </div>
-    <% } %>
-  </div>
-<% } %>
+<%- L.side.map(section).join('\n') %>
 </aside>
 </div>
+<p class="muted small dash-customize"><a class="muted" href="/dashboard/customize">⚙️ Customize this dashboard</a></p>
+
 
 <% if (flags.analytics && typeof analytics !== 'undefined' && analytics) { %>
 <details class="card analytics">

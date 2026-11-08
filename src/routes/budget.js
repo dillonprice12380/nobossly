@@ -58,12 +58,7 @@ async function loadBudget(req, extra = {}) {
   }, extra);
 }
 
-// The share of each payment to put aside for tax: the member's own rates if they
-// set them in Tax Set-Aside, otherwise self-employment tax plus the 12% bracket.
-async function setAsideRate(req) {
-  const tax = await premium.load(req, 'tax');
-  return calc.taxRate(tax.settings || {});
-}
+const setAsideRate = income.setAsideRate;   // shared with the dashboard (src/income.js)
 
 router.get('/', async (req, res, next) => {
   try {

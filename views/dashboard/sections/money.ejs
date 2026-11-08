@@ -1,0 +1,25 @@
+<%# This month from the income log (src/dashboard_data.js moneyGlance). %>
+<% if (typeof money !== 'undefined' && money) {
+  var $d = function (n) { return '$' + Math.round(Number(n) || 0).toLocaleString('en-US'); };
+  var monthName = new Date(money.month + '-15T12:00:00Z').toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  var diff = money.thisMonth - money.lastMonth; %>
+  <div class="card dash-money">
+    <div class="page-head" style="margin:0 0 .5rem">
+      <div><h2 style="margin:0">💰 Money in <%= monthName %></h2></div>
+      <a class="btn btn-ghost btn-sm" href="/budget#income">Income log</a>
+    </div>
+    <% if (money.empty) { %>
+      <p class="muted small" style="margin:0">Nothing in your income log yet. Log a payment below, <a href="/budget/import">import a CSV</a> or <a href="/budget/connect/stripe">connect Stripe</a>, and this month's money shows here.</p>
+    <% } else { %>
+      <div class="dash-money-row">
+        <div><span class="dash-money-num"><%= $d(money.thisMonth) %></span><span class="muted small">came in · <%= money.payments %> payment<%= money.payments === 1 ? '' : 's' %></span></div>
+        <div><span class="dash-money-num"><%= $d(money.recurring) %></span><span class="muted small">recurring</span></div>
+        <% if (money.setAside !== null) { %><div><span class="dash-money-num"><%= $d(money.setAside) %></span><span class="muted small">to put aside for tax (<%= Math.round(money.rate) %>%)</span></div><% } %>
+      </div>
+      <p class="muted small" style="margin:.5rem 0 0">
+        Last month <%= $d(money.lastMonth) %><% if (money.lastMonth > 0 || money.thisMonth > 0) { %> · <%= diff === 0 ? 'level so far' : (diff > 0 ? $d(diff) + ' ahead so far' : $d(-diff) + ' to go to match it') %><% } %>
+        <% if (money.stripe) { %> · <a class="muted" href="/budget/connect/stripe"><%= money.stripe.status === 'error' ? '⚠️ Stripe needs attention' : 'Stripe syncing' %></a><% } %>
+      </p>
+    <% } %>
+  </div>
+<% } %>

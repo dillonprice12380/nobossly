@@ -1,0 +1,50 @@
+<% if (flags.sprints) { %>
+<a id="sprint"></a>
+<% if (sprint) { %>
+  <div class="card" id="sprint-card">
+    <div class="page-head">
+      <div><h2><svg class="icon icon-lg"><use href="#i-target"/></svg> Sprint <%= sprint.sprint_number %>: <%= sprint.theme %></h2>
+      <p class="muted"><%= sprint.goal %> · <%= sprint.start_date %> → <%= sprint.end_date %></p></div>
+      <span class="chip"><%= sprint.tasks_done %>/<%= sprint.tasks_total %> done</span>
+    </div>
+    <div class="progress"><div class="progress-bar" style="width:<%= sprint.velocity_pct || 0 %>%"></div></div>
+    <ul class="task-list">
+      <% tasks.forEach(t => { %>
+        <li class="task <%= t.status === 'done' ? 'done' : '' %>" data-id="<%= t.id %>">
+          <button class="task-check" title="Toggle"><%= t.status === 'done' ? '✓' : '' %></button>
+          <div><strong><%= t.title %></strong> <span class="tag tag-<%= t.priority %>"><%= t.priority %></span>
+          <% if (t.description) { %><p class="muted small"><%= t.description %></p><% } %></div>
+        </li>
+      <% }) %>
+    </ul>
+    <form method="post" action="/dashboard/sprint/task/add" style="margin-top:.7rem;display:flex;gap:.4rem">
+      <input type="text" name="title" maxlength="200" placeholder="Add a task to this sprint…" required style="flex:1">
+      <button class="btn btn-ghost btn-sm">Add</button>
+    </form>
+    <form method="post" action="/dashboard/sprint/end" style="margin-top:.5rem" onsubmit="return confirm('End this sprint?')">
+      <button class="btn btn-ghost btn-sm">End sprint</button>
+    </form>
+  </div>
+<% } else { %>
+  <div class="card center">
+    <h2>No active sprint</h2>
+    <% if (typeof needsPath !== 'undefined' && needsPath) { %>
+      <p>Pick your path first, then start your first 7-day sprint.</p>
+      <a class="btn btn-primary" style="margin-top:.9rem;display:inline-block" href="/choose-path">Choose your path</a>
+    <% } else { %>
+      <p>A sprint is a 7-day push toward one thing, with your own tasks on it. Name it and get moving.</p>
+      <form method="post" action="/dashboard/sprint/start" style="max-width:28rem;margin:.9rem auto 0;text-align:left">
+        <label>What's this sprint about?<input type="text" name="theme" maxlength="120" placeholder="e.g. Get my first 3 customer conversations" required></label>
+        <label>Goal (optional)<textarea name="goal" rows="2" maxlength="400" placeholder="What does done look like?"></textarea></label>
+        <% if (typeof sprintSuggestions !== 'undefined' && sprintSuggestions.length) { %>
+          <p class="small" style="margin:.6rem 0 .2rem"><strong>Start with these tasks?</strong> <span class="muted">Picked for your path — untick any that don't fit.</span></p>
+          <% sprintSuggestions.forEach(function (t) { %>
+            <label class="check" style="display:flex;gap:.5rem;align-items:flex-start;margin:.2rem 0"><input type="checkbox" name="task" value="<%= t %>" checked> <span class="small"><%= t %></span></label>
+          <% }) %>
+        <% } %>
+        <button class="btn btn-primary" style="margin-top:.5rem">Start sprint</button>
+      </form>
+    <% } %>
+  </div>
+<% } %>
+<% } %>

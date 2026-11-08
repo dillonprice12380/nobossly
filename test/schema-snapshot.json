@@ -522,6 +522,7 @@
       "biz_value_prop",
       "created_at",
       "current_level",
+      "dashboard_layout",
       "delete_requested_at",
       "display_name",
       "display_preference",

@@ -1,0 +1,3 @@
+<% if (typeof pathNews !== 'undefined' && pathNews && pathNews.length) { %>
+  <%- include('../../partials/news_card', { news: pathNews, ago: newsAgo }) %>
+<% } %>

@@ -10,6 +10,9 @@ const { claimFeedbackGate } = require('./reviews');
 const activity = require('../activity');
 const { firstWeek } = require('../first_week');
 const starter = require('../starter_tasks');
+const dashData = require('../dashboard_data');
+const dashLayout = require('../dashboard_layout');
+const { FLAGS } = require('../features');
 
 router.get('/', async (req, res, next) => {
   try {
@@ -99,6 +102,13 @@ router.get('/', async (req, res, next) => {
     const pathPanel = await dashboards.panelFor(req.sb, req.user.id, p).catch(e => { console.error('[path panel]', e.message || e); return null; });
     // The latest headlines for the member's path (src/news.js).
     const pathNews = await news.forMember(req.sb, p, { limit: 4 }).then(r => r.items, () => []);
+    // The cards across the top: this month's money and the week ahead.
+    const layout = dashLayout.resolve(p.dashboard_layout, FLAGS);
+    const shows = k => layout.top.includes(k);
+    const [money, upcoming] = await Promise.all([
+      shows('money') ? dashData.moneyGlance(req).catch(e => { console.error('[dash money]', e.message || e); return null; }) : null,
+      shows('upcoming') ? dashData.upcoming(req.sb, req.user.id, { pinned }).catch(e => { console.error('[dash upcoming]', e.message || e); return null; }) : null
+    ]);
 
     res.render('dashboard', {
       title: 'Dashboard', sprint, tasks, checkinToday: !!checkinToday,
@@ -106,6 +116,7 @@ router.get('/', async (req, res, next) => {
       // The path's featured workspace tools (src/path_dashboards).
       needsSetup: dashboards.needsSetup(p), pathTools: dashboards.featuredFor(p.path), pathPanel,
       pathNews, newsAgo: news.ago,
+      layout, money, upcoming, whenLabel: d => dashData.whenLabel(d),
       levelInfo: { current: cur, next }, ladder, yourPath, pinned, analytics,
       needsPath, checklist,
       // Suggested first tasks for a new sprint, matched to the member's path.
@@ -118,6 +129,33 @@ router.get('/', async (req, res, next) => {
         return r ? r.title : '';
       }
     });
+  } catch (e) { next(e); }
+});
+
+// Customize: reorder and hide the dashboard's sections. Plain forms, one
+// change per press, so it works without JavaScript.
+const layoutReady = p => Object.prototype.hasOwnProperty.call(p || {}, 'dashboard_layout');
+
+router.get('/customize', (req, res) => {
+  const p = req.profile || {};
+  const layout = dashLayout.resolve(p.dashboard_layout, FLAGS);
+  const cols = { top: 'Across the top', main: 'Left column', side: 'Right column' };
+  res.render('dashboard_customize', {
+    title: 'Customize your dashboard', layout, cols, ready: layoutReady(p),
+    msg: req.query.msg || null
+  });
+});
+
+router.post('/layout', async (req, res, next) => {
+  try {
+    const back = '/dashboard/customize';
+    if (!layoutReady(req.profile)) return res.redirect(back + '?msg=' + encodeURIComponent('Customizing is being switched on. Check back shortly.'));
+    const value = dashLayout.apply(req.profile.dashboard_layout, req.body || {}, FLAGS);
+    if (value === undefined) return res.redirect(back);
+    const { error } = await req.sb.from('profiles').update({ dashboard_layout: value }).eq('id', req.user.id);
+    if (error) return res.redirect(back + '?msg=' + encodeURIComponent('That did not save. Try again.'));
+    const key = String((req.body || {}).key || '');
+    res.redirect(back + (value === null ? '?msg=' + encodeURIComponent('Back to the standard layout.') : (key ? '#sec-' + encodeURIComponent(key) : '')));
   } catch (e) { next(e); }
 });
 

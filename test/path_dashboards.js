@@ -327,8 +327,8 @@ async function panels() {
   try { bh = render('partials/path_panel.ejs', { panel: bm, pathInfo: { label: 'Brick and mortar', emoji: '🏪' } }); } catch (e) { bh = 'ERR ' + e.message; }
   ok('...and renders it', bh.includes('Funding') && bh.includes('Site scout') && !bh.includes('Food and drink'), bh.startsWith('ERR') ? bh.slice(0, 200) : undefined);
 
-  const dashView = read('views/dashboard.ejs');
-  ok('the dashboard shows the panel', dashView.includes("include('partials/path_panel'"));
+  const dashView = read('views/dashboard/sections/path.ejs');
+  ok('the dashboard shows the panel', dashView.includes("include('../../partials/path_panel'"));
   ok('the dashboard route loads it', read('src/routes/dashboard.js').includes('dashboards.panelFor('));
 }
 
