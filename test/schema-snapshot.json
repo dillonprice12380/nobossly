@@ -619,6 +619,7 @@
       "description",
       "entry_date",
       "entry_type",
+      "external_id",
       "id",
       "is_recurring",
       "source",
@@ -1200,6 +1201,19 @@
       "title",
       "topic",
       "url"
+    ],
+    "payment_connections": [
+      "created_at",
+      "id",
+      "imported_count",
+      "key_hint",
+      "last_error",
+      "last_synced_at",
+      "provider",
+      "secret_id",
+      "status",
+      "synced_through",
+      "user_id"
     ]
   },
   "enums": {

@@ -226,7 +226,7 @@ function fakeSc(store) {
   ok('the income log links to Connect Stripe, and says when it is connected', /href="\/budget\/connect\/stripe">Connect Stripe/.test(read('views/budget.ejs')) && /Stripe connected/.test(read('views/budget.ejs')));
   {
     const sql = read('migrations/2026-11-08_stripe_connection.sql');
-    ok('the migration is marked as not applied yet, and listed as pending', /^-- NOT APPLIED/.test(sql) && JSON.parse(read('test/schema-pending.json')).migrations['2026-11-08_stripe_connection.sql']);
+    ok('the migration is marked as applied, and its columns are in the schema snapshot', /^-- Applied live 2026-11-08/.test(sql) && !JSON.parse(read('test/schema-pending.json')).migrations['2026-11-08_stripe_connection.sql'] && JSON.parse(read('test/schema-snapshot.json')).columns.payment_connections.includes('key_hint') && JSON.parse(read('test/schema-snapshot.json')).columns.revenue_entries.includes('external_id'));
     ok('keys live in the Vault, and only the sync job can read them', /vault\.create_secret/.test(sql) && /grant execute on function public\.payment_connection_secret\(uuid\) to service_role/.test(sql) && /revoke all on function public\.payment_connection_secret\(uuid\) from public, anon, authenticated/.test(sql));
     ok('members never get the column that points at the key', !/grant select \([^)]*secret_id/.test(sql));
   }
