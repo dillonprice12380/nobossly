@@ -10,6 +10,8 @@ const router = require('express').Router();
 const dashboards = require('../path_dashboards');
 const { WORKSHEETS, clean, progress, ideaScore, pitchStats, summaryOf } = require('../workspace/worksheets');
 const matrix = require('../workspace/matrix');
+const richtext = require('../workspace/richtext');
+const hub = require('../workspace_hub');
 const paths = require('../paths');
 const { quiet } = require('../db');
 const mailer = require('../mailer');
@@ -28,19 +30,51 @@ async function canShare(sb) {
   return !error && data === true;
 }
 
-// The hub: featured tools first, then the rest, then the library.
+// The hub: pinned tools, what you touched last, then every tool in groups,
+// each tile saying what is in it (src/workspace_hub.js).
+const layoutReady = p => Object.prototype.hasOwnProperty.call(p || {}, 'workspace_layout');
+const tilesFor = profile => hub.tilesOf(dashboards.workspaceFor(profile.path), dashboards.pathItemsFor(profile));
+
 router.get('/', async (req, res, next) => {
   try {
     const slug = req.profile.path;
     const { data: docs, error } = await req.sb.from('workspace_docs')
       .select('id, kind, title, updated_at').eq('user_id', req.user.id).order('updated_at', { ascending: false }).limit(200);
-    const recent = {};
-    (docs || []).forEach(d => { (recent[d.kind] = recent[d.kind] || []).push(d); });
+    const tiles = tilesFor(req.profile);
+    const [live, recent] = await Promise.all([
+      hub.liveOf(req.sb, req.user.id, tiles, docs || []).catch(e => { console.error('[workspace tiles]', e.message || e); return {}; }),
+      hub.recent(req.sb, req.user.id, docs || []).catch(() => [])
+    ]);
     res.render('workspace/index', {
-      title: 'Workspace', tools: dashboards.workspaceFor(slug), recent, notReady: missing(error),
-      pathItems: dashboards.pathItemsFor(req.profile),
+      title: 'Workspace', hub: hub.arrange(tiles, req.profile.workspace_layout), live, recent,
+      canArrange: layoutReady(req.profile), notReady: missing(error),
       pathDef: slug ? paths.get(slug) : null, needsSetup: dashboards.needsSetup(req.profile), msg: req.query.msg || null
     });
+  } catch (e) { next(e); }
+});
+
+// One search box across docs, board cards and tasks.
+router.get('/search', async (req, res, next) => {
+  try {
+    const found = await hub.search(req.sb, req.user.id, req.query.q);
+    res.render('workspace/search', { title: found.q ? 'Search: ' + found.q : 'Search your workspace', found });
+  } catch (e) { next(e); }
+});
+
+// Pin, unpin, hide, show and reorder pins. Plain forms, one change a press.
+router.post('/layout', async (req, res, next) => {
+  try {
+    const id = String((req.body || {}).id || '');
+    const back = '/workspace' + (/^[a-z:_0-9]+$/.test(id) ? '#t-' + id.replace(':', '-') : '');
+    if (!layoutReady(req.profile)) return res.redirect('/workspace?msg=' + enc('Pinning is being switched on. Check back shortly.'));
+    const value = hub.apply(req.profile.workspace_layout, req.body || {}, tilesFor(req.profile));
+    if (value === undefined) {
+      const full = (req.body || {}).action === 'pin' && hub.clean(req.profile.workspace_layout).pinned.length >= hub.MAX_PINS;
+      return res.redirect(full ? '/workspace?msg=' + enc('You can pin up to ' + hub.MAX_PINS + ' tools. Unpin one first.') : back);
+    }
+    const { error } = await req.sb.from('profiles').update({ workspace_layout: value }).eq('id', req.user.id);
+    if (error) return res.redirect('/workspace?msg=' + enc('That did not save. Try again.'));
+    res.redirect(value === null ? '/workspace?msg=' + enc('Pins and hidden tools cleared.') : back);
   } catch (e) { next(e); }
 });
 
@@ -61,7 +95,7 @@ router.get('/docs/:kind', async (req, res, next) => {
     const { data, error } = await req.sb.from('workspace_docs').select('id, title, data, updated_at')
       .eq('user_id', req.user.id).eq('kind', req.params.kind).order('updated_at', { ascending: false });
     if (missing(error)) return res.render('workspace/doc_list', { title: def.label, def, kind: req.params.kind, docs: [], notReady: true, progress, msg: null });
-    res.render('workspace/doc_list', { title: def.label, def, kind: req.params.kind, docs: data || [], notReady: false, progress, ideaScore, msg: req.query.msg || null });
+    res.render('workspace/doc_list', { title: def.label, def, kind: req.params.kind, docs: data || [], notReady: false, progress, ideaScore, textOf: richtext.textOf, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
 
@@ -69,7 +103,7 @@ router.post('/docs/:kind', async (req, res, next) => {
   try {
     const def = defOf(req.params.kind);
     if (!def) return res.redirect('/workspace');
-    const title = String(req.body.title || '').trim().slice(0, 120) || ('My ' + def.label.toLowerCase());
+    const title = String(req.body.title || '').trim().slice(0, 120) || def.newTitle || ('My ' + def.label.toLowerCase());
     const { data: doc, error } = await req.sb.from('workspace_docs')
       .insert({ user_id: req.user.id, kind: req.params.kind, title, data: {} }).select('id').maybeSingle();
     if (error || !doc) return res.redirect('/workspace/docs/' + req.params.kind + '?err=' + enc(missing(error) ? 'The workspace is being set up — try again shortly.' : 'Could not create that. Please try again.'));

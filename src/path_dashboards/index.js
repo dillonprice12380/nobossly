@@ -44,6 +44,7 @@ const TOOLS = {
   tax:                   { label: 'Tax Set-Aside',          emoji: '🧾', href: '/tools/tax', money: true, blurb: 'What to put aside from each payment, and your quarterly estimates.' },
   pricing:               { label: 'Pricing & Margin',       emoji: '🏷️', href: '/tools/pricing', money: true, blurb: 'The rate or price you need, and the true margin after fees.' },
   proof:                 { label: 'Proof Page',             emoji: '🌟', href: '/tools/proof', blurb: 'A public page with your work, testimonials and results.' },
+  notes:                 { label: 'Notes',                  emoji: '📝', href: '/workspace/docs/notes', kind: true, blurb: 'A blank page for anything: meeting notes, ideas, how you do things.' },
   interviews:            { label: 'Customer interviews',    emoji: '🎙️', href: '/tools/interviews', blurb: 'Log conversations and see which problems keep coming up.' }
 };
 // Path worksheets that are about money: costs, prices, margins, break-even.
@@ -127,11 +128,13 @@ function setupQuestions(slug) {
 // tools are left out; they are listed under Money (moneyToolsFor).
 function workspaceFor(slug) {
   const c = configFor(slug);
-  const named = new Set(c.featured.concat(c.available));
+  // Notes are for everyone, whatever the path: first of the "also useful" tools.
+  const available = c.featured.includes('notes') || c.available.includes('notes') ? c.available : ['notes'].concat(c.available);
+  const named = new Set(c.featured.concat(available));
   const as = (keys, rank) => keys.filter(k => TOOLS[k] && !isMoney(k)).map(k => Object.assign({ key: k, rank }, TOOLS[k]));
   return {
     featured: as(c.featured, 'featured'),
-    available: as(c.available, 'available'),
+    available: as(available, 'available'),
     library: as(Object.keys(TOOLS).filter(k => !named.has(k)), 'library')
   };
 }

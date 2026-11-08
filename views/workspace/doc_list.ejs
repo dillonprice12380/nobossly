@@ -16,7 +16,12 @@
     <% docs.forEach(function (d) { var pr = progress(def, d.data || {}); var sc = kind === 'idea_refiner' ? ideaScore(d.data || {}) : null; %>
       <a class="card ws-tool" href="/workspace/docs/<%= kind %>/<%= d.id %>" style="display:block;color:inherit;text-decoration:none">
         <strong><%= d.title || def.label %></strong>
+        <% if (kind === 'notes') { var snip = typeof textOf === 'function' ? textOf((d.data || {}).body || '').replace(/\s+/g, ' ').trim() : ''; %>
+          <% if (snip) { %><p class="small" style="margin:.3rem 0 0"><%= snip.length > 140 ? snip.slice(0, 140) + '…' : snip %></p><% } %>
+          <p class="muted small" style="margin:.3rem 0 0">Edited <%= new Date(d.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p>
+        <% } else { %>
         <p class="muted small" style="margin:.3rem 0 0"><%= pr.done %> of <%= pr.total %> filled in · edited <%= new Date(d.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %><% if (sc) { %> · scores <%= sc.total %>/<%= sc.of %><% } %></p>
+        <% } %>
       </a>
     <% }) %>
   </div>

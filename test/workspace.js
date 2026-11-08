@@ -140,7 +140,7 @@ function fakeSb(answers = {}) {
     const sb = fakeSb({ workspace_docs: { data: null, error: { code: '42P01', message: 'relation "public.workspace_docs" does not exist' } } });
     const r = await run(wr, 'GET', '/', { sb, profile: { path: 'software' } });
     ok('before the migration the hub still opens, saying it is being set up', r.view === 'workspace/index' && r.data.notReady === true);
-    ok('...ordered for the path (Apps & Software leads with the Lean Canvas)', r.data.tools.featured[0].key === 'lean_canvas');
+    ok('...ordered for the path (Apps & Software leads with the Lean Canvas)', r.data.hub.groups.featured[0].key === 'lean_canvas');
   }
   {
     const r = await run(wr, 'GET', '/docs/not_a_tool', { sb: fakeSb() });
@@ -173,7 +173,7 @@ function fakeSb(answers = {}) {
   const render = (f, data) => ejs.render(read('views/' + f), Object.assign({}, base, data), { filename: V(f) });
   const now = new Date().toISOString();
   const pages = {
-    'workspace/index.ejs': { tools: dash.workspaceFor('brick_mortar'), recent: { business_plan: [{ id: 'd1', updated_at: now }] }, notReady: false, pathDef: paths.get('brick_mortar'), needsSetup: true, msg: null },
+    'workspace/index.ejs': { hub: require('../src/workspace_hub').arrange(require('../src/workspace_hub').tilesOf(dash.workspaceFor('brick_mortar'), null), { pinned: ['tool:business_plan'] }), live: { 'tool:business_plan': { text: '1 saved · Nov 5' } }, recent: [{ title: 'My plan', kind: '📄 Business plan', href: '/workspace/docs/business_plan/d1', when: 'Nov 5' }], canArrange: true, notReady: false, pathDef: paths.get('brick_mortar'), needsSetup: true, msg: null },
     'workspace/doc_list.ejs': { def: ws.WORKSHEETS.idea_refiner, kind: 'idea_refiner', docs: [{ id: 'd1', title: 'Meal prep', data: idea, updated_at: now }], notReady: false, progress: ws.progress, ideaScore: ws.ideaScore, msg: null },
     'workspace/doc.ejs': { def: ws.WORKSHEETS.lean_canvas, kind: 'lean_canvas', doc: { id: 'd1', title: 'Night-shift meals', updated_at: now }, data: d, progress: ws.progress(lean, d), score: null, pitch: null, saved: true },
     'workspace/goals.ejs': { goals: [{ id: 'g1', title: 'Three clients', status: 'active', target: '2027-02-01', measure: '3 invoices paid' }], notReady: false, GOAL_STATUS: { active: 'Active', done: 'Done', dropped: 'Dropped' }, msg: null },

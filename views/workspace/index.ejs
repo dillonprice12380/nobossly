@@ -5,6 +5,7 @@
 </div><div class="ws-actions" style="display:flex;gap:.4rem;flex-wrap:wrap"><a class="btn btn-ghost btn-sm" href="/workspace/shared">📥 Shared with you</a><% if (pathDef) { %><a class="btn btn-ghost btn-sm" href="/choose-path/setup">Path settings</a><% } %></div></div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 <nav class="ws-quick" aria-label="Workspace tools">
+  <a class="ws-quick-link" href="/workspace/docs/notes">📝 Notes</a>
   <a class="ws-quick-link" href="/tasks">✅ Tasks</a>
   <a class="ws-quick-link" href="/surveys">📋 Surveys</a>
   <a class="ws-quick-link" href="/tools/interviews">🎙️ Customer interviews</a>
@@ -19,53 +20,105 @@
 <% } %>
 <% if (notReady) { %><div class="card"><p class="muted" style="margin:0">Your workspace is being set up — saving documents opens shortly.</p></div><% } %>
 
-<% var card = function (t) { var mine = recent[t.key === 'goals' ? 'goal' : t.key] || []; %>
-  <a class="card ws-tool" href="<%= t.href %>">
-    <div class="ws-head"><span class="ws-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div>
-    <p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p>
-    <% if (mine.length) { %><p class="small" style="margin:.4rem 0 0"><%= mine.length %> saved · last edited <%= new Date(mine[0].updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></p><% } %>
-  </a>
-<% }; %>
+<form class="ws-search" method="get" action="/workspace/search" role="search">
+  <input type="search" name="q" maxlength="80" placeholder="Search your docs, notes, board cards and tasks…" aria-label="Search your workspace">
+  <button class="btn btn-ghost btn-sm">Search</button>
+</form>
 
-<h2 class="ws-section">For your path</h2>
-<div class="grid"><% tools.featured.forEach(function (t) { card(t); }) %></div>
-<% if (typeof pathItems !== 'undefined' && pathItems) { %>
-  <h2 class="ws-section">Boards and numbers</h2>
-  <div class="grid">
-    <% pathItems.boards.forEach(function (b) { %>
-      <a class="card ws-tool" href="/workspace/boards/<%= b.key %>"><div class="ws-head"><span class="ws-emoji"><%= b.emoji || '🗂️' %></span><strong><%= b.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Board · <%= b.stages.map(function (s) { return s.label; }).join(' → ') %></p></a>
-    <% }) %>
-    <% pathItems.metrics.forEach(function (m) { %>
-      <a class="card ws-tool" href="/workspace/metrics/<%= m.key %>"><div class="ws-head"><span class="ws-emoji">📈</span><strong><%= m.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Logged each <%= m.period %><%= m.help ? ' · ' + m.help : '' %></p></a>
+<% if (recent.length) { %>
+  <h2 class="ws-section">Jump back in</h2>
+  <div class="ws-recent">
+    <% recent.forEach(function (r) { %>
+      <a class="ws-recent-item" href="<%= r.href %>"><strong><%= r.title %></strong><span class="muted small"><%= r.kind %> · <%= r.when %></span></a>
     <% }) %>
   </div>
+<% } %>
+
+<%# One tile: the link covers the card; the pin and hide buttons sit on top. %>
+<% var tile = function (t, i, all) { var lv = live[t.id]; %>
+  <div class="card ws-tool<%= t.pinned ? ' is-pinned' : '' %>" id="t-<%= t.id.replace(':', '-') %>">
+    <a class="ws-tool-link" href="<%= t.href %>"><span class="ws-head"><span class="ws-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></span></a>
+    <% if (lv) { %>
+      <p class="small ws-live<%= lv.quiet ? ' muted' : '' %>"><%= lv.text %><% if (lv.change) { %> <span class="ws-change <%= lv.good === true ? 'good' : (lv.good === false ? 'bad' : '') %>"><%= lv.change %></span><% } %></p>
+    <% } else { %>
+      <p class="muted small ws-blurb"><%= t.blurb %></p>
+    <% } %>
+    <% if (canArrange) { %>
+      <div class="ws-tool-acts">
+        <% if (t.pinned) { %>
+          <% if (i > 0) { %><form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="left"><button title="Move left" aria-label="Move <%= t.label %> left">←</button></form><% } %>
+          <% if (i < all.length - 1) { %><form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="right"><button title="Move right" aria-label="Move <%= t.label %> right">→</button></form><% } %>
+          <form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="unpin"><button title="Unpin" aria-label="Unpin <%= t.label %>">★ Unpin</button></form>
+        <% } else if (t.hidden) { %>
+          <form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="show"><button aria-label="Show <%= t.label %> again">Show again</button></form>
+        <% } else { %>
+          <% if (!hub.full) { %><form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="pin"><button title="Pin to the top" aria-label="Pin <%= t.label %>">☆ Pin</button></form><% } %>
+          <form method="post" action="/workspace/layout"><input type="hidden" name="id" value="<%= t.id %>"><input type="hidden" name="action" value="hide"><button title="Hide" aria-label="Hide <%= t.label %>">Hide</button></form>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+<% }; %>
+<% var G = hub.groups; %>
+
+<% if (hub.pinned.length) { %>
+  <h2 class="ws-section">📌 Pinned</h2>
+  <div class="grid"><% hub.pinned.forEach(tile) %></div>
+<% } %>
+<% if (G.featured.length) { %>
+  <h2 class="ws-section">For your path</h2>
+  <div class="grid"><% G.featured.forEach(tile) %></div>
+<% } %>
+<% if (G.path.length) { %>
+  <h2 class="ws-section">Boards and numbers</h2>
+  <div class="grid"><% G.path.forEach(tile) %></div>
   <p class="small" style="margin:.4rem 0 0"><a href="/workspace/calendar">Calendar of everything with a date →</a></p>
-  <% if (pathItems.checklists.length) { %>
-    <h2 class="ws-section">Checklist templates</h2>
-    <p class="muted small" style="margin:-.3rem 0 .6rem">Optional. Open one if it's useful, tick what applies, ignore the rest.</p>
-    <div class="grid">
-    <% pathItems.checklists.forEach(function (c) { %>
-      <a class="card ws-tool" href="/workspace/checklists/<%= c.key %>"><div class="ws-head"><span class="ws-emoji">☑️</span><strong><%= c.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Template · <%= c.items.length %> items</p></a>
-    <% }) %>
-    </div>
-  <% } %>
 <% } %>
-<% if (tools.available.length) { %>
+<% if (G.checklists.length) { %>
+  <h2 class="ws-section">Checklist templates</h2>
+  <p class="muted small" style="margin:-.3rem 0 .6rem">Optional. Open one if it's useful, tick what applies, ignore the rest.</p>
+  <div class="grid"><% G.checklists.forEach(tile) %></div>
+<% } %>
+<% if (G.available.length) { %>
   <h2 class="ws-section">Also useful</h2>
-  <div class="grid"><% tools.available.forEach(function (t) { card(t); }) %></div>
+  <div class="grid"><% G.available.forEach(tile) %></div>
 <% } %>
-<% if (tools.library.length) { %>
-  <details class="ws-library"><summary><strong>More tools</strong> <span class="muted small">(<%= tools.library.length %>)</span></summary>
-    <div class="grid" style="margin-top:.6rem"><% tools.library.forEach(function (t) { card(t); }) %></div>
+<% if (G.library.length) { %>
+  <details class="ws-library"><summary><strong>More tools</strong> <span class="muted small">(<%= G.library.length %>)</span></summary>
+    <div class="grid" style="margin-top:.6rem"><% G.library.forEach(tile) %></div>
   </details>
 <% } %>
+<% if (hub.hidden.length) { %>
+  <details class="ws-library"><summary><strong>Hidden</strong> <span class="muted small">(<%= hub.hidden.length %>)</span></summary>
+    <div class="grid" style="margin-top:.6rem"><% hub.hidden.forEach(tile) %></div>
+  </details>
+<% } %>
+<% if (canArrange) { %><p class="muted small" style="margin-top:1rem">☆ Pin the tools you use most and they sit at the top. Hide the ones you never open.</p><% } %>
 <style>
   .ws-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
   .ws-quick { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 .2rem; }
   .ws-quick-link { padding: .45rem .8rem; border: 1px solid var(--border); border-radius: 999px; color: var(--text); text-decoration: none; font-size: .9rem; background: var(--panel); }
   .ws-quick-link:hover { border-color: var(--accent); }
-  .ws-tool { display: block; color: inherit; text-decoration: none; }
+  .ws-tool { position: relative; display: flex; flex-direction: column; }
   .ws-tool:hover { border-color: var(--accent); }
+  .ws-tool.is-pinned { border-left: 3px solid var(--accent); }
+  .ws-tool-link { color: inherit; text-decoration: none; }
+  .ws-tool-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+  .ws-blurb, .ws-live { margin: .3rem 0 0; }
+  .ws-change { font-size: .82rem; white-space: nowrap; }
+  .ws-change.good { color: var(--accent); }
+  .ws-change.bad { color: var(--danger); }
+  .ws-tool-acts { position: relative; z-index: 1; display: flex; gap: .25rem; justify-content: flex-end; margin-top: auto; padding-top: .45rem; opacity: .55; }
+  .ws-tool:hover .ws-tool-acts, .ws-tool:focus-within .ws-tool-acts { opacity: 1; }
+  .ws-tool-acts button { background: none; border: 1px solid transparent; border-radius: 6px; color: var(--muted); cursor: pointer; font-size: .78rem; padding: .1rem .4rem; }
+  .ws-tool-acts button:hover { border-color: var(--border); color: var(--text); }
+  @media (hover: none) { .ws-tool-acts { opacity: 1; } }
+  .ws-search { display: flex; gap: .4rem; margin: .8rem 0 .2rem; max-width: 640px; }
+  .ws-search input { flex: 1; margin: 0; }
+  .ws-recent { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .5rem; }
+  .ws-recent-item { display: flex; flex-direction: column; gap: .1rem; padding: .55rem .75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: inherit; text-decoration: none; min-width: 0; }
+  .ws-recent-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ws-recent-item:hover { border-color: var(--accent); }
   .ws-head { display: flex; gap: .5rem; align-items: center; }
   .ws-emoji { font-size: 1.4rem; }
   .ws-library { margin-top: 1.2rem; }
