@@ -1,0 +1,59 @@
+<%- include('partials/head') %>
+<%# Connect Stripe to the income log with a read-only restricted key
+    (src/routes/budget.js, src/stripe_sync.js). %>
+<% var when = function (t) { return t ? new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet'; }; %>
+<div class="page-head">
+  <div>
+    <h1>💳 Connect Stripe</h1>
+    <p class="muted">Payments you take through Stripe go into your income log by themselves: one-off payments as income, subscription payments ticked Recurring. NoBossly only ever reads; it cannot refund, pay out or change anything in your Stripe account.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/budget#income">← Income log</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (!ready) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Connecting Stripe is being switched on. Check back shortly.</p></div>
+<% } else if (conn) { %>
+  <div class="card" style="border-left:3px solid <%= conn.status === 'error' ? 'var(--danger)' : 'var(--accent-2)' %>">
+    <div class="page-head" style="margin:0">
+      <div>
+        <h2 style="margin:0">Stripe is connected <span class="chip" style="font-size:.7rem"><%= conn.status === 'error' ? 'Needs attention' : 'Syncing' %></span></h2>
+        <p class="muted small" style="margin:.25rem 0 0">Key ending <strong><%= conn.key_hint %></strong> · last synced <%= when(conn.last_synced_at) %> · <%= conn.imported_count %> payment<%= conn.imported_count === 1 ? '' : 's' %> brought in so far · syncs every <%= everyHours %> hours</p>
+      </div>
+      <div class="cta-row" style="margin:0">
+        <% if (canSync) { %><form method="post" action="/budget/connect/stripe/sync" class="inline"><button class="btn btn-primary btn-sm">Sync now</button></form><% } %>
+        <form method="post" action="/budget/connect/stripe/disconnect" class="inline" onsubmit="return confirm('Disconnect Stripe? The key is deleted from NoBossly. Payments already in your income log stay.')"><button class="btn btn-ghost btn-sm">Disconnect</button></form>
+      </div>
+    </div>
+    <% if (conn.status === 'error' && conn.last_error) { %><p class="small" style="margin:.7rem 0 0;color:var(--danger)"><%= conn.last_error %></p><% } %>
+  </div>
+<% } %>
+
+<% if (ready) { %>
+<div class="grid-2">
+  <div class="card">
+    <h2 style="margin-top:0"><%= conn ? 'Replace the key' : 'Step 1: make a read-only key in Stripe' %></h2>
+    <ol class="small" style="margin:0;padding-left:1.1rem;line-height:1.75">
+      <li>In your Stripe Dashboard, make sure you are in <strong>live mode</strong> (not a sandbox or test mode).</li>
+      <li>Go to <strong>Developers → API keys</strong> and click <strong>Create restricted key</strong>. If Stripe asks how you will use it, choose that you are giving it to a third-party app.</li>
+      <li>Name it <strong>NoBossly</strong>.</li>
+      <li>Set <strong>Charges</strong> to <strong>Read</strong> and <strong>Invoices</strong> to <strong>Read</strong>. Leave everything else on <strong>None</strong>.</li>
+      <li>Click <strong>Create key</strong> and copy it. It starts with <code>rk_live_</code>.</li>
+    </ol>
+    <p class="muted small" style="margin:.8rem 0 0">Never paste a key that starts with <code>sk_</code>: that is your full secret key, and NoBossly will refuse it.</p>
+  </div>
+  <form class="card" method="post" action="/budget/connect/stripe" autocomplete="off">
+    <h2 style="margin-top:0"><%= conn ? 'Paste the new key' : 'Step 2: paste it here' %></h2>
+    <label>Restricted key <input name="key" required spellcheck="false" autocomplete="off" placeholder="rk_live_…" pattern="rk_live_[A-Za-z0-9]{20,200}" title="A live restricted key starts with rk_live_"></label>
+    <button class="btn btn-primary" style="margin-top:.4rem"><%= conn ? 'Replace key' : 'Connect Stripe' %></button>
+    <ul class="muted small" style="margin:.9rem 0 0;padding-left:1.1rem;line-height:1.6">
+      <li>We check the key with Stripe, then store it encrypted. Nobody can read it back, including you; you only ever see its last four characters.</li>
+      <li>The first sync brings in the last 12 months. After that, new payments arrive every few hours.</li>
+      <li>Payments you already logged by hand or from a CSV are recognised and not added twice.</li>
+      <li>Refunds are taken off when they happen before a payment is synced. If you refund one later, delete it from your income log.</li>
+      <li>Disconnecting deletes the key here. You can also delete it in Stripe at any time, and syncing stops.</li>
+    </ul>
+  </form>
+</div>
+<% } %>
+<%- include('partials/foot') %>

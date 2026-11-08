@@ -32,9 +32,12 @@ async function loadBudget(req, extra = {}) {
   const totalBudget = (budgets || []).reduce((s, b) => s + (Number(b.monthly_limit) || 0), 0);
   const cats = [...new Set([...(budgets || []).map(b => b.category), ...Object.keys(spentByCat)])];
   const launchBudget = (q && q.launch_budget) || null;
-  const [log, done, rate] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req)]);
+  const [log, done, rate, stripeRes] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req),
+    // The Stripe connection, if any (migrations/2026-11-08_stripe_connection.sql).
+    req.sb.from('payment_connections').select('status, key_hint, last_synced_at, imported_count').eq('user_id', req.user.id).eq('provider', 'stripe').maybeSingle().then(r => r, () => ({ data: null }))]);
   const sum = income.summary(log.income, log.expenses);
   return Object.assign({
+    stripeConn: (stripeRes && stripeRes.data) || null,
     title: 'Money', budgets: budgets || [], expenses: expenses || [],
     incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
     claims: claimsFor(req.profile.path, sum, done),
@@ -244,6 +247,67 @@ router.post('/import/save', takeCsv, async (req, res, next) => {
       ? 'Imported ' + saved + ' payment' + (saved === 1 ? '' : 's') + ' (' + money(result.counts.total_amount) + ')' + (result.counts.recurring ? ', ' + result.counts.recurring + ' ticked Recurring' : '') + '.' + (skipped ? ' ' + skipped + ' row' + (skipped === 1 ? ' was' : 's were') + ' skipped.' : '')
       : 'Nothing new to import from that file.';
     res.redirect('/budget?msg=' + encodeURIComponent(m) + '#income');
+  } catch (e) { next(e); }
+});
+
+// ---------------------------------------------------------- Stripe connection
+// A read-only restricted key, stored in Supabase Vault (never readable back),
+// synced by src/stripe_sync.js every few hours and on "Sync now".
+const stripe = require('../stripe_sync');
+const { serviceClient } = require('../supabase');
+const service = () => { try { return serviceClient(); } catch (_) { return null; } };
+const back = (m, path = '/budget/connect/stripe') => path + '?msg=' + encodeURIComponent(m);
+
+async function myConnection(req) {
+  const { data, error } = await req.sb.from('payment_connections')
+    .select('id, provider, key_hint, status, last_error, last_synced_at, synced_through, imported_count, created_at')
+    .eq('user_id', req.user.id).eq('provider', 'stripe').maybeSingle();
+  return { conn: data || null, ready: !error };
+}
+const syncedMsg = r => (r.error ? r.error
+  : r.imported ? 'Synced: ' + r.imported + ' new payment' + (r.imported === 1 ? '' : 's') + ' from Stripe' + (r.skipped ? ' (' + r.skipped + ' already in your log)' : '') + '.'
+  : 'Synced. Nothing new from Stripe' + (r.skipped ? ' (' + r.skipped + ' already in your log)' : '') + '.');
+
+router.get('/connect/stripe', async (req, res, next) => {
+  try {
+    const { conn, ready } = await myConnection(req);
+    res.render('budget_stripe', { title: 'Connect Stripe', conn, ready, canSync: !!service(), msg: req.query.msg || null, everyHours: stripe.EVERY_HOURS });
+  } catch (e) { next(e); }
+});
+
+router.post('/connect/stripe', async (req, res, next) => {
+  try {
+    const checked = stripe.checkKey(req.body.key);
+    if (checked.error) return res.redirect(back(checked.error));
+    const ok = await stripe.verify(checked.key);
+    if (!ok.ok) return res.redirect(back(ok.error));
+    const { data: id, error } = await req.sb.rpc('payment_connect_stripe', { p_key: checked.key });
+    if (error || !id) return res.redirect(back('Could not save the connection. Please try again.'));
+    // First sync now, so the member sees their payments straight away.
+    const sc = service();
+    if (!sc) return res.redirect(back('Connected. Your payments will appear after the next sync.'));
+    const { conn } = await myConnection(req);
+    const r = await stripe.syncConnection(sc, Object.assign({}, conn, { user_id: req.user.id }));
+    res.redirect(back(r.error ? 'Connected, but the first sync failed: ' + r.error : 'Connected. ' + syncedMsg(r)));
+  } catch (e) { next(e); }
+});
+
+router.post('/connect/stripe/sync', async (req, res, next) => {
+  try {
+    const { conn } = await myConnection(req);
+    if (!conn) return res.redirect('/budget/connect/stripe');
+    const sc = service();
+    if (!sc) return res.redirect(back('Syncing is not switched on right now. Try again later.'));
+    if (conn.last_synced_at && Date.now() - new Date(conn.last_synced_at).getTime() < 60000) return res.redirect(back('Synced less than a minute ago.'));
+    const r = await stripe.syncConnection(sc, Object.assign({}, conn, { user_id: req.user.id }));
+    res.redirect(back(syncedMsg(r)));
+  } catch (e) { next(e); }
+});
+
+router.post('/connect/stripe/disconnect', async (req, res, next) => {
+  try {
+    await req.sb.rpc('payment_disconnect', { p_provider: 'stripe' });
+    res.redirect(back('Disconnected. The key is deleted from NoBossly; the payments already logged stay in your income log. You can also delete the key in Stripe.'));
   } catch (e) { next(e); }
 });
 
