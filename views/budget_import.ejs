@@ -1,0 +1,107 @@
+<%- include('partials/head') %>
+<%# Import payments into the income log from a CSV export (src/csv_import.js,
+    the routes in src/routes/budget.js). Two steps: upload, then a preview the
+    member can adjust before anything is saved. %>
+<div class="page-head">
+  <div>
+    <h1>📥 Import payments</h1>
+    <p class="muted">Bring payments into your income log from a CSV export: your bank, Stripe, PayPal, Etsy, Shopify, Gumroad or a spreadsheet. Only money coming in is imported, and nothing is saved until you check the preview.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/budget#income">← Income log</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% if (step === 'upload') { %>
+  <div class="grid-2">
+    <form class="card" method="post" action="/budget/import" enctype="multipart/form-data">
+      <h2 style="margin-top:0">Choose a file</h2>
+      <label>CSV file <input type="file" name="file" accept=".csv,text/csv,text/plain" required></label>
+      <p class="muted small" style="margin:.3rem 0 .8rem">Up to 2 MB, or about a few thousand rows. Export one account or one month at a time if your file is bigger.</p>
+      <button class="btn btn-primary">Preview →</button>
+    </form>
+    <div class="card">
+      <h2 style="margin-top:0">Where to find the export</h2>
+      <ul class="small" style="margin:0;padding-left:1.1rem;line-height:1.7">
+        <li><strong>Bank:</strong> on your account's transactions page, look for Download or Export, and choose CSV.</li>
+        <li><strong>Stripe:</strong> Payments → Export (or Balance → Reports → Balance change from activity).</li>
+        <li><strong>PayPal:</strong> Activity → Download → Completed payments, CSV.</li>
+        <li><strong>Etsy:</strong> Shop Manager → Settings → Options → Download data → Orders.</li>
+        <li><strong>Shopify:</strong> Orders → Export, or Finances → Payouts → Export.</li>
+        <li><strong>A spreadsheet:</strong> any sheet with a date column and an amount column, saved as CSV.</li>
+      </ul>
+      <p class="muted small" style="margin:.8rem 0 0">Importing the same file twice is safe: payments already in your log are skipped.</p>
+    </div>
+  </div>
+<% } else { var R = result, C = R.counts; %>
+  <form method="post" action="/budget/import" enctype="multipart/form-data">
+    <textarea name="csv" hidden><%= csvText %></textarea>
+
+    <div class="card" style="border-left:3px solid var(--accent)">
+      <div class="page-head" style="margin:0">
+        <div>
+          <h2 style="margin:0"><%= C.import %> payment<%= C.import === 1 ? '' : 's' %> to import · <%= $m(C.total_amount) %></h2>
+          <p class="muted small" style="margin:.2rem 0 0"><%= C.total %> row<%= C.total === 1 ? '' : 's' %> in the file<% if (C.recurring) { %> · <%= C.recurring %> ticked Recurring<% } %><% if (R.truncated) { %> · only the first <%= R.rows.length %> rows are read<% } %></p>
+        </div>
+        <button class="btn btn-primary" formaction="/budget/import/save" <%= C.import ? '' : 'disabled' %>>Import <%= C.import %> payment<%= C.import === 1 ? '' : 's' %></button>
+      </div>
+      <% var reasons = Object.keys(labels).filter(function (k) { return C[k]; }); %>
+      <% if (reasons.length) { %>
+        <p class="small" style="margin:.7rem 0 0"><strong>Skipped:</strong>
+          <% reasons.forEach(function (k, i) { %><%= i ? ' · ' : '' %><%= C[k] %> <%= labels[k] %><% }) %>
+        </p>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Check the columns</h2>
+      <p class="muted small" style="margin:0 0 .6rem">We guessed which column is which. Change any that are wrong, then update the preview.</p>
+      <% var cols = [
+           ['date', 'Date', true], ['amount', 'Amount (money in)', true], ['debit', 'Money out (if a separate column)', false],
+           ['description', 'Description', false], ['status', 'Status (to skip refunds and failed payments)', false], ['type', 'Type (to skip transfers and payouts)', false]
+         ]; %>
+      <div class="grid-3" style="margin-top:0">
+        <% cols.forEach(function (c) { %>
+          <label class="small"><%= c[1] %>
+            <select name="col_<%= c[0] %>">
+              <option value="-1"><%= c[2] ? 'Choose…' : 'None' %></option>
+              <% R.headers.forEach(function (h, i) { %><option value="<%= i %>" <%= R.columns[c[0]] === i ? 'selected' : '' %>><%= h %></option><% }) %>
+            </select>
+          </label>
+        <% }) %>
+        <label class="small">From <span class="muted">(when a row has no description)</span><input name="source" maxlength="40" value="<%= R.source %>" placeholder="e.g. Stripe, Bank"></label>
+      </div>
+      <fieldset class="small" style="border:0;padding:0;margin:.8rem 0 0">
+        <legend><strong>Recurring</strong> <span class="muted">(feeds monthly recurring revenue)</span></legend>
+        <label class="check" style="display:inline-flex;gap:.35rem;margin-right:1rem"><input type="radio" name="recurring" value="matching" <%= R.recurring === 'matching' ? 'checked' : '' %>> Tick ones that look like subscriptions</label>
+        <label class="check" style="display:inline-flex;gap:.35rem;margin-right:1rem"><input type="radio" name="recurring" value="all" <%= R.recurring === 'all' ? 'checked' : '' %>> Tick all</label>
+        <label class="check" style="display:inline-flex;gap:.35rem"><input type="radio" name="recurring" value="none" <%= R.recurring === 'none' ? 'checked' : '' %>> Tick none</label>
+      </fieldset>
+      <% if (C.payouts) { %>
+        <label class="check small" style="display:flex;gap:.45rem;align-items:flex-start;margin:.8rem 0 0"><input type="checkbox" name="skip_payouts" value="1" <%= R.skipPayouts ? 'checked' : '' %> style="width:auto;margin-top:.2rem">
+          <span><strong>Skip the <%= C.payouts %> payout<%= C.payouts === 1 ? '' : 's' %> from Stripe, PayPal, Shopify and the like.</strong> <span class="muted">Tick this if you import those platforms' own files too, so the same money is not counted twice.</span></span></label>
+      <% } %>
+      <button class="btn btn-ghost btn-sm" style="margin-top:.8rem">Update preview</button>
+    </div>
+  </form>
+
+  <div class="card table-wrap">
+    <h2 style="margin-top:0">Preview</h2>
+    <% var shown = R.rows.slice(0, 200); %>
+    <table class="table small" style="width:100%">
+      <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>From</th><th></th></tr></thead>
+      <tbody>
+        <% shown.forEach(function (r) { %>
+          <tr style="<%= r.skip ? 'opacity:.55' : '' %>">
+            <td class="muted"><%= r.row %></td>
+            <td><%= r.date || '—' %></td>
+            <td><strong><%= r.amount === null ? '—' : $m(r.amount) %></strong></td>
+            <td><%= r.source %><% if (r.description) { %><br><span class="muted"><%= r.description %></span><% } %></td>
+            <td><% if (r.skip) { %><span class="muted">Skipped: <%= labels[r.skip] %></span><% } else if (r.recurring) { %><span class="chip" style="font-size:.7rem">Recurring</span><%= r.payout ? ' ' : '' %><% if (r.payout) { %><span class="muted">payout</span><% } %><% } else { %><span class="chip chip-success" style="font-size:.7rem">Import</span><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% if (R.rows.length > shown.length) { %><p class="muted small">Showing the first <%= shown.length %> of <%= R.rows.length %> rows. The totals above count them all.</p><% } %>
+  </div>
+<% } %>
+<%- include('partials/foot') %>

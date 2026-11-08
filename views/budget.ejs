@@ -60,6 +60,7 @@
         <label class="check" style="display:flex;gap:.45rem;align-items:center;margin:.2rem 0 .6rem"><input type="checkbox" name="recurring" value="1"> Recurring <span class="muted small">(a subscription or retainer payment)</span></label>
         <button class="btn btn-primary">Log income</button>
       </form>
+      <p class="small" style="margin:.5rem 0 0"><a href="/budget/import">📥 Import payments from a CSV</a> <span class="muted">(bank, Stripe, PayPal, Etsy, Shopify…)</span></p>
       <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates.<% } %></p>
     </div>
     <div>
