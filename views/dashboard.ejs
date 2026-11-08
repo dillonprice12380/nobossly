@@ -173,6 +173,7 @@
       <label>Date<input type="date" name="date" value="<%= today %>" max="<%= today %>"></label>
     </div>
     <label>From<input name="source" maxlength="80" placeholder="Client, platform, sale…"></label>
+    <label class="check" style="display:flex;gap:.45rem;align-items:center;margin:.35rem 0 0"><input type="checkbox" name="recurring" value="1" style="width:auto"> Recurring <span class="muted small">(subscription or retainer)</span></label>
     <div class="cta-row" style="justify-content:space-between;align-items:center;margin:.5rem 0 0">
       <button class="btn btn-primary btn-sm">Log income</button>
       <a class="muted small" href="/budget">Income log →</a>

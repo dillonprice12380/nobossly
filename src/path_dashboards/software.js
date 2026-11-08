@@ -9,7 +9,7 @@ registry.defineMetric({ key: 'sw_waitlist', label: 'Waitlist sign-ups', unit: 'c
 registry.defineMetric({ key: 'sw_active', label: 'Active users', unit: 'count', period: 'month',
   help: 'People who used it this month — your own definition, kept the same every month.' });
 registry.defineMetric({ key: 'sw_paying', label: 'Paying customers', unit: 'count', period: 'month' });
-registry.defineMetric({ key: 'sw_mrr', label: 'Monthly recurring revenue', unit: 'money', period: 'month',
+registry.defineMetric({ key: 'sw_mrr', label: 'Monthly recurring revenue', unit: 'money', period: 'month', fromIncome: 'recurring',
   help: 'What subscriptions bring in each month, at the end of the month.' });
 registry.defineMetric({ key: 'sw_churn', label: 'Churn', unit: 'percent', period: 'month', higherIsBetter: false,
   help: 'Paying customers lost this month ÷ paying customers at the start of it.' });

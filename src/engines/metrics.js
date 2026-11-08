@@ -68,8 +68,32 @@ async function log(sb, userId, key, periodInputValue, value, note, now = new Dat
 }
 
 /**
+ * What the income log says for each month from `first` to `current`, for a
+ * number that fills in from it (def.fromIncome). { 'YYYY-MM-01': total }.
+ * Before migrations/2026-11-08_recurring_income.sql has run there is no
+ * is_recurring column: 'all' still works, 'recurring' finds nothing.
+ */
+async function fromIncomeLog(sb, userId, def, first, current) {
+  const until = step(def, current, 1);
+  const read = cols => sb.from('revenue_entries').select(cols).eq('user_id', userId).eq('entry_type', 'revenue')
+    .gte('entry_date', first).lt('entry_date', until).limit(5000);
+  let r = await read('amount, entry_date, is_recurring');
+  if (r.error && def.fromIncome === 'all') r = await read('amount, entry_date');
+  if (r.error) return {};
+  const out = {};
+  for (const row of r.data || []) {
+    if (def.fromIncome === 'recurring' && !row.is_recurring) continue;
+    const p = String(row.entry_date).slice(0, 7) + '-01';
+    out[p] = Math.round(((out[p] || 0) + Number(row.amount || 0)) * 100) / 100;
+  }
+  return out;
+}
+
+/**
  * The last n periods up to and including the current one, oldest first, with
- * null for a period nothing was logged in — a gap is a gap, not a zero.
+ * null for a period nothing was logged in — a gap is a gap, not a zero. For a
+ * number that fills in from the income log, a month with nothing typed takes
+ * the log's total (source 'income'); a typed number always wins ('typed').
  */
 async function series(sb, userId, key, n = 12, now = new Date()) {
   const def = metricOrThrow(key);
@@ -81,10 +105,13 @@ async function series(sb, userId, key, n = 12, now = new Date()) {
     .order('period', { ascending: true })) || [];
   const by = {};
   rows.forEach(r => { by[String(r.period).slice(0, 10)] = r; });
+  const log = def.fromIncome ? await fromIncomeLog(sb, userId, def, first, current) : {};
   const out = [];
   for (let i = 0, p = first; i < n; i++, p = step(def, p, 1)) {
     const r = by[p];
-    out.push({ period: p, label: periodLabel(def, p, true), value: r ? Number(r.value) : null, id: r ? r.id : null, note: r ? r.note : null });
+    if (r) out.push({ period: p, label: periodLabel(def, p, true), value: Number(r.value), id: r.id, note: r.note, source: 'typed' });
+    else if (log[p]) out.push({ period: p, label: periodLabel(def, p, true), value: log[p], id: null, note: null, source: 'income' });
+    else out.push({ period: p, label: periodLabel(def, p, true), value: null, id: null, note: null, source: null });
   }
   return out;
 }
@@ -153,4 +180,4 @@ async function remove(sb, userId, key, id) {
   return true;
 }
 
-module.exports = { periodOf, periodLabel, periodInput, step, log, series, entries, summary, card, present, remove };
+module.exports = { periodOf, periodLabel, periodInput, step, log, series, entries, summary, card, present, remove, fromIncomeLog };

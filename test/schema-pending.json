@@ -5,5 +5,11 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-08_recurring_income.sql": {
+      "revenue_entries": [
+        "is_recurring"
+      ]
+    }
+  }
 }

@@ -4,8 +4,8 @@
 const { registry } = require('../engines');
 const { defineWorksheet } = require('../workspace/worksheets');
 
-registry.defineMetric({ key: 'fl_income', label: 'Billable income', unit: 'money', period: 'month',
-  help: 'Money invoiced for work done this month (not what landed in the bank).' });
+registry.defineMetric({ key: 'fl_income', label: 'Billable income', unit: 'money', period: 'month', fromIncome: 'all',
+  help: 'Money from client work this month. Type a number to use what you invoiced instead of what was paid.' });
 registry.defineMetric({ key: 'fl_hours', label: 'Billable hours', unit: 'count', period: 'week',
   help: 'Hours you could put on an invoice. Admin, pitching and learning do not count.' });
 registry.defineMetric({ key: 'fl_active_clients', label: 'Active clients', unit: 'count', period: 'month',
