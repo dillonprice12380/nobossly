@@ -5,46 +5,5 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {
-    "2026-11-09_more_connections.sql": {
-      "payment_connections": [
-        "account_label",
-        "meta"
-      ],
-      "bank_connections": [
-        "id",
-        "user_id",
-        "provider",
-        "item_id",
-        "institution",
-        "accounts",
-        "secret_id",
-        "status",
-        "last_error",
-        "last_synced_at",
-        "sync_cursor",
-        "created_at"
-      ],
-      "bank_transactions": [
-        "id",
-        "user_id",
-        "connection_id",
-        "external_id",
-        "posted_on",
-        "amount",
-        "direction",
-        "name",
-        "merchant",
-        "category",
-        "account_label",
-        "pending",
-        "status",
-        "decided_at",
-        "created_at"
-      ],
-      "expenses": [
-        "external_id"
-      ]
-    }
-  }
+  "migrations": {}
 }

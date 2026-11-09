@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-09 (run in the SQL Editor; returned true. Verified: bank_connections and bank_transactions with RLS on, the four providers, account_label and meta, expenses.external_id; members cannot run payment_connection_store or bank_connection_secret or read sync_cursor; anon cannot read the inbox).
 --
 -- More connections for the income log (2026-11-09), beside Stripe
 -- (migrations/2026-11-08_stripe_connection.sql):
