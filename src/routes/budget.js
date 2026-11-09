@@ -6,6 +6,7 @@ const calc = require('../tools_calc');
 const premium = require('../premium');
 const dashboards = require('../path_dashboards');
 const { FLAGS } = require('../features');
+const moneyLib = require('../money');
 // "Your income log shows a money rung: claim it" belongs to the levels system;
 // with levels off there is nothing to claim.
 const claimsFor = (path, sum, done) => (FLAGS.ladder || FLAGS.trophies ? income.claimPrompts(path, sum, done) : []);
@@ -14,6 +15,9 @@ const isPaid = req => planOf(req.profile) === 'paid';
 
 // Load the budget view payload.
 async function loadBudget(req, extra = {}) {
+  // Monthly costs the member set up are logged first, so this month's numbers
+  // include them (src/money.js).
+  const rec = await moneyLib.catchUp(req.sb, req.user.id).catch(e => { console.error('[recurring]', e.message || e); return { rules: [], logged: 0 }; });
   const monthStart = new Date(); monthStart.setDate(1);
   const ms = monthStart.toISOString().slice(0, 10);
   // The launch budget the member declared when they picked their path. This
@@ -36,7 +40,10 @@ async function loadBudget(req, extra = {}) {
     // The Stripe connection, if any (migrations/2026-11-08_stripe_connection.sql).
     req.sb.from('payment_connections').select('status, key_hint, last_synced_at, imported_count').eq('user_id', req.user.id).eq('provider', 'stripe').maybeSingle().then(r => r, () => ({ data: null }))]);
   const sum = income.summary(log.income, log.expenses);
+  const ov = moneyLib.overview(log.income, log.expenses);
   return Object.assign({
+    overview: ov, chart: moneyLib.chart(ov.series, ov.max), fmt: moneyLib.fmt,
+    rules: rec.rules || [], rulesReady: !rec.notReady, recurringLogged: rec.logged || 0,
     stripeConn: (stripeRes && stripeRes.data) || null,
     title: 'Money', budgets: budgets || [], expenses: expenses || [],
     incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
@@ -107,14 +114,14 @@ router.post('/expense', async (req, res, next) => {
     if (category === '__other') category = (req.body.category_other || '').trim();
     category = (category || 'Other').slice(0, 40);
     const amount = parseFloat(req.body.amount);
-    if (category && amount > 0) {
+    if (category && amount > 0 && amount <= 1e7) {
       await req.sb.from('expenses').insert({
-        user_id: req.user.id, category, amount,
+        user_id: req.user.id, category, amount: Math.round(amount * 100) / 100,
         note: (req.body.note || '').slice(0, 200) || null,
-        spent_at: req.body.spent_at || new Date().toISOString().slice(0, 10)
+        spent_at: /^\d{4}-\d{2}-\d{2}$/.test(req.body.spent_at || '') ? req.body.spent_at : new Date().toISOString().slice(0, 10)
       });
     }
-    res.redirect('/budget');
+    res.redirect('/budget#expenses');
   } catch (e) { next(e); }
 });
 
@@ -164,6 +171,108 @@ router.post('/income/:id/delete', async (req, res, next) => {
     res.redirect('/budget');
   } catch (e) { next(e); }
 });
+
+// ----------------------------------------------------------------- History
+// Every payment and expense, filtered; each one editable.
+router.get('/history', async (req, res, next) => {
+  try {
+    await moneyLib.catchUp(req.sb, req.user.id).catch(() => null);
+    const f = moneyLib.filtersOf(req.query);
+    const h = await moneyLib.history(req.sb, req.user.id, f);
+    const thisYear = Number(today().slice(0, 4));
+    res.render('budget_history', {
+      title: 'Money history', f, h, years: [thisYear, thisYear - 1, thisYear - 2].map(String),
+      months: Array.from({ length: 12 }, (_, i) => income.addMonths(income.thisMonth(), -i)),
+      monthLabel: m => new Date(m + '-15T12:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }),
+      msg: req.query.msg || null
+    });
+  } catch (e) { next(e); }
+});
+
+const KINDS = { in: 'revenue_entries', out: 'expenses' };
+const ownEntry = (req) => {
+  const table = KINDS[req.params.kind];
+  if (!table || !/^[0-9a-f-]{36}$/i.test(req.params.id)) return Promise.resolve({ data: null });
+  return req.sb.from(table).select('*').eq('id', req.params.id).eq('user_id', req.user.id).maybeSingle();
+};
+const backOf = req => { const b = String((req.body && req.body.back) || (req.query && req.query.back) || ''); return /^\/budget(\/history)?(\?[\w=&%.-]*)?$/.test(b) ? b : '/budget/history'; };
+
+router.get('/entry/:kind/:id', async (req, res, next) => {
+  try {
+    const { data: e } = await ownEntry(req);
+    if (!e) return res.status(404).render('error', { title: 'Not found', message: 'That entry is gone.' });
+    res.render('budget_edit', {
+      title: req.params.kind === 'in' ? 'Edit payment' : 'Edit expense', kind: req.params.kind, e, back: backOf(req),
+      budgetCategories: require('../budget_categories').STANDARD, today: today(), err: req.query.err || null
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/entry/:kind/:id', async (req, res, next) => {
+  try {
+    const table = KINDS[req.params.kind];
+    const back = backOf(req);
+    const self = '/budget/entry/' + req.params.kind + '/' + req.params.id + '?back=' + encodeURIComponent(back);
+    if (!table) return res.redirect('/budget/history');
+    if (req.body.delete) {
+      await req.sb.from(table).delete().eq('id', req.params.id).eq('user_id', req.user.id);
+      return res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=' + encodeURIComponent('Deleted.'));
+    }
+    const c = moneyLib.cleanEntry(req.params.kind, req.body, today());
+    if (c.error) return res.redirect(self + '&err=' + encodeURIComponent(c.error));
+    let { error } = await req.sb.from(table).update(c.fields).eq('id', req.params.id).eq('user_id', req.user.id);
+    if (error && req.params.kind === 'in' && /is_recurring/.test(error.message || '')) {
+      delete c.fields.is_recurring;
+      ({ error } = await req.sb.from(table).update(c.fields).eq('id', req.params.id).eq('user_id', req.user.id));
+    }
+    if (error) return res.redirect(self + '&err=' + encodeURIComponent('That did not save. Try again.'));
+    res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=' + encodeURIComponent('Saved.'));
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------------------------ Export
+// A year as CSV: every entry, or summed by month and category.
+router.get('/export', (req, res) => {
+  const y = Number(today().slice(0, 4));
+  res.render('budget_export', { title: 'Export for tax time', years: [y, y - 1, y - 2].map(String) });
+});
+
+router.get('/export/:file', async (req, res, next) => {
+  try {
+    const file = req.params.file;
+    if (!['transactions.csv', 'summary.csv'].includes(file)) return res.redirect('/budget/export');
+    const year = /^20\d{2}$/.test(String(req.query.year || '')) ? String(req.query.year) : today().slice(0, 4);
+    await moneyLib.catchUp(req.sb, req.user.id).catch(() => null);
+    const h = await moneyLib.history(req.sb, req.user.id, moneyLib.filtersOf({ year }), 100000);
+    const body = file === 'summary.csv' ? moneyLib.summaryCsv(h.rows, year) : moneyLib.transactionsCsv(h.rows);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', 'attachment; filename="nobossly-' + year + '-' + file.replace('.csv', '') + '.csv"');
+    res.send(body);
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------------- Recurring expenses
+router.post('/recurring', async (req, res, next) => {
+  try {
+    const c = moneyLib.cleanRule(req.body, req.user.id, today());
+    if (c.error) return res.redirect('/budget?msg=' + encodeURIComponent(c.error) + '#monthly');
+    const { error } = await req.sb.from('recurring_expenses').insert(c.row);
+    if (error) return res.redirect('/budget?msg=' + encodeURIComponent(moneyLib.missing(error) ? 'Monthly costs are being switched on. Check back shortly.' : 'That did not save. Try again.') + '#monthly');
+    const r = await moneyLib.catchUp(req.sb, req.user.id, today());
+    const m = c.row.category + ' (' + moneyLib.fmt(c.row.amount) + ') is set up for the ' + ordinal(c.row.day_of_month) + ' of each month.' + (r.logged ? ' This month\'s is logged.' : '');
+    res.redirect('/budget?msg=' + encodeURIComponent(m) + '#monthly');
+  } catch (e) { next(e); }
+});
+
+router.post('/recurring/:id/stop', async (req, res, next) => {
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.redirect('/budget#monthly');
+    await req.sb.from('recurring_expenses').update({ stopped_at: new Date().toISOString() }).eq('id', req.params.id).eq('user_id', req.user.id);
+    res.redirect('/budget?msg=' + encodeURIComponent('Stopped. What was already logged stays in your expenses.') + '#monthly');
+  } catch (e) { next(e); }
+});
+
+const ordinal = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
 
 // ------------------------------------------------------------ CSV import
 // Upload an export from a bank, Stripe, PayPal, Etsy, Shopify or a sheet;

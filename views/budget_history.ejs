@@ -1,0 +1,64 @@
+<%- include('partials/head') %>
+<%# Every payment and expense (src/money.js history), filtered; click one to edit it. %>
+<% var $c = function (n) { return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+   var here = '/budget/history' + (f.month ? '?month=' + f.month : f.year ? '?year=' + f.year : '') ;
+   var qs = function (o) { var p = Object.assign({ month: f.month, year: f.year, type: f.type === 'all' ? '' : f.type, q: f.q }, o); return '/budget/history?' + Object.keys(p).filter(function (k) { return p[k]; }).map(function (k) { return k + '=' + encodeURIComponent(p[k]); }).join('&'); };
+   var self = qs({}); %>
+<div class="page-head">
+  <div><h1>📒 Money history</h1><p class="muted">Every payment and expense. Click one to change it.</p></div>
+  <div class="cta-row" style="margin:0"><a class="btn btn-ghost btn-sm" href="/budget">← Money</a><a class="btn btn-ghost btn-sm" href="/budget/export">Export</a></div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<form class="card mh-filters" method="get" action="/budget/history">
+  <label>When
+    <select name="period">
+      <option value="" <%= !f.month && !f.year ? 'selected' : '' %>>Last 12 months</option>
+      <optgroup label="Year"><% years.forEach(function (y) { %><option value="<%= y %>" <%= f.year === y ? 'selected' : '' %>><%= y %></option><% }) %></optgroup>
+      <optgroup label="Month"><% months.forEach(function (m) { %><option value="<%= m %>" <%= f.month === m ? 'selected' : '' %>><%= monthLabel(m) %></option><% }) %></optgroup>
+    </select>
+  </label>
+  <label>Show
+    <select name="type"><option value="">Everything</option><option value="in" <%= f.type === 'in' ? 'selected' : '' %>>Income</option><option value="out" <%= f.type === 'out' ? 'selected' : '' %>>Expenses</option></select>
+  </label>
+  <label>Containing<input name="q" value="<%= f.q %>" maxlength="60" placeholder="Client, category, note…"></label>
+  <button class="btn btn-primary btn-sm">Show</button>
+  <% if (f.month || f.year || f.type !== 'all' || f.q) { %><a class="btn btn-ghost btn-sm" href="/budget/history">Clear</a><% } %>
+</form>
+
+<div class="mh-totals">
+  <% if (f.type !== 'out') { %><span><strong><%= $c(h.totals.in) %></strong> <span class="muted">in</span></span><% } %>
+  <% if (f.type !== 'in') { %><span><strong><%= $c(h.totals.out) %></strong> <span class="muted">out</span></span><% } %>
+  <% if (f.type === 'all') { %><span><strong><%= (h.totals.profit < 0 ? '−' : '') + $c(Math.abs(h.totals.profit)) %></strong> <span class="muted">profit</span></span><% } %>
+  <span class="muted"><%= h.count %> entr<%= h.count === 1 ? 'y' : 'ies' %><%= h.count > h.rows.length ? ', showing ' + h.rows.length : '' %></span>
+</div>
+
+<% if (!h.rows.length) { %>
+  <div class="card center"><p class="muted" style="margin:0">Nothing<%= f.q ? ' matches “' + f.q + '”' : ' here' %>.</p></div>
+<% } else { %>
+  <div class="card mh-list">
+    <% var lastMonth = null; h.rows.forEach(function (r) { var m = r.date.slice(0, 7); %>
+      <% if (m !== lastMonth) { lastMonth = m; %><p class="mh-month"><%= monthLabel(m) %></p><% } %>
+      <a class="mh-row" href="/budget/entry/<%= r.kind %>/<%= r.id %>?back=<%= encodeURIComponent(self) %>">
+        <span class="mh-date"><%= new Date(r.date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) %></span>
+        <span class="mh-what"><strong><%= r.label %></strong><% if (r.recurring) { %> <span class="chip" style="font-size:.68rem"><%= r.kind === 'in' ? 'Recurring' : 'Monthly' %></span><% } %><% if (r.note) { %><br><span class="muted small"><%= r.note %></span><% } %></span>
+        <span class="mh-amt <%= r.kind %>"><%= r.kind === 'out' ? '−' : '+' %><%= $c(r.amount) %></span>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+<style>
+  .mh-filters { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: flex-end; }
+  .mh-filters label { margin: 0; min-width: 150px; flex: 1; }
+  .mh-filters button, .mh-filters .btn { margin-bottom: .1rem; }
+  .mh-totals { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin: .2rem 0 .8rem; }
+  .mh-list { padding: .3rem 1rem .6rem; }
+  .mh-month { margin: .9rem 0 .2rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .mh-row { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; gap: .7rem; align-items: baseline; padding: .5rem 0; border-top: 1px solid var(--border); color: inherit; text-decoration: none; }
+  .mh-month + .mh-row { border-top: 0; }
+  .mh-row:hover strong { color: var(--accent); }
+  .mh-date { color: var(--muted); font-size: .85rem; }
+  .mh-amt { font-weight: 600; white-space: nowrap; }
+  .mh-amt.in { color: var(--accent); }
+</style>
+<%- include('partials/foot') %>

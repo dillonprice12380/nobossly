@@ -1,6 +1,7 @@
 <%- include('partials/head') %>
 <div class="page-head">
   <div><h1>💰 Money</h1><p class="muted"><%= monthLabel %> — what came in, what went out, what to keep aside, and the tools for prices and costs.</p></div>
+  <div class="cta-row" style="margin:0"><a class="btn btn-ghost btn-sm" href="/budget/history">History</a><a class="btn btn-ghost btn-sm" href="/budget/export">Export for tax time</a></div>
 </div>
 
 <% if (typeof msg !== 'undefined' && msg) { %><p class="notice"><%= msg %></p><% } %>
@@ -12,45 +13,13 @@
   </div>
 <% }) %>
 
-<% if (typeof moneyTools !== 'undefined' && moneyTools) { %>
-  <h2 class="money-section">Money tools</h2>
-  <div class="grid money-tools">
-    <% moneyTools.mine.forEach(function (t) { %>
-      <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
-    <% }) %>
-    <% (moneyMetrics || []).forEach(function (m) { %>
-      <a class="card money-tool" href="/workspace/metrics/<%= m.key %>"><div class="money-head"><span class="money-emoji">📈</span><strong><%= m.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Logged each <%= m.period %><%= m.help ? ' · ' + m.help : '' %></p></a>
-    <% }) %>
-  </div>
-  <% if (moneyTools.more.length) { %>
-    <details class="money-more"><summary><strong>More money worksheets</strong> <span class="muted small">(<%= moneyTools.more.length %>, from other paths)</span></summary>
-      <div class="grid" style="margin-top:.6rem">
-        <% moneyTools.more.forEach(function (t) { %>
-          <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
-        <% }) %>
-      </div>
-    </details>
-  <% } %>
-  <h2 class="money-section">This month</h2>
-<% } %>
-<style>
-  .money-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
-  .money-tool { display: block; color: inherit; text-decoration: none; }
-  .money-tool:hover { border-color: var(--accent); }
-  .money-head { display: flex; gap: .5rem; align-items: center; }
-  .money-emoji { font-size: 1.4rem; }
-  .money-more { margin: .4rem 0 1rem; }
-</style>
+<%- include('partials/money_overview') %>
 
 <div class="card">
   <div class="grid-2" style="align-items:start">
     <div>
       <h3 style="margin-top:0" id="income">💵 Income</h3>
-      <div class="stat-row" style="margin:0 0 .6rem">
-        <div class="stat"><span class="stat-num"><%= $m(incomeSum.thisMonth) %></span><span class="muted small">this month</span></div>
-        <div class="stat"><span class="stat-num"><%= $m(incomeSum.lastMonth) %></span><span class="muted small">last month</span></div>
-        <div class="stat"><span class="stat-num"><%= $m(incomeSum.total) %></span><span class="muted small">logged in all</span></div>
-      </div>
+      <p class="muted small" style="margin:-.3rem 0 .6rem">Log a payment when it lands. <%= $m(incomeSum.total) %> logged in all.</p>
       <form method="post" action="/budget/income">
         <div class="form-grid-2">
           <label>Amount ($)<input name="amount" inputmode="decimal" required></label>
@@ -68,13 +37,13 @@
       <p class="muted small">Put about <strong><%= setAsideRate %>%</strong> of each payment aside for tax<%= isPremium ? '' : ' — a rough US figure' %>. <% if (isPremium) { %><a href="/tools/tax">Your quarterly estimates →</a><% } else if (flags.premium) { %><a href="/pricing">Premium</a> turns this into quarterly estimates.<% } %></p>
     </div>
     <div>
-      <h3 style="margin-top:0">Recent payments</h3>
+      <h3 style="margin-top:0">Recent payments <a class="muted small" style="font-weight:400;margin-left:.4rem" href="/budget/history?type=in">All →</a></h3>
       <% if (!incomeLog.length) { %><p class="muted small">Nothing logged yet. Every payment counts<% if (flags.ladder) { %> — the first sale is a rung on every path<% } %>.</p><% } %>
       <table class="table small" style="width:100%">
-        <% incomeLog.forEach(e => { %>
+        <% incomeLog.slice(0, 8).forEach(e => { %>
           <tr>
             <td><%= new Date(e.entry_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
-            <td><strong><%= $m(e.amount) %></strong><% if (e.is_recurring) { %> <span class="chip" style="font-size:.7rem">Recurring</span><% } %><% if (e.source) { %><br><span class="muted small"><%= e.source %></span><% } %></td>
+            <td><a class="money-edit" href="/budget/entry/in/<%= e.id %>?back=/budget" title="Edit"><strong><%= $m(e.amount) %></strong></a><% if (e.is_recurring) { %> <span class="chip" style="font-size:.7rem">Recurring</span><% } %><% if (e.source) { %><br><span class="muted small"><%= e.source %></span><% } %></td>
             <td><form method="post" action="/budget/income/<%= e.id %>/delete" class="inline" onsubmit="return confirm('Delete this payment?')"><button class="btn-x" title="Delete">×</button></form></td>
           </tr>
         <% }) %>
@@ -95,9 +64,9 @@
   </div>
 <% } %>
 
-<div class="grid-2">
+<div class="grid-2" id="expenses">
   <div class="card">
-    <h3>This month</h3>
+    <h3>Spending this month</h3>
     <p class="big-number">$<%= totalSpent.toFixed(2) %> <span class="muted small">spent<%= totalBudget ? ' of $' + totalBudget.toFixed(2) + ' budgeted' : '' %></span></p>
     <% if (totalBudget) { const pct = Math.min(100, Math.round(totalSpent / totalBudget * 100)); %>
       <div class="budget-bar"><div class="budget-fill <%= pct >= 100 ? 'over' : pct >= 80 ? 'warn' : '' %>" style="width:<%= pct %>%"></div></div>
@@ -156,13 +125,13 @@
       <label>Note (optional)<input name="note" maxlength="200" placeholder="What was it for?"></label>
       <button class="btn btn-primary">Add expense</button>
     </form>
-    <h3 style="margin-top:1.2rem">Recent expenses</h3>
+    <h3 style="margin-top:1.2rem">Recent expenses <a class="muted small" style="font-weight:400;margin-left:.4rem" href="/budget/history?type=out">All →</a></h3>
     <% if (!expenses.length) { %><p class="muted small">Nothing logged this month yet.</p><% } %>
     <table class="table small" style="width:100%">
-      <% expenses.slice(0, 30).forEach(e => { %>
+      <% expenses.slice(0, 12).forEach(e => { %>
         <tr>
           <td><%= new Date(e.spent_at + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></td>
-          <td><strong><%= e.category %></strong><% if (e.note) { %><br><span class="muted small"><%= e.note %></span><% } %></td>
+          <td><a class="money-edit" href="/budget/entry/out/<%= e.id %>?back=/budget" title="Edit"><strong><%= e.category %></strong></a><% if (e.recurring_id) { %> <span class="chip" style="font-size:.7rem">Monthly</span><% } %><% if (e.note) { %><br><span class="muted small"><%= e.note %></span><% } %></td>
           <td>$<%= Number(e.amount).toFixed(2) %></td>
           <td><form method="post" action="/budget/expense/<%= e.id %>/delete" class="inline"><button class="btn-x" title="Delete">×</button></form></td>
         </tr>
@@ -170,6 +139,39 @@
     </table>
   </div>
 </div>
+<%- include('partials/money_monthly') %>
+
+<% if (typeof moneyTools !== 'undefined' && moneyTools) { %>
+  <h2 class="money-section">Money tools</h2>
+  <div class="grid money-tools">
+    <% moneyTools.mine.forEach(function (t) { %>
+      <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
+    <% }) %>
+    <% (moneyMetrics || []).forEach(function (m) { %>
+      <a class="card money-tool" href="/workspace/metrics/<%= m.key %>"><div class="money-head"><span class="money-emoji">📈</span><strong><%= m.label %></strong></div><p class="muted small" style="margin:.3rem 0 0">Logged each <%= m.period %><%= m.help ? ' · ' + m.help : '' %></p></a>
+    <% }) %>
+  </div>
+  <% if (moneyTools.more.length) { %>
+    <details class="money-more"><summary><strong>More money worksheets</strong> <span class="muted small">(<%= moneyTools.more.length %>, from other paths)</span></summary>
+      <div class="grid" style="margin-top:.6rem">
+        <% moneyTools.more.forEach(function (t) { %>
+          <a class="card money-tool" href="<%= t.href %>"><div class="money-head"><span class="money-emoji"><%= t.emoji %></span><strong><%= t.label %></strong></div><p class="muted small" style="margin:.3rem 0 0"><%= t.blurb %></p></a>
+        <% }) %>
+      </div>
+    </details>
+  <% } %>
+<% } %>
+<style>
+  .money-section { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .money-tool { display: block; color: inherit; text-decoration: none; }
+  .money-tool:hover { border-color: var(--accent); }
+  .money-head { display: flex; gap: .5rem; align-items: center; }
+  .money-emoji { font-size: 1.4rem; }
+  .money-more { margin: .4rem 0 1rem; }
+  .money-edit { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--border); }
+  .money-edit:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+
 <script>
   (function () {
     var sel = document.getElementById('exp-cat');
