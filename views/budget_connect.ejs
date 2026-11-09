@@ -1,0 +1,83 @@
+<%- include('partials/head') %>
+<%# Every way into the income log in one place (src/routes/connect.js). %>
+<% var when = function (t) { return t ? new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet'; }; %>
+<div class="page-head">
+  <div>
+    <h1>🔌 Connect your money</h1>
+    <p class="muted">Payments come into your income log by themselves. NoBossly only ever reads: it cannot move money, refund or change anything.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/budget">← Money</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (waiting) { %><div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0"><strong><%= waiting %></strong> bank transaction<%= waiting === 1 ? '' : 's' %> waiting for you to say what they are. <a href="/budget/review">Go through them →</a></p></div><% } %>
+
+<h2 class="cx-h">Where you get paid</h2>
+<div class="grid cx-grid">
+  <% var s = by.stripe; %>
+  <div class="card cx-card">
+    <div class="cx-head"><span class="cx-emoji">💳</span><strong>Stripe</strong><% if (s) { %><span class="chip cx-chip <%= s.status === 'error' ? 'bad' : '' %>"><%= s.status === 'error' ? 'Needs attention' : 'Connected' %></span><% } %></div>
+    <p class="muted small">Card payments and subscriptions, ticked Recurring.</p>
+    <% if (s) { %><p class="small cx-meta">Last synced <%= when(s.last_synced_at) %> · <%= s.imported_count || 0 %> brought in</p><% } %>
+    <a class="btn btn-ghost btn-sm" href="/budget/connect/stripe"><%= s ? 'Manage' : 'Connect' %></a>
+  </div>
+  <% providers.forEach(function (p) { var c = by[p.key]; %>
+    <div class="card cx-card">
+      <div class="cx-head"><span class="cx-emoji"><%= p.emoji %></span><strong><%= p.label %></strong><% if (c) { %><span class="chip cx-chip <%= c.status === 'error' ? 'bad' : '' %>"><%= c.status === 'error' ? 'Needs attention' : 'Connected' %></span><% } %></div>
+      <p class="muted small"><%= p.blurb %></p>
+      <% if (c) { %>
+        <p class="small cx-meta"><%= c.account_label ? c.account_label + ' · ' : '' %>Last synced <%= when(c.last_synced_at) %> · <%= c.imported_count || 0 %> brought in</p>
+        <% if (c.status === 'error' && c.last_error) { %><p class="small" style="color:var(--danger);margin:.2rem 0 .4rem"><%= c.last_error %></p><% } %>
+        <div class="cta-row" style="justify-content:flex-start;gap:.35rem;margin:0">
+          <% if (p.key === 'shopify') { %><a class="btn btn-ghost btn-sm" href="/budget/connect/shopify">Manage</a><% } else { %>
+            <% if (canSync) { %><form method="post" action="/budget/connect/<%= p.key %>/sync" class="inline"><button class="btn btn-ghost btn-sm">Sync now</button></form><% } %>
+            <form method="post" action="/budget/connect/<%= p.key %>/disconnect" class="inline" onsubmit="return confirm('Disconnect <%= p.label %>? Payments already logged stay.')"><button class="btn btn-ghost btn-sm">Disconnect</button></form>
+          <% } %>
+        </div>
+      <% } else if (!ready) { %>
+        <p class="muted small" style="margin:0">Being switched on. Check back shortly.</p>
+      <% } else if (p.how === 'paste') { %>
+        <a class="btn btn-ghost btn-sm" href="/budget/connect/<%= p.key %>">Connect</a>
+      <% } else if (p.ready) { %>
+        <a class="btn btn-primary btn-sm" href="/budget/connect/<%= p.key %>/start">Connect <%= p.label %></a>
+      <% } else { %>
+        <p class="muted small" style="margin:0">Coming soon.</p>
+      <% } %>
+    </div>
+  <% }) %>
+  <div class="card cx-card">
+    <div class="cx-head"><span class="cx-emoji">🅿️</span><strong>PayPal, Etsy and others</strong></div>
+    <p class="muted small">Download your activity as a CSV from their site and import it. Duplicates are spotted.</p>
+    <a class="btn btn-ghost btn-sm" href="/budget/import">Import a CSV</a>
+  </div>
+</div>
+
+<h2 class="cx-h">Your bank</h2>
+<div class="card">
+  <p class="muted small" style="margin-top:0">A bank account mixes business and personal money, so nothing from it is logged on its own: new transactions wait for you to mark them income, expense or not business.</p>
+  <% if (banks.length) { %>
+    <ul class="cx-banks">
+      <% banks.forEach(function (b) { %>
+        <li><strong>🏦 <%= b.institution || 'Bank' %></strong> <span class="muted small"><%= (b.accounts || []).map(function (a) { return a.name + (a.mask ? ' ··' + a.mask : ''); }).join(', ') %> · last synced <%= when(b.last_synced_at) %></span><% if (b.status === 'error') { %> <span class="chip cx-chip bad">Needs attention</span><% } %></li>
+      <% }) %>
+    </ul>
+  <% } %>
+  <% if (!banksReady) { %><p class="muted small" style="margin:0">Being switched on. Check back shortly.</p>
+  <% } else if (!plaidReady) { %><p class="muted small" style="margin:0">Coming soon. Meanwhile, <a href="/budget/import">import your bank's CSV</a>.</p>
+  <% } else { %><a class="btn btn-primary btn-sm" href="/budget/connect/bank"><%= banks.length ? 'Manage banks' : 'Connect a bank' %></a><% } %>
+</div>
+<p class="muted small">Each connection syncs by itself every <%= everyHours %> hours. Payments you already logged by hand or from a CSV are recognised and not added twice.</p>
+<style>
+  .cx-h { font-size: 1.05rem; margin: 1.2rem 0 .5rem; }
+  .cx-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .cx-card { display: flex; flex-direction: column; gap: .2rem; }
+  .cx-card > .btn, .cx-card > .cta-row { margin-top: auto; align-self: flex-start; }
+  .cx-head { display: flex; align-items: center; gap: .45rem; }
+  .cx-emoji { font-size: 1.3rem; }
+  .cx-chip { font-size: .68rem; margin-left: auto; }
+  .cx-chip.bad { color: var(--danger); border-color: var(--danger); }
+  .cx-meta { margin: 0 0 .4rem; }
+  .cx-banks { list-style: none; padding: 0; margin: 0 0 .8rem; }
+  .cx-banks li { padding: .35rem 0; border-top: 1px solid var(--border); }
+  .cx-banks li:first-child { border-top: 0; }
+</style>
+<%- include('partials/foot') %>

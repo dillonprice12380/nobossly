@@ -308,6 +308,15 @@ setInterval(() => {
   stripeSync.runAll(sc).then(r => { if (r && r.imported) console.log('stripe sync:', r); }, e => console.error('[stripe sync]', e && e.message));
 }, 30 * 60 * 1000);
 
+// Shopify, Gumroad, Square and banks (src/connections): each synced when it has
+// not been for six hours; the timer only checks every 30 minutes.
+const connections = require('./src/connections');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  connections.runAll(sc).then(r => { if (r && (r.imported || r.bankAdded)) console.log('connections sync:', r); }, e => console.error('[connections]', e && e.message));
+}, 30 * 60 * 1000);
+
 // Co-working reminders, about an hour before each session (src/coworking.js).
 const coworking = require('./src/coworking');
 setInterval(() => {

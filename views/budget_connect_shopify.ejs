@@ -1,0 +1,50 @@
+<%- include('partials/head') %>
+<%# Connect Shopify with the member's own read-only Dev Dashboard app (src/connections/shopify.js). %>
+<% var when = function (t) { return t ? new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet'; }; %>
+<div class="page-head">
+  <div><h1>🛍️ Connect Shopify</h1><p class="muted">Paid orders from your store go into your income log by themselves. NoBossly can only read orders; it cannot change anything in your store.</p></div>
+  <a class="btn btn-ghost btn-sm" href="/budget/connect">← Connections</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (!ready) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Connecting Shopify is being switched on. Check back shortly.</p></div>
+<% } else { %>
+  <% if (conn) { %>
+    <div class="card" style="border-left:3px solid <%= conn.status === 'error' ? 'var(--danger)' : 'var(--accent-2)' %>">
+      <div class="page-head" style="margin:0">
+        <div><h2 style="margin:0">Connected: <%= conn.account_label %></h2>
+          <p class="muted small" style="margin:.25rem 0 0">Last synced <%= when(conn.last_synced_at) %> · <%= conn.imported_count || 0 %> order<%= conn.imported_count === 1 ? '' : 's' %> brought in · syncs every <%= everyHours %> hours</p></div>
+        <div class="cta-row" style="margin:0">
+          <form method="post" action="/budget/connect/shopify/sync" class="inline"><button class="btn btn-primary btn-sm">Sync now</button></form>
+          <form method="post" action="/budget/connect/shopify/disconnect" class="inline" onsubmit="return confirm('Disconnect Shopify? Orders already logged stay.')"><button class="btn btn-ghost btn-sm">Disconnect</button></form>
+        </div>
+      </div>
+      <% if (conn.status === 'error' && conn.last_error) { %><p class="small" style="margin:.7rem 0 0;color:var(--danger)"><%= conn.last_error %></p><% } %>
+    </div>
+  <% } %>
+  <div class="grid-2">
+    <div class="card">
+      <h2 style="margin-top:0"><%= conn ? 'Replace the app' : 'Step 1: make a read-only app' %></h2>
+      <ol class="small" style="margin:0;padding-left:1.1rem;line-height:1.75">
+        <li>Open the <strong>Shopify Dev Dashboard</strong> (dev.shopify.com) with the account that owns your store, and click <strong>Create app</strong>. Name it <strong>NoBossly</strong>.</li>
+        <li>Under access scopes, choose <strong>read_orders</strong>. Add <strong>read_all_orders</strong> too if you want orders older than 60 days. Nothing else, and nothing that starts with write_.</li>
+        <li>Release the version, then <strong>install the app on your store</strong>.</li>
+        <li>From the app's <strong>Settings</strong>, copy the <strong>Client ID</strong> and <strong>Client secret</strong>.</li>
+      </ol>
+      <p class="muted small" style="margin:.8rem 0 0">An app that can write anything is refused, so NoBossly can only ever read.</p>
+    </div>
+    <form class="card" method="post" action="/budget/connect/shopify" autocomplete="off">
+      <h2 style="margin-top:0"><%= conn ? 'Paste the new app' : 'Step 2: paste it here' %></h2>
+      <label>Store address<input name="shop" required spellcheck="false" placeholder="mystore.myshopify.com" value="<%= conn ? conn.account_label : '' %>"></label>
+      <label>Client ID<input name="client_id" required spellcheck="false" autocomplete="off"></label>
+      <label>Client secret<input name="client_secret" type="password" required spellcheck="false" autocomplete="off"></label>
+      <button class="btn btn-primary" style="margin-top:.4rem"><%= conn ? 'Replace' : 'Connect Shopify' %></button>
+      <ul class="muted small" style="margin:.9rem 0 0;padding-left:1.1rem;line-height:1.6">
+        <li>We check it with Shopify, then store it encrypted. Nobody can read it back, including you.</li>
+        <li>Paid orders come in as income, minus refunds. Test and cancelled orders are left out.</li>
+        <li>Orders you already logged by hand or from a CSV are recognised and not added twice.</li>
+      </ul>
+    </form>
+  </div>
+<% } %>
+<%- include('partials/foot') %>

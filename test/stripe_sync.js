@@ -223,7 +223,7 @@ function fakeSc(store) {
   }
 
   console.log('\nOn the Money page and in the migration:');
-  ok('the income log links to Connect Stripe, and says when it is connected', /href="\/budget\/connect\/stripe">Connect Stripe/.test(read('views/budget.ejs')) && /Stripe connected/.test(read('views/budget.ejs')));
+  ok('the income log links to the connections, and says when Stripe is connected', read('views/budget.ejs').includes('href="/budget/connect">Connect Stripe, Shopify, Gumroad, Square or your bank') && read('views/budget.ejs').includes("Stripe <%= stripeConn.status === 'error' ? 'needs attention' : 'connected' %>") && read('views/budget_connect.ejs').includes('href="/budget/connect/stripe"'));
   {
     const sql = read('migrations/2026-11-08_stripe_connection.sql');
     ok('the migration is marked as applied, and its columns are in the schema snapshot', /^-- Applied live 2026-11-08/.test(sql) && !JSON.parse(read('test/schema-pending.json')).migrations['2026-11-08_stripe_connection.sql'] && JSON.parse(read('test/schema-snapshot.json')).columns.payment_connections.includes('key_hint') && JSON.parse(read('test/schema-snapshot.json')).columns.revenue_entries.includes('external_id'));

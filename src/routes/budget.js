@@ -39,12 +39,14 @@ async function loadBudget(req, extra = {}) {
   const [log, done, rate, stripeRes] = await Promise.all([income.load(req), income.doneTitles(req), setAsideRate(req),
     // The Stripe connection, if any (migrations/2026-11-08_stripe_connection.sql).
     req.sb.from('payment_connections').select('status, key_hint, last_synced_at, imported_count').eq('user_id', req.user.id).eq('provider', 'stripe').maybeSingle().then(r => r, () => ({ data: null }))]);
+  // Bank transactions waiting to be sorted (migrations/2026-11-09_more_connections.sql).
+  const waitingRes = await req.sb.from('bank_transactions').select('id', { count: 'exact', head: true }).eq('user_id', req.user.id).eq('status', 'new').then(r => r, () => ({ count: 0 }));
   const sum = income.summary(log.income, log.expenses);
   const ov = moneyLib.overview(log.income, log.expenses);
   return Object.assign({
     overview: ov, chart: moneyLib.chart(ov.series, ov.max), fmt: moneyLib.fmt,
     rules: rec.rules || [], rulesReady: !rec.notReady, recurringLogged: rec.logged || 0,
-    stripeConn: (stripeRes && stripeRes.data) || null,
+    stripeConn: (stripeRes && stripeRes.data) || null, bankWaiting: (waitingRes && !waitingRes.error && waitingRes.count) || 0,
     title: 'Money', budgets: budgets || [], expenses: expenses || [],
     incomeLog: log.income.slice(0, 25), incomeSum: sum, setAsideRate: rate,
     claims: claimsFor(req.profile.path, sum, done),
@@ -414,5 +416,8 @@ router.post('/connect/stripe/disconnect', async (req, res, next) => {
     res.redirect(back('Disconnected. The key is deleted from NoBossly; the payments already logged stay in your income log. You can also delete the key in Stripe.'));
   } catch (e) { next(e); }
 });
+
+// Shopify, Gumroad, Square and banks (src/routes/connect.js).
+router.use(require('./connect'));
 
 module.exports = router;

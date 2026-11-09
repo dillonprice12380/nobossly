@@ -1,0 +1,72 @@
+<%- include('partials/head') %>
+<%# The bank inbox (src/routes/connect.js): each transaction from a connected
+    bank waits here until the member says what it is. %>
+<% var $c = function (n) { return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+   var day = function (d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); }; %>
+<div class="page-head">
+  <div><h1>🏦 From your bank</h1><p class="muted">Say what each one is. Income goes to your income log, expenses to your spending; anything personal stays out.</p></div>
+  <div class="cta-row" style="margin:0"><a class="btn btn-ghost btn-sm" href="/budget">← Money</a><a class="btn btn-ghost btn-sm" href="/budget/connect/bank">Banks</a></div>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<nav class="cta-row rv-tabs" aria-label="Show">
+  <a class="chip <%= show === 'new' ? 'chip-active' : '' %>" href="/budget/review">Waiting<%= waiting ? ' (' + waiting + ')' : '' %></a>
+  <a class="chip <%= show === 'done' ? 'chip-active' : '' %>" href="/budget/review?show=done">Logged</a>
+  <a class="chip <%= show === 'ignored' ? 'chip-active' : '' %>" href="/budget/review?show=ignored">Not business</a>
+</nav>
+<% if (!ready) { %>
+  <div class="card center"><p class="muted" style="margin:0">Being switched on. Check back shortly.</p></div>
+<% } else if (!rows.length) { %>
+  <div class="card center"><p class="muted" style="margin:0"><%= show === 'new' ? 'Nothing waiting. New transactions arrive every few hours.' : 'Nothing here yet.' %></p></div>
+<% } else { %>
+  <% if (show === 'new' && rows.length > 10) { %>
+    <form class="card rv-bulk" method="post" action="/budget/review/bulk/ignore" onsubmit="return confirm('Set aside everything still waiting from before this date?')">
+      <span class="small">Only care about recent ones? Set aside everything waiting from before</span>
+      <input type="date" name="before" required value="<%= new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) %>">
+      <button class="btn btn-ghost btn-sm">Set aside</button>
+    </form>
+  <% } %>
+  <div class="rv-list">
+    <% rows.forEach(function (t) { %>
+      <div class="card rv-row <%= t.direction %>" id="t-<%= t.id %>">
+        <div class="rv-main">
+          <span class="rv-amt"><%= t.direction === 'in' ? '+' : '−' %><%= $c(t.amount) %></span>
+          <span><strong><%= t.merchant || t.name %></strong><% if (t.merchant && t.name && t.name !== t.merchant) { %> <span class="muted small"><%= t.name %></span><% } %><br>
+            <span class="muted small"><%= day(t.posted_on) %><%= t.account_label ? ' · ' + t.account_label : '' %><%= t.category ? ' · ' + t.category : '' %></span></span>
+        </div>
+        <% if (t.payout) { %><p class="small rv-warn">Looks like a payout from <strong><%= t.payout %></strong>. <%= connected.indexOf(String(t.payout).toLowerCase()) !== -1 ? 'That is connected, so its payments are already in your log: mark this not business.' : 'If you log those payments another way, mark this not business so it isn\'t counted twice.' %></p><% } %>
+        <% if (show === 'new' || show === 'ignored') { %>
+          <div class="rv-acts">
+            <% if (t.direction === 'in') { %>
+              <form method="post" action="/budget/review/<%= t.id %>" class="inline"><input type="hidden" name="as" value="income"><input type="hidden" name="show" value="<%= show %>"><button class="btn btn-primary btn-sm">Income</button></form>
+              <form method="post" action="/budget/review/<%= t.id %>" class="inline"><input type="hidden" name="as" value="income"><input type="hidden" name="recurring" value="1"><input type="hidden" name="show" value="<%= show %>"><button class="btn btn-ghost btn-sm">Recurring income</button></form>
+            <% } else { %>
+              <form method="post" action="/budget/review/<%= t.id %>" class="inline rv-exp"><input type="hidden" name="as" value="expense"><input type="hidden" name="show" value="<%= show %>">
+                <select name="category" aria-label="Category"><% budgetCategories.forEach(function (c) { %><option><%= c %></option><% }) %></select>
+                <button class="btn btn-primary btn-sm">Expense</button></form>
+            <% } %>
+            <% if (show === 'new') { %><form method="post" action="/budget/review/<%= t.id %>" class="inline"><input type="hidden" name="as" value="ignore"><button class="btn btn-ghost btn-sm">Not business</button></form><% } %>
+          </div>
+        <% } else { %>
+          <div class="rv-acts"><span class="chip"><%= t.status === 'income' ? 'In your income log' : 'In your expenses' %></span>
+            <form method="post" action="/budget/review/<%= t.id %>" class="inline"><input type="hidden" name="as" value="undo"><input type="hidden" name="show" value="done"><button class="btn btn-ghost btn-sm">Undo</button></form></div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<style>
+  .rv-tabs { justify-content: flex-start; gap: .35rem; margin: 0 0 .8rem; }
+  .rv-bulk { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .rv-bulk input { width: auto; margin: 0; }
+  .rv-row { padding: .8rem 1rem; margin-bottom: .6rem; }
+  .rv-row.in { border-left: 3px solid var(--accent); }
+  .rv-main { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: .8rem; align-items: baseline; }
+  .rv-amt { font-weight: 700; white-space: nowrap; }
+  .rv-row.in .rv-amt { color: var(--accent); }
+  .rv-warn { margin: .5rem 0 0; color: #b45309; }
+  .rv-acts { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .6rem; }
+  .rv-exp { display: inline-flex; gap: .35rem; align-items: center; }
+  .rv-exp select { width: auto; margin: 0; padding: .25rem .4rem; }
+  @media (max-width: 600px) { .rv-main { grid-template-columns: 1fr; gap: .1rem; } }
+</style>
+<%- include('partials/foot') %>
