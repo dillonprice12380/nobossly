@@ -1,0 +1,71 @@
+<%- include('partials/head') %>
+<%# Connect a bank through Plaid (src/connections/plaid.js). The button asks
+    the server for a Link token, opens Plaid's window, and posts back what it
+    returned. Transactions go to the inbox at /budget/review. %>
+<% var when = function (t) { return t ? new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet'; }; %>
+<div class="page-head">
+  <div><h1>🏦 Connect a bank</h1><p class="muted">Your bank's transactions come to NoBossly to sort. Nothing is logged until you say what it is, because a bank account mixes business and personal money. Read-only: NoBossly can never move money.</p></div>
+  <a class="btn btn-ghost btn-sm" href="/budget/connect">← Connections</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (waiting) { %><div class="card" style="border-left:3px solid var(--accent)"><p style="margin:0"><strong><%= waiting %></strong> waiting to be sorted. <a href="/budget/review">Go through them →</a></p></div><% } %>
+
+<% if (!tablesReady || !ready) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Connecting a bank is being switched on. Meanwhile you can <a href="/budget/import">import your bank's CSV</a>.</p></div>
+<% } else { %>
+  <% banks.forEach(function (b) { %>
+    <div class="card" style="border-left:3px solid <%= b.status === 'error' ? 'var(--danger)' : 'var(--accent-2)' %>">
+      <div class="page-head" style="margin:0">
+        <div><h2 style="margin:0"><%= b.institution || 'Bank' %></h2>
+          <p class="muted small" style="margin:.25rem 0 0"><%= (b.accounts || []).map(function (a) { return a.name + (a.mask ? ' ··' + a.mask : ''); }).join(', ') || 'Accounts' %> · last synced <%= when(b.last_synced_at) %> · syncs every <%= everyHours %> hours</p></div>
+        <div class="cta-row" style="margin:0">
+          <form method="post" action="/budget/connect/bank/<%= b.id %>/sync" class="inline"><button class="btn btn-ghost btn-sm">Sync now</button></form>
+          <form method="post" action="/budget/connect/bank/<%= b.id %>/disconnect" class="inline" onsubmit="return confirm('Disconnect this bank? What you already logged stays.')"><button class="btn btn-ghost btn-sm">Disconnect</button></form>
+        </div>
+      </div>
+      <% if (b.status === 'error' && b.last_error) { %><p class="small" style="margin:.7rem 0 0;color:var(--danger)"><%= b.last_error %></p><% } %>
+    </div>
+  <% }) %>
+  <div class="card">
+    <h2 style="margin-top:0"><%= banks.length ? 'Connect another bank' : 'Connect your bank' %></h2>
+    <p class="small">You'll pick your bank and log in on its own secure screen (run by Plaid, which most finance apps use). NoBossly never sees your bank password.</p>
+    <ul class="muted small" style="padding-left:1.1rem;line-height:1.6">
+      <li>Pick only the account you use for the business, if you have one.</li>
+      <li>The first sync brings up to a year of transactions; you can set aside everything before a date in one go.</li>
+      <li>Payouts from Stripe, PayPal, Shopify and the like are flagged, so you don't count a payment twice.</li>
+    </ul>
+    <button class="btn btn-primary" id="plaid-connect" type="button" <%= banks.length >= 5 ? 'disabled' : '' %>>Connect a bank</button>
+    <% if (banks.length >= 5) { %><p class="muted small">Five banks at most.</p><% } %>
+    <p class="small" id="plaid-status" role="status" style="margin:.6rem 0 0"></p>
+  </div>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script>
+    (function () {
+      var btn = document.getElementById('plaid-connect'), out = document.getElementById('plaid-status');
+      if (!btn) return;
+      var say = function (t) { out.textContent = t; };
+      var post = function (url, body) {
+        return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'That did not work. Try again.'); return j; }); });
+      };
+      btn.addEventListener('click', function () {
+        if (!window.Plaid) return say('The bank window could not load. Check your connection and try again.');
+        btn.disabled = true; say('Opening…');
+        post('/budget/connect/bank/link-token').then(function (j) {
+          var handler = window.Plaid.create({
+            token: j.link_token,
+            onSuccess: function (publicToken, metadata) {
+              say('Connecting and fetching your transactions…');
+              post('/budget/connect/bank/exchange', { public_token: publicToken, metadata: { institution: metadata.institution, accounts: metadata.accounts } })
+                .then(function (r) { window.location = r.redirect || '/budget/review'; })
+                .catch(function (e) { btn.disabled = false; say(e.message); });
+            },
+            onExit: function (err) { btn.disabled = false; say(err ? 'The bank did not connect: ' + (err.display_message || err.error_message || 'try again') + '.' : ''); }
+          });
+          handler.open();
+        }).catch(function (e) { btn.disabled = false; say(e.message); });
+      });
+    })();
+  </script>
+<% } %>
+<%- include('partials/foot') %>
