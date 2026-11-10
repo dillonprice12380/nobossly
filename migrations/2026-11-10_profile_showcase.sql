@@ -1,4 +1,4 @@
--- NOT APPLIED
+-- Applied live 2026-11-10 (run in the SQL Editor; returned true. Verified: business_name, offers, links and privacy on profiles).
 --
 -- Profiles (2026-11-10): a business showcase and privacy controls.
 --
