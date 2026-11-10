@@ -1,44 +1,169 @@
 <%- include('partials/head') %>
-<a class="muted" href="/members/<%= p.username %>">← My profile</a>
-<div class="card form-card">
-  <h2>Edit profile</h2>
-  <% if (saved) { %><p class="notice">Profile saved.</p><% } %>
-  <form method="post" action="/members/me/edit">
+<%# Edit your profile (src/routes/members.js, src/profile.js): photo, about you,
+    your business, help, privacy. %>
+<div class="page-head">
+  <div><h1>Edit profile</h1><p class="muted">What other members see when they find you.</p></div>
+  <div class="cta-row" style="margin:0"><a class="btn btn-ghost btn-sm" href="/members/<%= p.username %>">← My profile</a><a class="btn btn-ghost btn-sm" href="/members/<%= p.username %>?as=member">View as a member</a></div>
+</div>
+<% if (saved) { %><p class="notice">Profile saved.</p><% } %>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (err) { %><p class="notice" style="border-color:var(--danger)"><%= err %></p><% } %>
+
+<div class="card pe-complete">
+  <div class="pe-complete-head"><strong><%= complete.pct %>% done</strong><div class="progress" style="flex:1"><div class="progress-bar" style="width:<%= complete.pct %>%"></div></div></div>
+  <% if (complete.missing.length) { %><p class="muted small" style="margin:.4rem 0 0">To go: <% complete.missing.forEach(function (m, i) { %><%= i ? ' · ' : '' %><a href="#<%= m.key %>"><%= m.label %></a><% }) %></p>
+  <% } else { %><p class="muted small" style="margin:.4rem 0 0">Everything is filled in. Nice.</p><% } %>
+</div>
+
+<div class="card pe-section" id="photo">
+  <h2>Photo</h2>
+  <div class="pe-photo">
+    <div class="avatar-circle pe-avatar" id="pe-preview"><% if (avatar) { %><img src="<%= avatar %>" alt="Your photo"><% } else { %><%= (p.display_name || p.username || '?').slice(0, 1).toUpperCase() %><% } %></div>
+    <div>
+      <form method="post" action="/members/me/photo" enctype="multipart/form-data" id="pe-photo-form">
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" required id="pe-photo-input">
+        <button class="btn btn-primary btn-sm" style="margin-top:.4rem">Upload photo</button>
+      </form>
+      <p class="muted small" style="margin:.4rem 0 0">A clear photo of you or your logo. It's cropped to a square; up to 2 MB.</p>
+      <% if (avatar) { %><form method="post" action="/members/me/photo/remove" style="margin-top:.4rem"><button class="btn btn-ghost btn-sm">Remove photo</button></form><% } %>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="/members/me/edit" class="pe-form">
+  <div class="card pe-section">
+    <h2>About you</h2>
     <label>Display name<input name="display_name" value="<%= p.display_name || '' %>" maxlength="60"></label>
     <% if (networkFields) { %>
-      <label>Headline <span class="muted small">(one line under your name, e.g. "Nurse by day, building a meal-prep business")</span>
+      <label id="headline">Headline <span class="muted small">(one line under your name, e.g. "Nurse by day, building a meal-prep business")</span>
         <input name="headline" value="<%= p.headline || '' %>" maxlength="120"></label>
-      <label>What are you working on? <span class="muted small">(right now, in a sentence)</span>
+      <label id="working_on">What are you working on? <span class="muted small">(right now, in a sentence)</span>
         <input name="working_on" value="<%= p.working_on || '' %>" maxlength="200"></label>
     <% } %>
-    <label>About<textarea name="bio" rows="3" maxlength="600"><%= p.bio || '' %></textarea></label>
-    <% if (networkFields) { %>
+    <label id="bio">About<textarea name="bio" rows="4" maxlength="600"><%= p.bio || '' %></textarea></label>
+    <div class="pe-two">
+      <label>Day job <span class="muted small">(optional)</span><input name="occupation" value="<%= p.occupation || '' %>" maxlength="80"></label>
+      <label>Location <span class="muted small">(a city or region)</span><input name="location" value="<%= p.location || '' %>" maxlength="80"></label>
+    </div>
+    <p class="muted small" style="margin:.2rem 0 0">Your path<% if (pathDef) { %>: <%= pathDef.emoji %> <%= pathDef.label %><% } %>. <a href="/choose-path">Change it</a>.</p>
+  </div>
+
+  <div class="card pe-section" id="business">
+    <h2>Your business</h2>
+    <% if (!showcaseFields) { %>
+      <label>Website<input name="website_url" value="<%= p.website_url || '' %>" placeholder="https://"></label>
+      <p class="muted small">More links and what you offer are being switched on. Check back shortly.</p>
+    <% } else { %>
+      <label>Business name <span class="muted small">(optional)</span><input name="business_name" value="<%= p.business_name || '' %>" maxlength="80" placeholder="e.g. Bloom Studio"></label>
+      <fieldset class="pe-rows"><legend>What you offer <span class="muted small">(up to <%= maxRows %>; a price is optional)</span></legend>
+        <% var offers = (p.offers || []).slice(); while (offers.length < maxRows) offers.push({}); %>
+        <% offers.forEach(function (o, i) { %>
+          <div class="pe-row<%= i >= Math.max(2, (p.offers || []).length + 1) ? ' pe-more' : '' %>">
+            <input name="offer_title" maxlength="60" value="<%= o.title || '' %>" placeholder="<%= i === 0 ? 'e.g. Logo design' : 'Another service or product' %>" aria-label="Offer <%= i + 1 %>">
+            <input name="offer_price" maxlength="30" value="<%= o.price || '' %>" placeholder="<%= i === 0 ? 'from $300' : 'Price' %>" aria-label="Price <%= i + 1 %>" class="pe-price">
+          </div>
+        <% }) %>
+      </fieldset>
+      <fieldset class="pe-rows" id="links"><legend>Links</legend>
+        <label>Website<input name="website_url" value="<%= p.website_url || '' %>" placeholder="https://yourbusiness.com"></label>
+        <% var links = (p.links || []).slice(); while (links.length < maxRows) links.push({}); %>
+        <% links.forEach(function (l, i) { %>
+          <div class="pe-row<%= i >= Math.max(2, (p.links || []).length + 1) ? ' pe-more' : '' %>">
+            <select name="link_kind" aria-label="Kind of link <%= i + 1 %>"><% LINK_KINDS.filter(function (k) { return k.key !== 'website'; }).forEach(function (k) { %><option value="<%= k.key %>" <%= l.kind === k.key ? 'selected' : '' %>><%= k.emoji %> <%= k.label %></option><% }) %></select>
+            <input name="link_url" value="<%= l.url || '' %>" maxlength="200" placeholder="https://" aria-label="Link <%= i + 1 %>">
+          </div>
+        <% }) %>
+      </fieldset>
+      <p class="muted small" style="margin:0">Links are fine; emails, phone numbers and addresses are not (members message you on NoBossly). Your <a href="/tools/proof">Proof Page</a> shows on your profile once it's published.</p>
+    <% } %>
+  </div>
+
+  <% if (networkFields) { %>
+    <div class="card pe-section" id="help">
+      <h2>Help</h2>
       <fieldset class="help-pick"><legend>I can help with</legend>
         <% helpCats.CATEGORIES.forEach(function (c) { %><label class="check"><input type="checkbox" name="help_offer" value="<%= c.key %>" <%= (p.help_offer || []).includes(c.key) ? 'checked' : '' %>> <%= c.emoji %> <%= c.label %></label><% }) %>
       </fieldset>
       <fieldset class="help-pick"><legend>I'm looking for help with</legend>
         <% helpCats.CATEGORIES.forEach(function (c) { %><label class="check"><input type="checkbox" name="help_need" value="<%= c.key %>" <%= (p.help_need || []).includes(c.key) ? 'checked' : '' %>> <%= c.emoji %> <%= c.label %></label><% }) %>
       </fieldset>
-      <p class="muted small">These decide who is told when someone asks for, or offers, that kind of help on the Help &amp; exchange board.</p>
+      <p class="muted small" style="margin:0">These decide who is told when someone asks for, or offers, that kind of help on the Help &amp; exchange board.</p>
+      <% if (flags.ladder && (p.verified_level || 1) >= mentorLevel) { %>
+        <label class="check" style="margin-top:.6rem"><input type="checkbox" name="mentor_available" <%= p.mentor_available !== false ? 'checked' : '' %>> List me as a mentor &mdash; members on lower rungs can find and message me</label>
+      <% } %>
+    </div>
+  <% } %>
+
+  <div class="card pe-section" id="privacy">
+    <h2>Privacy</h2>
+    <fieldset class="pe-vis"><legend>Who can see my profile</legend>
+      <label class="check"><input type="radio" name="visibility" value="public" <%= p.profile_is_public !== false ? 'checked' : '' %>> Members <span class="muted small">(anyone signed in to NoBossly)</span></label>
+      <label class="check"><input type="radio" name="visibility" value="private" <%= p.profile_is_public === false ? 'checked' : '' %>> Only my @username <span class="muted small">(everything else hidden; people can still follow and message you)</span></label>
+    </fieldset>
+    <% if (showcaseFields) { %>
+      <fieldset class="pe-show"><legend>On a members-visible profile, show</legend>
+        <% PRIVACY.forEach(function (x) { %><label class="check"><input type="checkbox" name="show" value="<%= x.key %>" <%= shows(x.key) ? 'checked' : '' %>> <%= x.label %></label><% }) %>
+      </fieldset>
     <% } %>
-    <label>Occupation<input name="occupation" value="<%= p.occupation || '' %>"></label>
-    <label>Location<input name="location" value="<%= p.location || '' %>"></label>
-    <label>Website<input name="website_url" value="<%= p.website_url || '' %>" placeholder="https://"></label>
-    <label>Journey stage
-      <select name="founder_stage">
-        <% ['Dreaming','Validating','Building','Launched','Growing','Scaling'].forEach(o => { %><option <%= p.founder_stage === o ? 'selected' : '' %>><%= o %></option><% }) %>
-      </select>
-    </label>
-    <label class="check"><input type="checkbox" name="notification_emails_enabled" <%= p.notification_emails_enabled !== false ? 'checked' : '' %>> Email me task deadline reminders</label>
-    <%# Only shown once the mentor rung is verified. Being listed as available
-        to help is a commitment made in public, so it is declinable — but it is
-        on by default, because the rung was earned rather than asked for. The
-        route ignores this field for anyone below the rung. %>
-    <% if (flags.ladder && (p.verified_level || 1) >= mentorLevel) { %>
-      <label class="check"><input type="checkbox" name="mentor_available" <%= p.mentor_available !== false ? 'checked' : '' %>> List me as a mentor &mdash; members on lower rungs can find and message me</label>
-    <% } %>
-    <button class="btn btn-primary">Save</button>
-  </form>
-</div>
-<style>.help-pick { border: 1px solid var(--border); border-radius: 10px; padding: .5rem .8rem; margin: .6rem 0; } .help-pick label.check { display: inline-flex; margin: .2rem 1rem .2rem 0; }</style>
+    <label class="check" style="margin-top:.6rem"><input type="checkbox" name="notification_emails_enabled" <%= p.notification_emails_enabled !== false ? 'checked' : '' %>> Email me task deadline reminders</label>
+  </div>
+
+  <div class="pe-save"><button class="btn btn-primary">Save profile</button> <a class="muted small" href="/members/<%= p.username %>?as=member">See it as others do →</a></div>
+</form>
+<style>
+  .pe-section h2 { margin-top: 0; font-size: 1.15rem; }
+  .pe-complete-head { display: flex; align-items: center; gap: .8rem; }
+  .pe-photo { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+  .pe-avatar { width: 96px; height: 96px; font-size: 2.2rem; flex: none; overflow: hidden; }
+  .pe-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .pe-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 .8rem; }
+  .pe-rows { border: 0; padding: 0; margin: .8rem 0; }
+  .pe-rows legend { font-weight: 600; margin-bottom: .3rem; }
+  .pe-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: .5rem; margin-bottom: .4rem; }
+  #links .pe-row { grid-template-columns: minmax(120px, 1fr) minmax(0, 2.5fr); }
+  .pe-row input, .pe-row select { margin: 0; }
+  .help-pick, .pe-vis, .pe-show { border: 1px solid var(--border); border-radius: 10px; padding: .5rem .8rem; margin: .6rem 0; }
+  .help-pick label.check, .pe-show label.check { display: inline-flex; margin: .2rem 1rem .2rem 0; }
+  .pe-vis label.check { display: flex; gap: .45rem; margin: .25rem 0; }
+  .pe-save { position: sticky; bottom: 0; padding: .7rem 0; background: var(--bg); display: flex; gap: 1rem; align-items: center; }
+  @media (max-width: 820px) { .pe-save { bottom: calc(4.2rem + env(safe-area-inset-bottom)); } }
+  .js .pe-more { display: none; }
+</style>
+<script>
+  (function () {
+    document.documentElement.classList.add('js');
+    // Extra rows open one at a time, as the last one is filled in.
+    document.querySelectorAll('.pe-rows').forEach(function (fs) {
+      var reveal = function () {
+        var shown = fs.querySelectorAll('.pe-row:not(.pe-more)');
+        var last = shown[shown.length - 1];
+        var filled = last && Array.prototype.some.call(last.querySelectorAll('input'), function (i) { return i.value.trim(); });
+        var next = fs.querySelector('.pe-more');
+        if (filled && next) next.classList.remove('pe-more');
+      };
+      fs.addEventListener('input', reveal);
+    });
+    // The photo: crop to a square and shrink to 512px in the browser before it is sent.
+    var input = document.getElementById('pe-photo-input'), form = document.getElementById('pe-photo-form'), preview = document.getElementById('pe-preview');
+    if (!input || !form || !window.FileReader || !window.HTMLCanvasElement || !window.DataTransfer) return;
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      if (!f || !/^image\/(jpeg|png|webp)$/.test(f.type)) return;   // GIFs go as they are
+      var img = new Image();
+      img.onload = function () {
+        var side = Math.min(img.width, img.height), size = Math.min(512, side);
+        var c = document.createElement('canvas'); c.width = c.height = size;
+        c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        c.toBlob(function (b) {
+          if (!b) return;
+          var dt = new DataTransfer(); dt.items.add(new File([b], 'photo.jpg', { type: 'image/jpeg' }));
+          input.files = dt.files;
+          preview.innerHTML = ''; var im = new Image(); im.src = URL.createObjectURL(b); im.alt = 'New photo'; preview.appendChild(im);
+        }, 'image/jpeg', 0.88);
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(f);
+    });
+  })();
+</script>
 <%- include('partials/foot') %>

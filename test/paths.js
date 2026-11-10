@@ -303,18 +303,15 @@ const allowedIn = (sql, constraint) => {
      extra.length === 0, extra.join(', ') || 'clean');
 }
 
-// Same class of drift, caught the same way: the profile editor's stage options
-// have to be values the profiles constraint accepts.
+// The old "Journey stage" (Dreaming…Scaling) overlapped with the stage a path
+// sets, so the profile editor no longer offers it (2026-11-10), and saving the
+// profile must not write it either — a stale value stays as it was, never
+// becomes null or something the profiles constraint rejects.
 {
-  const sql = fs.readFileSync(MIGRATION, 'utf8');
-  const allowed = allowedIn(sql, 'profiles_founder_stage_check');
   const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'profile_edit.ejs'), 'utf8');
-  const offered = ((view.match(/\[([^\]]*)\]\.forEach\(o =>/) || [])[1] || '')
-    .split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
-  const rejected = offered.filter(o => !allowed.includes(o));
-  ok('every stage the profile editor offers is one the database accepts',
-     offered.length > 0 && rejected.length === 0,
-     rejected.length ? 'REJECTED: ' + rejected.join(', ') : offered.length + ' options');
+  const route = fs.readFileSync(path.join(__dirname, '..', 'src', 'routes', 'members.js'), 'utf8');
+  ok('the profile editor no longer asks for the old journey stage, and saving never writes it',
+     !/founder_stage/.test(view) && !/founder_stage/.test(route));
 }
 
 console.log(fail ? `\n${fail} PROBLEM(S)` : '\nPaths hold. All checks pass.');

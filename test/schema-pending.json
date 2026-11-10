@@ -5,5 +5,14 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-10_profile_showcase.sql": {
+      "profiles": [
+        "business_name",
+        "offers",
+        "links",
+        "privacy"
+      ]
+    }
+  }
 }

@@ -7,6 +7,10 @@ const ladders = require('../ladders');
 const { showsBuild, SHOWCASE_LEVEL, isMentor, MENTOR_LEVEL } = require('../unlocks');
 const activity = require('../activity');
 const paths = require('../paths');
+const prof = require('../profile');
+const { quiet } = require('../db');
+const multer = require('multer');
+const photoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: prof.AVATAR_MAX, files: 1, fields: 5 } });
 
 // Helper: backfill any profiles that have no username yet (bare OAuth sign-ups).
 // Uses the service role key so it bypasses RLS entirely. Fast no-op once every
@@ -91,10 +95,53 @@ router.get('/', async (req, res, next) => {
 // leaves them out rather than writing columns that are not there.
 const hasNetworkFields = p => !!p && Object.prototype.hasOwnProperty.call(p, 'headline');
 
+// business_name, offers, links and privacy arrive with migrations/2026-11-10_profile_showcase.sql.
+const hasShowcase = p => !!p && Object.prototype.hasOwnProperty.call(p, 'business_name');
+
 router.get('/me/edit', (req, res) => {
-  res.render('profile_edit', { title: 'Edit profile', p: req.profile, saved: req.query.saved,
-    isMentor: isMentor(req.profile), mentorLevel: MENTOR_LEVEL,
-    networkFields: hasNetworkFields(req.profile), helpCats });
+  const p = req.profile;
+  res.render('profile_edit', { title: 'Edit profile', p, saved: req.query.saved, err: req.query.err || null, msg: req.query.msg || null,
+    isMentor: isMentor(p), mentorLevel: MENTOR_LEVEL,
+    networkFields: hasNetworkFields(p), showcaseFields: hasShowcase(p), helpCats,
+    LINK_KINDS: prof.LINK_KINDS, PRIVACY: prof.PRIVACY, shows: k => prof.shows(p, k), complete: prof.completeness(p),
+    avatar: prof.ownAvatar(p.avatar_url), maxRows: prof.MAX,
+    pathDef: p.path && p.path !== 'default' ? paths.get(p.path) : null });
+});
+
+// A profile photo: the browser crops it square and shrinks it first
+// (public/js/app.js); the server checks what the file really is, puts it in the
+// member's own folder of the avatars bucket and removes the old one.
+router.post('/me/photo', (req, res, next) => photoUpload.single('photo')(req, res, err => savePhoto(req, res, next, err)));
+async function savePhoto(req, res, next, err) {
+  const back = m => res.redirect('/members/me/edit?' + (m.ok ? 'msg=' : 'err=') + encodeURIComponent(m.text) + '#photo');
+  try {
+    if (err) return back({ text: err.code === 'LIMIT_FILE_SIZE' ? 'That photo is over 2 MB. Try a smaller one.' : 'That upload did not work. Try again.' });
+    if (!req.file) return back({ text: 'Choose a photo first.' });
+    const kind = prof.imageType(req.file.buffer);
+    if (!kind) return back({ text: 'That is not a photo NoBossly can use. Use a JPG, PNG, WebP or GIF.' });
+    const folder = req.user.id;
+    const name = folder + '/' + Date.now() + '.' + kind.ext;
+    const store = req.sb.storage.from('avatars');
+    const { error } = await store.upload(name, req.file.buffer, { contentType: kind.type, upsert: false, cacheControl: '31536000' });
+    if (error) return back({ text: 'That photo did not save. Try again.' });
+    const url = store.getPublicUrl(name).data.publicUrl;
+    await req.sb.from('profiles').update({ avatar_url: url }).eq('id', req.user.id);
+    // Old photos go, so a replaced one is not left public.
+    const { data: old } = await store.list(folder, { limit: 50 }).then(r => r, () => ({ data: [] }));
+    const stale = (old || []).map(o => folder + '/' + o.name).filter(n => n !== name);
+    if (stale.length) await store.remove(stale).then(...quiet('avatars.remove'));
+    back({ ok: true, text: 'Photo updated.' });
+  } catch (e) { next(e); }
+}
+
+router.post('/me/photo/remove', async (req, res, next) => {
+  try {
+    const store = req.sb.storage.from('avatars');
+    const { data: old } = await store.list(req.user.id, { limit: 50 }).then(r => r, () => ({ data: [] }));
+    if ((old || []).length) await store.remove(old.map(o => req.user.id + '/' + o.name)).then(...quiet('avatars.remove'));
+    await req.sb.from('profiles').update({ avatar_url: null }).eq('id', req.user.id);
+    res.redirect('/members/me/edit?msg=' + encodeURIComponent('Photo removed.') + '#photo');
+  } catch (e) { next(e); }
 });
 
 router.post('/me/edit', async (req, res, next) => {
@@ -102,15 +149,27 @@ router.post('/me/edit', async (req, res, next) => {
     const b = req.body;
     // Public by default: none of the free-text fields may carry contact details.
     // (website_url is a link field, and links are allowed.)
-    const found = pi.check(b.display_name, b.bio, b.location, b.occupation, b.headline, b.working_on);
+    const offers = prof.cleanOffers(b.offer_title, b.offer_price);
+    const found = pi.check(b.display_name, b.bio, b.location, b.occupation, b.headline, b.working_on, b.business_name, ...offers.map(o => o.title + ' ' + (o.price || '')));
     if (found) return pi.refuse(req, res, '/members/me/edit', found, 'profile');
+    const links = prof.cleanLinks(b.link_kind, b.link_url);
+    const website = String(b.website_url || '').trim() ? prof.cleanUrl(b.website_url) : null;
+    if ((String(b.website_url || '').trim() && !website) || links.bad.length) {
+      return res.redirect('/members/me/edit?err=' + encodeURIComponent('That link does not look right: ' + (links.bad[0] || b.website_url) + '. Nothing was saved.'));
+    }
     await req.sb.from('profiles').update({
       display_name: (b.display_name || '').slice(0, 60) || req.profile.username,
       bio: (b.bio || '').slice(0, 600),
       location: (b.location || '').slice(0, 80),
-      website_url: (b.website_url || '').slice(0, 200),
+      website_url: website || '',
       occupation: (b.occupation || '').slice(0, 80),
-      founder_stage: b.founder_stage || null,
+      ...(b.visibility ? { profile_is_public: b.visibility !== 'private' } : {}),
+      ...(hasShowcase(req.profile) ? {
+        business_name: String(b.business_name || '').replace(/\s+/g, ' ').trim().slice(0, 80) || null,
+        offers: offers.length ? offers : null,
+        links: links.links.length ? links.links : null,
+        privacy: prof.cleanPrivacy(b)
+      } : {}),
       notification_emails_enabled: b.notification_emails_enabled === 'on',
       ...(hasNetworkFields(req.profile) ? {
         headline: String(b.headline || '').trim().slice(0, 120) || null,
@@ -147,7 +206,9 @@ router.get('/:username', async (req, res, next) => {
     ]);
     const milestones = [...(preMilestones || []), ...((customM || []).map(c => ({ emoji: c.emoji, title: c.title })))];
     const lvl = ladders.rungAt(p.path, p.current_level || 1) || { title: 'Dreamer', emoji: '\uD83C\uDF31' };
-    const isMe = p.id === req.user.id;
+    // "View as a member": your own profile as others see it.
+    const asMember = p.id === req.user.id && req.query.as === 'member';
+    const isMe = p.id === req.user.id && !asMember;
 
     // Level 3 — Builder promises "your business name and link now show on your
     // public profile". The link used to show from Level 1, so the rung unlocked
@@ -163,6 +224,8 @@ router.get('/:username', async (req, res, next) => {
       if (!showcase.businessName && !showcase.url) showcase = null;
     }
     const isPrivate = p.profile_is_public === false && !isMe;
+    // What this member chose to show others. They always see all of it.
+    const show = k => isMe || prof.shows(p, k);
     const [{ data: followRows }, { count: followerCount }, { count: followingCount }, { data: friendship }, { data: blockRow }, { data: blockedMeRow }, { count: friendCount }] = await Promise.all([
       req.sb.from('follows').select('follower_id').eq('follower_id', req.user.id).eq('following_id', p.id),
       req.sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', p.id),
@@ -186,7 +249,10 @@ router.get('/:username', async (req, res, next) => {
     // the other side of it. RLS decides what is readable, so a private profile
     // simply returns nothing here rather than needing a second rule.
     const recent = await activity.forUser(req.sb, p.id, 8);
-    const memberPosts = isPrivate ? [] : await posts.byMember(req.sb, req.user.id, p.id, 10);
+    const memberPosts = isPrivate || !show('posts') ? [] : await posts.byMember(req.sb, req.user.id, p.id, 10);
+    const community = isPrivate || !show('activity') ? null : await prof.activityOf(req.sb, p.id).catch(() => null);
+    // Their Proof Page, if they have published one.
+    const proof = isPrivate || !show('business') ? null : await req.sb.rpc('proof_page', { p_username: p.username }).then(r => (r.data ? '/proof/' + p.username : null), () => null);
     // Public thank-yous from the help board. The table arrives with the same
     // migration; until then there are simply none.
     const { data: thanksRows } = await req.sb.from('help_thanks')
@@ -199,8 +265,11 @@ router.get('/:username', async (req, res, next) => {
     }
     const thanks = (thanksRows || []).map(t => ({ ...t, who: thankers[t.thanker_id] || null }));
     res.render('profile', {
-      memberPosts, thanks, helpCats, pathDef: p.path ? require('../paths').get(p.path) : null, title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent, mentor: isMentor(p), mentorLevel: MENTOR_LEVEL });
+      memberPosts, thanks, helpCats, community, show, asMember, links: show('links') ? prof.linksOf(p) : [],
+      proof, avatar: prof.ownAvatar(p.avatar_url), complete: isMe ? prof.completeness(p) : null,
+      business: show('business') && (p.business_name || (p.offers || []).length) ? { name: p.business_name || null, offers: p.offers || [] } : null, pathDef: p.path ? require('../paths').get(p.path) : null, title: isPrivate ? p.username : (p.display_name || p.username), p, badges: badges || [], milestones: milestones || [], lvl, isMe, isPrivate, social, showcase, canShowcase, showcaseLevel: SHOWCASE_LEVEL, recent, mentor: isMentor(p), mentorLevel: MENTOR_LEVEL });
   } catch (e) { next(e); }
 });
 
 module.exports = router;
+module.exports.savePhoto = savePhoto;
