@@ -20,7 +20,7 @@ const home = require('../src/home');
 const { FLAGS } = require('../src/features');
 
 const base = { title: 'Build Your Way Out of the 9 to 5', user: null, profile: null, plan: 'free', currentPath: '/', canonicalUrl: 'https://nobossly.com/', unreadCount: 0, unreadMsgs: 0, metaDescription: 'NoBossly is a free workspace and community.', bodyTheme: 'theme-dark', settings: {}, pendingDeletion: null, reactivated: false, isPremium: false, flags: FLAGS, flashErr: null, premiumTools: [], msg: null, affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false } };
-const html = ejs.render(read('views/home.ejs'), Object.assign({}, base, { paths: paths.MARKETED, previews: home.previews(), faq: home.FAQ, structuredData: home.structuredData() }), { filename: path.join(ROOT, 'views/home.ejs') });
+const html = ejs.render(read('views/home.ejs'), Object.assign({}, base, { paths: paths.MARKETED, previews: home.previews(), wordsFor: require('../src/path_pages').wordsFor, faq: home.FAQ, structuredData: home.structuredData() }), { filename: path.join(ROOT, 'views/home.ejs') });
 const text = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
 console.log('The three parts:');
@@ -43,6 +43,7 @@ ok('one choice per marketed path, one of them already picked', slugs.every(s => 
 ok('each shows that path\'s own numbers, boards and tools', html.includes('Billable income') && html.includes('Client pipeline') && html.includes('Proposal &amp; quote'));
 ok('...and its button carries the choice through sign-up', slugs.every(s => html.includes('href="/signup?path=' + s + '"')) && read('src/routes/auth.js').includes("router.get('/signup'"));
 ok('...and the button reads "as an online store", not "as a online store"', !/as a [aeiou]/i.test(html));
+ok('...and the exploring path reads "Start free, still figuring it out"', html.includes("Start free, still figuring it out") && !/as a still/i.test(html));
 ok('it works without JavaScript: a CSS rule shows each panel when its choice is picked', slugs.every(s => html.includes('#hp-' + s + ':checked ~ .hm-panels .hm-panel-' + s)));
 ok('...and is usable by keyboard', html.includes(':focus-visible ~ .hm-chips') && /\.hm-radio \{ position: absolute; opacity: 0;/.test(html) && !/\.hm-radio \{[^}]*display: none/.test(html));
 

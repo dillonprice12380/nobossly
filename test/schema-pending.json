@@ -5,5 +5,11 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-10_path_pages.sql": {
+      "profiles": [
+        "saved_paths"
+      ]
+    }
+  }
 }

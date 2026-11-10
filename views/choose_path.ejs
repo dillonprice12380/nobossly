@@ -1,20 +1,77 @@
 <%- include('partials/head') %>
-<div class="card" style="max-width:820px;margin:0 auto">
-  <h2><%= current ? 'Change your path' : 'What are you working toward?' %></h2>
-  <p class="muted">Pick the one that fits best. It decides what your dashboard puts first: the numbers, boards and tools for that kind of work. You can change it any time.</p>
+<% locals.cur = current ? choices.find(function (c) { return c.slug === current; }) : null; %>
+<div class="cp">
+  <div class="page-head"><div>
+    <h1><%= cur ? 'Change your path' : 'What are you building?' %></h1>
+    <p class="muted">Pick the one that fits best. It decides what your dashboard puts first: the numbers, boards and tools for that kind of work. Every other tool stays open either way.</p>
+  </div></div>
+
   <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
-  <form method="post" action="/choose-path">
-    <div class="path-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin:1rem 0">
-      <% paths.forEach(function(p) { %>
-        <label class="card path-option" style="cursor:pointer;display:block;padding:1rem;<%= current === p.slug ? 'outline:2px solid var(--accent)' : '' %>">
-          <input type="radio" name="path" value="<%= p.slug %>" <%= current === p.slug ? 'checked' : '' %> required style="margin-right:.5rem">
-          <span style="font-size:1.4rem"><%= p.emoji %></span>
+
+  <% if (cur) { %>
+    <div class="card cp-now">
+      <p style="margin:0"><strong>You are on <%= cur.emoji %> <%= cur.label %>.</strong></p>
+      <p class="muted small" style="margin:.35rem 0 0">Switching keeps everything you have logged: money, notes, boards, posts and your profile. <%= keepsAnswers ? 'Your setup answers for ' + cur.label + ' are kept too, so switching back brings them back.' : 'The new path asks its own few setup questions.' %></p>
+    </div>
+  <% } %>
+
+  <form method="post" action="/choose-path" class="cp-pick">
+    <% choices.forEach(function (p) { %>
+      <input class="cp-radio" type="radio" name="path" value="<%= p.slug %>" id="cp-<%= p.slug %>" <%= current === p.slug ? 'checked' : '' %> required>
+    <% }) %>
+    <div class="cp-grid" role="presentation">
+      <% choices.forEach(function (p) { %>
+        <label class="cp-card" for="cp-<%= p.slug %>">
+          <span class="cp-emoji" aria-hidden="true"><%= p.emoji %></span>
           <strong><%= p.label %></strong>
-          <% if (p.blurb) { %><p class="muted small" style="margin:.35rem 0 0"><%= p.blurb %></p><% } %>
+          <span class="muted small"><%= p.blurb %></span>
+          <% if (current === p.slug) { %><span class="cp-tag">Your path now</span><% } else if (saved.indexOf(p.slug) !== -1) { %><span class="cp-tag soft">Your answers are saved</span><% } %>
         </label>
       <% }) %>
     </div>
-    <button class="btn btn-primary btn-block" type="submit"><%= current ? 'Switch path' : "Let's go" %></button>
+
+    <div class="cp-panels" aria-live="polite">
+      <p class="cp-empty muted">Pick one to see what your dashboard puts first.</p>
+      <% choices.forEach(function (p) { %>
+        <div class="cp-panel cp-panel-<%= p.slug %>">
+          <h2><%= p.emoji %> <%= p.label %>: what your dashboard puts first</h2>
+          <div class="cp-cols">
+            <div><h3>Your numbers</h3><ul><% p.numbers.forEach(function (n) { %><li><%= n %></li><% }) %></ul></div>
+            <% if (p.boards.length) { %><div><h3>Boards</h3><ul><% p.boards.forEach(function (b) { %><li><%= b.emoji %> <%= b.label %></li><% }) %></ul></div><% } %>
+            <div><h3>Tools up front</h3><ul><% p.tools.forEach(function (t) { %><li><%= t.emoji %> <%= t.label %></li><% }) %></ul></div>
+          </div>
+          <% if (p.kinds.length) { %><p class="muted small" style="margin:.6rem 0 0">Covers <%= p.kinds.join(', ') %>, and anything else.</p><% } %>
+        </div>
+      <% }) %>
+      <button class="btn btn-primary btn-block" type="submit"><%= cur ? 'Switch path' : 'Use this path' %></button>
+      <% if (cur) { %><p class="muted small" style="text-align:center;margin:.5rem 0 0"><a href="/dashboard">Keep <%= cur.label %></a></p><% } %>
+    </div>
   </form>
 </div>
+
+<style>
+  .cp { max-width: 980px; margin: 0 auto; }
+  .cp-now { margin: 0 0 1rem; border-left: 3px solid var(--accent); }
+  .cp-pick { position: relative; }
+  .cp-radio { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; margin: 0; padding: 0; left: 0; top: 0; }
+  .cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .7rem; }
+  .cp-card { cursor: pointer; display: flex; flex-direction: column; gap: .25rem; padding: .95rem 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--panel-2); margin: 0; }
+  .cp-card:hover { border-color: var(--accent); }
+  .cp-emoji { font-size: 1.5rem; line-height: 1; }
+  .cp-tag { align-self: flex-start; margin-top: .35rem; font-size: .75rem; font-weight: 600; padding: .15rem .5rem; border-radius: 999px; background: var(--accent); color: #fff; }
+  .cp-tag.soft { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .cp-panels { margin-top: 1rem; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+  .cp-panel { display: none; }
+  .cp-panel h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+  .cp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .4rem 1rem; }
+  .cp-cols h3 { font-size: .85rem; margin: 0 0 .2rem; color: var(--muted); }
+  .cp-cols ul { margin: 0 0 .3rem; padding-left: 1.1rem; font-size: .92rem; }
+  .cp-panels .btn { margin-top: .9rem; }
+  .cp-pick:has(.cp-radio:checked) .cp-empty { display: none; }
+  <% choices.forEach(function (p) { %>
+  #cp-<%= p.slug %>:checked ~ .cp-grid label[for="cp-<%= p.slug %>"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  #cp-<%= p.slug %>:focus-visible ~ .cp-grid label[for="cp-<%= p.slug %>"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #cp-<%= p.slug %>:checked ~ .cp-panels .cp-panel-<%= p.slug %> { display: block; }
+  <% }) %>
+</style>
 <%- include('partials/foot') %>

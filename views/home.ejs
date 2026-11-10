@@ -33,7 +33,7 @@
             <% if (v.tools.length) { %><p class="small hm-row"><span class="muted">Tools:</span> <%= v.tools.map(function (t) { return t.label; }).join(' · ') %></p><% } %>
           <% } %>
           <div class="cta-row hm-panel-cta">
-            <a class="btn btn-primary" href="/signup?path=<%= p.slug %>">Start free as <%= /^[aeiou]/i.test(p.label) ? 'an' : 'a' %> <%= p.label.toLowerCase() %> →</a>
+            <a class="btn btn-primary" href="/signup?path=<%= p.slug %>"><%= wordsFor(p).cta %> →</a>
             <a class="muted small" href="/paths/<%= p.slug %>">See the whole dashboard</a>
           </div>
         </div>

@@ -624,7 +624,7 @@ const PATHS = [
     slug: 'exploring',
     label: 'Still figuring it out',
     emoji: '🧭',
-    blurb: 'You know you want to build something, but not what yet. Start here: weigh up a few options, run small tests, and let real conversations narrow it down.',
+    blurb: 'You know you want to build something, but not what yet. Compare a few ideas side by side, and switch to a path when one fits.',
     marketing: {
       headline: 'Knowing you want out is enough to start. You do not need the idea yet.',
       subhead: 'A workspace for comparing ideas: a self-inventory, an options matrix, a board for small experiments, and members to talk them through with. It never picks for you.',

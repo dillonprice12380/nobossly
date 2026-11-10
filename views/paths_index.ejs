@@ -1,15 +1,15 @@
 <%- include('partials/head') %>
 
 <section class="pi-hero">
-  <h1>What is your way out?</h1>
-  <p class="lead" style="margin-left:0">A plumber and a podcaster do not leave their jobs the same way, so NoBossly does not give them the same dashboard. Pick your path and it changes what comes first: the numbers worth tracking, and the boards and tools for that kind of work.</p>
-  <p class="muted">A freelancer tracks billable income and a client pipeline. A café owner compares premises and checks break-even before signing a lease. A creator logs their audience and runs a content calendar. Every tool stays open to everyone; your path decides what is up front.</p>
+  <h1>Pick what you are building.</h1>
+  <p class="lead">A plumber and a podcaster do not track the same things, so NoBossly does not give them the same dashboard. Your path decides what comes first: the numbers, the boards and the tools for that kind of work. Every tool stays open to everyone, and you can switch any time.</p>
+  <div class="pi-cta"><a class="btn btn-ghost" href="#compare">Compare them side by side ↓</a></div>
 </section>
 
 <div class="paths-grid">
   <% paths.forEach(function (p) { %>
     <a class="path-tile" href="/paths/<%= p.slug %>">
-      <span class="pt-emoji"><%= p.emoji %></span>
+      <span class="pt-emoji" aria-hidden="true"><%= p.emoji %></span>
       <strong><%= p.label %></strong>
       <span class="muted small"><%= p.blurb %></span>
       <span class="pt-go">See this path →</span>
@@ -17,24 +17,79 @@
   <% }) %>
 </div>
 
-<section class="cta-band" style="margin-top:1.6rem">
-  <h2>Not sure which one?</h2>
-  <p class="muted">Take the &ldquo;still figuring it out&rdquo; path. Wanting out is enough to start. You'll get a self-inventory, an options matrix and small two-week experiments to narrow it down, and can switch to a specific path any time once you know more.</p>
-  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup?path=exploring">Start there →</a>
+<section class="cmp" id="compare" aria-labelledby="cmp-h">
+  <h2 id="cmp-h">Compare what each path puts first</h2>
+  <p class="muted">Untick the ones that are not you to narrow it down.</p>
+  <fieldset class="cmp-pick">
+    <legend class="sr-only">Paths to compare</legend>
+    <% compare.forEach(function (p) { %>
+      <input class="cmp-box" type="checkbox" id="cmp-<%= p.slug %>" checked>
+      <label class="cmp-chip" for="cmp-<%= p.slug %>"><%= p.emoji %> <%= p.label %></label>
+    <% }) %>
+  </fieldset>
+  <div class="cmp-scroll" tabindex="0" role="region" aria-label="Path comparison table, scrolls sideways">
+    <table class="cmp-table">
+      <thead>
+        <tr><th scope="col" class="cmp-row-h"><span class="sr-only">What</span></th>
+          <% compare.forEach(function (p) { %><th scope="col" class="c-<%= p.slug %>"><span aria-hidden="true"><%= p.emoji %></span> <%= p.label %></th><% }) %></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row" class="cmp-row-h">What it is</th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %>"><%= p.blurb %></td><% }) %></tr>
+        <tr><th scope="row" class="cmp-row-h">Your numbers</th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %>"><ul><% p.numbers.forEach(function (n) { %><li><%= n %></li><% }) %></ul></td><% }) %></tr>
+        <tr><th scope="row" class="cmp-row-h">Boards</th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %>"><% if (p.boards.length) { %><ul><% p.boards.forEach(function (b) { %><li><%= b.emoji %> <%= b.label %></li><% }) %></ul><% } else { %><span class="muted">—</span><% } %></td><% }) %></tr>
+        <tr><th scope="row" class="cmp-row-h">Tools up front</th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %>"><ul><% p.tools.forEach(function (t) { %><li><%= t.emoji %> <%= t.label %></li><% }) %></ul></td><% }) %></tr>
+        <tr><th scope="row" class="cmp-row-h">Covers</th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %> muted small"><%= p.kinds.join(' · ') || '—' %></td><% }) %></tr>
+        <tr><th scope="row" class="cmp-row-h"><span class="sr-only">Links</span></th>
+          <% compare.forEach(function (p) { %><td class="c-<%= p.slug %>"><a class="btn btn-primary btn-sm" href="/signup?path=<%= p.slug %>">Start free</a> <a class="small" href="/paths/<%= p.slug %>">More</a></td><% }) %></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
+<section class="cta-band" style="margin-top:1.6rem">
+  <h2>Still deciding?</h2>
+  <p class="muted">Pick &ldquo;Still figuring it out&rdquo;. It is a workspace for comparing ideas side by side and writing down what you try. It never picks for you, and you can switch to a path whenever one fits.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup?path=exploring">Start free, still figuring it out →</a>
+</section>
+
+<script type="application/ld+json"><%- JSON.stringify(structuredData).replace(/</g, '\\u003c') %></script>
+
 <style>
-  .pi-hero { max-width: 44rem; padding: clamp(1.2rem, 4vw, 2.5rem) 0 1.4rem; }
+  .pi-hero { max-width: 46rem; padding: clamp(1.2rem, 4vw, 2.5rem) 0 1.2rem; }
   .pi-hero h1 { font-size: clamp(1.9rem, 5vw, 3rem); letter-spacing: -.02em; text-wrap: balance; }
+  .pi-hero .lead { margin-left: 0; }
+  .pi-cta { margin-top: .8rem; }
   .paths-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .9rem; }
-  .path-tile {
-    display: flex; flex-direction: column; gap: .3rem;
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px;
-    padding: 1.1rem 1.2rem; text-decoration: none; color: var(--text);
-  }
+  .path-tile { display: flex; flex-direction: column; gap: .3rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; text-decoration: none; color: var(--text); }
   .path-tile:hover { border-color: var(--accent); }
   .pt-emoji { font-size: 1.7rem; line-height: 1; }
   .path-tile strong { font-size: 1.08rem; }
   .pt-go { margin-top: auto; padding-top: .5rem; color: var(--accent); font-size: .88rem; font-weight: 600; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .cmp { margin: 2.6rem 0 1rem; scroll-margin-top: 5rem; }
+  .cmp h2 { margin: 0 0 .3rem; }
+  .cmp-pick { position: relative; border: 0; padding: 0; margin: .8rem 0 1rem; display: flex; flex-wrap: wrap; gap: .45rem; }
+  .cmp-box { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; margin: 0; padding: 0; left: 0; top: 0; }
+  .cmp-chip { cursor: pointer; font-size: .88rem; padding: .35rem .75rem; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); text-decoration: line-through; }
+  .cmp-box:checked + .cmp-chip { color: var(--text); border-color: var(--accent); text-decoration: none; }
+  .cmp-box:focus-visible + .cmp-chip { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cmp-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+  .cmp-scroll:focus-visible { outline: 2px solid var(--accent); }
+  .cmp-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 40rem; font-size: .9rem; }
+  .cmp-table th, .cmp-table td { text-align: left; vertical-align: top; padding: .75rem .85rem; border-bottom: 1px solid var(--border); min-width: 12rem; }
+  .cmp-table thead th { font-size: .95rem; background: var(--panel-2); }
+  .cmp-table tr:last-child th, .cmp-table tr:last-child td { border-bottom: 0; }
+  .cmp-table ul { margin: 0; padding-left: 1rem; }
+  .cmp-table li { margin: .1rem 0; }
+  .cmp-row-h { position: sticky; left: 0; z-index: 1; background: var(--panel-2); min-width: 8.5rem !important; max-width: 9rem; font-weight: 700; }
+  <% compare.forEach(function (p) { %>
+  .cmp:has(#cmp-<%= p.slug %>:not(:checked)) .c-<%= p.slug %> { display: none; }
+  <% }) %>
+  @media (max-width: 640px) { .cmp-table th, .cmp-table td { min-width: 10.5rem; } .cmp-row-h { min-width: 6.5rem !important; } }
 </style>
 <%- include('partials/foot') %>
