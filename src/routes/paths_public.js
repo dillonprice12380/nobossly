@@ -1,19 +1,16 @@
 const router = require('express').Router();
 const paths = require('../paths');
-const dashboards = require('../path_dashboards');
+const pages = require('../path_pages');
 
-// Public landing pages, one per path.
+// Public pages: the /paths comparison and one landing page per path
+// (src/path_pages.js builds what each renders with).
 
-const canonical = (req, p) => 'https://nobossly.com/paths/' + p;
+function clientFor(req) {
+  if (req.sb) return req.sb;
+  try { return require('../supabase').anonClient(); } catch (_) { return null; }
+}
 
-router.get('/', (req, res) => {
-  res.render('paths_index', {
-    title: 'Pick your path',
-    metaDescription: 'NoBossly sets up a different dashboard depending on what you are building: a channel, a client base, a shop, a product. Pick your path and see what it tracks.',
-    canonicalUrl: 'https://nobossly.com/paths',
-    paths: paths.MARKETED
-  });
-});
+router.get('/', (req, res) => res.render('paths_index', pages.indexLocals()));
 
 router.get('/:slug', async (req, res, next) => {
   try {
@@ -21,17 +18,8 @@ router.get('/:slug', async (req, res, next) => {
     // A path with no marketing block is live in the product but not on the
     // public site, so it must not resolve to a half-empty page.
     if (!def || !def.marketing) return res.redirect('/paths');
-
-    res.render('path_landing', {
-      title: def.label + ' — your path',
-      metaDescription: def.marketing.subhead.slice(0, 300),
-      canonicalUrl: canonical(req, def.slug),
-      def,
-      // What this path's dashboard is made of, from the same config members get.
-      dash: dashboards.previewFor(def.slug),
-      subpaths: paths.subpathsOf(def.slug),
-      others: paths.MARKETED.filter(p => p.slug !== def.slug)
-    });
+    const sb = clientFor(req);
+    res.render('path_landing', pages.landingLocals(def, sb ? await pages.community(sb, def.slug) : null));
   } catch (e) { next(e); }
 });
 

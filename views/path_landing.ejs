@@ -1,101 +1,194 @@
 <%- include('partials/head') %>
 <%
-  var mk = def.marketing;
-  var start = '/signup?path=' + def.slug;
+  locals.mk = def.marketing;
+  locals.start = '/signup?path=' + def.slug;
+  locals.words = wordsFor(def);
+  locals.lower = words.noun;
+  locals.when = function (d) { return d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : ''; };
 %>
 
+<nav class="pl-crumbs small" aria-label="Breadcrumb"><a href="/paths">Paths</a> <span class="muted">/</span> <span><%= def.label %></span></nav>
+
 <section class="pl-hero">
-  <div>
-    <a class="chip" href="/paths">← All paths</a>
-    <h1 style="margin:.7rem 0 0"><%= def.emoji %> <%= mk.headline %></h1>
-    <p class="lead" style="margin-left:0"><%= mk.subhead %></p>
-    <div class="cta-row" style="justify-content:flex-start">
-      <a class="btn btn-primary btn-lg" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
-      <a class="btn btn-ghost btn-lg" href="/community">See the community</a>
-    </div>
-    <p class="muted small" style="margin-top:.7rem">Free, no card. Pick this path, answer a few questions, and your dashboard is ready in about a minute.</p>
+  <p class="pl-kicker"><span aria-hidden="true"><%= def.emoji %></span> <%= def.label %></p>
+  <h1><%= mk.headline %></h1>
+  <p class="lead"><%= mk.subhead %></p>
+  <div class="pl-cta">
+    <a class="btn btn-primary btn-lg" href="<%= start %>"><%= words.cta %> →</a>
+    <a class="btn btn-ghost btn-lg" href="/paths#compare">Compare paths</a>
   </div>
+  <p class="muted small">Free. No card. Switch paths any time; nothing you log is lost.</p>
 </section>
 
-<section class="card">
-  <h2>Sound familiar?</h2>
-  <ul class="pain-list">
-    <% mk.pains.forEach(function (t) { %><li><%= t %></li><% }) %>
-  </ul>
+<section class="pl-familiar">
+  <div>
+    <h2>Sound familiar?</h2>
+    <ul class="pain-list"><% mk.pains.forEach(function (t) { %><li><%= t %></li><% }) %></ul>
+  </div>
   <p class="pl-truth"><%= mk.truth %></p>
 </section>
 
-<% if (subpaths && subpaths.length) { %>
-<section>
-  <h2>Which kind of <%= def.label.toLowerCase() %>?</h2>
-  <p class="muted">This path covers all of it &mdash; nobody is forced into a box.</p>
-  <div class="sub-row">
-    <% subpaths.forEach(function (sp) { %><span class="sub-chip"><%= sp.label %></span><% }) %>
+<section class="pl-dash" id="dashboard" aria-labelledby="pl-dash-h">
+  <div class="pl-head">
+    <h2 id="pl-dash-h">Your <%= lower %> dashboard</h2>
+    <p class="muted">What a new member on this path sees first, before they have logged anything. Every other tool stays open too; the path only decides what comes first.</p>
   </div>
+  <div class="pl-frame" role="img" aria-label="A preview of the <%= lower %> dashboard: <%= summary.numbers.concat(summary.boards.map(function (b) { return b.label; })).join(', ') %>">
+    <div class="pl-bar" aria-hidden="true"><i></i><i></i><i></i><span><%= def.emoji %> Your <%= lower %> dashboard</span></div>
+    <div class="pl-body" aria-hidden="true">
+      <% if (summary.numbers.length) { %>
+        <div class="pl-nums">
+          <% summary.numbers.forEach(function (n, i) { %>
+            <div class="pl-num<%= i === 0 ? ' lead-num' : '' %>"><span><%= n %></span><b>—</b><em><%= i === 0 ? 'Your main number' : 'Log it as you go' %></em></div>
+          <% }) %>
+        </div>
+      <% } %>
+      <% if (summary.boards.length) { %>
+        <div class="pl-boards">
+          <% summary.boards.forEach(function (b) { %>
+            <div class="pl-board"><strong><%= b.emoji %> <%= b.label %></strong><i></i><i></i><i class="short"></i></div>
+          <% }) %>
+        </div>
+      <% } %>
+      <% if (summary.tools.length) { %>
+        <div class="pl-tools"><span class="muted small">Tools up front</span>
+          <% summary.tools.forEach(function (t) { %><span class="pl-tool"><%= t.emoji %> <%= t.label %></span><% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  <% if (summary.kinds.length) { %>
+    <div class="pl-kinds">
+      <h3>What it covers</h3>
+      <div class="sub-row"><% summary.kinds.forEach(function (k) { %><span class="sub-chip"><%= k %></span><% }) %><span class="sub-chip other">Something else</span></div>
+      <p class="muted small">Say which fits when you sign up and the dashboard follows it.</p>
+    </div>
+  <% } %>
 </section>
-<% } %>
 
-<% if (typeof dash !== 'undefined' && dash) { %>
-<section class="card">
-  <h2>📊 Your dashboard on this path</h2>
-  <p class="muted">Built for what a <%= def.label.toLowerCase() %> actually needs to track. Everything is private to you.</p>
-  <div class="dash-grid">
+<section class="pl-also" aria-labelledby="pl-also-h">
+  <h2 id="pl-also-h">Plus what every member gets</h2>
+  <div class="pl-also-grid">
+    <a class="pl-card" href="/#money">
+      <figure><img src="/img/home/money.jpg" width="1560" height="627" alt="The NoBossly Money page: money in, money out, profit and tax to put aside, with a twelve-month chart" loading="lazy" decoding="async"></figure>
+      <strong>Money</strong>
+      <span class="muted small">Log income and expenses, see profit and tax to put aside, and export it all at tax time. Stripe and Shopify connect read-only.</span>
+    </a>
+    <a class="pl-card" href="/#community">
+      <figure><img src="/img/home/community.jpg" width="1560" height="1038" alt="The NoBossly community home: questions, the feed, co-working sessions and members on your path" loading="lazy" decoding="async"></figure>
+      <strong>Community</strong>
+      <span class="muted small">Questions and answers, groups, co-working sessions, and people building the same kind of thing around a job.</span>
+    </a>
+  </div>
+</section>
+
+<section class="pl-people card" id="community" aria-labelledby="pl-people-h">
+  <h2 id="pl-people-h">The <%= lower %> community</h2>
+  <% if (people && people.showCount) { %>
+    <p class="pl-big"><b><%= people.members.toLocaleString('en-US') %></b> members are on this path.</p>
+  <% } else { %>
+    <p class="muted">This part of the community is just getting started, so the people who join now shape it.</p>
+  <% } %>
+  <div class="pl-people-grid">
     <div>
-      <h3>Where you are</h3>
-      <ol class="stage-list"><% dash.stages.forEach(function (s) { %><li><%= s %></li><% }) %></ol>
-      <p class="muted small" style="margin:.4rem 0 0">Say which fits and your dashboard shows the numbers and boards for it.</p>
+      <h3>Recent questions</h3>
+      <% if (people && people.recent.length) { %>
+        <ul class="pl-qs">
+          <% people.recent.forEach(function (q) { %>
+            <li><a href="/community/t/<%= q.id %>"><%= q.title %></a>
+              <span class="muted small"><%= q.answered ? 'Answered' : q.replies === 1 ? '1 reply' : q.replies + ' replies' %></span></li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="muted small">No questions from this path yet. Ask the first one; members on every path answer.</p>
+      <% } %>
+      <a class="small" href="/community/qa">Browse all questions →</a>
     </div>
     <div>
-      <% if (dash.numbers.length) { %><h3>Your numbers</h3><ul class="dash-list"><% dash.numbers.forEach(function (n) { %><li><%= n %></li><% }) %></ul><% } %>
-      <% if (dash.boards.length) { %><h3>Boards</h3><ul class="dash-list"><% dash.boards.forEach(function (b) { %><li><%= b.emoji %> <%= b.label %></li><% }) %></ul><% } %>
-    </div>
-    <div>
-      <% if (dash.checklists.length) { %><h3>Checklist templates</h3><ul class="dash-list"><% dash.checklists.forEach(function (c) { %><li><%= c %></li><% }) %></ul><% } %>
-      <% if (dash.tools.length) { %><h3>Tools up front</h3><ul class="dash-list"><% dash.tools.forEach(function (t) { %><li><%= t.emoji %> <%= t.label %></li><% }) %></ul><% } %>
+      <h3>Co-working</h3>
+      <% if (people && people.sessions) { %>
+        <p><%= people.sessions === 1 ? '1 session' : people.sessions + ' sessions' %> coming up<%= people.nextSessionAt ? ', the next on ' + when(people.nextSessionAt) : '' %>.</p>
+      <% } else { %>
+        <p class="muted small">None booked right now. Any member can host one: pick a time and work alongside each other.</p>
+      <% } %>
+      <p class="muted small">Sessions are for members, so sign in to see them.</p>
     </div>
   </div>
-  <p class="muted small" style="margin:.8rem 0 0">Every other tool stays open to you too. Your path only decides what comes first.</p>
-  <a class="btn btn-ghost" style="margin-top:.8rem;display:inline-block" href="/how-it-works">How the whole thing works →</a>
 </section>
-<% } %>
 
 <%- include('partials/affiliate_picks', { picks: affiliates.forPath(def.slug), from: 'path:' + def.slug }) %>
 
 <section class="cta-band">
-  <h2>Start as a <%= def.label.toLowerCase() %>.</h2>
-  <p class="muted">Free, no card. Your dashboard is ready in about a minute, and you can switch paths any time.</p>
-  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>">Start as a <%= def.label.toLowerCase() %> →</a>
+  <h2><%= words.cta %>.</h2>
+  <p class="muted">No card. Your dashboard is ready in about a minute, and you can switch paths any time.</p>
+  <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="<%= start %>"><%= words.cta %> →</a>
 </section>
 
-<section>
+<section class="pl-others">
   <h3 class="small muted">Building something else?</h3>
   <div class="other-paths">
-    <% others.forEach(function (p) { %>
-      <a class="chip" href="/paths/<%= p.slug %>"><%= p.emoji %> <%= p.label %></a>
-    <% }) %>
+    <% others.forEach(function (p) { %><a class="chip" href="/paths/<%= p.slug %>"><%= p.emoji %> <%= p.label %></a><% }) %>
+    <a class="chip" href="/paths#compare">Compare them all</a>
   </div>
 </section>
 
+<script type="application/ld+json"><%- JSON.stringify(structuredData).replace(/</g, '\\u003c') %></script>
+
 <style>
-  .pl-hero { padding: clamp(1.5rem, 5vw, 3rem) 0 .5rem; max-width: 46rem; }
-  .pl-hero h1 { font-size: clamp(1.8rem, 4.6vw, 2.9rem); line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; }
+  .pl-crumbs { margin-top: 1rem; }
+  .pl-crumbs a { color: var(--muted); }
+  .pl-hero { padding: clamp(1rem, 4vw, 2.4rem) 0 .5rem; max-width: 48rem; }
+  .pl-kicker { margin: 0; font-weight: 700; color: var(--accent); letter-spacing: .01em; }
+  .pl-hero h1 { font-size: clamp(1.8rem, 4.6vw, 2.9rem); line-height: 1.1; letter-spacing: -.02em; text-wrap: balance; margin: .4rem 0 .6rem; }
+  .pl-hero .lead { margin-left: 0; }
+  .pl-cta { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 .6rem; }
+  .pl-familiar { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1.4rem; align-items: center; margin: 2rem 0; }
+  .pl-familiar h2 { margin: 0 0 .4rem; }
   .pain-list { list-style: none; padding: 0; margin: .6rem 0 0; display: flex; flex-direction: column; gap: .55rem; }
   .pain-list li { padding-left: 1.5rem; position: relative; }
   .pain-list li::before { content: "—"; position: absolute; left: 0; color: var(--muted); }
-  .pl-truth {
-    margin: 1rem 0 0; padding: .85rem 1rem; border-left: 3px solid var(--accent);
-    background: rgba(16,185,129,.08); border-radius: 0 10px 10px 0; font-weight: 500;
-  }
-  .sub-row { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .9rem; }
-  .sub-chip {
-    font-size: .88rem; padding: .35rem .7rem; border-radius: 999px;
-    background: var(--panel-2); border: 1px solid var(--border);
-  }
-  .sub-chip:last-child { border-style: dashed; color: var(--muted); }
-  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin-top: .8rem; }
-  .dash-grid h3 { font-size: .95rem; margin: .2rem 0 .4rem; }
-  .dash-list, .stage-list { margin: 0 0 .6rem; padding-left: 1.2rem; }
-  .dash-list li, .stage-list li { margin: .15rem 0; }
+  .pl-truth { margin: 0; padding: 1rem 1.1rem; border-left: 3px solid var(--accent); background: rgba(16,185,129,.08); border-radius: 0 12px 12px 0; font-weight: 500; }
+  .pl-head h2 { margin: 0 0 .3rem; }
+  .pl-dash, .pl-also { margin: 2.4rem 0; scroll-margin-top: 5rem; }
+  .pl-frame { margin-top: 1rem; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--panel); box-shadow: 0 18px 50px rgba(0,0,0,.16); }
+  .pl-bar { display: flex; align-items: center; gap: .35rem; padding: .6rem .9rem; border-bottom: 1px solid var(--border); background: var(--panel-2); font-size: .85rem; font-weight: 600; }
+  .pl-bar i { width: .6rem; height: .6rem; border-radius: 50%; background: var(--border); }
+  .pl-bar span { margin-left: .5rem; }
+  .pl-body { padding: 1rem; display: grid; gap: 1rem; }
+  .pl-nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; }
+  .pl-num { display: flex; flex-direction: column; gap: .15rem; padding: .8rem .9rem; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); }
+  .pl-num span { font-size: .85rem; color: var(--muted); }
+  .pl-num b { font-size: 1.5rem; line-height: 1.1; }
+  .pl-num em { font-style: normal; font-size: .75rem; color: var(--muted); }
+  .pl-num.lead-num { border-color: var(--accent); }
+  .pl-boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .7rem; }
+  .pl-board { display: flex; flex-direction: column; gap: .4rem; padding: .8rem .9rem; border: 1px dashed var(--border); border-radius: 12px; }
+  .pl-board strong { font-size: .92rem; }
+  .pl-board i { display: block; height: .55rem; border-radius: 6px; background: var(--panel-2); }
+  .pl-board i.short { width: 60%; }
+  .pl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+  .pl-tool { font-size: .85rem; padding: .3rem .65rem; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); }
+  .pl-kinds { margin-top: 1.2rem; }
+  .pl-kinds h3 { margin: 0 0 .2rem; font-size: 1rem; }
+  .sub-row { display: flex; flex-wrap: wrap; gap: .45rem; margin: .6rem 0; }
+  .sub-chip { font-size: .88rem; padding: .35rem .7rem; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); }
+  .sub-chip.other { border-style: dashed; color: var(--muted); }
+  .pl-also-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: .8rem; }
+  .pl-card { display: flex; flex-direction: column; gap: .35rem; text-decoration: none; color: var(--text); padding: .8rem; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); }
+  .pl-card:hover { border-color: var(--accent); }
+  .pl-card figure { margin: 0 0 .4rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); aspect-ratio: 16 / 8; }
+  .pl-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .pl-people { scroll-margin-top: 5rem; }
+  .pl-people h2 { margin-top: 0; }
+  .pl-big { font-size: 1.1rem; }
+  .pl-people-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.4rem; margin-top: .6rem; }
+  .pl-people-grid h3 { font-size: 1rem; margin: 0 0 .4rem; }
+  .pl-qs { list-style: none; padding: 0; margin: 0 0 .6rem; display: flex; flex-direction: column; gap: .5rem; }
+  .pl-qs li { display: flex; flex-direction: column; }
   .other-paths { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .5rem; }
+  .pl-others { margin: 1.6rem 0; }
+  @media (max-width: 760px) {
+    .pl-familiar, .pl-also-grid, .pl-people-grid { grid-template-columns: 1fr; }
+  }
 </style>
 <%- include('partials/foot') %>

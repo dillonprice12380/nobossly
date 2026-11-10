@@ -580,7 +580,8 @@
       "working_on",
       "workspace_layout",
       "xp_total",
-      "years_experience"
+      "years_experience",
+      "saved_paths"
     ],
     "public_profiles": [
       "avatar_url",

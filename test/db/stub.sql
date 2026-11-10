@@ -61,3 +61,4 @@ create table expenses(id uuid primary key default gen_random_uuid(), user_id uui
 alter table expenses enable row level security;
 create policy expenses_own on expenses for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 grant select, insert, update, delete on expenses to authenticated;
+alter table profiles add column if not exists path text;

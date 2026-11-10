@@ -91,7 +91,8 @@ const criteriaForVisitor = () => [];
 const CHALLENGES = [{ title: 'Post three times this week', description: 'Same hook, three angles.',
   emoji: '🎥', xp_reward: 120, suggested_days: 7, paths: ['creator'] }];
 
-const index = render('paths_index.ejs', { paths: paths.MARKETED });
+const pathPages = require('../src/path_pages');
+const index = render('paths_index.ejs', pathPages.indexLocals());
 ok('/paths lists every marketed path',
    paths.MARKETED.every(p => index.includes('/paths/' + p.slug)),
    `${paths.MARKETED.length} paths`);
@@ -105,14 +106,7 @@ for (const def of paths.MARKETED) {
        [['with DB rows', criteriaForVisitor(def.slug), CHALLENGES], ['with an empty DB', [], []]]) {
     let html = '';
     try {
-      html = render('path_landing.ejs', {
-        title: def.label, metaDescription: def.marketing.subhead,
-        canonicalUrl: 'https://nobossly.com/paths/' + def.slug,
-        def, questions, criteria, challenges,
-        dash: require('../src/path_dashboards').previewFor(def.slug),
-        subpaths: paths.subpathsOf(def.slug),
-        others: paths.MARKETED.filter(p => p.slug !== def.slug)
-      });
+      html = render('path_landing.ejs', Object.assign(pathPages.landingLocals(def), { questions, criteria, challenges }));
     } catch (e) {
       ok(`${def.slug} ${label}: renders`, false, e.message);
       continue;
@@ -131,7 +125,10 @@ for (const def of paths.MARKETED) {
     if (challenges.length && html.includes(esc(challenges[0].title))) missing.push('no curated quest');
     if (def.marketing.bar || /The number this path turns on/.test(html)) missing.push('no traction bar');
     const dash = require('../src/path_dashboards').previewFor(def.slug);
-    if (!html.includes('Your dashboard on this path') || !dash.stages.every(st => html.includes(esc(st)))) missing.push('the dashboard preview');
+    // The preview shows what the dashboard puts first: its numbers and boards.
+    // The stage list and checklist templates are not on the dashboard any more.
+    if (!html.includes('dashboard</h2>') || !dash.numbers.every(n => html.includes(esc(n))) || !dash.boards.every(b => html.includes(esc(b.label)))) missing.push('the dashboard preview');
+    if (html.includes('Checklist templates') || html.includes('Where you are')) missing.push('no stage list or checklists');
     if (/\bXP\b|\brungs?\b|\bladder\b/.test(html.replace(/<style[\s\S]*?<\/style>/g, ''))) missing.push('no retired XP/ladder wording');
     if (criteria.length && !html.includes(esc(criteria[0].criterion))) missing.push('the criterion');
     ok(`${def.slug} ${label}: every block is in the HTML`, !missing.length,
@@ -177,19 +174,14 @@ const TIERS = require('../src/pricing').withOffer([
 ]);
 
 const marketing = {
-  'home.ejs': { paths: paths.MARKETED },
+  'home.ejs': { paths: paths.MARKETED, previews: require('../src/home').previews(), faq: require('../src/home').FAQ, structuredData: require('../src/home').structuredData(), wordsFor: require('../src/path_pages').wordsFor },
   'how_it_works.ejs': {},
-  'paths_index.ejs': { paths: paths.MARKETED },
+  'paths_index.ejs': require('../src/path_pages').indexLocals(),
   'pricing.ejs': { tiers: TIERS, freeFeatures: ['Every path, tool and the whole community'],
                    paidFeatures: ['Everything in Free'], plan: null, upgrade: null, msg: null }
 };
 for (const def of paths.MARKETED) {
-  marketing['path_landing.ejs:' + def.slug] = {
-    def, questions: paths.ownQuestions(def.slug), criteria: [], challenges: [],
-    dash: require('../src/path_dashboards').previewFor(def.slug),
-    subpaths: paths.subpathsOf(def.slug),
-    others: paths.MARKETED.filter(p => p.slug !== def.slug)
-  };
+  marketing['path_landing.ejs:' + def.slug] = require('../src/path_pages').landingLocals(def);
 }
 
 // Visible text only: strip tags, scripts and styles, then decode the few

@@ -2,15 +2,21 @@ const router = require('express').Router();
 const paths = require('../paths');
 const dashboards = require('../path_dashboards');
 const pi = require('../personal_info_filter');
+const pages = require('../path_pages');
 
 // Onboarding, now just this: pick a path, land in the product. Replaces the
 // old AI-driven questionnaire + Compass. Also reachable any time to switch
 // paths later.
 router.get('/', (req, res) => {
+  const p = req.profile || {};
+  const saved = p.saved_paths && typeof p.saved_paths === 'object' ? Object.keys(p.saved_paths) : [];
   res.render('choose_path', {
     title: 'Choose your path',
-    paths: paths.PATHS,
-    current: (req.profile && req.profile.path) || null,
+    choices: pages.choices(),
+    current: p.path && paths.isPath(p.path) ? p.path : null,
+    saved,
+    // saved_paths arrives with migrations/2026-11-10_path_pages.sql.
+    keepsAnswers: Object.prototype.hasOwnProperty.call(p, 'saved_paths'),
     msg: req.query.msg || null
   });
 });
@@ -21,14 +27,10 @@ router.post('/', async (req, res, next) => {
     if (!paths.isPath(chosen)) {
       return res.redirect('/choose-path?msg=' + encodeURIComponent('Pick the one that fits best — you can change it later.'));
     }
-    const switching = req.profile && req.profile.path && req.profile.path !== chosen;
-    await req.sb.from('profiles').update({
-      path: chosen,
-      onboarding_completed: true,
-      // A new path's subpath and answers would be the old path's otherwise.
-      ...(switching ? { subpath: null } : {}),
-      ...(switching && hasAnswersColumn(req.profile) ? { path_answers: {} } : {})
-    }).eq('id', req.user.id);
+    // A new path's subpath and answers would be the old path's otherwise; the
+    // old ones are put aside and come back on switching back (src/path_pages).
+    await req.sb.from('profiles').update(Object.assign({ path: chosen, onboarding_completed: true },
+      pages.switchPatch(req.profile, chosen))).eq('id', req.user.id);
     res.redirect('/choose-path/setup');
   } catch (e) { next(e); }
 });
