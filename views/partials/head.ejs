@@ -6,6 +6,20 @@
 <title><%= title %> &middot; NoBossly</title>
 <meta name="description" content="<%= typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'NoBossly is a free workspace and community for people building a business around a 9 to 5: a dashboard for your kind of business, worksheets and money tools, Q&A, groups and help from other members.' %>">
 <link rel="canonical" href="<%= typeof canonicalUrl !== 'undefined' && canonicalUrl ? canonicalUrl : 'https://nobossly.com' %>">
+<%# Sharing: what a link to any page shows in messages and social posts. A page can pass ogImage. %>
+<% var _ogUrl = typeof canonicalUrl !== 'undefined' && canonicalUrl ? canonicalUrl : 'https://nobossly.com';
+   var _ogDesc = typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : 'A free workspace and community for people building a business around a 9 to 5.';
+   var _ogImg = typeof ogImage !== 'undefined' && ogImage ? ogImage : 'https://nobossly.com/img/home/og.jpg'; %>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NoBossly">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= _ogDesc %>">
+<meta property="og:url" content="<%= _ogUrl %>">
+<meta property="og:image" content="<%= _ogImg %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b3d2e">
 <link rel="icon" type="image/png" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/N_i8pl8n.png">
 <link rel="preconnect" href="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
