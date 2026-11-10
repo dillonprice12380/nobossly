@@ -1,137 +1,181 @@
 <%- include('partials/head') %>
-<section class="home-hero">
-  <div class="reveal reveal-left">
+<%# The home page for signed-out visitors (server.js GET /). Three parts:
+    Workspace, Money, Community. The pictures are the real pages with sample
+    data (scripts/home_shots.js makes them). The "what are you building?"
+    picker works without JavaScript (radio buttons), and its button carries
+    the choice through sign-up (/signup?path=…). %>
+<% var P = (typeof paths !== 'undefined' && paths) ? paths : [];
+   var prev = (typeof previews !== 'undefined' && previews) ? previews : {};
+   var first = P.some(function (p) { return p.slug === 'freelancer'; }) ? 'freelancer' : (P[0] && P[0].slug);
+   var faqs = (typeof faq !== 'undefined' && faq) ? faq : []; %>
+
+<section class="hm-hero">
+  <div class="hm-hero-text">
     <h1>Build your way out<br>of the <span class="accent-text">9 to 5.</span></h1>
-    <p class="lead" style="margin-left:0">NoBossly is a free workspace and community for people building a business around a job. Run the business from a workspace set up for what you're building: your numbers, boards, worksheets and money in one place. Talk shop, trade help and find collaborators with other members. And if you're in an accelerator or a course, your program can run its private cohort here too.</p>
-    <div class="cta-row" style="justify-content:flex-start">
-      <a class="btn btn-primary btn-lg" href="/signup">Join free →</a>
-      <a class="btn btn-ghost btn-lg" href="/how-it-works">How it works</a>
+    <p class="lead">A free workspace and community for people building a business around a job. Your numbers, your money and other people doing the same thing, in one place that fits your evenings.</p>
+    <p class="muted small hm-free">Free. No card. Works on your phone.</p>
+  </div>
+
+  <% if (P.length) { %>
+  <div class="card hm-pick" aria-labelledby="hm-pick-h">
+    <h2 id="hm-pick-h">What are you building?</h2>
+    <% P.forEach(function (p) { %><input type="radio" name="hm-path" id="hp-<%= p.slug %>" class="hm-radio" <%= p.slug === first ? 'checked' : '' %>><% }) %>
+    <div class="hm-chips" role="presentation">
+      <% P.forEach(function (p) { %><label for="hp-<%= p.slug %>" class="hm-chip"><span><%= p.emoji %></span> <%= p.label %></label><% }) %>
+    </div>
+    <div class="hm-panels">
+      <% P.forEach(function (p) { var v = prev[p.slug]; %>
+        <div class="hm-panel hm-panel-<%= p.slug %>">
+          <p class="hm-panel-h"><%= p.emoji %> Your <%= p.label.toLowerCase() %> dashboard</p>
+          <% if (v) { %>
+            <% if (v.numbers.length) { %><p class="small hm-row"><span class="muted">Numbers:</span> <%= v.numbers.slice(0, 4).join(' · ') %></p><% } %>
+            <% if (v.boards.length) { %><p class="small hm-row"><span class="muted">Boards:</span> <%= v.boards.map(function (b) { return b.label; }).join(' · ') %></p><% } %>
+            <% if (v.tools.length) { %><p class="small hm-row"><span class="muted">Tools:</span> <%= v.tools.map(function (t) { return t.label; }).join(' · ') %></p><% } %>
+          <% } %>
+          <div class="cta-row hm-panel-cta">
+            <a class="btn btn-primary" href="/signup?path=<%= p.slug %>">Start free as <%= /^[aeiou]/i.test(p.label) ? 'an' : 'a' %> <%= p.label.toLowerCase() %> →</a>
+            <a class="muted small" href="/paths/<%= p.slug %>">See the whole dashboard</a>
+          </div>
+        </div>
+      <% }) %>
     </div>
   </div>
-  <img class="hero-img img-fade" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/light-bulb_p2diod.png" alt="A way out of the day job, lit up">
+  <% } else { %>
+    <div class="cta-row"><a class="btn btn-primary btn-lg" href="/signup">Join free →</a></div>
+  <% } %>
 </section>
 
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <span>Free, no card ✦ Ask and answer ✦ Trade skills ✦ Find collaborators ✦ Groups and weekly challenges ✦ A workspace for your kind of business ✦ Private cohorts for programs ✦ Built for evenings and weekends ✦&nbsp;</span><span>Free, no card ✦ Ask and answer ✦ Trade skills ✦ Find collaborators ✦ Groups and weekly challenges ✦ A workspace for your kind of business ✦ Private cohorts for programs ✦ Built for evenings and weekends ✦&nbsp;</span>
-  </div>
-</div>
+<nav class="hm-pillars" aria-label="What's inside">
+  <a href="#workspace"><strong>🧰 Workspace</strong><span class="muted small">A dashboard, boards, notes and worksheets for your kind of business</span></a>
+  <a href="#money"><strong>💰 Money</strong><span class="muted small">What came in, what went out, and what to keep aside for tax</span></a>
+  <a href="#community"><strong>🤝 Community</strong><span class="muted small">Q&amp;A, co-working and people doing the same thing</span></a>
+</nav>
 
-<section class="home-sides reveal reveal-up">
-  <div class="card home-side">
-    <p class="home-kicker">The community</p>
-    <h2>💬 People building the same way</h2>
-    <p class="muted">Everyone who joins can use it. Ask a question and hear from members who've been there. Offer what you're good at, or swap it for what you need.</p>
+<section class="hm-feature reveal reveal-up" id="workspace">
+  <div class="hm-copy">
+    <p class="hm-kicker">Workspace</p>
+    <h2>A dashboard for what you're actually building</h2>
+    <p class="muted">A YouTuber and a café owner don't need the same dashboard. Pick your path and yours has the numbers, boards and tools for that kind of business.</p>
     <ul class="feature-list">
-      <li><strong>Feed and Q&amp;A</strong>: post what you're working on, ask what you're stuck on</li>
-      <li><strong>Help &amp; exchange</strong>: ask for help with a website, pricing or sales, offer yours, or trade skills</li>
-      <li><strong>Get feedback</strong> on your idea, pitch or landing page from other members</li>
-      <li><strong>Groups</strong> around a niche, an industry or a goal. Start your own</li>
-      <li><strong>Collaborators</strong>: find a business partner, or someone with the skill you're missing</li>
-      <li><strong>Weekly challenges</strong>: pick your own goal for the week and work on it alongside other members</li>
+      <li><strong>Your numbers</strong> with the trend at a glance: income, clients, followers, sign-ups</li>
+      <li><strong>Boards</strong> for the work in progress: clients, jobs, content, orders</li>
+      <li><strong>Coming up this week</strong>: due dates, renewals and challenge ends in one list</li>
+      <li><strong>Notes and worksheets</strong>: Lean Canvas, personas, pitches, proposals, with one search across all of it</li>
+      <li><strong>Your layout</strong>: pin what you use, hide what you don't</li>
     </ul>
   </div>
-  <div class="card home-side">
-    <p class="home-kicker">For programs</p>
-    <h2>🔒 Bring your accelerator or course</h2>
-    <p class="muted">NoBossly doesn't teach; programs do. Accelerators, incubators and teachers run their cohorts here, invite-only, and their participants use the same workspace for the work. Nothing in a cohort is visible to anyone outside it: not the posts, not the members, not the work.</p>
+  <figure class="hm-shot"><img src="/img/home/dashboard.jpg" width="1560" height="1080" alt="A freelancer's NoBossly dashboard: money this month, what's coming up this week, billable income and a client pipeline" loading="lazy" decoding="async"></figure>
+</section>
+
+<section class="hm-feature flip reveal reveal-up" id="money">
+  <div class="hm-copy">
+    <p class="hm-kicker">Money</p>
+    <h2>Know what you made, and what to keep aside</h2>
+    <p class="muted">This month's income, costs and profit up top, and twelve months of it underneath.</p>
     <ul class="feature-list">
-      <li><strong>Join by invite link</strong> from your program</li>
-      <li><strong>Assignments</strong>: your Lean Canvas by Friday, your pricing, your pitch</li>
-      <li><strong>Hand in a copy</strong> of your work. Your own workspace stays private</li>
-      <li><strong>Feedback</strong> from your program team, and resubmit until it's right</li>
-      <li><strong>A weekly check-in thread</strong> with the rest of your cohort</li>
+      <li><strong>Payments log themselves</strong>: connect Stripe or Shopify read-only, or import a CSV from your bank, PayPal or Etsy</li>
+      <li><strong>Tax to put aside</strong> on every payment, worked out from your own rates</li>
+      <li><strong>Monthly costs</strong> like software and rent log themselves too</li>
+      <li><strong>Export for tax time</strong>: the year as a spreadsheet, by month and category</li>
+      <li><strong>Pricing &amp; margin</strong>, break-even and cost worksheets for your path</li>
     </ul>
-    <p class="muted small">Running a program? Your team gets a private home for its cohorts, invite links, and an activity view that shows who's moving and who's gone quiet. It shows counts and dates, never what anyone wrote.</p>
+  </div>
+  <figure class="hm-shot"><img src="/img/home/money.jpg" width="1560" height="627" alt="The NoBossly Money page: money in, money out, profit and tax to put aside, with a twelve-month chart of income against expenses" loading="lazy" decoding="async"></figure>
+</section>
+
+<section class="hm-feature reveal reveal-up" id="community">
+  <div class="hm-copy">
+    <p class="hm-kicker">Community</p>
+    <h2>People building the same way</h2>
+    <p class="muted">Everyone here is fitting a business around something else. Nobody is selling you a course.</p>
+    <ul class="feature-list">
+      <li><strong>Q&amp;A</strong>: ask, answer, and mark the reply that helped</li>
+      <li><strong>Co-working</strong>: book an hour to work alongside other members, cameras optional</li>
+      <li><strong>Groups and weekly challenges</strong> around a niche or a goal</li>
+      <li><strong>Profiles with your business on them</strong>: what you offer, your links, how you've helped</li>
+      <li><strong>Help &amp; exchange</strong>: trade what you're good at for what you need</li>
+    </ul>
+  </div>
+  <figure class="hm-shot"><img src="/img/home/community.jpg" width="1560" height="1038" alt="The NoBossly community home: questions waiting for an answer, the feed, co-working sessions and members on your path" loading="lazy" decoding="async"></figure>
+</section>
+
+<section class="hm-more reveal reveal-up">
+  <div class="card">
+    <p class="hm-kicker">For programs</p>
+    <h3>Bring your accelerator or course</h3>
+    <p class="muted small">NoBossly doesn't teach; programs do. Accelerators and teachers run invite-only cohorts here with assignments, feedback and a weekly check-in, and participants do the work in the same workspace. Nothing in a cohort is visible outside it.</p>
+  </div>
+  <div class="card">
+    <p class="hm-kicker">Reference</p>
+    <h3>The paperwork, explained</h3>
+    <p class="muted small">Over a hundred free pages on registering a business where you live, EINs, licences, sales tax, contracts, and tax while you're still employed. <a href="/guides">Browse</a> · <a href="/locations">By location</a></p>
+  </div>
+  <div class="card">
+    <p class="hm-kicker">Built for spare hours</p>
+    <h3>Open it, pick up where you left off</h3>
+    <p class="muted small">You have a job, a commute and a few evenings a week. Everything opens where you left it and works on your phone, so a spare hour goes on the business, not on finding things.</p>
   </div>
 </section>
 
-<% if (typeof paths !== 'undefined' && paths && paths.length) { %>
-<section class="reveal reveal-up" id="paths">
-  <div class="page-head">
-    <div>
-      <h2>A dashboard for what you're actually building</h2>
-      <p class="muted">A YouTuber and a café owner don't need the same dashboard. Pick your path and answer a few questions, about a minute, and yours is set up with the numbers, boards and tools for that kind of business.</p>
-    </div>
-    <a class="btn btn-ghost" href="/paths">Compare the paths →</a>
-  </div>
-  <div class="home-paths">
-    <% paths.forEach(function (p) { %>
-      <a class="home-path" href="/paths/<%= p.slug %>">
-        <span class="hp-emoji"><%= p.emoji %></span>
-        <strong><%= p.label %></strong>
-      </a>
-    <% }) %>
-  </div>
+<% if (faqs.length) { %>
+<section class="hm-faq reveal reveal-up" id="faq">
+  <h2>Questions</h2>
+  <% faqs.forEach(function (f) { %>
+    <details class="card"><summary><strong><%= f.q %></strong></summary><p class="muted"><%= f.a %></p></details>
+  <% }) %>
 </section>
 <% } %>
 
-<section class="feature-row reveal reveal-left">
-  <div>
-    <h2>📊 Your dashboard, your numbers</h2>
-    <p class="muted">Each path keeps the numbers you'd want in front of you, and boards for the work in progress.</p>
-    <ul class="feature-list">
-      <li><strong>Creators</strong> log followers or subscribers and income, run a content pipeline with a publish calendar, and track brand deals</li>
-      <li><strong>Freelancers</strong> track billable income and hours, a client pipeline, invoices, and proposals</li>
-      <li><strong>Local services</strong> run a jobs board, keep regular customers on a cycle, and quote in a minute</li>
-      <li><strong>Shops and cafés</strong> compare premises, plan opening day, track funding, and check break-even before signing a lease</li>
-      <li><strong>Online stores and product makers</strong> see real margin after fees and shipping, landed cost, and suppliers side by side</li>
-      <li><strong>Apps and software</strong> scope the first version, log sign-ups and paying customers, and keep a roadmap of what users ask for</li>
-    </ul>
-  </div>
-  <img class="img-corner-fade" src="https://pub-95ede4ca0cce4b26aa322170b1a5b9f1.r2.dev/Site%20Images/light-bulb_2_mns1wm.png" alt="A dashboard shaped by your path" loading="lazy">
-</section>
-
-<section class="feature-row single reveal reveal-right">
-  <div>
-    <h2>🧰 A workspace for the whole business</h2>
-    <p class="muted">All free, all private to you. Share a document with someone when you choose, or hand in a copy if you're in a program.</p>
-    <ul class="feature-list">
-      <li>Lean Canvas and Business Model Canvas</li>
-      <li>Customer persona, idea refiner, and elevator pitch, with every version kept</li>
-      <li>Business plan builder, goals, and a milestone tracker</li>
-      <li>Tasks, a budgeter, and an income log</li>
-      <li>A survey maker: share a link, no account needed to answer, results on your dashboard</li>
-      <li>Tax Set-Aside, Pricing &amp; Margin, a public Proof Page, and a customer-interview log</li>
-    </ul>
-  </div>
-</section>
-
-<section class="feature-row single reveal reveal-left">
-  <div>
-    <h2>🌙 Built for the hours you have left</h2>
-    <p class="muted">NoBossly assumes you haven't quit: you have a job, a commute, and a few evenings a week that are yours. Everything opens where you left it, works on your phone, and keeps your numbers and notes in one place, so a spare hour goes on the business and not on finding things.</p>
-  </div>
-</section>
-
-<section class="feature-row single reveal reveal-right">
-  <div>
-    <h2>📚 Reference, free and open</h2>
-    <p class="muted">Over a hundred reference pages on the paperwork: registering a business where you live, EINs, licences, sales tax, contracts, and tax while you're still employed. Free to read, no account needed.</p>
-    <div class="cta-row" style="justify-content:flex-start;margin-top:.9rem">
-      <a class="btn btn-ghost" href="/guides">Browse the reference</a>
-      <a class="btn btn-ghost" href="/locations">By location</a>
-    </div>
-  </div>
-</section>
-
 <section class="cta-band reveal reveal-up">
   <h2>Keep the job. Build the way out.</h2>
-  <p class="muted">Free, no card. Join, pick your path, and your workspace is ready in about a minute.</p>
+  <p class="muted">Free, no card. Pick your path and your workspace is ready in about a minute.</p>
   <a class="btn btn-primary btn-lg" style="margin-top:1.1rem;display:inline-block" href="/signup">Join free →</a>
 </section>
+
+<% if (typeof structuredData !== 'undefined' && structuredData) { %>
+<script type="application/ld+json"><%- JSON.stringify(structuredData).replace(/</g, '\\u003c') %></script>
+<% } %>
 <style>
-  .home-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; margin: 2rem 0; }
-  .home-side h2 { margin-top: .2rem; }
-  .home-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0; }
-  .home-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; margin-top: 1rem; }
-  .home-path {
-    display: flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--text);
-    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: .8rem .9rem;
+  .hm-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 2rem; align-items: center; padding: 2.5rem 0 1.5rem; }
+  .hm-hero .lead { margin-left: 0; }
+  .hm-free { margin: .6rem 0 0; }
+  .hm-pick h2 { margin: 0 0 .7rem; font-size: 1.15rem; }
+  .hm-pick { position: relative; }
+  .hm-radio { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; margin: 0; padding: 0; left: 0; top: 0; }
+  .hm-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .hm-chip { display: inline-flex; gap: .35rem; align-items: center; padding: .4rem .75rem; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: .9rem; background: var(--panel-2); margin: 0; }
+  .hm-chip:hover { border-color: var(--accent); }
+  .hm-panels { margin-top: .9rem; border-top: 1px solid var(--border); padding-top: .8rem; min-height: 9.5rem; }
+  .hm-panel { display: none; }
+  .hm-panel-h { font-weight: 700; margin: 0 0 .4rem; }
+  .hm-row { margin: .15rem 0; }
+  .hm-panel-cta { justify-content: flex-start; align-items: center; gap: .8rem; margin: .8rem 0 0; }
+  <% P.forEach(function (p) { %>
+  #hp-<%= p.slug %>:checked ~ .hm-panels .hm-panel-<%= p.slug %> { display: block; }
+  #hp-<%= p.slug %>:checked ~ .hm-chips label[for="hp-<%= p.slug %>"] { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  #hp-<%= p.slug %>:focus-visible ~ .hm-chips label[for="hp-<%= p.slug %>"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  <% }) %>
+  .hm-pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin: .5rem 0 2rem; }
+  .hm-pillars a { display: flex; flex-direction: column; gap: .2rem; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: inherit; text-decoration: none; }
+  .hm-pillars a:hover { border-color: var(--accent); }
+  .hm-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 .3rem; }
+  .hm-feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 2.2rem; align-items: center; margin: 3rem 0; scroll-margin-top: 5rem; }
+  .hm-feature.flip .hm-copy { order: 2; }
+  .hm-feature h2 { margin: 0 0 .5rem; }
+  .hm-shot { margin: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 18px 50px rgba(0,0,0,.18); background: var(--panel); }
+  .hm-shot img { display: block; width: 100%; height: auto; }
+  .hm-more { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin: 2.5rem 0; }
+  .hm-more h3 { margin: 0 0 .4rem; }
+  .hm-faq { max-width: 820px; margin: 2.5rem auto; }
+  .hm-faq details { margin-bottom: .6rem; }
+  .hm-faq summary { cursor: pointer; }
+  .hm-faq details p { margin: .6rem 0 0; }
+  @media (max-width: 900px) {
+    .hm-hero, .hm-feature { grid-template-columns: 1fr; gap: 1.2rem; }
+    .hm-feature.flip .hm-copy { order: 0; }
+    .hm-pillars { grid-template-columns: 1fr; }
+    .hm-hero { padding-top: 1.5rem; }
   }
-  .home-path:hover { border-color: var(--accent); }
-  .hp-emoji { font-size: 1.35rem; line-height: 1; flex: none; }
-  .home-path strong { font-size: .95rem; line-height: 1.2; }
 </style>
 <script src="/js/home.js?v=5"></script>
 <%- include('partials/foot') %>

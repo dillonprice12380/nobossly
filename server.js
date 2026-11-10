@@ -174,7 +174,12 @@ app.use('/', require('./src/routes/publiccms'));
 
 app.get('/', (req, res) => {
   if (res.locals.user) return res.redirect('/dashboard');
-  res.render('home', { title: 'Build Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED, metaDescription: 'NoBossly is a free community and workspace for people building a business around a job: ask questions and trade help in public, run your business from a dashboard made for your path, and work through accelerator programs in private cohorts.' });
+  const home = require('./src/home');
+  res.render('home', {
+    title: 'Build Your Way Out of the 9 to 5', bodyTheme: 'theme-dark', paths: require('./src/paths').MARKETED,
+    previews: home.previews(), faq: home.FAQ, structuredData: home.structuredData(), canonicalUrl: home.SITE + '/',
+    metaDescription: 'NoBossly is a free workspace and community for people building a business around a job: a dashboard for your kind of business, your money and tax set-aside in one place, and Q&A and co-working with people doing the same.'
+  });
 });
 
 app.get('/robots.txt', (req, res) => {
