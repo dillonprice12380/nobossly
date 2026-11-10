@@ -1,19 +1,27 @@
 <%- include('partials/head') %>
-<% var shownName = isPrivate ? '@' + p.username : (p.display_name || p.username); %>
+<% var shownName = isPrivate ? '@' + p.username : (p.display_name || p.username);
+   // Older callers render this page without the showcase fields: default them.
+   // (Set on locals: a "var" here would hide the real value.)
+   if (locals.avatar === undefined) locals.avatar = null;
+   if (locals.links === undefined) locals.links = locals.showcase && locals.showcase.url
+     ? [{ kind: 'website', url: locals.showcase.url, emoji: '🌐', label: 'Website', short: String(locals.showcase.url).replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') }] : [];
+   if (typeof locals.show !== 'function') locals.show = function () { return true; };
+   ['community', 'business', 'proof', 'complete'].forEach(function (k) { if (locals[k] === undefined) locals[k] = null; });
+   if (locals.asMember === undefined) locals.asMember = false; %>
 <div class="card profile-card">
   <div class="profile-head">
-    <div class="avatar-circle"><% if (p.avatar_url && !isPrivate) { %><img src="<%= p.avatar_url %>" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><% } else { %><%= ((isPrivate ? p.username : (p.display_name || p.username)) || '?').slice(0,1).toUpperCase() %><% } %></div>
+    <div class="avatar-circle pf-avatar"><% if (avatar && !isPrivate) { %><img src="<%= avatar %>" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover"><% } else { %><%= ((isPrivate ? p.username : (p.display_name || p.username)) || '?').slice(0,1).toUpperCase() %><% } %></div>
     <div style="flex:1;min-width:0">
       <h1 style="margin:0"><%= shownName %></h1>
       <% if (!isPrivate && p.headline) { %><p style="margin:.15rem 0 0;font-size:1.05rem"><%= p.headline %></p><% } %>
       <p class="muted small" style="margin:.25rem 0 0">
         <% if (!isPrivate) { %>@<%= p.username %><% } %>
         <% if (!isPrivate && pathDef) { %> · <%= pathDef.emoji %> <%= pathDef.label %><% } %>
-        <% if (!isPrivate && p.location) { %> · 📍 <%= p.location %><% } %>
+        <% if (!isPrivate && p.location && show('location')) { %> · 📍 <%= p.location %><% } %>
         <% if (flags.ladder) { %> · <%= lvl.emoji %> Level <%= p.current_level || 1 %> — <%= lvl.title %><% } %>
       </p>
-      <% if (!isPrivate && typeof showcase !== 'undefined' && showcase && showcase.url) { %>
-        <p class="small" style="margin:.25rem 0 0"><a href="<%= showcase.url %>" rel="nofollow noopener" target="_blank">🔗 <%= showcase.url.replace(/^https?:\/\//, '') %></a></p>
+      <% if (!isPrivate && links.length) { %>
+        <p class="pf-links"><% links.forEach(function (l) { %><a href="<%= l.url %>" rel="nofollow noopener" target="_blank" title="<%= l.label %>"><%= l.emoji %> <%= l.kind === 'website' || l.kind === 'other' ? l.short : l.label %></a><% }) %></p>
       <% } %>
       <% if (flags.ladder) { %>
         <div class="scores">
@@ -23,10 +31,11 @@
         </div>
       <% } %>
     </div>
-    <% if (isMe) { %><a class="btn btn-ghost" style="margin-left:auto;align-self:flex-start" href="/members/me/edit">Edit profile</a><% } %>
+    <% if (isMe) { %><div class="pf-me"><a class="btn btn-ghost btn-sm" href="/members/me/edit">Edit profile</a><a class="btn btn-ghost btn-sm" href="/members/<%= p.username %>?as=member">View as a member</a></div><% } %>
   </div>
 
-  <% if (!isMe && typeof social !== 'undefined') { %>
+  <% if (asMember) { %><p class="notice" style="margin:.8rem 0 0">This is how other members see your profile. <a href="/members/<%= p.username %>">Back to your view</a> · <a href="/members/me/edit#privacy">Change what shows</a></p><% } %>
+  <% if (!isMe && !asMember && typeof social !== 'undefined') { %>
     <div class="social-bar">
       <% if (social.blockedMe) { %>
         <p class="muted small">This member isn't available.</p>
@@ -58,9 +67,15 @@
       <% } %>
     </div>
   <% } %>
-  <p class="muted small" style="margin:.5rem 0 0"><%= social.followers %> follower<%= social.followers === 1 ? '' : 's' %> · <%= social.following %> following<% if (flags.friendships) { %> · <%= social.friends %> friend<%= social.friends === 1 ? '' : 's' %><% } %><% if (!isPrivate) { %> · Member since <%= new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %><% } %></p>
+  <p class="muted small" style="margin:.5rem 0 0"><% if (show('follows')) { %><%= social.followers %> follower<%= social.followers === 1 ? '' : 's' %> · <%= social.following %> following<% } %><% if (flags.friendships) { %> · <%= social.friends %> friend<%= social.friends === 1 ? '' : 's' %><% } %><% if (!isPrivate) { %><%= show('follows') ? ' · ' : '' %>Member since <%= new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %><% } %></p>
 </div>
 
+<% if (complete && complete.missing.length) { %>
+  <div class="card pf-complete">
+    <div class="pf-complete-head"><strong>Your profile is <%= complete.pct %>% done</strong><div class="progress" style="flex:1"><div class="progress-bar" style="width:<%= complete.pct %>%"></div></div></div>
+    <p class="muted small" style="margin:.4rem 0 0">Next: <% complete.missing.slice(0, 3).forEach(function (m, i) { %><%= i ? ' · ' : '' %><a href="/members/me/edit#<%= m.key %>"><%= m.label %></a><% }) %></p>
+  </div>
+<% } %>
 <% if (isPrivate) { %>
   <div class="card"><p class="muted small" style="margin:0">🔒 This profile is private. Follow or message to connect.</p></div>
 <% } else { %>
@@ -83,6 +98,36 @@
     </div>
   <% } %>
 
+  <% if (business || proof) { %>
+    <div class="card pf-biz">
+      <h3 style="margin-top:0">🏷️ <%= business && business.name ? business.name : 'What I offer' %></h3>
+      <% if (business && business.offers.length) { %>
+        <ul class="pf-offers"><% business.offers.forEach(function (o) { %><li><span><%= o.title %></span><% if (o.price) { %><strong><%= o.price %></strong><% } %></li><% }) %></ul>
+      <% } %>
+      <div class="cta-row" style="justify-content:flex-start;gap:.4rem;margin:.6rem 0 0">
+        <% if (proof) { %><a class="btn btn-ghost btn-sm" href="<%= proof %>">🌟 See my Proof Page</a><% } %>
+        <% if (!isMe && !isPrivate && !(typeof social !== 'undefined' && (social.blockedMe || social.iBlocked))) { %><a class="btn btn-primary btn-sm" href="/messages/with/<%= p.id %>">Ask about it</a><% } %>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (community && community.any) { var c = community; %>
+    <div class="card">
+      <h3 style="margin-top:0">🤝 In the community</h3>
+      <div class="pf-stats">
+        <% if (c.helped) { %><div><strong><%= c.helped %></strong><span class="muted small">answer<%= c.helped === 1 ? '' : 's' %> marked helpful</span></div><% } %>
+        <% if (c.answers) { %><div><strong><%= c.answers %></strong><span class="muted small">repl<%= c.answers === 1 ? 'y' : 'ies' %> in Q&amp;A</span></div><% } %>
+        <% if (c.asked) { %><div><strong><%= c.asked %></strong><span class="muted small">question<%= c.asked === 1 ? '' : 's' %> asked</span></div><% } %>
+        <% if (c.hosted) { %><div><strong><%= c.hosted %></strong><span class="muted small">co-working session<%= c.hosted === 1 ? '' : 's' %> hosted</span></div><% } %>
+        <% if (c.thanks) { %><div><strong><%= c.thanks %></strong><span class="muted small">thank-you<%= c.thanks === 1 ? '' : 's' %></span></div><% } %>
+        <% if (c.results && show('results')) { %><div><strong><%= c.results %></strong><span class="muted small">result<%= c.results === 1 ? '' : 's' %> shared</span></div><% } %>
+      </div>
+      <% if (c.helpedThreads.length) { %><p class="small" style="margin:.7rem 0 0"><span class="muted">Helped with:</span> <% c.helpedThreads.forEach(function (t, i) { %><%= i ? ' · ' : '' %><a href="/community/t/<%= t.id %>"><%= t.title %></a><% }) %></p><% } %>
+      <% if (c.upcoming.length) { %><p class="small" style="margin:.4rem 0 0"><span class="muted">Hosting:</span> <% c.upcoming.forEach(function (s, i) { %><%= i ? ' · ' : '' %><a href="/community/coworking/<%= s.id %>"><%= s.title %></a><% }) %></p><% } %>
+      <% if (c.groups.length) { %><p class="small" style="margin:.4rem 0 0"><span class="muted">Groups:</span> <% c.groups.forEach(function (g, i) { %><%= i ? ' · ' : '' %><a href="/groups/<%= g.slug %>"><%= g.name %></a><% }) %></p><% } %>
+    </div>
+  <% } %>
+
   <% if (thanks && thanks.length) { %>
     <div class="card">
       <h3 style="margin-top:0">💚 Thanked for helping</h3>
@@ -92,6 +137,7 @@
     </div>
   <% } %>
 
+  <% if (show('posts')) { %>
   <h3 style="margin:1.2rem 0 .5rem">Posts</h3>
   <% if (!memberPosts.length) { %>
     <div class="card"><p class="muted" style="margin:0"><%= isMe ? 'You have not posted yet. ' : 'No posts yet.' %><% if (isMe) { %><a href="/feed">Share an update →</a><% } %></p></div>
@@ -102,7 +148,8 @@
     <% }) %>
   </div>
 
-  <% if (typeof recent !== 'undefined' && recent && recent.length) { %>
+  <% } %>
+  <% if (show('results') && typeof recent !== 'undefined' && recent && recent.length) { %>
     <div class="card" style="margin-top:1rem">
       <h3 style="margin-top:0">Results</h3>
       <% recent.filter(function (ev) { return flags.ladder || ['win', 'challenge'].indexOf(ev.kind) > -1; }).forEach(function (ev) { %>
@@ -129,4 +176,18 @@
     </div>
   <% } %>
 <% } %>
+<style>
+  .pf-avatar { width: 84px; height: 84px; font-size: 2rem; flex: none; }
+  .pf-links { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: .35rem 0 0; font-size: .9rem; }
+  .pf-links a { text-decoration: none; }
+  .pf-me { margin-left: auto; align-self: flex-start; display: flex; flex-direction: column; gap: .35rem; }
+  .pf-complete-head { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+  .pf-offers { list-style: none; padding: 0; margin: 0; }
+  .pf-offers li { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0; border-top: 1px solid var(--border); }
+  .pf-offers li:first-child { border-top: 0; }
+  .pf-stats { display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; }
+  .pf-stats > div { display: flex; flex-direction: column; }
+  .pf-stats strong { font-size: 1.35rem; line-height: 1.2; }
+  @media (max-width: 600px) { .pf-me { flex-direction: row; margin-left: 0; } .profile-head { flex-wrap: wrap; } }
+</style>
 <%- include('partials/foot') %>
