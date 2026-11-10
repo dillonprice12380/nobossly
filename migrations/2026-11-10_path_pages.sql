@@ -8,7 +8,8 @@
 --    profile row, so no new grant or policy is needed.
 --  * path_community(path) is what a path's public page shows about its
 --    community: how many members are on it, their questions from the last 90
---    days (title, reply count, whether it was answered; no names), and how many
+--    days (title, reply count, whether it was answered; no names; not the
+--    site's own starter threads), and how many
 --    co-working sessions are coming up for that path or for everyone. Counts and
 --    titles only: thread titles are already public, and no member, private
 --    profile or co-working link is exposed.
@@ -27,11 +28,13 @@ declare
 begin
   if coalesce(p_path, '') !~ '^[a-z_]{2,40}$' then return null; end if;
   with members as (
-    select id from public.profiles where path = p_path and account_status = 'active'
+    select id, coalesce(is_admin, false) as admin from public.profiles where path = p_path and account_status = 'active'
   ), threads as (
+    -- The site's own starter threads (posted by an admin for everyone) are
+    -- not this path's questions.
     select t.id, t.title, t.reply_count, t.accepted_reply_id, t.created_at
       from public.forum_threads t join members m on m.id = t.user_id
-     where t.created_at >= since
+     where t.created_at >= since and not m.admin
   ), sessions as (
     select starts_at from public.coworking_sessions
      where cancelled_at is null and starts_at + make_interval(mins => minutes) > now()
