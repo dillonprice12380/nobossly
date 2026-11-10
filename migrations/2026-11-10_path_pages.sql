@@ -1,4 +1,4 @@
--- NOT APPLIED. Run in the Supabase SQL Editor; it ends with one row, ok = true.
+-- Applied live 2026-11-10 (run in the SQL Editor; returned true, then the function re-run to leave out admin starter threads, also true. Verified: profiles.saved_paths, path_community() is security definer and callable by anon, returns no starter threads, and null for a made-up path).
 --
 -- Path pages (2026-11-10):
 --

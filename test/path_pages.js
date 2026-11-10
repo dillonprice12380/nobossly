@@ -172,7 +172,7 @@ function fakeSb(rpc) {
 
   console.log('\nThe migration:');
   const sql = read('migrations/2026-11-10_path_pages.sql');
-  ok('it is marked as not applied, with saved_paths pending', /^-- NOT APPLIED/.test(sql) && JSON.stringify(require('./schema-pending.json').migrations['2026-11-10_path_pages.sql']) === '{"profiles":["saved_paths"]}');
+  ok('it is marked as applied, and saved_paths is in the live snapshot', /^-- Applied live/.test(sql) && !require('./schema-pending.json').migrations['2026-11-10_path_pages.sql'] && require('./schema-snapshot.json').columns.profiles.includes('saved_paths'));
   ok('path_community is read-only, security definer, open to visitors', /returns jsonb language plpgsql stable security definer set search_path to 'public'/.test(sql) && /grant execute on function public.path_community\(text\) to anon, authenticated/.test(sql));
   ok('...and returns no names or member ids', !/username|display_name|'user_id'|host_id/.test(sql.slice(sql.indexOf('jsonb_build_object'), sql.indexOf('into out'))));
 
