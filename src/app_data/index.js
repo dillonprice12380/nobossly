@@ -18,13 +18,21 @@ const MAX = 3;
 // Supabase does not let a project's own roles grant access to its auth
 // schema, so the reader gets a view of the three columns instead, in a schema
 // of its own that Supabase's API does not expose.
-const SUPABASE_SQL = `create role nobossly_reader with login password 'choose-a-long-password';
+const SUPABASE_SQL = `do $$ begin
+  create role nobossly_reader with login password 'choose-a-long-password';
+exception when duplicate_object then
+  alter role nobossly_reader with login password 'choose-a-long-password';
+end $$;
 create schema if not exists nobossly;
 create or replace view nobossly.users as select id, created_at, last_sign_in_at from auth.users;
 revoke all on schema nobossly from public;
 grant usage on schema nobossly to nobossly_reader;
 grant select on nobossly.users to nobossly_reader;`;
-const POSTGRES_SQL = `create role nobossly_reader with login password 'choose-a-long-password';
+const POSTGRES_SQL = `do $$ begin
+  create role nobossly_reader with login password 'choose-a-long-password';
+exception when duplicate_object then
+  alter role nobossly_reader with login password 'choose-a-long-password';
+end $$;
 grant usage on schema public to nobossly_reader;
 grant select on public.users to nobossly_reader;   -- your users table`;
 const MYSQL_SQL = `create user 'nobossly_reader'@'%' identified by 'choose-a-long-password';
@@ -37,7 +45,7 @@ const PRESETS = {
     sql: SUPABASE_SQL,
     where: [
       'In your Supabase project, open the SQL Editor and run the lines below, with a password of your own (letters and numbers only, so it fits in the connection string). They make a role that can only read sign-up and sign-in times, through a view of three columns.',
-      'Open Connect (top of the dashboard) → Session pooler, and copy the connection string.',
+      'Open Connect (top of the dashboard) → Session pooler, and copy that connection string (its host ends in pooler.supabase.com). Not Direct connection: that address only works over IPv6.',
       'In the string, change the user from postgres.<your project ref> to nobossly_reader.<your project ref> (keep the part after the dot), and put in the password you chose.'
     ] },
   neon: { key: 'neon', kind: 'postgres', label: 'Neon', emoji: '🟢', blurb: 'Any users table in a Neon Postgres database.',

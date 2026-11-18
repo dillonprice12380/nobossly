@@ -33,7 +33,12 @@ function parse(raw) {
   if (!u.hostname) return { error: 'The connection string has no host in it.' };
   const port = Number(u.port || 5432);
   if (!(port > 0 && port < 65536)) return { error: 'That port does not look right.' };
-  return { host: u.hostname.toLowerCase(), port, user, password, database, url: s, provider: providerOf(u.hostname.toLowerCase()) };
+  const host = u.hostname.toLowerCase();
+  // Supabase's direct address answers only over IPv6, which most servers
+  // (ours included) cannot reach; its Session pooler works everywhere.
+  if (/^db\.[a-z0-9]+\.supabase\.co$/.test(host)) return { error: 'That is Supabase\'s Direct connection, which only works over IPv6. In Supabase, open Connect → Session pooler and paste that string instead (its host ends in pooler.supabase.com).' };
+  if (/\.pooler\.supabase\.com$/.test(host) && !/\./.test(user)) return { error: 'For Supabase\'s pooler the user needs your project ref after a dot, e.g. nobossly_reader.abcdefghijklmnop.' };
+  return { host, port, user, password, database, url: s, provider: providerOf(host) };
 }
 
 // Quote an identifier that has already been checked against the catalogue.
