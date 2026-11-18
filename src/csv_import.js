@@ -81,8 +81,16 @@ const pick = (headers, ...tests) => {
 };
 
 // A first guess at which column is which. -1 = none.
+// Amazon Associates' Fee-Earnings report: the commission is "Ad Fees", not
+// the price or revenue of what was bought.
+const AMAZON = h => h.some(x => /^ad fees?$/i.test(x)) && h.some(x => /^asin$/i.test(x));
+
 function guessColumns(headers) {
   const h = headers.map(x => String(x || '').trim());
+  if (AMAZON(h)) {
+    return { date: pick(h, /^date shipped$/i, /date/i), amount: pick(h, /^ad fees?$/i), debit: -1,
+      description: pick(h, /^name$/i, /^product name$/i, /title/i), status: -1, type: -1 };
+  }
   const credit = pick(h, IN_H);
   return {
     date: pick(h, DATE_H, /date/i),
@@ -129,6 +137,7 @@ function fillFromValues(cols, body) {
 // Where the file came from, from its headers, for the "From" field.
 function sourceOf(headers) {
   const h = headers.join(' | ').toLowerCase();
+  if (AMAZON(headers.map(x => String(x || '').trim()))) return 'Amazon Associates';
   if (/balance impact|gross.*fee.*net|from email address/.test(h)) return 'PayPal';
   if (/payment intent|customer email|seller message|amount refunded|captured/.test(h)) return 'Stripe';
   if (/sale date.*order id|etsy|buyer user ?id/.test(h)) return 'Etsy';
@@ -237,7 +246,8 @@ function plan(text, opts = {}) {
     let amount = amountOf(cell('amount'), { comma });
     if ((amount === null || amount === 0) && columns.debit >= 0 && amountOf(cell('debit'), { comma })) amount = -Math.abs(amountOf(cell('debit'), { comma }));
     const description = String(cell('description')).replace(/\s+/g, ' ').trim().slice(0, 200);
-    const from = (description || source || 'Imported').slice(0, 80);
+    // An affiliate report names the product bought, not who paid: the network did.
+    const from = (source === 'Amazon Associates' ? source : description || source || 'Imported').slice(0, 80);
     const out = { row: i + 1, date, amount, source: from, description: description && description !== from ? description : null, recurring: false, skip: null };
     if (columns.date < 0 || columns.amount < 0) out.skip = 'columns';
     else if (!date) out.skip = 'date';

@@ -57,6 +57,22 @@ async function saveCommissions(sc, conn, network, items, { now = new Date(), com
   return Object.assign({}, r, { removed, pendingCount });
 }
 
+// Networks that report a return as a separate negative record (CJ, Rakuten)
+// are netted per order: the order's first record keeps its id, and an order
+// that nets to nothing or less counts as reversed.
+function netted(items, keyOf) {
+  const by = new Map();
+  for (const it of items) {
+    if (!it || !it.id) continue;
+    const k = keyOf(it) || it.id;
+    const g = by.get(k);
+    if (!g) { by.set(k, Object.assign({}, it, { amount: Number(it.amount) || 0 })); continue; }
+    g.amount = Math.round((g.amount + (Number(it.amount) || 0)) * 100) / 100;
+    if (it.state === 'pending') g.state = 'pending';
+  }
+  return [...by.values()].map(g => (g.amount > 0 ? g : Object.assign(g, { state: 'reversed' })));
+}
+
 // What a network answered when it refused, in plain words.
 function refused(label, status) {
   if (status === 401 || status === 403) return label + ' did not accept those details. Check them and connect again.';
@@ -85,4 +101,4 @@ function windows(from, to, days) {
   return out;
 }
 
-module.exports = { FIRST_DAYS, REREAD_DAYS, sinceOf, rowsOf, saveCommissions, refused, ymd, windows, fail };
+module.exports = { netted, FIRST_DAYS, REREAD_DAYS, sinceOf, rowsOf, saveCommissions, refused, ymd, windows, fail };

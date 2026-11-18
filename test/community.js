@@ -4,6 +4,16 @@
 //
 //   node test/community.js        (COMM_OUT=dir also writes the pages as HTML)
 
+// The fixtures are dated around Sunday 8 November 2026, so the routes run on
+// that day's clock too: without this they start failing once the dates pass.
+{
+  const FIXED = Date.parse('2026-11-08T15:00:00Z');
+  const RealDate = Date;
+  global.Date = class extends RealDate {
+    constructor(...a) { super(...(a.length ? a : [FIXED])); }
+    static now() { return FIXED; }
+  };
+}
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');

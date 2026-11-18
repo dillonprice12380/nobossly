@@ -218,7 +218,7 @@ const now = new Date('2026-11-09T15:00:00Z');
   out.hub = render('budget_connect.ejs', {
     by: { stripe: { status: 'active', last_synced_at: '2026-11-09T12:00:00Z', imported_count: 14 }, shopify: { status: 'active', account_label: 'my-shop.myshopify.com', last_synced_at: '2026-11-09T12:00:00Z', imported_count: 3 } },
     ready: true, banks: [{ id: 'b1', institution: 'Chase', accounts: [{ name: 'Business checking', mask: '1234' }], status: 'active', last_synced_at: '2026-11-09T12:00:00Z' }], banksReady: true, waiting: 4,
-    providers: Object.values(C.PROVIDERS).map(p => ({ key: p.key, label: p.label, emoji: p.emoji, how: p.how, blurb: p.blurb, ready: p.key !== 'square' })), plaidReady: true, canSync: true, everyHours: 6
+    providers: Object.values(C.PROVIDERS).map(p => ({ key: p.key, label: p.label, emoji: p.emoji, how: p.how, blurb: p.blurb, ready: p.key !== 'square' })), plaidReady: true, canSync: true, everyHours: 6, networks: C.affiliates.list(), affiliatesReady: true, pendingText: C.affiliates.pendingText
   });
   ok('the hub lists every way in, what is connected, and what is waiting', !out.hub.startsWith('ERR') && ['Stripe', 'Shopify', 'Gumroad', 'Square', 'PayPal, Etsy and others', 'Chase', '4</strong> bank transactions waiting'].every(x => out.hub.includes(x)), out.hub.startsWith('ERR') ? out.hub.slice(0, 300) : undefined);
   ok('...with Connect buttons where NoBossly is set up, and "coming soon" where not', out.hub.includes('href="/budget/connect/gumroad/start"') && !out.hub.includes('/budget/connect/square/start') && out.hub.includes('Coming soon'));

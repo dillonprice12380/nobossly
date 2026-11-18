@@ -6,6 +6,7 @@ const shopify = require('./shopify');
 const gumroad = require('./gumroad');
 const square = require('./square');
 const plaid = require('./plaid');
+const affiliates = require('./affiliates');
 
 const EVERY_HOURS = 6;
 const PROVIDERS = {
@@ -13,6 +14,10 @@ const PROVIDERS = {
   gumroad: { key: 'gumroad', label: 'Gumroad', emoji: '🎨', how: 'oauth', mod: gumroad, ready: gumroad.configured, blurb: 'Sales, with memberships ticked Recurring.' },
   square: { key: 'square', label: 'Square', emoji: '🟦', how: 'oauth', mod: square, ready: square.configured, blurb: 'Card and in-person payments.' }
 };
+// Affiliate networks sync through the same pass (src/connections/affiliates).
+const AFFILIATES = {};
+affiliates.list().forEach(n => { AFFILIATES[n.key] = { key: n.key, label: n.label, emoji: n.emoji, how: 'affiliate', mod: affiliates, ready: () => true, blurb: n.blurb }; });
+const ALL = Object.assign({}, PROVIDERS, AFFILIATES);
 
 const due = (row, now) => !row.last_synced_at || now - new Date(row.last_synced_at) > EVERY_HOURS * 3600000;
 
@@ -22,10 +27,10 @@ async function runAll(sc, { now = new Date(), limit = 50 } = {}) {
   const cutoff = new Date(now.getTime() - EVERY_HOURS * 3600000).toISOString();
   const { data: conns, error } = await sc.from('payment_connections')
     .select('id, user_id, provider, status, last_synced_at, synced_through, imported_count, account_label, meta')
-    .in('provider', Object.keys(PROVIDERS)).or('last_synced_at.is.null,last_synced_at.lt.' + cutoff).limit(limit);
+    .in('provider', Object.keys(ALL)).or('last_synced_at.is.null,last_synced_at.lt.' + cutoff).limit(limit);
   if (!error) {
     for (const c of conns || []) {
-      const p = PROVIDERS[c.provider];
+      const p = ALL[c.provider];
       if (!p || !p.ready()) continue;
       const r = await p.mod.sync(sc, c, { now }).catch(e => ({ imported: 0, error: e.message }));
       out.payments++; out.imported += r.imported || 0; if (r.error) out.errors++;
@@ -44,4 +49,4 @@ async function runAll(sc, { now = new Date(), limit = 50 } = {}) {
   return out;
 }
 
-module.exports = { EVERY_HOURS, PROVIDERS, due, runAll, shopify, gumroad, square, plaid };
+module.exports = { EVERY_HOURS, PROVIDERS, AFFILIATES, ALL, affiliates, due, runAll, shopify, gumroad, square, plaid };

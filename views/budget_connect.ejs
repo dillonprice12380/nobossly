@@ -51,6 +51,31 @@
   </div>
 </div>
 
+<h2 class="cx-h" id="affiliate">Affiliate networks</h2>
+<p class="muted small" style="margin:-.2rem 0 .6rem">Commissions come in once the network approves them. Pending ones show as on the way, and reversed ones come back out.</p>
+<div class="grid cx-grid">
+  <% networks.forEach(function (n) { var c = by[n.key]; var pend = c ? pendingText(c) : ''; %>
+    <div class="card cx-card">
+      <div class="cx-head"><span class="cx-emoji"><%= n.emoji %></span><strong><%= n.label %></strong><% if (c) { %><span class="chip cx-chip <%= c.status === 'error' ? 'bad' : '' %>"><%= c.status === 'error' ? 'Needs attention' : 'Connected' %></span><% } %></div>
+      <p class="muted small"><%= n.blurb %></p>
+      <% if (c) { %>
+        <p class="small cx-meta">Last synced <%= when(c.last_synced_at) %> · <%= c.imported_count || 0 %> brought in<%= pend ? ' · ' + pend : '' %></p>
+        <% if (c.status === 'error' && c.last_error) { %><p class="small" style="color:var(--danger);margin:.2rem 0 .4rem"><%= c.last_error %></p><% } %>
+        <a class="btn btn-ghost btn-sm" href="/budget/connect/affiliate/<%= n.key %>">Manage</a>
+      <% } else if (!affiliatesReady) { %>
+        <p class="muted small" style="margin:0">Being switched on. Check back shortly.</p>
+      <% } else { %>
+        <a class="btn btn-ghost btn-sm" href="/budget/connect/affiliate/<%= n.key %>">Connect</a>
+      <% } %>
+    </div>
+  <% }) %>
+  <div class="card cx-card">
+    <div class="cx-head"><span class="cx-emoji">📦</span><strong>Amazon Associates</strong></div>
+    <p class="muted small">Amazon has no earnings API for Associates. Download the Fee-Earnings report from Associates Central (Reports) as a CSV and import it.</p>
+    <a class="btn btn-ghost btn-sm" href="/budget/import">Import a CSV</a>
+  </div>
+</div>
+
 <h2 class="cx-h">Your bank</h2>
 <div class="card">
   <p class="muted small" style="margin-top:0">A bank account mixes business and personal money, so nothing from it is logged on its own: new transactions wait for you to mark them income, expense or not business.</p>

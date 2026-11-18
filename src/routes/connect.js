@@ -26,12 +26,15 @@ const syncedMsg = (label, r) => (r.error ? r.error
 
 const CONN_COLS = 'id, provider, key_hint, account_label, status, last_error, last_synced_at, synced_through, imported_count, created_at';
 async function myConnections(req) {
-  let r = await req.sb.from('payment_connections').select(CONN_COLS).eq('user_id', req.user.id);
+  // pending arrives with migrations/2026-11-18_affiliate_connections.sql.
+  let r = await req.sb.from('payment_connections').select(CONN_COLS + ', pending').eq('user_id', req.user.id);
+  const affiliatesReady = !r.error;
+  if (r.error) r = await req.sb.from('payment_connections').select(CONN_COLS).eq('user_id', req.user.id);
   const ready = !r.error;   // account_label arrives with migrations/2026-11-09_more_connections.sql
   if (r.error) r = await req.sb.from('payment_connections').select(CONN_COLS.replace('account_label, ', '')).eq('user_id', req.user.id);
   const by = {};
   (r.data || []).forEach(c => { by[c.provider] = c; });
-  return { by, ready };
+  return { by, ready, affiliatesReady };
 }
 async function myBanks(req) {
   const r = await req.sb.from('bank_connections').select('id, institution, accounts, status, last_error, last_synced_at, created_at').eq('user_id', req.user.id).order('created_at');
@@ -48,12 +51,15 @@ async function fullConnection(sc, userId, provider) {
   return data || null;
 }
 
+const pendingText = C.affiliates.pendingText;
+
 // --------------------------------------------------------------------- Hub
 router.get('/connect', async (req, res, next) => {
   try {
-    const [{ by, ready }, b, waiting] = await Promise.all([myConnections(req), myBanks(req), waitingCount(req)]);
+    const [{ by, ready, affiliatesReady }, b, waiting] = await Promise.all([myConnections(req), myBanks(req), waitingCount(req)]);
     res.render('budget_connect', {
       title: 'Connect your money', by, ready, banks: b.banks, banksReady: b.ready && ready, waiting,
+      networks: C.affiliates.list(), affiliatesReady, pendingText,
       providers: Object.values(C.PROVIDERS).map(p => ({ key: p.key, label: p.label, emoji: p.emoji, how: p.how, blurb: p.blurb, ready: p.ready() })),
       plaidReady: C.plaid.configured(), canSync: !!service(), everyHours: C.EVERY_HOURS, msg: req.query.msg || null
     });
@@ -262,6 +268,66 @@ router.post('/review/bulk/ignore', async (req, res, next) => {
     if (before) q = q.lt('posted_on', before);
     await q.then(...quiet('bank_transactions bulk ignore'));
     go(res, '/budget/review', before ? 'Set aside everything before ' + before + '.' : 'Set aside everything that was waiting.');
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------------- Affiliate networks
+// One page per network: what to paste, where to find it, and the connection.
+const NETS = C.affiliates.KEYS.join('|');
+router.get('/connect/affiliate/:network(' + NETS + ')', async (req, res, next) => {
+  try {
+    const mod = C.affiliates.BY[req.params.network];
+    const { by, affiliatesReady } = await myConnections(req);
+    res.render('budget_connect_affiliate', {
+      title: 'Connect ' + mod.network.label, net: mod.network, conn: by[mod.network.key] || null, ready: affiliatesReady,
+      pendingText, others: C.affiliates.list().filter(n => n.key !== mod.network.key),
+      canSync: !!service(), everyHours: C.EVERY_HOURS, msg: req.query.msg || null
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/connect/affiliate/:network(' + NETS + ')', async (req, res, next) => {
+  try {
+    const key = req.params.network, label = C.affiliates.BY[key].network.label;
+    const back = '/budget/connect/affiliate/' + key;
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const r = await C.affiliates.connect(sc, req.user.id, key, req.body);
+    if (r.error === 'save') return go(res, back, missing(r.dbError) || /unknown provider|check constraint/i.test((r.dbError && r.dbError.message) || '') ? 'Connecting ' + label + ' is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.');
+    if (r.error) return go(res, back, r.error);
+    const conn = await fullConnection(sc, req.user.id, key);
+    const s = conn ? await C.affiliates.sync(sc, conn) : { imported: 0 };
+    go(res, back, 'Connected. ' + affiliateMsg(label, s));
+  } catch (e) { next(e); }
+});
+
+function affiliateMsg(label, r) {
+  if (r.error) return r.error;
+  const bits = [];
+  bits.push(r.imported ? r.imported + ' approved commission' + (r.imported === 1 ? '' : 's') + ' added to your income log' : 'No new approved commissions');
+  if (r.removed) bits.push(r.removed + ' reversed and taken back out');
+  if (r.pendingCount) bits.push(r.pendingCount + ' still pending');
+  return 'Synced ' + label + ': ' + bits.join(', ') + '.';
+}
+
+router.post('/connect/affiliate/:network(' + NETS + ')/sync', async (req, res, next) => {
+  try {
+    const key = req.params.network, label = C.affiliates.BY[key].network.label;
+    const back = '/budget/connect/affiliate/' + key;
+    const sc = service();
+    if (!sc) return go(res, back, 'Syncing is not switched on right now. Try again later.');
+    const conn = await fullConnection(sc, req.user.id, key);
+    if (!conn) return go(res, back);
+    if (conn.last_synced_at && Date.now() - new Date(conn.last_synced_at).getTime() < 60000) return go(res, back, 'Synced less than a minute ago.');
+    go(res, back, affiliateMsg(label, await C.affiliates.sync(sc, conn)));
+  } catch (e) { next(e); }
+});
+
+router.post('/connect/affiliate/:network(' + NETS + ')/disconnect', async (req, res, next) => {
+  try {
+    const key = req.params.network, label = C.affiliates.BY[key].network.label;
+    await req.sb.rpc('payment_disconnect', { p_provider: key });
+    go(res, '/budget/connect/affiliate/' + key, 'Disconnected. Your ' + label + ' details are deleted from NoBossly; commissions already logged stay in your income log. You can also delete the key in ' + label + '.');
   } catch (e) { next(e); }
 });
 
