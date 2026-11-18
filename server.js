@@ -26,6 +26,8 @@ app.post('/billing/webhook', express.raw({ type: '*/*' }), billing.webhook);
 // PayPal's signature also covers the exact bytes, so it needs the raw body too.
 app.post('/billing/paypal/webhook', express.raw({ type: '*/*' }), billing.paypalWebhook);
 
+// Shopify's privacy webhooks for "Connect Shopify" (src/connections/shopify.js), signed over the raw body.
+app.post('/webhooks/shopify', express.raw({ type: '*/*' }), (req, res, next) => require('./src/connections/shopify').webhook(req, res, { service: () => { try { return serviceClient(); } catch (_) { return null; } } }).catch(next));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());

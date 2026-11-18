@@ -22,6 +22,10 @@
       <% if (conn.status === 'error' && conn.last_error) { %><p class="small" style="margin:.7rem 0 0;color:var(--danger)"><%= conn.last_error %></p><% } %>
     </div>
   <% } %>
+  <div class="card oc-card">
+    <h2 style="margin-top:0">Connect Shopify</h2>
+    <% if (locals.oneClick) { %><form method="get" action="/budget/connect/shopify/start" class="oc-row"><input name="shop" required spellcheck="false" placeholder="mystore.myshopify.com" value="<%= conn ? conn.account_label : '' %>"><button class="btn btn-primary">Connect Shopify →</button></form><p class="muted small" style="margin:.6rem 0 0">You approve read-only access to orders on Shopify. Nothing to make or paste.</p><% } else { %><p class="muted small" style="margin:0">Coming soon: enter your store and approve read-only access on Shopify, with nothing to make or paste. For now, use the two steps below.</p><% } %>
+  </div>
   <div class="grid-2">
     <div class="card">
       <h2 style="margin-top:0"><%= conn ? 'Replace the app' : 'Step 1: make a read-only app' %></h2>
@@ -47,4 +51,5 @@
     </form>
   </div>
 <% } %>
+<style>.oc-card { max-width: 640px; } .oc-row { display: flex; gap: .5rem; flex-wrap: wrap; } .oc-row input { flex: 1 1 14rem; }</style>
 <%- include('partials/foot') %>

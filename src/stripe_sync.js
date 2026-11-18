@@ -114,8 +114,12 @@ async function syncConnection(sc, conn, { fetchImpl = fetch, now = new Date() } 
     await sc.from('payment_connections').update({ status: 'error', last_error: error.slice(0, 300), last_synced_at: now.toISOString() }).eq('id', conn.id);
     return { imported: 0, skipped: 0, error };
   };
-  const { data: key, error: keyErr } = await sc.rpc('payment_connection_secret', { p_id: conn.id });
-  if (keyErr || !key) return fail('The key could not be read. Disconnect and connect Stripe again.');
+  const { data: raw, error: keyErr } = await sc.rpc('payment_connection_secret', { p_id: conn.id });
+  if (keyErr || !raw) return fail('The key could not be read. Disconnect and connect Stripe again.');
+  // A pasted restricted key, or a "Connect with Stripe" token (src/connections/stripe_app.js).
+  const k = await require('./connections/stripe_app').keyFor(sc, conn, raw, { fetchImpl, now: now.getTime() });
+  if (k.error) return fail(k.error);
+  const key = k.key;
 
   const nowUnix = Math.floor(now.getTime() / 1000);
   const since = conn.synced_through

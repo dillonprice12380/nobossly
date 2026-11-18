@@ -24,6 +24,12 @@
       <% if (conn.status === 'error' && conn.last_error) { %><p class="small" style="margin:.7rem 0 0;color:var(--danger)"><%= conn.last_error %></p><% } %>
     </div>
   <% } %>
+  <% if (locals.oneClick) { %>
+  <div class="card oc-card">
+    <h2 style="margin-top:0">Connect with <%= net.label %></h2>
+    <% if (oneClick.ready) { %><a class="btn btn-primary" href="<%= oneClick.href %>">Connect with <%= net.label %> →</a><p class="muted small" style="margin:.6rem 0 0">Sign in on <%= net.label %> and approve read-only access to your statistics. Nothing to paste.</p><% } else { %><p class="muted small" style="margin:0">Coming soon: sign in on <%= net.label %> and approve access, with nothing to paste. For now, paste your details below.</p><% } %>
+  </div>
+  <% } %>
   <div class="grid-2">
     <div class="card">
       <h2 style="margin-top:0">Where to find it</h2>
@@ -51,5 +57,6 @@
 <% } %>
 <style>
   .af-pending { margin: .7rem 0 0; padding: .55rem .75rem; border-radius: 10px; background: rgba(16,185,129,.08); }
+  .oc-card { max-width: 640px; }
 </style>
 <%- include('partials/foot') %>

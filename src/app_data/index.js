@@ -8,6 +8,9 @@ const my = require('./mysql');
 const fb = require('./firebase');
 const wp = require('./wordpress');
 const C = require('./common');
+const sbapi = require('./supabase_api');
+const ps = require('./planetscale');
+const OA = require('./oauth');
 const registry = require('../engines/registry');
 const metrics = require('../engines/metrics');
 require('../path_dashboards');   // registers every path's numbers
@@ -40,7 +43,7 @@ grant select on your_database.users to 'nobossly_reader'@'%';   -- your users ta
 
 // What a member can pick on the connect page.
 const PRESETS = {
-  supabase: { key: 'supabase', kind: 'postgres', label: 'Supabase', emoji: '⚡', blurb: 'Sign-ups and sign-ins from Supabase Auth, or any table.',
+  supabase: { key: 'supabase', kind: 'postgres', oauth: 'supabase', oauthNote: 'You sign in to Supabase and pick your project. NoBossly asks only to see your projects and to read your database, and reads through Supabase\'s own read-only access: no role to make, no SQL to run.', label: 'Supabase', emoji: '⚡', blurb: 'Sign-ups and sign-ins from Supabase Auth, or any table.',
     fields: [{ name: 'url', label: 'Connection string (Session pooler)', placeholder: 'postgresql://nobossly_reader.abcd…@aws-0-….pooler.supabase.com:5432/postgres', secret: true }],
     sql: SUPABASE_SQL,
     where: [
@@ -62,14 +65,14 @@ const PRESETS = {
       'Run the lines below with your own users table. They make a role that can only read it.',
       'Copy your database\'s connection string and put that role and its password in it. The database has to accept connections from the internet.'
     ] },
-  mysql: { key: 'mysql', kind: 'mysql', label: 'MySQL / PlanetScale', emoji: '🐬', blurb: 'Any users table in MySQL, including PlanetScale.',
+  mysql: { key: 'mysql', kind: 'mysql', oauth: 'planetscale', oauthNote: 'For PlanetScale databases: you sign in and pick a database, and NoBossly makes its own read-only login there. Other MySQL databases: set it up by hand below.', label: 'MySQL / PlanetScale', emoji: '🐬', blurb: 'Any users table in MySQL, including PlanetScale.',
     fields: [{ name: 'url', label: 'Connection string', placeholder: 'mysql://nobossly_reader:…@host:3306/database', secret: true }],
     sql: MYSQL_SQL,
     where: [
       'Make a user that can only SELECT your users table (the lines below). On PlanetScale, create a password with the Read-only role instead.',
       'Paste the connection string for that user, ending in your database name.'
     ] },
-  firebase: { key: 'firebase', kind: 'firebase', label: 'Firebase', emoji: '🔥', blurb: 'Sign-ups and sign-ins from Firebase Authentication.',
+  firebase: { key: 'firebase', kind: 'firebase', oauth: 'google', oauthNote: 'You sign in with Google and pick your Firebase project. Google has no read-only permission for this, so its screen asks for access to your Firebase data; NoBossly only ever lists sign-up and sign-in times. Prefer a read-only key? Set it up by hand below.', label: 'Firebase', emoji: '🔥', blurb: 'Sign-ups and sign-ins from Firebase Authentication.',
     fields: [{ name: 'key', label: 'Service account key (JSON)', placeholder: '{ "type": "service_account", … }', secret: true, area: true }],
     where: [
       'In Google Cloud console → IAM → Service accounts (same project as Firebase), create a service account named nobossly-reader.',
@@ -90,7 +93,7 @@ const PRESETS = {
       'WordPress has no read-only application passwords and does not record sign-ins, so NoBossly counts sign-ups only. You can revoke the password from the same screen at any time.'
     ] }
 };
-const KINDS = { postgres: pg, mysql: my, firebase: fb, wordpress: wp };
+const KINDS = { postgres: pg, mysql: my, firebase: fb, wordpress: wp, supabase: sbapi };
 
 // The secret a kind keeps, from what the member pasted, and back again.
 function parseInput(preset, body) {
@@ -111,7 +114,7 @@ function parsedOfSecret(kind, s) {
   if (kind === 'firebase') return fb.parse(s);
   try { return wp.parse(JSON.parse(s)); } catch (_) { return { error: 'unreadable' }; }
 }
-const needsTable = kind => kind === 'postgres' || kind === 'mysql';
+const needsTable = kind => kind === 'postgres' || kind === 'mysql' || kind === 'supabase';
 
 /** Check what the member pasted, then keep it in the Vault. → { id } or { error }. */
 async function connect(sc, userId, presetKey, body, opts = {}) {
@@ -128,18 +131,78 @@ async function connect(sc, userId, presetKey, body, opts = {}) {
   return { id: data };
 }
 
-async function parsedFor(sc, conn) {
+// Which sign-in a connection came from, if any.
+const OAUTH_OF = { supabase: 'supabase', planetscale: 'planetscale', firebase: 'google' };
+
+async function parsedFor(sc, conn, opts = {}) {
   const s = await C.secretOf(sc, conn);
   if (!s) return { error: 'The connection could not be read. Disconnect and connect it again.' };
+  let obj = null;
+  try { obj = JSON.parse(s); } catch (_) { obj = null; }
+  if (obj && obj.mode === 'oauth') {
+    const save = next => sc.rpc('data_connection_set_secret', { p_id: conn.id, p_secret: JSON.stringify(next) });
+    const t = await OA.fresh(OAUTH_OF[conn.kind], obj, { fetchImpl: opts.fetchImpl, now: Date.now(), save });
+    if (t.error) return { error: t.error === 'unreadable' ? 'The connection could not be read. Disconnect and connect it again.' : t.error };
+    const project = conn.config && conn.config.project ? conn.config.project.id : null;
+    return { access: t.access, project, oauth: true };
+  }
   const p = parsedOfSecret(conn.kind, s);
   return p.error ? { error: 'The connection could not be read. Disconnect and connect it again.' } : p;
 }
 
-/** The tables a Postgres or MySQL connection could count, for the set-up page. */
+// --------------------------------------------- After a "Connect with …" sign-in
+/** Store a fresh sign-in as a connection waiting for its project. → { id } or { error }. */
+async function connectOAuth(sc, userId, provider, token) {
+  const kind = provider === 'google' ? 'firebase' : provider;
+  const label = provider === 'google' ? 'Firebase' : OA.PROVIDERS[provider].label;
+  const { data, error } = await C.store(sc, { userId, kind, provider: provider === 'google' ? 'google' : kind, label, host: 'choose a project', secret: token });
+  if (error) return { error: /three app databases/i.test(error.message || '') ? 'You can connect up to ' + MAX + ' app databases. Disconnect one first.' : 'save', dbError: error };
+  return { id: data };
+}
+const needsProject = conn => (conn.kind === 'supabase' || conn.kind === 'planetscale' || conn.provider === 'google') && !(conn.config && conn.config.project);
+
+/** The projects (or databases) a sign-in can see, for the picker. */
+async function projectsFor(sc, conn, opts = {}) {
+  const p = await parsedFor(sc, conn, opts);
+  if (p.error) return p;
+  if (!p.access) return { projects: [] };
+  if (conn.kind === 'supabase') return sbapi.projects(p.access, opts);
+  if (conn.kind === 'firebase') return fb.projects(p.access, opts);
+  if (conn.kind === 'planetscale') return ps.projects(p.access, opts);
+  return { projects: [] };
+}
+
+/**
+ * The member picked a project. Supabase and Firebase remember it; PlanetScale
+ * makes its read-only login there and becomes an ordinary MySQL or Postgres
+ * connection. The choice must be one of the projects the sign-in listed.
+ */
+async function chooseProject(sc, conn, value, opts = {}) {
+  const list = await projectsFor(sc, conn, opts);
+  if (list.error) return list;
+  const pick = (list.projects || []).find(x => x.id === String(value || ''));
+  if (!pick) return { error: 'Choose one of your projects.' };
+  if (conn.kind === 'planetscale') {
+    const p = await parsedFor(sc, conn, opts);
+    if (p.error) return p;
+    const login = await ps.readerLogin(p.access, pick, opts);
+    if (login.error) return login;
+    const parsed = login.kind === 'postgres' ? pg.parse(login.url) : my.parse(login.url);
+    if (parsed.error) return { error: 'PlanetScale gave a login NoBossly could not read. Try again.' };
+    const { error } = await C.store(sc, { id: conn.id, userId: conn.user_id, kind: login.kind, provider: 'planetscale', label: 'PlanetScale · ' + pick.name, host: parsed.host, secret: login.url });
+    return error ? { error: 'Could not save the connection. Please try again.' } : { ok: true };
+  }
+  const { error } = await sc.from('data_connections').update({ config: { project: { id: pick.id, name: pick.name } }, host_label: pick.name + (pick.note && pick.note !== pick.name ? ' · ' + pick.note : '') })
+    .eq('id', conn.id).eq('user_id', conn.user_id);
+  return error ? { error: 'Could not save that. Please try again.' } : { ok: true };
+}
+
+/** The tables a Postgres, MySQL or Supabase connection could count, for the set-up page. */
 async function tablesFor(sc, conn, opts = {}) {
   if (!needsTable(conn.kind)) return { tables: [] };
-  const p = await parsedFor(sc, conn);
+  const p = await parsedFor(sc, conn, opts);
   if (p.error) return p;
+  if (conn.kind === 'supabase' && !p.project) return { error: 'Choose a project first.' };
   return KINDS[conn.kind].tables(p, opts);
 }
 
@@ -179,6 +242,7 @@ function configFrom(conn, body, tables) {
   if (fill.active && needsTable(conn.kind) && !cfg.active) delete fill.active;
   if (fill.active && conn.kind === 'wordpress') delete fill.active;
   cfg.fill = fill;
+  if (conn.config && conn.config.project) cfg.project = conn.config.project;
   return { config: cfg };
 }
 
@@ -191,7 +255,7 @@ async function saveConfig(sc, conn, config) {
 async function sync(sc, conn, opts = {}) {
   const now = opts.now || new Date();
   if (needsTable(conn.kind) && !(conn.config && conn.config.table)) return { error: 'Choose what to count first.' };
-  const p = await parsedFor(sc, conn);
+  const p = await parsedFor(sc, conn, opts);
   if (p.error) return C.fail(sc, conn, p.error, now);
   const got = await KINDS[conn.kind].counts(p, conn.config || {}, Object.assign({}, opts, { now: now.getTime ? now.getTime() : now })).catch(e => ({ error: 'Counting failed: ' + String(e && e.message || e).slice(0, 120) }));
   if (got.error) return C.fail(sc, conn, got.error, now);
@@ -227,7 +291,7 @@ async function runAll(sc, { now = new Date(), limit = 30 } = {}) {
   const out = { synced: 0, errors: 0 };
   if (error) return out;
   for (const c of data || []) {
-    if (needsTable(c.kind) && !(c.config && c.config.table)) continue;
+    if (c.kind === 'planetscale' || (needsTable(c.kind) && !(c.config && c.config.table))) continue;
     const r = await sync(sc, c, { now }).catch(e => ({ error: e.message }));
     out.synced++; if (r.error) out.errors++;
   }
@@ -251,4 +315,4 @@ function summary(rows, now = new Date()) {
   };
 }
 
-module.exports = { PRESETS, KINDS, MAX, EVERY_HOURS, DEFAULT_FILL, connect, tablesFor, fillable, configFrom, saveConfig, sync, runAll, summary, needsTable, parsedOfSecret, secretOfParsed };
+module.exports = { PRESETS, KINDS, MAX, EVERY_HOURS, DEFAULT_FILL, OAUTH_OF, connectOAuth, needsProject, projectsFor, chooseProject, connect, tablesFor, fillable, configFrom, saveConfig, sync, runAll, summary, needsTable, parsedOfSecret, secretOfParsed };

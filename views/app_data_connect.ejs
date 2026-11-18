@@ -17,7 +17,19 @@
       <button class="btn btn-primary"><%= preset.click.button %> →</button>
       <p class="muted small" style="margin:.7rem 0 0"><%= preset.click.note %></p>
     </form>
-    <details class="ad-manual"><summary class="muted small">Or set it up by hand</summary>
+  <% } else if (preset.oauth) { var oname = { supabase: 'Supabase', google: 'Google', planetscale: 'PlanetScale' }[preset.oauth]; %>
+    <div class="card ad-click">
+      <h2 style="margin-top:0">Connect with <%= oname %></h2>
+      <% if (locals.oauthReady) { %>
+        <a class="btn btn-primary" href="/app-data/oauth/<%= preset.oauth %>/start">Connect with <%= oname %> →</a>
+        <p class="muted small" style="margin:.7rem 0 0"><%= preset.oauthNote %></p>
+      <% } else { %>
+        <p class="muted" style="margin:0">Coming soon: sign in to <%= oname %> and pick your project, with nothing to paste. For now, set it up by hand below.</p>
+      <% } %>
+    </div>
+  <% } %>
+  <% if (preset.click || preset.oauth) { %>
+    <details class="ad-manual"<%= preset.oauth && !locals.oauthReady ? ' open' : '' %>><summary class="muted small">Or set it up by hand</summary>
   <% } %>
   <div class="grid-2">
     <div class="card">
@@ -42,7 +54,7 @@
       </ul>
     </form>
   </div>
-  <% if (preset.click) { %></details><% } %>
+  <% if (preset.click || preset.oauth) { %></details><% } %>
 <% } %>
 <style>
   .ad-sql { margin: .8rem 0 0; padding: .7rem .8rem; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); font-size: .8rem; overflow-x: auto; white-space: pre; }

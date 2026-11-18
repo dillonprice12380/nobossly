@@ -63,8 +63,16 @@ async function verify(p, { fetchImpl = fetch, now = Date.now() } = {}) {
 
 const ms = v => { const n = Number(v); return isFinite(n) && n > 0 ? n : (v ? Date.parse(v) || null : null); };
 
+// The member's Firebase projects, after "Connect with Google".
+async function projects(access, { fetchImpl = fetch } = {}) {
+  const r = await call(fetchImpl, 'https://firebase.googleapis.com/v1beta1/projects?pageSize=100', { headers: { Authorization: 'Bearer ' + access } });
+  if (r.status !== 200 || !r.body) return { error: explain(r.status) };
+  return { projects: (r.body.results || []).filter(x => /^[a-z][a-z0-9-]{4,29}$/.test(x.projectId || '')).map(x => ({ id: x.projectId, name: x.displayName || x.projectId, note: x.projectId })) };
+}
+
 async function counts(p, cfg, { fetchImpl = fetch, now = Date.now() } = {}) {
-  const t = await token(p, fetchImpl, now);
+  // After "Connect with Google" the member's own token is used; otherwise the service account's.
+  const t = p.access ? { token: p.access } : await token(p, fetchImpl, now);
   if (t.error) return { error: t.error };
   const since = now - DAYS * 86400000, d7 = now - 7 * 86400000, d30 = now - 30 * 86400000;
   let total = 0, active7 = 0, active30 = 0, next = null;
@@ -87,4 +95,4 @@ async function counts(p, cfg, { fetchImpl = fetch, now = Date.now() } = {}) {
   return { total, active7, active30, byDay };
 }
 
-module.exports = { parse, verify, counts, assertion, WRITE_PERMS };
+module.exports = { parse, verify, counts, projects, assertion, WRITE_PERMS };
