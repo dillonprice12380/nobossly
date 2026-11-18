@@ -77,4 +77,42 @@ async function counts(p, cfg, opts = {}) {
   return { total, active7: null, active30: null, byDay };
 }
 
-module.exports = { parse, verify, counts, explain };
+// ------------------------------------------------- "Connect with WordPress"
+// WordPress (5.6+) has its own approval page for apps: the member is sent to
+// their site, signs in if needed, clicks Approve, and WordPress sends them
+// back with a new application password for NoBossly. Nothing to register.
+const APP_ID = '4f6c2c1e-7a54-4f4e-9d1b-6e0b1a2c3d4e';   // NoBossly's fixed app id, so the member sees it named the same way each time
+
+// The site's own approval page, read from its REST index.
+async function authorizeUrl(siteInput, { fetchImpl = fetch, lookup, resolve = resolvePublic } = {}) {
+  let u;
+  const raw = String(siteInput || '').trim();
+  try { u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw); } catch (_) { return { error: 'Enter your site address, e.g. https://example.com' }; }
+  if (u.protocol !== 'https:') return { error: 'Your site needs to use https:// to connect.' };
+  const host = u.hostname.toLowerCase();
+  const r = await resolve(host, { lookup });
+  if (r.error) return { error: r.error };
+  const base = u.origin + u.pathname.replace(/\/+$/, '').replace(/\/wp-admin.*$/, '').replace(/\/wp-json.*$/, '');
+  let res, body = null;
+  try { res = await fetchImpl(base + '/wp-json/', { redirect: 'manual', headers: { Accept: 'application/json' } }); } catch (_) { return { error: 'We could not reach that site.' }; }
+  try { body = await res.json(); } catch (_) { /* not JSON */ }
+  if (res.status >= 300 && res.status < 400) return { error: 'That address redirects somewhere else. Use the exact address your site lives at (with https://).' };
+  const auth = body && body.authentication && body.authentication['application-passwords'];
+  const url = auth && auth.endpoints && auth.endpoints.authorization;
+  if (res.status !== 200 || !url) return { error: 'That site does not offer app approval. It needs WordPress 5.6 or newer with application passwords switched on; otherwise paste an application password below.' };
+  let a;
+  try { a = new URL(url); } catch (_) { return { error: 'That site gave an approval address we could not read.' }; }
+  if (a.protocol !== 'https:' || a.hostname.toLowerCase() !== host) return { error: 'That site sends app approval to a different address, so NoBossly will not use it.' };
+  return { url: a.toString(), site: base, host };
+}
+
+function approvalLink(auth, successUrl, rejectUrl) {
+  const a = new URL(auth.url);
+  a.searchParams.set('app_name', 'NoBossly');
+  a.searchParams.set('app_id', APP_ID);
+  a.searchParams.set('success_url', successUrl);
+  a.searchParams.set('reject_url', rejectUrl);
+  return a.toString();
+}
+
+module.exports = { parse, verify, counts, explain, authorizeUrl, approvalLink, APP_ID };

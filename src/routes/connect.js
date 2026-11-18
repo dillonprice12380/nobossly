@@ -70,7 +70,7 @@ router.get('/connect', async (req, res, next) => {
 router.get('/connect/shopify', async (req, res, next) => {
   try {
     const { by, ready } = await myConnections(req);
-    res.render('budget_connect_shopify', { title: 'Connect Shopify', conn: by.shopify || null, ready, msg: req.query.msg || null, everyHours: C.EVERY_HOURS });
+    res.render('budget_connect_shopify', { title: 'Connect Shopify', conn: by.shopify || null, ready, oneClick: C.shopify.configured(), msg: req.query.msg || null, everyHours: C.EVERY_HOURS });
   } catch (e) { next(e); }
 });
 
@@ -88,6 +88,56 @@ router.post('/connect/shopify', async (req, res, next) => {
     const conn = await fullConnection(sc, req.user.id, 'shopify');
     const r = conn ? await C.shopify.sync(sc, conn) : { imported: 0 };
     go(res, back, 'Connected. ' + syncedMsg('Shopify', r) + (ok.allOrders ? '' : ' Shopify only shares the last 60 days unless the app also has read_all_orders.'));
+  } catch (e) { next(e); }
+});
+
+// ----------------------------------------------- "Connect Shopify" (OAuth)
+router.get('/connect/shopify/start', (req, res) => {
+  const back = '/budget/connect/shopify';
+  if (!C.shopify.configured()) return go(res, back, 'Connect Shopify is coming soon. Use the steps below for now.');
+  const shop = C.shopify.cleanShop(req.query.shop);
+  if (!shop) return go(res, back, 'Enter your store address, e.g. mystore.myshopify.com.');
+  res.redirect(C.shopify.authUrl(shop, common.newState(res, 'shopify')));
+});
+
+router.get('/connect/shopify/callback', async (req, res, next) => {
+  try {
+    const back = '/budget/connect/shopify';
+    const shop = C.shopify.cleanShop(req.query.shop);
+    if (!shop || !C.shopify.validCallback(req.query) || !common.checkState(req, res, 'shopify')) return go(res, back, 'That Shopify connection did not finish. Try again.');
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const t = await C.shopify.exchange(shop, String(req.query.code || ''));
+    if (t.error) return go(res, back, t.error);
+    const { error } = await common.store(sc, req.user.id, 'shopify', t.secret, shop, { shop, all_orders: t.allOrders });
+    if (error) return go(res, back, 'Could not save the connection. Please try again.');
+    const conn = await fullConnection(sc, req.user.id, 'shopify');
+    const r = conn ? await C.shopify.sync(sc, conn) : { imported: 0 };
+    go(res, back, 'Connected. ' + syncedMsg('Shopify', r) + (t.allOrders ? '' : ' Shopify shares the last 60 days of orders.'));
+  } catch (e) { next(e); }
+});
+
+// ----------------------------------------------- "Connect Admitad" (OAuth)
+router.get('/connect/admitad/start', (req, res) => {
+  const mod = C.affiliates.BY.admitad;
+  if (!mod.configured()) return go(res, '/budget/connect/affiliate/admitad', 'Connect with Admitad is coming soon. Paste your API details below for now.');
+  res.redirect(mod.authUrl(common.newState(res, 'admitad')));
+});
+
+router.get('/connect/admitad/callback', async (req, res, next) => {
+  try {
+    const back = '/budget/connect/affiliate/admitad', mod = C.affiliates.BY.admitad;
+    if (!common.checkState(req, res, 'admitad')) return go(res, back, 'That Admitad connection did not finish. Try again.');
+    if (req.query.error || !req.query.code) return go(res, back, 'Admitad was not connected' + (req.query.error === 'access_denied' ? ' (you said no).' : '.'));
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const t = await mod.exchange(String(req.query.code));
+    if (t.error) return go(res, back, t.error);
+    const r = await C.affiliates.connectOAuth(sc, req.user.id, 'admitad', t.secret, 'Admitad account');
+    if (r.error) return go(res, back, 'Could not save the connection. Please try again.');
+    const conn = await fullConnection(sc, req.user.id, 'admitad');
+    const s = conn ? await C.affiliates.sync(sc, conn) : { imported: 0 };
+    go(res, back, 'Connected. ' + affiliateMsg('Admitad', s));
   } catch (e) { next(e); }
 });
 
@@ -280,6 +330,7 @@ router.get('/connect/affiliate/:network(' + NETS + ')', async (req, res, next) =
     const { by, affiliatesReady } = await myConnections(req);
     res.render('budget_connect_affiliate', {
       title: 'Connect ' + mod.network.label, net: mod.network, conn: by[mod.network.key] || null, ready: affiliatesReady,
+      oneClick: typeof mod.configured === 'function' ? { ready: mod.configured(), href: '/budget/connect/' + mod.network.key + '/start' } : null,
       pendingText, others: C.affiliates.list().filter(n => n.key !== mod.network.key),
       canSync: !!service(), everyHours: C.EVERY_HOURS, msg: req.query.msg || null
     });

@@ -18,7 +18,7 @@
     <div class="page-head" style="margin:0">
       <div>
         <h2 style="margin:0">Stripe is connected <span class="chip" style="font-size:.7rem"><%= conn.status === 'error' ? 'Needs attention' : 'Syncing' %></span></h2>
-        <p class="muted small" style="margin:.25rem 0 0">Key ending <strong><%= conn.key_hint %></strong> · last synced <%= when(conn.last_synced_at) %> · <%= conn.imported_count %> payment<%= conn.imported_count === 1 ? '' : 's' %> brought in so far · syncs every <%= everyHours %> hours</p>
+        <p class="muted small" style="margin:.25rem 0 0"><% if (conn.key_hint) { %>Key ending <strong><%= conn.key_hint %></strong><% } else { %>Signed in with Stripe<% } %> · last synced <%= when(conn.last_synced_at) %> · <%= conn.imported_count %> payment<%= conn.imported_count === 1 ? '' : 's' %> brought in so far · syncs every <%= everyHours %> hours</p>
       </div>
       <div class="cta-row" style="margin:0">
         <% if (canSync) { %><form method="post" action="/budget/connect/stripe/sync" class="inline"><button class="btn btn-primary btn-sm">Sync now</button></form><% } %>
@@ -30,6 +30,10 @@
 <% } %>
 
 <% if (ready) { %>
+  <div class="card oc-card">
+    <h2 style="margin-top:0">Connect with Stripe</h2>
+    <% if (locals.oneClick) { %><a class="btn btn-primary" href="/budget/connect/stripe/start">Connect with Stripe →</a><p class="muted small" style="margin:.6rem 0 0">Sign in on Stripe and approve read-only access. Nothing to paste.</p><% } else { %><p class="muted small" style="margin:0">Coming soon: sign in on Stripe and approve read-only access, with nothing to paste. For now, use a restricted key below.</p><% } %>
+  </div>
 <div class="grid-2">
   <div class="card">
     <h2 style="margin-top:0"><%= conn ? 'Replace the key' : 'Step 1: make a read-only key in Stripe' %></h2>
@@ -56,4 +60,5 @@
   </form>
 </div>
 <% } %>
+<style>.oc-card { max-width: 640px; }</style>
 <%- include('partials/foot') %>

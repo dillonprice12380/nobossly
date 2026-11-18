@@ -7,7 +7,8 @@
 // Without the read_all_orders scope Shopify only shows the last 60 days; the
 // connect page says so.
 
-const { call, form, secretOf, fail, saveIncome, incomeRow, sinceOf } = require('./common');
+const crypto = require('crypto');
+const { call, form, secretOf, fail, saveIncome, incomeRow, sinceOf, redirectUri, store } = require('./common');
 
 const API_VERSION = '2025-10';
 const PAID = new Set(['PAID', 'PARTIALLY_REFUNDED', 'PARTIALLY_PAID']);
@@ -95,13 +96,72 @@ async function verify(input, { fetchImpl = fetch } = {}) {
   return { ok: true, allOrders: t.scopes.includes('read_all_orders') };
 }
 
+// ------------------------------------------------------ "Connect Shopify"
+// NoBossly's own public Shopify app (SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET,
+// redirect URI https://nobossly.com/budget/connect/shopify/callback). The
+// member enters their store and approves read_orders on Shopify; NoBossly
+// gets an expiring offline token (an hour) and a refresh token (90 days,
+// rotated on each use). Until the app is set up, pasting a Dev Dashboard
+// app's ID and secret (above) still works.
+const configured = () => !!(process.env.SHOPIFY_CLIENT_ID && process.env.SHOPIFY_CLIENT_SECRET);
+const SCOPES = () => (process.env.SHOPIFY_ALL_ORDERS === '1' ? 'read_orders,read_all_orders' : 'read_orders');
+
+function authUrl(shop, state) {
+  return 'https://' + shop + '/admin/oauth/authorize?' + form({ client_id: process.env.SHOPIFY_CLIENT_ID, scope: SCOPES(), redirect_uri: redirectUri('shopify'), state });
+}
+
+// Shopify signs the way back: every parameter but hmac, sorted, HMAC-SHA256 with the app secret.
+function validCallback(query, secret = process.env.SHOPIFY_CLIENT_SECRET) {
+  if (!query || !query.hmac || !secret) return false;
+  const msg = Object.keys(query).filter(k => k !== 'hmac' && k !== 'signature').sort()
+    .map(k => k + '=' + (Array.isArray(query[k]) ? query[k].join(',') : query[k])).join('&');
+  const want = crypto.createHmac('sha256', secret).update(msg).digest('hex');
+  const got = String(query.hmac);
+  return got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+
+function checkScopes(scopeText) {
+  const scopes = String(scopeText || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (scopes.some(x => /^write_/.test(x))) return { error: 'Shopify granted more than read access. Try connecting again.' };
+  if (!scopes.includes('read_orders')) return { error: 'Shopify did not grant access to orders. Try connecting again.' };
+  return { scopes };
+}
+
+async function exchange(shop, code, { fetchImpl = fetch, now = Date.now() } = {}) {
+  const r = await call(fetchImpl, 'https://' + shop + '/admin/oauth/access_token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: form({ client_id: process.env.SHOPIFY_CLIENT_ID, client_secret: process.env.SHOPIFY_CLIENT_SECRET, code, expiring: 1 })
+  });
+  if (r.status !== 200 || !r.body || !r.body.access_token) return { error: 'Shopify did not let NoBossly in. Try connecting again.' };
+  const sc = checkScopes(r.body.scope);
+  if (sc.error) return sc;
+  return { secret: oauthSecret(r.body, now), allOrders: sc.scopes.includes('read_all_orders') };
+}
+const oauthSecret = (b, now) => ({ mode: 'oauth', access_token: b.access_token, refresh_token: b.refresh_token || null,
+  expires_at: b.expires_in ? now + (Number(b.expires_in) - 120) * 1000 : null, scope: b.scope || '' });
+
+// A usable token for an OAuth connection, refreshing (and saving the rotated
+// refresh token) when it has run out.
+async function oauthToken(sc, conn, s, { fetchImpl, now }) {
+  if (!s.expires_at || now.getTime() < s.expires_at) return { token: s.access_token, scopes: String(s.scope || '').split(',') };
+  if (!s.refresh_token || !configured()) return { error: 'Shopify access ran out. Connect Shopify again.' };
+  const r = await call(fetchImpl, 'https://' + conn.meta.shop + '/admin/oauth/access_token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: form({ client_id: process.env.SHOPIFY_CLIENT_ID, client_secret: process.env.SHOPIFY_CLIENT_SECRET, grant_type: 'refresh_token', refresh_token: s.refresh_token })
+  });
+  if (r.status !== 200 || !r.body || !r.body.access_token) return { error: 'Shopify access ran out or was removed. Connect Shopify again.' };
+  const fresh = oauthSecret(Object.assign({ scope: s.scope }, r.body), now.getTime());
+  await store(sc, conn.user_id, 'shopify', fresh, conn.account_label || conn.meta.shop, conn.meta);
+  return { token: fresh.access_token, scopes: String(fresh.scope || '').split(',') };
+}
+
 async function sync(sc, conn, { fetchImpl = fetch, now = new Date() } = {}) {
   const raw = await secretOf(sc, conn);
   let s = null;
   try { s = JSON.parse(raw); } catch (_) { /* unreadable */ }
   const shop = (conn.meta && conn.meta.shop) || null;
   if (!s || !shop) return fail(sc, conn, 'The connection could not be read. Disconnect and connect Shopify again.', now);
-  const t = await token(fetchImpl, shop, s.client_id, s.client_secret);
+  const t = s.mode === 'oauth' ? await oauthToken(sc, conn, s, { fetchImpl, now }) : await token(fetchImpl, shop, s.client_id, s.client_secret);
   if (t.error) return fail(sc, conn, t.error, now);
   let since = sinceOf(conn, now);
   if (!t.scopes.includes('read_all_orders')) since = new Date(Math.max(since.getTime(), now.getTime() - 59 * 86400000));
@@ -111,4 +171,28 @@ async function sync(sc, conn, { fetchImpl = fetch, now = new Date() } = {}) {
   return saveIncome(sc, conn, rows, { now, through: got.error ? null : now, error: got.error || null, provider: 'Shopify' });
 }
 
-module.exports = { API_VERSION, cleanShop, checkInput, token, ordersSince, rowOf, verify, sync, explain };
+// Shopify's required privacy webhooks for a public app (customers/data_request,
+// customers/redact, shop/redact), all sent here. NoBossly keeps no customer
+// data from Shopify (only order totals and order numbers in the member's own
+// income log), so there is nothing to send or erase for a customer; when a
+// store is erased, its connection is marked removed. Signed with the app
+// secret over the raw body; anything unsigned gets a 401.
+function validWebhook(raw, header, secret = process.env.SHOPIFY_CLIENT_SECRET) {
+  if (!secret || !header || !Buffer.isBuffer(raw)) return false;
+  const want = crypto.createHmac('sha256', secret).update(raw).digest('base64');
+  const got = String(header);
+  return got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+async function webhook(req, res, { service } = {}) {
+  if (!validWebhook(req.body, req.get('X-Shopify-Hmac-Sha256'))) return res.status(401).send('unauthorized');
+  const topic = String(req.get('X-Shopify-Topic') || '');
+  if (topic === 'shop/redact') {
+    let shop = null;
+    try { shop = cleanShop(JSON.parse(req.body.toString('utf8')).shop_domain); } catch (_) { shop = null; }
+    const sc = service && service();
+    if (shop && sc) await sc.from('payment_connections').update({ status: 'error', last_error: 'NoBossly was removed from this Shopify store. Connect again to keep syncing.' }).eq('provider', 'shopify').eq('account_label', shop);
+  }
+  res.status(200).send('ok');
+}
+
+module.exports = { validWebhook, webhook, API_VERSION, cleanShop, checkInput, token, ordersSince, rowOf, verify, sync, explain, configured, authUrl, validCallback, checkScopes, exchange, oauthSecret };

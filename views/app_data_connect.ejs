@@ -10,6 +10,27 @@
 <% } else if (full) { %>
   <div class="card center"><p class="muted">You have connected <%= max %> apps, the most there can be. <a href="/app-data">Disconnect one</a> to add another.</p></div>
 <% } else { %>
+  <% if (preset.click) { %>
+    <form class="card ad-click" method="post" action="<%= preset.click.action %>">
+      <h2 style="margin-top:0"><%= preset.click.button %></h2>
+      <% if (preset.click.field) { %><label><%= preset.click.field.label %><input name="<%= preset.click.field.name %>" type="text" required spellcheck="false" placeholder="<%= preset.click.field.placeholder || '' %>"></label><% } %>
+      <button class="btn btn-primary"><%= preset.click.button %> →</button>
+      <p class="muted small" style="margin:.7rem 0 0"><%= preset.click.note %></p>
+    </form>
+  <% } else if (preset.oauth) { var oname = { supabase: 'Supabase', google: 'Google', planetscale: 'PlanetScale' }[preset.oauth]; %>
+    <div class="card ad-click">
+      <h2 style="margin-top:0">Connect with <%= oname %></h2>
+      <% if (locals.oauthReady) { %>
+        <a class="btn btn-primary" href="/app-data/oauth/<%= preset.oauth %>/start">Connect with <%= oname %> →</a>
+        <p class="muted small" style="margin:.7rem 0 0"><%= preset.oauthNote %></p>
+      <% } else { %>
+        <p class="muted" style="margin:0">Coming soon: sign in to <%= oname %> and pick your project, with nothing to paste. For now, set it up by hand below.</p>
+      <% } %>
+    </div>
+  <% } %>
+  <% if (preset.click || preset.oauth) { %>
+    <details class="ad-manual"<%= preset.oauth && !locals.oauthReady ? ' open' : '' %>><summary class="muted small">Or set it up by hand</summary>
+  <% } %>
   <div class="grid-2">
     <div class="card">
       <h2 style="margin-top:0">Make a read-only login</h2>
@@ -33,8 +54,12 @@
       </ul>
     </form>
   </div>
+  <% if (preset.click || preset.oauth) { %></details><% } %>
 <% } %>
 <style>
   .ad-sql { margin: .8rem 0 0; padding: .7rem .8rem; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); font-size: .8rem; overflow-x: auto; white-space: pre; }
+  .ad-click { max-width: 560px; }
+  .ad-manual { margin: 1rem 0; }
+  .ad-manual summary { cursor: pointer; margin-bottom: .6rem; }
 </style>
 <%- include('partials/foot') %>

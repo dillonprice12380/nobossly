@@ -377,7 +377,7 @@ const syncedMsg = r => (r.error ? r.error
 router.get('/connect/stripe', async (req, res, next) => {
   try {
     const { conn, ready } = await myConnection(req);
-    res.render('budget_stripe', { title: 'Connect Stripe', conn, ready, canSync: !!service(), msg: req.query.msg || null, everyHours: stripe.EVERY_HOURS });
+    res.render('budget_stripe', { title: 'Connect Stripe', conn, ready, oneClick: require('../connections/stripe_app').configured(), canSync: !!service(), msg: req.query.msg || null, everyHours: stripe.EVERY_HOURS });
   } catch (e) { next(e); }
 });
 
@@ -394,6 +394,29 @@ router.post('/connect/stripe', async (req, res, next) => {
     if (!sc) return res.redirect(back('Connected. Your payments will appear after the next sync.'));
     const { conn } = await myConnection(req);
     const r = await stripe.syncConnection(sc, Object.assign({}, conn, { user_id: req.user.id }));
+    res.redirect(back(r.error ? 'Connected, but the first sync failed: ' + r.error : 'Connected. ' + syncedMsg(r)));
+  } catch (e) { next(e); }
+});
+
+// "Connect with Stripe" (src/connections/stripe_app.js): sign in on Stripe and approve read-only access.
+const stripeApp = require('../connections/stripe_app');
+const connCommon = require('../connections/common');
+router.get('/connect/stripe/start', (req, res) => {
+  if (!stripeApp.configured()) return res.redirect(back('Connect with Stripe is coming soon. Paste a restricted key below for now.'));
+  res.redirect(stripeApp.authUrl(connCommon.newState(res, 'stripe')));
+});
+router.get('/connect/stripe/callback', async (req, res, next) => {
+  try {
+    if (!connCommon.checkState(req, res, 'stripe')) return res.redirect(back('That Stripe connection did not finish. Try again.'));
+    if (req.query.error || !req.query.code) return res.redirect(back('Stripe was not connected' + (req.query.error === 'access_denied' ? ' (you said no).' : '.')));
+    const sc = service();
+    if (!sc) return res.redirect(back('Connecting is not switched on right now. Try again later.'));
+    const t = await stripeApp.exchange(String(req.query.code));
+    if (t.error) return res.redirect(back(t.error));
+    const { error } = await connCommon.store(sc, req.user.id, 'stripe', t.secret, 'Stripe account' + (t.secret.account ? ' ' + t.secret.account : ''), t.secret.account ? { account: t.secret.account } : null);
+    if (error) return res.redirect(back(/unknown provider/i.test(error.message || '') ? 'Connect with Stripe is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.'));
+    const { conn } = await myConnection(req);
+    const r = conn ? await stripe.syncConnection(sc, Object.assign({}, conn, { user_id: req.user.id })) : { imported: 0 };
     res.redirect(back(r.error ? 'Connected, but the first sync failed: ' + r.error : 'Connected. ' + syncedMsg(r)));
   } catch (e) { next(e); }
 });

@@ -9,6 +9,10 @@ const router = require('express').Router();
 const { serviceClient } = require('../supabase');
 const AD = require('../app_data');
 const dashboards = require('../path_dashboards');
+const crypto = require('crypto');
+const wpConnect = require('../app_data/wordpress');
+const OA = require('../app_data/oauth');
+const SITE = (process.env.SITE_URL || 'https://nobossly.com').replace(/\/$/, '');
 
 const service = () => { try { return serviceClient(); } catch (_) { return null; } };
 const enc = encodeURIComponent;
@@ -46,7 +50,8 @@ const PRESETS = Object.keys(AD.PRESETS).join('|');
 router.get('/connect/:preset(' + PRESETS + ')', async (req, res, next) => {
   try {
     const { list, ready } = await mine(req);
-    res.render('app_data_connect', { title: 'Connect ' + AD.PRESETS[req.params.preset].label, preset: AD.PRESETS[req.params.preset], ready, full: list.length >= AD.MAX, max: AD.MAX, msg: req.query.msg || null });
+    const preset = AD.PRESETS[req.params.preset];
+    res.render('app_data_connect', { title: 'Connect ' + preset.label, preset, ready, oauthReady: preset.oauth ? OA.configured(preset.oauth) : false, full: list.length >= AD.MAX, max: AD.MAX, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
 
@@ -62,13 +67,103 @@ router.post('/connect/:preset(' + PRESETS + ')', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ------------------------------------------------- Connect with WordPress
+// The member names their site; WordPress's own approval page does the rest
+// and sends them back here with an application password made for NoBossly.
+const WP_COOKIE = 'nb_wp_connect';
+const cookieOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/app-data', maxAge: 15 * 60 * 1000 };
+
+router.post('/connect/wordpress/start', async (req, res, next) => {
+  try {
+    const back = '/app-data/connect/wordpress';
+    const a = await wpConnect.authorizeUrl(req.body && req.body.url);
+    if (a.error) return go(res, back, a.error);
+    const state = crypto.randomBytes(18).toString('base64url');
+    res.cookie(WP_COOKIE, JSON.stringify({ state, site: a.site, host: a.host }), cookieOpts);
+    const cb = SITE + '/app-data/connect/wordpress/callback?state=' + state;
+    res.redirect(wpConnect.approvalLink(a, cb, cb + '&rejected=1'));
+  } catch (e) { next(e); }
+});
+
+router.get('/connect/wordpress/callback', async (req, res, next) => {
+  try {
+    const back = '/app-data/connect/wordpress';
+    let want = null;
+    try { want = JSON.parse((req.cookies && req.cookies[WP_COOKIE]) || 'null'); } catch (_) { want = null; }
+    res.clearCookie(WP_COOKIE, { path: '/app-data' });
+    const got = String(req.query.state || '');
+    const same = want && want.state && got.length === want.state.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want.state));
+    if (!same) return go(res, back, 'That WordPress approval did not finish. Try again.');
+    if (req.query.rejected) return go(res, back, 'WordPress was not connected (you said no).');
+    let host = null;
+    try { host = new URL(String(req.query.site_url || '')).hostname.toLowerCase(); } catch (_) { host = null; }
+    if (host !== want.host) return go(res, back, 'That approval came from a different site. Try again.');
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const r = await AD.connect(sc, req.user.id, 'wordpress', { url: want.site, user: req.query.user_login, password: req.query.password });
+    if (r.error === 'save') return go(res, back, missing(r.dbError) ? 'Connecting app databases is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.');
+    if (r.error) return go(res, back, r.error);
+    go(res, '/app-data/' + r.id + '/setup', 'WordPress connected. Choose what to fill in, then save.');
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------- Connect with Supabase / Google / PlanetScale
+const OAUTH_COOKIE = 'nb_ad_oauth';
+const NAMES = { supabase: 'Supabase', google: 'Google', planetscale: 'PlanetScale' };
+const BACK = { supabase: '/app-data/connect/supabase', google: '/app-data/connect/firebase', planetscale: '/app-data/connect/mysql' };
+
+router.get('/oauth/:provider(supabase|google|planetscale)/start', (req, res) => {
+  const p = req.params.provider;
+  if (!OA.configured(p)) return go(res, BACK[p], 'Connect with ' + NAMES[p] + ' is coming soon. Set it up by hand below for now.');
+  const s = OA.start(p);
+  res.cookie(OAUTH_COOKIE, JSON.stringify({ state: s.state, verifier: s.verifier }), cookieOpts);
+  res.redirect(s.url);
+});
+
+router.get('/oauth/:provider(supabase|google|planetscale)/callback', async (req, res, next) => {
+  try {
+    const p = req.params.provider, back = BACK[p];
+    let want = null;
+    try { want = JSON.parse((req.cookies && req.cookies[OAUTH_COOKIE]) || 'null'); } catch (_) { want = null; }
+    res.clearCookie(OAUTH_COOKIE, { path: '/app-data' });
+    const got = String(req.query.state || '');
+    const same = want && want.state && want.state.startsWith(p + '.') && got.length === want.state.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want.state));
+    if (!same) return go(res, back, 'That ' + NAMES[p] + ' sign-in did not finish. Try again.');
+    if (req.query.error || !req.query.code) return go(res, back, NAMES[p] + ' was not connected' + (req.query.error === 'access_denied' ? ' (you said no).' : '.'));
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const t = await OA.exchange(p, String(req.query.code), want.verifier);
+    if (t.error) return go(res, back, t.error);
+    const r = await AD.connectOAuth(sc, req.user.id, p, t.token);
+    if (r.error === 'save') return go(res, back, missing(r.dbError) || /unknown kind|check constraint/i.test((r.dbError && r.dbError.message) || '') ? 'Connect with ' + NAMES[p] + ' is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.');
+    if (r.error) return go(res, back, r.error);
+    go(res, '/app-data/' + r.id + '/setup', 'Signed in. Now choose the project.');
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/project', async (req, res, next) => {
+  try {
+    const conn = await one(req, req.params.id);
+    if (!conn) return go(res, '/app-data');
+    const sc = service();
+    if (!sc) return go(res, '/app-data', 'Not switched on right now. Try again later.');
+    const r = await AD.chooseProject(sc, Object.assign({}, conn, { user_id: req.user.id }), req.body && req.body.project);
+    go(res, '/app-data/' + conn.id + '/setup', r.error || null);
+  } catch (e) { next(e); }
+});
+
 // -------------------------------------------------------------- What to count
 router.get('/:id/setup', async (req, res, next) => {
   try {
     const conn = await one(req, req.params.id);
     if (!conn) return go(res, '/app-data');
     const sc = service();
-    const t = sc ? await AD.tablesFor(sc, Object.assign({}, conn, { user_id: req.user.id })) : { error: 'Not switched on right now. Try again later.' };
+    const full = Object.assign({}, conn, { user_id: req.user.id });
+    if (AD.needsProject(conn)) {
+      const pr = sc ? await AD.projectsFor(sc, full) : { error: 'Not switched on right now. Try again later.' };
+      return res.render('app_data_project', { title: 'Choose a project', conn, projects: pr.projects || [], error: pr.error || null, msg: req.query.msg || null });
+    }
+    const t = sc ? await AD.tablesFor(sc, full) : { error: 'Not switched on right now. Try again later.' };
     res.render('app_data_setup', { title: 'What to count', conn, tables: t.tables || [], tablesError: t.error || null, needsTable: AD.needsTable(conn.kind),
       fillable: AD.fillable(pathMetricKeys(req.profile)), defaults: AD.DEFAULT_FILL, msg: req.query.msg || null });
   } catch (e) { next(e); }

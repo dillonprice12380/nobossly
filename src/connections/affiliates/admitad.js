@@ -2,7 +2,7 @@
 // (Settings → API in Admitad). NoBossly asks only for the "statistics"
 // scope, which can read and nothing else, and reads actions from it.
 
-const { call, form } = require('../common');
+const { call, form, redirectUri } = require('../common');
 const A = require('../affiliate_common');
 
 const BASE = 'https://api.admitad.com';
@@ -51,8 +51,39 @@ function itemOf(x) {
   };
 }
 
-async function fetchCommissions(secret, meta, { since, now, fetchImpl }) {
-  const t = await token(secret, fetchImpl);
+// ------------------------------------------------------ "Connect Admitad"
+// NoBossly's own Admitad app (ADMITAD_CLIENT_ID, ADMITAD_CLIENT_SECRET,
+// redirect URI https://nobossly.com/budget/connect/admitad/callback): the
+// member approves the statistics scope on Admitad and nothing is pasted.
+const configured = () => !!(process.env.ADMITAD_CLIENT_ID && process.env.ADMITAD_CLIENT_SECRET);
+const authUrl = state => BASE + '/authorize/?' + form({ client_id: process.env.ADMITAD_CLIENT_ID, redirect_uri: redirectUri('admitad'), scope: 'statistics', response_type: 'code', state });
+const oauthSecret = (b, now) => ({ mode: 'oauth', access_token: b.access_token, refresh_token: b.refresh_token || null, expires_at: b.expires_in ? now + (Number(b.expires_in) - 120) * 1000 : null });
+
+async function exchange(code, { fetchImpl = fetch, now = Date.now() } = {}) {
+  const r = await call(fetchImpl, BASE + '/token/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: form({ code, client_id: process.env.ADMITAD_CLIENT_ID, client_secret: process.env.ADMITAD_CLIENT_SECRET, grant_type: 'authorization_code', redirect_uri: redirectUri('admitad') }) });
+  if (r.status !== 200 || !r.body || !r.body.access_token) return { error: 'Admitad did not let NoBossly in. Try connecting again.' };
+  const scopes = String(r.body.scope || 'statistics').split(/[\s,]+/).filter(Boolean);
+  if (scopes.some(x => x !== 'statistics')) return { error: 'Admitad granted more than NoBossly asked for. Try connecting again.' };
+  return { secret: oauthSecret(r.body, now) };
+}
+
+// A token for either kind of connection; an OAuth one is refreshed (and the
+// new refresh token saved) when it has run out.
+async function tokenFor(secret, fetchImpl, saveSecret, now = Date.now()) {
+  if (secret.mode !== 'oauth') return token(secret, fetchImpl);
+  if (!secret.expires_at || now < secret.expires_at) return { token: secret.access_token };
+  if (!secret.refresh_token || !configured()) return { error: 'Admitad access ran out. Connect Admitad again.' };
+  const r = await call(fetchImpl, BASE + '/token/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: form({ refresh_token: secret.refresh_token, client_id: process.env.ADMITAD_CLIENT_ID, client_secret: process.env.ADMITAD_CLIENT_SECRET, grant_type: 'refresh_token' }) });
+  if (r.status !== 200 || !r.body || !r.body.access_token) return { error: 'Admitad access ran out or was removed. Connect Admitad again.' };
+  const fresh = oauthSecret(r.body, now);
+  if (saveSecret) await saveSecret(fresh);
+  return { token: fresh.access_token };
+}
+
+async function fetchCommissions(secret, meta, { since, now, fetchImpl, saveSecret }) {
+  const t = await tokenFor(secret, fetchImpl, saveSecret, now.getTime());
   if (t.error) return { items: [], complete: false, error: t.error };
   const items = [];
   for (let page = 0; page < MAX_PAGES; page++) {
@@ -72,4 +103,4 @@ async function verify(secret, { fetchImpl = fetch } = {}) {
   return t.error ? { ok: false, error: t.error } : { ok: true };
 }
 
-module.exports = { network, checkInput, verify, fetchCommissions, itemOf, dmy };
+module.exports = { network, checkInput, verify, fetchCommissions, itemOf, dmy, configured, authUrl, exchange, tokenFor };
