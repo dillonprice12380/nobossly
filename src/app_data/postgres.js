@@ -25,7 +25,9 @@ function parse(raw) {
   let u;
   try { u = new URL(s); } catch (_) { return { error: 'Paste the whole connection string; it starts with postgresql://' }; }
   if (!/^postgres(ql)?:$/.test(u.protocol)) return { error: 'That is not a Postgres connection string (it should start with postgresql://).' };
-  const user = decodeURIComponent(u.username || ''), password = decodeURIComponent(u.password || '');
+  let user, password;
+  try { user = decodeURIComponent(u.username || ''); password = decodeURIComponent(u.password || ''); }
+  catch (_) { return { error: 'The password has a symbol that breaks the connection string. Use a password of only letters and numbers.' }; }
   const database = decodeURIComponent((u.pathname || '').replace(/^\//, '')) || 'postgres';
   if (!user || !password) return { error: 'The connection string needs the read-only user and its password in it.' };
   if (!u.hostname) return { error: 'The connection string has no host in it.' };
@@ -90,7 +92,7 @@ const TABLES = `select table_schema as s, table_name as t, column_name as c, dat
   where table_schema not in ('pg_catalog', 'information_schema') and table_schema not like 'pg_toast%'
     and data_type in ('timestamp with time zone', 'timestamp without time zone', 'date', 'bigint', 'integer')
     and has_column_privilege(quote_ident(table_schema) || '.' || quote_ident(table_name), column_name, 'SELECT')
-  order by (table_schema = 'auth' and table_name = 'users') desc, (table_name ~* 'user|member|account|customer|profile|signup|waitlist|subscriber') desc, table_schema, table_name, ordinal_position
+  order by (table_schema = 'nobossly' and table_name = 'users') desc, (table_schema = 'auth' and table_name = 'users') desc, (table_name ~* 'user|member|account|customer|profile|signup|waitlist|subscriber') desc, table_schema, table_name, ordinal_position
   limit 600`;
 
 async function tables(p, opts = {}) {
@@ -141,7 +143,8 @@ async function counts(p, cfg, opts = {}) {
   finally { await o.close(); }
 }
 
-// Supabase keeps sign-ups in auth.users; most apps have it.
-const SUGGEST = { schema: 'auth', table: 'users', created: 'created_at', active: 'last_sign_in_at' };
+// Supabase keeps sign-ups in auth.users; the reader sees them through the
+// nobossly.users view the connect page has the member make.
+const SUGGEST = { schema: 'nobossly', table: 'users', created: 'created_at', active: 'last_sign_in_at' };
 
 module.exports = { parse, providerOf, verify, tables, counts, explain, group, q, SUGGEST, WRITABLE };

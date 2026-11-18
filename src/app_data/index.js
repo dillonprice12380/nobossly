@@ -15,9 +15,15 @@ require('../path_dashboards');   // registers every path's numbers
 const EVERY_HOURS = 6;
 const MAX = 3;
 
+// Supabase does not let a project's own roles grant access to its auth
+// schema, so the reader gets a view of the three columns instead, in a schema
+// of its own that Supabase's API does not expose.
 const SUPABASE_SQL = `create role nobossly_reader with login password 'choose-a-long-password';
-grant usage on schema auth to nobossly_reader;
-grant select (id, created_at, last_sign_in_at) on auth.users to nobossly_reader;`;
+create schema if not exists nobossly;
+create or replace view nobossly.users as select id, created_at, last_sign_in_at from auth.users;
+revoke all on schema nobossly from public;
+grant usage on schema nobossly to nobossly_reader;
+grant select on nobossly.users to nobossly_reader;`;
 const POSTGRES_SQL = `create role nobossly_reader with login password 'choose-a-long-password';
 grant usage on schema public to nobossly_reader;
 grant select on public.users to nobossly_reader;   -- your users table`;
@@ -30,9 +36,9 @@ const PRESETS = {
     fields: [{ name: 'url', label: 'Connection string (Session pooler)', placeholder: 'postgresql://nobossly_reader.abcd…@aws-0-….pooler.supabase.com:5432/postgres', secret: true }],
     sql: SUPABASE_SQL,
     where: [
-      'In your Supabase project, open the SQL Editor and run the three lines below. They make a role that can only read sign-up and sign-in times.',
+      'In your Supabase project, open the SQL Editor and run the lines below, with a password of your own (letters and numbers only, so it fits in the connection string). They make a role that can only read sign-up and sign-in times, through a view of three columns.',
       'Open Connect (top of the dashboard) → Session pooler, and copy the connection string.',
-      'Replace the user with nobossly_reader.<your project ref> (keep the part after the dot) and the password with the one you chose.'
+      'In the string, change the user from postgres.<your project ref> to nobossly_reader.<your project ref> (keep the part after the dot), and put in the password you chose.'
     ] },
   neon: { key: 'neon', kind: 'postgres', label: 'Neon', emoji: '🟢', blurb: 'Any users table in a Neon Postgres database.',
     fields: [{ name: 'url', label: 'Connection string', placeholder: 'postgresql://nobossly_reader:…@ep-….neon.tech/neondb?sslmode=require', secret: true }],
