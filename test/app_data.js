@@ -218,7 +218,7 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
   ok('...and suggests filling in Active users and Waitlist sign-ups', /name="fill_active"[\s\S]*?value="sw_active" selected/.test(su) && /name="fill_total"[\s\S]*?value="sw_waitlist" selected/.test(su));
   ok('workspace and the Active users page link here', read('views/workspace/index.ejs').includes('href="/app-data"') && read('views/workspace/metric.ejs').includes('href="/app-data"'));
   ok('routes are behind sign-in; secrets stored by the server only', /app\.use\('\/app-data', requireAuth/.test(read('server.js')) && /data_connection_store/.test(read('src/app_data/common.js')) && !/data_connection_secret/.test(read('src/routes/app_data.js')));
-  ok('the migration is marked not applied, with its tables pending', /^-- NOT APPLIED/.test(read('migrations/2026-11-18_app_data.sql')) && !!require('./schema-pending.json').migrations['2026-11-18_app_data.sql']);
+  ok('the migration is marked applied, and its tables are in the live snapshot', /^-- Applied live/.test(read('migrations/2026-11-18_app_data.sql')) && !require('./schema-pending.json').migrations['2026-11-18_app_data.sql'] && require('./schema-snapshot.json').columns.app_metrics.includes('active_30d'));
 
   if (process.env.APPDATA_OUT) {
     const fix = h => h.replace(/href="\/css\/([a-z]+)\.css\?v=\d+"/g, (m, n) => 'href="' + path.join(ROOT, 'public/css/' + n + '.css') + '"');

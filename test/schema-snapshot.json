@@ -44,6 +44,15 @@
       "stack",
       "user_id"
     ],
+    "app_metrics": [
+      "connection_id",
+      "user_id",
+      "day",
+      "total_users",
+      "new_users",
+      "active_7d",
+      "active_30d"
+    ],
     "app_secrets": [
       "key",
       "value"
@@ -61,6 +70,37 @@
       "slug",
       "tier",
       "xp_reward"
+    ],
+    "bank_connections": [
+      "accounts",
+      "created_at",
+      "id",
+      "institution",
+      "item_id",
+      "last_error",
+      "last_synced_at",
+      "provider",
+      "secret_id",
+      "status",
+      "sync_cursor",
+      "user_id"
+    ],
+    "bank_transactions": [
+      "account_label",
+      "amount",
+      "category",
+      "connection_id",
+      "created_at",
+      "decided_at",
+      "direction",
+      "external_id",
+      "id",
+      "merchant",
+      "name",
+      "pending",
+      "posted_on",
+      "status",
+      "user_id"
     ],
     "beta_programs": [
       "created_at",
@@ -131,6 +171,14 @@
       "title",
       "xp_reward"
     ],
+    "checklist_progress": [
+      "checklist",
+      "done_at",
+      "due_on",
+      "item",
+      "note",
+      "user_id"
+    ],
     "cms_contents": [
       "author_id",
       "blocks",
@@ -175,6 +223,35 @@
       "status",
       "title",
       "updated_at"
+    ],
+    "cohort_assignments": [
+      "created_at",
+      "created_by",
+      "due_on",
+      "group_id",
+      "id",
+      "instructions",
+      "kind",
+      "position",
+      "title",
+      "tool_key",
+      "updated_at"
+    ],
+    "cohort_submissions": [
+      "assignment_id",
+      "body",
+      "feedback",
+      "group_id",
+      "id",
+      "link_url",
+      "reviewed_at",
+      "reviewed_by",
+      "snapshot",
+      "source_id",
+      "status",
+      "submitted_at",
+      "title",
+      "user_id"
     ],
     "collab_members": [
       "created_at",
@@ -235,6 +312,48 @@
       "participant_a",
       "participant_b"
     ],
+    "course_lessons": [
+      "body",
+      "created_at",
+      "id",
+      "listing_id",
+      "minutes",
+      "module_id",
+      "position",
+      "title",
+      "tool_key",
+      "updated_at",
+      "video_url"
+    ],
+    "course_modules": [
+      "created_at",
+      "id",
+      "listing_id",
+      "position",
+      "title"
+    ],
+    "coworking_links": [
+      "link",
+      "session_id"
+    ],
+    "coworking_rsvps": [
+      "created_at",
+      "reminded_at",
+      "session_id",
+      "user_id"
+    ],
+    "coworking_sessions": [
+      "about",
+      "cancelled_at",
+      "capacity",
+      "created_at",
+      "host_id",
+      "id",
+      "minutes",
+      "path",
+      "starts_at",
+      "title"
+    ],
     "daily_checkins": [
       "blockers",
       "checkin_date",
@@ -247,6 +366,20 @@
       "user_id",
       "wins_today",
       "xp_awarded"
+    ],
+    "data_connections": [
+      "id",
+      "user_id",
+      "kind",
+      "provider",
+      "label",
+      "host_label",
+      "config",
+      "secret_id",
+      "status",
+      "last_error",
+      "last_synced_at",
+      "created_at"
     ],
     "email_log": [
       "created_at",
@@ -271,6 +404,13 @@
       "spent_at",
       "user_id"
     ],
+    "filter_hits": [
+      "context",
+      "created_at",
+      "id",
+      "kind",
+      "user_id"
+    ],
     "follows": [
       "created_at",
       "follower_id",
@@ -286,6 +426,11 @@
       "name",
       "position",
       "slug"
+    ],
+    "forum_follows": [
+      "created_at",
+      "thread_id",
+      "user_id"
     ],
     "forum_reactions": [
       "created_at",
@@ -330,6 +475,16 @@
       "requester_id",
       "responded_at",
       "status"
+    ],
+    "group_invites": [
+      "code",
+      "created_at",
+      "created_by",
+      "expires_at",
+      "group_id",
+      "id",
+      "max_uses",
+      "uses"
     ],
     "group_members": [
       "group_id",
@@ -397,6 +552,39 @@
       "slug",
       "sort_order"
     ],
+    "help_posts": [
+      "author_id",
+      "body",
+      "category",
+      "closed_at",
+      "created_at",
+      "exchange",
+      "group_id",
+      "id",
+      "kind",
+      "partner_id",
+      "status",
+      "title",
+      "updated_at"
+    ],
+    "help_responses": [
+      "created_at",
+      "id",
+      "message",
+      "post_id",
+      "responder_id",
+      "status"
+    ],
+    "help_thanks": [
+      "created_at",
+      "helper_id",
+      "id",
+      "is_public",
+      "note",
+      "post_id",
+      "rating",
+      "thanker_id"
+    ],
     "karma_transactions": [
       "amount",
       "created_at",
@@ -413,6 +601,49 @@
       "min_gates",
       "gates"
     ],
+    "lesson_progress": [
+      "completed_at",
+      "lesson_id",
+      "listing_id",
+      "user_id"
+    ],
+    "listing_enrollments": [
+      "answers",
+      "created_at",
+      "decided_at",
+      "decided_by",
+      "id",
+      "listing_id",
+      "note",
+      "status",
+      "user_id"
+    ],
+    "listings": [
+      "apply_by",
+      "capacity",
+      "created_at",
+      "created_by",
+      "description",
+      "ends_on",
+      "external_url",
+      "format",
+      "group_id",
+      "id",
+      "join_mode",
+      "kind",
+      "location",
+      "org_id",
+      "paths",
+      "price_cents",
+      "price_note",
+      "questions",
+      "slug",
+      "starts_on",
+      "status",
+      "summary",
+      "title",
+      "updated_at"
+    ],
     "messages": [
       "attachment_name",
       "attachment_type",
@@ -428,6 +659,15 @@
       "link_url",
       "sender_id"
     ],
+    "metric_entries": [
+      "created_at",
+      "id",
+      "metric",
+      "note",
+      "period",
+      "user_id",
+      "value"
+    ],
     "notifications": [
       "actor_id",
       "created_at",
@@ -438,6 +678,54 @@
       "message",
       "type",
       "user_id"
+    ],
+    "org_admins": [
+      "created_at",
+      "org_id",
+      "role",
+      "user_id"
+    ],
+    "organizations": [
+      "about",
+      "contact_email",
+      "created_at",
+      "created_by",
+      "id",
+      "kind",
+      "name",
+      "provider",
+      "slug",
+      "tagline",
+      "website_url"
+    ],
+    "path_news": [
+      "alerted_at",
+      "created_at",
+      "id",
+      "label",
+      "path",
+      "published_at",
+      "publisher",
+      "subpaths",
+      "title",
+      "topic",
+      "url"
+    ],
+    "payment_connections": [
+      "account_label",
+      "created_at",
+      "id",
+      "imported_count",
+      "key_hint",
+      "last_error",
+      "last_synced_at",
+      "meta",
+      "provider",
+      "secret_id",
+      "status",
+      "synced_through",
+      "user_id",
+      "pending"
     ],
     "peer_reviews": [
       "created_at",
@@ -455,6 +743,19 @@
       "updated_at",
       "url_or_content",
       "xp_awarded"
+    ],
+    "pipeline_items": [
+      "board",
+      "created_at",
+      "data",
+      "due_on",
+      "id",
+      "position",
+      "stage",
+      "title",
+      "updated_at",
+      "user_id",
+      "value"
     ],
     "post_comments": [
       "content",
@@ -583,6 +884,22 @@
       "years_experience",
       "saved_paths"
     ],
+    "provider_applications": [
+      "about",
+      "admin_note",
+      "contact_email",
+      "created_at",
+      "id",
+      "kind",
+      "offers",
+      "org_id",
+      "org_name",
+      "reviewed_at",
+      "reviewed_by",
+      "status",
+      "user_id",
+      "website_url"
+    ],
     "public_profiles": [
       "avatar_url",
       "bio",
@@ -605,6 +922,18 @@
       "username",
       "website_url",
       "xp_total"
+    ],
+    "recurring_expenses": [
+      "amount",
+      "category",
+      "created_at",
+      "day_of_month",
+      "id",
+      "logged_through",
+      "note",
+      "starts_on",
+      "stopped_at",
+      "user_id"
     ],
     "reports": [
       "created_at",
@@ -943,6 +1272,28 @@
       "title",
       "user_id"
     ],
+    "workspace_docs": [
+      "created_at",
+      "data",
+      "id",
+      "kind",
+      "title",
+      "updated_at",
+      "user_id"
+    ],
+    "workspace_shares": [
+      "created_at",
+      "doc_id",
+      "email",
+      "expires_at",
+      "id",
+      "last_viewed_at",
+      "note",
+      "owner_id",
+      "recipient_id",
+      "revoked_at",
+      "token"
+    ],
     "xp_award_kinds": [
       "amount",
       "amount_from",
@@ -970,334 +1321,6 @@
       "rank",
       "username",
       "xp_total"
-    ],
-    "filter_hits": [
-      "context",
-      "created_at",
-      "id",
-      "kind",
-      "user_id"
-    ],
-    "help_posts": [
-      "author_id",
-      "body",
-      "category",
-      "closed_at",
-      "created_at",
-      "exchange",
-      "group_id",
-      "id",
-      "kind",
-      "partner_id",
-      "status",
-      "title",
-      "updated_at"
-    ],
-    "help_responses": [
-      "created_at",
-      "id",
-      "message",
-      "post_id",
-      "responder_id",
-      "status"
-    ],
-    "help_thanks": [
-      "created_at",
-      "helper_id",
-      "id",
-      "is_public",
-      "note",
-      "post_id",
-      "rating",
-      "thanker_id"
-    ],
-    "workspace_docs": [
-      "created_at",
-      "data",
-      "id",
-      "kind",
-      "title",
-      "updated_at",
-      "user_id"
-    ],
-    "pipeline_items": [
-      "board",
-      "created_at",
-      "data",
-      "due_on",
-      "id",
-      "position",
-      "stage",
-      "title",
-      "updated_at",
-      "user_id",
-      "value"
-    ],
-    "metric_entries": [
-      "created_at",
-      "id",
-      "metric",
-      "note",
-      "period",
-      "user_id",
-      "value"
-    ],
-    "checklist_progress": [
-      "checklist",
-      "done_at",
-      "due_on",
-      "item",
-      "note",
-      "user_id"
-    ],
-    "organizations": [
-      "about",
-      "contact_email",
-      "created_at",
-      "created_by",
-      "id",
-      "kind",
-      "name",
-      "provider",
-      "slug",
-      "tagline",
-      "website_url"
-    ],
-    "org_admins": [
-      "created_at",
-      "org_id",
-      "role",
-      "user_id"
-    ],
-    "group_invites": [
-      "code",
-      "created_at",
-      "created_by",
-      "expires_at",
-      "group_id",
-      "id",
-      "max_uses",
-      "uses"
-    ],
-    "cohort_assignments": [
-      "created_at",
-      "created_by",
-      "due_on",
-      "group_id",
-      "id",
-      "instructions",
-      "kind",
-      "position",
-      "title",
-      "tool_key",
-      "updated_at"
-    ],
-    "cohort_submissions": [
-      "assignment_id",
-      "body",
-      "feedback",
-      "group_id",
-      "id",
-      "link_url",
-      "reviewed_at",
-      "reviewed_by",
-      "snapshot",
-      "source_id",
-      "status",
-      "submitted_at",
-      "title",
-      "user_id"
-    ],
-    "workspace_shares": [
-      "created_at",
-      "doc_id",
-      "email",
-      "expires_at",
-      "id",
-      "last_viewed_at",
-      "note",
-      "owner_id",
-      "recipient_id",
-      "revoked_at",
-      "token"
-    ],
-    "provider_applications": [
-      "about",
-      "admin_note",
-      "contact_email",
-      "created_at",
-      "id",
-      "kind",
-      "offers",
-      "org_id",
-      "org_name",
-      "reviewed_at",
-      "reviewed_by",
-      "status",
-      "user_id",
-      "website_url"
-    ],
-    "listings": [
-      "apply_by",
-      "capacity",
-      "created_at",
-      "created_by",
-      "description",
-      "ends_on",
-      "external_url",
-      "format",
-      "group_id",
-      "id",
-      "join_mode",
-      "kind",
-      "location",
-      "org_id",
-      "paths",
-      "price_cents",
-      "price_note",
-      "questions",
-      "slug",
-      "starts_on",
-      "status",
-      "summary",
-      "title",
-      "updated_at"
-    ],
-    "listing_enrollments": [
-      "answers",
-      "created_at",
-      "decided_at",
-      "decided_by",
-      "id",
-      "listing_id",
-      "note",
-      "status",
-      "user_id"
-    ],
-    "course_modules": [
-      "created_at",
-      "id",
-      "listing_id",
-      "position",
-      "title"
-    ],
-    "course_lessons": [
-      "body",
-      "created_at",
-      "id",
-      "listing_id",
-      "minutes",
-      "module_id",
-      "position",
-      "title",
-      "tool_key",
-      "updated_at",
-      "video_url"
-    ],
-    "lesson_progress": [
-      "completed_at",
-      "lesson_id",
-      "listing_id",
-      "user_id"
-    ],
-    "path_news": [
-      "alerted_at",
-      "created_at",
-      "id",
-      "label",
-      "path",
-      "published_at",
-      "publisher",
-      "subpaths",
-      "title",
-      "topic",
-      "url"
-    ],
-    "payment_connections": [
-      "account_label",
-      "created_at",
-      "id",
-      "imported_count",
-      "key_hint",
-      "last_error",
-      "last_synced_at",
-      "meta",
-      "provider",
-      "secret_id",
-      "status",
-      "synced_through",
-      "user_id",
-      "pending"
-    ],
-    "forum_follows": [
-      "created_at",
-      "thread_id",
-      "user_id"
-    ],
-    "coworking_sessions": [
-      "about",
-      "cancelled_at",
-      "capacity",
-      "created_at",
-      "host_id",
-      "id",
-      "minutes",
-      "path",
-      "starts_at",
-      "title"
-    ],
-    "coworking_links": [
-      "link",
-      "session_id"
-    ],
-    "coworking_rsvps": [
-      "created_at",
-      "reminded_at",
-      "session_id",
-      "user_id"
-    ],
-    "recurring_expenses": [
-      "amount",
-      "category",
-      "created_at",
-      "day_of_month",
-      "id",
-      "logged_through",
-      "note",
-      "starts_on",
-      "stopped_at",
-      "user_id"
-    ],
-    "bank_connections": [
-      "accounts",
-      "created_at",
-      "id",
-      "institution",
-      "item_id",
-      "last_error",
-      "last_synced_at",
-      "provider",
-      "secret_id",
-      "status",
-      "sync_cursor",
-      "user_id"
-    ],
-    "bank_transactions": [
-      "account_label",
-      "amount",
-      "category",
-      "connection_id",
-      "created_at",
-      "decided_at",
-      "direction",
-      "external_id",
-      "id",
-      "merchant",
-      "name",
-      "pending",
-      "posted_on",
-      "status",
-      "user_id"
     ]
   },
   "enums": {

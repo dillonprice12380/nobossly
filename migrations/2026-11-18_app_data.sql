@@ -1,4 +1,4 @@
--- NOT APPLIED. Run in the Supabase SQL Editor; it ends with one row, ok = true.
+-- Applied live 2026-11-18 (run in the SQL Editor; returned true. Verified: data_connections and app_metrics with RLS on, members cannot see secret_id or change the counts, data_connection_store/secret are service-role only, data_disconnect is the member's, anon reads nothing).
 --
 -- App data (2026-11-18): a member who builds an app connects their app's own
 -- database (Supabase, Neon or any Postgres, MySQL/PlanetScale, Firebase, or a
