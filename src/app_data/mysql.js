@@ -20,7 +20,9 @@ function parse(raw) {
   let u;
   try { u = new URL(s); } catch (_) { return { error: 'Paste the whole connection string; it starts with mysql://' }; }
   if (u.protocol !== 'mysql:') return { error: 'That is not a MySQL connection string (it should start with mysql://).' };
-  const user = decodeURIComponent(u.username || ''), password = decodeURIComponent(u.password || '');
+  let user, password;
+  try { user = decodeURIComponent(u.username || ''); password = decodeURIComponent(u.password || ''); }
+  catch (_) { return { error: 'The password has a symbol that breaks the connection string. Use a password of only letters and numbers.' }; }
   const database = decodeURIComponent((u.pathname || '').replace(/^\//, ''));
   if (!user || !password) return { error: 'The connection string needs the read-only user and its password in it.' };
   if (!database) return { error: 'The connection string needs the database name at the end.' };
