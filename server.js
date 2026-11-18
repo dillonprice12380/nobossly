@@ -150,6 +150,7 @@ app.use('/notifications', requireAuth, require('./src/routes/notifications'));
 app.use('/members', requireAuth, require('./src/routes/members'));
 app.use('/account', requireAuth, require('./src/routes/account'));
 app.use('/budget', requireAuth, require('./src/routes/budget'));
+app.use('/app-data', requireAuth, require('./src/routes/app_data')); // a member's own app database: user counts (src/app_data)
 app.use('/programs', requireFlag('marketplace'), require('./src/routes/programs')); // the marketplace: browse and listing pages are public
 app.use('/learn', requireAuth, requireFlag('marketplace'), require('./src/routes/learn')); // taking a course
 app.use('/providers', requireFlag('marketplace'), require('./src/routes/providers')); // for people who run programs or teach
@@ -320,6 +321,14 @@ setInterval(() => {
   let sc;
   try { sc = serviceClient(); } catch (_) { return; }
   connections.runAll(sc).then(r => { if (r && (r.imported || r.bankAdded)) console.log('connections sync:', r); }, e => console.error('[connections]', e && e.message));
+}, 30 * 60 * 1000);
+
+// Members' app databases (src/app_data): counted when not for six hours.
+const appData = require('./src/app_data');
+setInterval(() => {
+  let sc;
+  try { sc = serviceClient(); } catch (_) { return; }
+  appData.runAll(sc).then(r => { if (r && r.synced) console.log('app data:', r); }, e => console.error('[app data]', e && e.message));
 }, 30 * 60 * 1000);
 
 // Co-working reminders, about an hour before each session (src/coworking.js).

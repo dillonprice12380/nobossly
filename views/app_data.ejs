@@ -1,0 +1,92 @@
+<%- include('partials/head') %>
+<%# A member's own app databases and what NoBossly counts in them (src/routes/app_data.js). %>
+<% locals.when = function (t) { return t ? new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'not yet'; };
+   locals.num = function (n) { return n == null ? '—' : Number(n).toLocaleString('en-US'); };
+   locals.byKey = {}; presets.forEach(function (p) { byKey[p.key] = p; }); %>
+<div class="page-head">
+  <div>
+    <h1>📈 Your app's users</h1>
+    <p class="muted">Connect the database behind your app and NoBossly counts its users every <%= everyHours %> hours: how many, how many are new, and how many are active. It connects read-only and only ever counts.</p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/workspace">← Workspace</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+
+<% list.forEach(function (c) { var s = sums[c.id]; var p = byKey[c.provider] || byKey[c.kind] || { emoji: '🗄️' }; %>
+  <section class="card ad-conn">
+    <div class="ad-head">
+      <div>
+        <h2><%= p.emoji %> <%= c.label || 'Your app' %> <span class="muted small"><%= c.host_label || '' %></span></h2>
+        <p class="muted small">
+          <% if (c.status === 'setup') { %>Connected. Choose what to count to start.<% } else { %>Last counted <%= when(c.last_synced_at) %><% } %>
+          <% if (c.config && c.config.table) { %> · <code><%= c.config.schema %>.<%= c.config.table %></code><% } %>
+        </p>
+      </div>
+      <div class="cta-row" style="margin:0">
+        <% if (c.status === 'setup') { %><a class="btn btn-primary btn-sm" href="/app-data/<%= c.id %>/setup">Choose what to count</a>
+        <% } else { %>
+          <% if (canSync) { %><form method="post" action="/app-data/<%= c.id %>/sync" class="inline"><button class="btn btn-ghost btn-sm">Count now</button></form><% } %>
+          <a class="btn btn-ghost btn-sm" href="/app-data/<%= c.id %>/setup">Settings</a>
+        <% } %>
+        <form method="post" action="/app-data/<%= c.id %>/disconnect" class="inline" onsubmit="return confirm('Disconnect this database? Its counts are deleted too.')"><button class="btn btn-ghost btn-sm">Disconnect</button></form>
+      </div>
+    </div>
+    <% if (c.status === 'error' && c.last_error) { %><p class="small ad-err"><%= c.last_error %></p><% } %>
+    <% if (c.status !== 'setup') { %>
+      <div class="ad-tiles">
+        <div class="ad-tile"><span>Users</span><b><%= num(s.total) %></b></div>
+        <div class="ad-tile"><span>New this week</span><b><%= num(s.new7) %></b><em><%= num(s.new30) %> in 30 days</em></div>
+        <div class="ad-tile"><span>Active, last 7 days</span><b><%= num(s.active7) %></b><% if (s.active7 == null) { %><em><%= c.kind === 'wordpress' ? 'WordPress does not record sign-ins' : 'Choose a last-active column' %></em><% } %></div>
+        <div class="ad-tile"><span>Active, last 30 days</span><b><%= num(s.active30) %></b><% if (s.total && s.active30 != null) { %><em><%= Math.round(100 * s.active30 / s.total) %>% of users</em><% } %></div>
+      </div>
+      <figure class="ad-chart" aria-label="New users per week, last 12 weeks">
+        <figcaption class="muted small">New users per week</figcaption>
+        <div class="ad-bars">
+          <% s.weeks.forEach(function (w) { %>
+            <div class="ad-bar" title="<%= w.from %> to <%= w.to %>: <%= w.n %> new"><i style="height:<%= Math.max(2, Math.round(100 * w.n / s.max)) %>%"></i><span><%= w.n %></span></div>
+          <% }) %>
+        </div>
+        <div class="ad-axis muted small"><span><%= s.weeks[0].from %></span><span>this week</span></div>
+      </figure>
+      <% if (c.config && c.config.fill && Object.keys(c.config.fill).length) { %><p class="muted small" style="margin:.6rem 0 0">Also fills in your dashboard numbers each time it counts. Change that in Settings.</p><% } %>
+    <% } %>
+  </section>
+<% }) %>
+
+<% if (!ready) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Connecting app databases is being switched on. Check back shortly.</p></div>
+<% } else if (list.length < max) { %>
+  <h2 class="ad-h"><%= list.length ? 'Connect another' : 'Connect your app\'s database' %></h2>
+  <div class="grid ad-grid">
+    <% presets.forEach(function (p) { %>
+      <a class="card ad-pick" href="/app-data/connect/<%= p.key %>"><span class="ad-emoji"><%= p.emoji %></span><strong><%= p.label %></strong><span class="muted small"><%= p.blurb %></span></a>
+    <% }) %>
+  </div>
+  <p class="muted small">Up to <%= max %> apps. Nothing about your users is copied: NoBossly keeps only the daily counts.</p>
+<% } else { %>
+  <p class="muted small">You have connected <%= max %> apps, the most there can be. Disconnect one to add another.</p>
+<% } %>
+<style>
+  .ad-conn { margin-bottom: 1rem; }
+  .ad-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .8rem; flex-wrap: wrap; }
+  .ad-head h2 { margin: 0; font-size: 1.15rem; }
+  .ad-head p { margin: .25rem 0 0; }
+  .ad-err { color: var(--danger); margin: .6rem 0 0; }
+  .ad-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .7rem; margin-top: .9rem; }
+  .ad-tile { display: flex; flex-direction: column; gap: .1rem; padding: .75rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); }
+  .ad-tile span { font-size: .82rem; color: var(--muted); }
+  .ad-tile b { font-size: 1.45rem; line-height: 1.15; }
+  .ad-tile em { font-style: normal; font-size: .76rem; color: var(--muted); }
+  .ad-chart { margin: 1rem 0 0; }
+  .ad-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: .35rem; align-items: end; height: 8rem; margin-top: .4rem; }
+  .ad-bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+  .ad-bar i { display: block; width: 100%; max-width: 2.4rem; background: var(--accent); border-radius: 5px 5px 0 0; opacity: .85; }
+  .ad-bar span { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
+  .ad-axis { display: flex; justify-content: space-between; margin-top: .2rem; }
+  .ad-h { font-size: 1.05rem; margin: 1.4rem 0 .5rem; }
+  .ad-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .ad-pick { display: flex; flex-direction: column; gap: .25rem; text-decoration: none; color: var(--text); }
+  .ad-pick:hover { border-color: var(--accent); }
+  .ad-emoji { font-size: 1.4rem; }
+</style>
+<%- include('partials/foot') %>

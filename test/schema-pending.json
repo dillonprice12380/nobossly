@@ -5,5 +5,31 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {}
+  "migrations": {
+    "2026-11-18_app_data.sql": {
+      "data_connections": [
+        "id",
+        "user_id",
+        "kind",
+        "provider",
+        "label",
+        "host_label",
+        "config",
+        "secret_id",
+        "status",
+        "last_error",
+        "last_synced_at",
+        "created_at"
+      ],
+      "app_metrics": [
+        "connection_id",
+        "user_id",
+        "day",
+        "total_users",
+        "new_users",
+        "active_7d",
+        "active_30d"
+      ]
+    }
+  }
 }
