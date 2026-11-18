@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+<%# Connect one app database (src/app_data). %>
+<div class="page-head">
+  <div><h1><%= preset.emoji %> Connect <%= preset.label %></h1><p class="muted"><%= preset.blurb %> NoBossly connects read-only and only counts rows; it never copies your users.</p></div>
+  <a class="btn btn-ghost btn-sm" href="/app-data">← Your app's users</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (!ready) { %>
+  <div class="card center"><h2>Being set up</h2><p class="muted">Connecting app databases is being switched on. Check back shortly.</p></div>
+<% } else if (full) { %>
+  <div class="card center"><p class="muted">You have connected <%= max %> apps, the most there can be. <a href="/app-data">Disconnect one</a> to add another.</p></div>
+<% } else { %>
+  <div class="grid-2">
+    <div class="card">
+      <h2 style="margin-top:0">Make a read-only login</h2>
+      <ol class="small" style="margin:0;padding-left:1.1rem;line-height:1.75"><% preset.where.forEach(function (w) { %><li><%= w %></li><% }) %></ol>
+      <% if (preset.sql) { %><pre class="ad-sql"><code><%= preset.sql %></code></pre><% } %>
+      <p class="muted small" style="margin:.7rem 0 0">A login that can change anything is refused, so NoBossly can only ever read.</p>
+    </div>
+    <form class="card" method="post" action="/app-data/connect/<%= preset.key %>" autocomplete="off">
+      <h2 style="margin-top:0">Paste it here</h2>
+      <% preset.fields.forEach(function (f) { %>
+        <label><%= f.label %>
+          <% if (f.area) { %><textarea name="<%= f.name %>" rows="6" required spellcheck="false" placeholder="<%= f.placeholder || '' %>"></textarea>
+          <% } else { %><input name="<%= f.name %>" type="<%= f.secret ? 'password' : 'text' %>" required spellcheck="false" autocomplete="off" placeholder="<%= f.placeholder || '' %>"><% } %>
+        </label>
+      <% }) %>
+      <button class="btn btn-primary" style="margin-top:.4rem">Connect</button>
+      <ul class="muted small" style="margin:.9rem 0 0;padding-left:1.1rem;line-height:1.6">
+        <li>We check it can only read, then store it encrypted. Nobody can read it back, including you.</li>
+        <li>NoBossly only connects to public addresses, over an encrypted connection.</li>
+        <li>Next you choose which table holds your users, and NoBossly counts them every few hours.</li>
+      </ul>
+    </form>
+  </div>
+<% } %>
+<style>
+  .ad-sql { margin: .8rem 0 0; padding: .7rem .8rem; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); font-size: .8rem; overflow-x: auto; white-space: pre; }
+</style>
+<%- include('partials/foot') %>

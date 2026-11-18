@@ -1,0 +1,68 @@
+<%- include('partials/head') %>
+<%# Choose what NoBossly counts in a connected app database (src/app_data/index.js configFrom). %>
+<% locals.cfg = conn.config || {}; locals.fill = cfg.fill || (conn.status === 'setup' ? defaults : {}); %>
+<div class="page-head">
+  <div><h1>What to count</h1><p class="muted"><%= conn.label %> · <%= conn.host_label %></p></div>
+  <a class="btn btn-ghost btn-sm" href="/app-data">← Your app's users</a>
+</div>
+<% if (msg) { %><p class="notice"><%= msg %></p><% } %>
+<% if (tablesError) { %><div class="card"><p style="margin:0;color:var(--danger)"><%= tablesError %></p></div><% } %>
+<form class="card form-card" method="post" action="/app-data/<%= conn.id %>/setup" style="max-width:760px">
+  <% if (needsTable) { %>
+    <% if (!tables.length && !tablesError) { %>
+      <p class="muted">That login cannot read any table with a date column. Grant it SELECT on your users table, then come back.</p>
+    <% } else { %>
+      <label><strong>Table your users are in</strong>
+        <select name="table" required id="ad-table">
+          <% tables.forEach(function (t) { %><option value="<%= t.key %>" <%= cfg.schema + '.' + cfg.table === t.key ? 'selected' : '' %>><%= t.key %></option><% }) %>
+        </select>
+      </label>
+      <% tables.forEach(function (t, i) { var on = cfg.schema ? cfg.schema + '.' + cfg.table === t.key : i === 0; %>
+        <fieldset class="ad-cols" data-table="<%= t.key %>" <%= on ? '' : 'disabled hidden' %>>
+          <label><strong>When each user signed up</strong>
+            <select name="created" required>
+              <% t.columns.forEach(function (c) { %><option value="<%= c.name %>" <%= (on && cfg.created ? cfg.created === c.name : /^(created_at|created|inserted_at|joined_at|signup_at|registered_at|date_joined)$/i.test(c.name)) ? 'selected' : '' %>><%= c.name %><%= c.epoch ? ' (seconds since 1970)' : '' %></option><% }) %>
+            </select>
+          </label>
+          <label><strong>When each user was last active</strong> <span class="muted small">(optional; for active-user counts)</span>
+            <select name="active">
+              <option value="">None</option>
+              <% t.columns.forEach(function (c) { %><option value="<%= c.name %>" <%= (on && cfg.created ? cfg.active === c.name : /^(last_sign_in_at|last_seen_at|last_active_at|last_login_at|last_login|updated_at)$/i.test(c.name) && c.name !== 'updated_at') ? 'selected' : '' %>><%= c.name %><%= c.epoch ? ' (seconds since 1970)' : '' %></option><% }) %>
+            </select>
+          </label>
+        </fieldset>
+      <% }) %>
+    <% } %>
+  <% } else { %>
+    <p class="muted"><%= conn.kind === 'firebase' ? 'Firebase Authentication records when each user signed up and last signed in, so NoBossly counts users, new users and active users from it.' : 'WordPress records when each user registered, so NoBossly counts users and new users. It does not record sign-ins, so there are no active-user numbers.' %></p>
+  <% } %>
+
+  <fieldset class="ad-fill">
+    <legend><strong>Fill in my dashboard numbers</strong> <span class="muted small">(optional)</span></legend>
+    <p class="muted small" style="margin:.2rem 0 .5rem">Each time it counts, NoBossly logs the count as this month's number for you, so you do not type it.</p>
+    <% [['total', 'Total users →'], ['active', 'Active users (last 30 days) →'], ['new', 'New users this period →']].forEach(function (row) { if (row[0] === 'active' && conn.kind === 'wordpress') return; %>
+      <label class="ad-fill-row"><span><%= row[1] %></span>
+        <select name="fill_<%= row[0] %>">
+          <option value="">Don't fill in</option>
+          <% fillable.forEach(function (m) { %><option value="<%= m.key %>" <%= fill[row[0]] === m.key ? 'selected' : '' %>><%= m.label %><%= m.mine ? '' : ' (another path)' %></option><% }) %>
+        </select>
+      </label>
+    <% }) %>
+  </fieldset>
+  <button class="btn btn-primary" style="margin-top:.6rem" <%= needsTable && !tables.length ? 'disabled' : '' %>>Save and count</button>
+</form>
+<script>
+  (function () {
+    var sel = document.getElementById('ad-table');
+    if (!sel) return;
+    sel.addEventListener('change', function () {
+      document.querySelectorAll('.ad-cols').forEach(function (f) { var on = f.getAttribute('data-table') === sel.value; f.hidden = !on; f.disabled = !on; });
+    });
+  })();
+</script>
+<style>
+  .ad-cols, .ad-fill { border: 1px solid var(--border); border-radius: 10px; padding: .6rem .8rem; margin: .7rem 0; }
+  .ad-fill-row { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: .6rem; align-items: center; margin: .35rem 0; }
+  @media (max-width: 560px) { .ad-fill-row { grid-template-columns: 1fr; gap: .2rem; } }
+</style>
+<%- include('partials/foot') %>

@@ -20,6 +20,7 @@
     <h1><%= def.label %></h1>
     <% if (def.help) { %><p class="muted"><%= def.help %></p><% } %>
     <p class="muted small">Logged <%= def.period === 'week' ? 'weekly' : 'monthly' %><%= def.higherIsBetter ? '' : ' · lower is better' %></p>
+    <% if (['sw_active', 'sw_waitlist', 'sw_paying'].indexOf(def.key) !== -1) { %><p class="muted small" style="margin-top:.6rem">📈 This can fill in by itself: <a href="/app-data">connect your app's database</a> and choose this number.</p><% } %>
     <% if (def.fromIncome) { %><p class="notice" style="margin-top:.6rem">💵 This fills in from your <a href="/budget#income">income log</a>: <% if (def.fromIncome === 'recurring') { %>each month adds up the payments you ticked <strong>Recurring</strong><% } else { %>each month adds up every payment you logged<% } %>. Type a number below only to use something else for a month; it replaces the income log's figure for that month.</p><% } %>
   </div>
 </div>
