@@ -214,7 +214,7 @@ const form = s => Object.fromEntries(new URLSearchParams(s));
 
   console.log('\nThe migration:');
   const sql = read('migrations/2026-11-18_one_click.sql');
-  ok('adds the kinds, an in-place secret update, and Stripe to the store; marked not applied', /^-- NOT APPLIED/.test(sql) && /'supabase', 'planetscale'/.test(sql) && /data_connection_set_secret/.test(sql) && /'stripe', 'shopify'/.test(sql));
+  ok('adds the kinds, an in-place secret update, and Stripe to the store; marked applied', /^-- Applied live/.test(sql) && /'supabase', 'planetscale'/.test(sql) && /data_connection_set_secret/.test(sql) && /'stripe', 'shopify'/.test(sql));
 
   console.log(fail ? `\n${fail} failed` : '\nAll good');
   process.exit(fail ? 1 : 0);

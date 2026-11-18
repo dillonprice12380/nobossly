@@ -1,4 +1,4 @@
--- NOT APPLIED. Run in the Supabase SQL Editor; it ends with one row, ok = true.
+-- Applied live 2026-11-18 (run in the SQL Editor; returned true. Verified: data_connections takes supabase and planetscale, data_connection_set_secret exists and is service-role only, payment_connection_store takes stripe and stays service-role only).
 --
 -- One-click connections (2026-11-18): "Connect with …" sign-ins instead of
 -- pasting keys, where a provider offers it.
