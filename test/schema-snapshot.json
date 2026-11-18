@@ -1226,7 +1226,8 @@
       "secret_id",
       "status",
       "synced_through",
-      "user_id"
+      "user_id",
+      "pending"
     ],
     "forum_follows": [
       "created_at",

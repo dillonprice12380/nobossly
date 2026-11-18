@@ -5,11 +5,5 @@
     "a reminder. Once a migration is applied, regenerate schema-snapshot.json and",
     "remove its entries here."
   ],
-  "migrations": {
-    "2026-11-18_affiliate_connections.sql": {
-      "payment_connections": [
-        "pending"
-      ]
-    }
-  }
+  "migrations": {}
 }

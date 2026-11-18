@@ -1,4 +1,4 @@
--- NOT APPLIED. Run in the Supabase SQL Editor; it ends with one row, ok = true.
+-- Applied live 2026-11-18 (run in the SQL Editor; returned true. Verified: the 8 networks in the provider check, payment_connections.pending readable but not writable by members, payment_connection_store takes them and stays service-role only).
 --
 -- Affiliate networks in the income log (2026-11-18). A member connects their
 -- own affiliate accounts (impact.com, CJ, Awin, Rakuten, PartnerStack,

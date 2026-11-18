@@ -288,7 +288,7 @@ const pendingOf = sc => (sc.writes.find(w => w.table === 'payment_connections' &
   ok('...a connected one shows the pending total, the error, sync and disconnect', pc.includes('$4.00 pending') && pc.includes('did not accept') && pc.includes('action="/budget/connect/affiliate/impact/sync"') && pc.includes('action="/budget/connect/affiliate/impact/disconnect"'));
   const routes = read('src/routes/connect.js');
   ok('routes: a page, connect, sync and disconnect per network; secrets stored by the server', /'\/connect\/affiliate\/:network\(' \+ NETS \+ '\)'/.test(routes) && routes.includes("/sync'") && routes.includes("/disconnect'") && read('src/connections/affiliates/index.js').includes('store(sc, userId, key'));
-  ok('the migration is marked not applied, with pending', /^-- NOT APPLIED/.test(read('migrations/2026-11-18_affiliate_connections.sql')) && JSON.stringify(require('./schema-pending.json').migrations['2026-11-18_affiliate_connections.sql']) === '{"payment_connections":["pending"]}');
+  ok('the migration is marked applied, and pending is in the live snapshot', /^-- Applied live/.test(read('migrations/2026-11-18_affiliate_connections.sql')) && !require('./schema-pending.json').migrations['2026-11-18_affiliate_connections.sql'] && require('./schema-snapshot.json').columns.payment_connections.includes('pending'));
 
   if (process.env.AFF_OUT) {
     const fix = h => h.replace(/href="\/css\/([a-z]+)\.css\?v=\d+"/g, (m, n) => 'href="' + path.join(ROOT, 'public/css/' + n + '.css') + '"');
