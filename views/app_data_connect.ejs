@@ -33,7 +33,7 @@
   <% } %>
   <div class="grid-2">
     <div class="card">
-      <h2 style="margin-top:0">Make a read-only login</h2>
+      <h2 style="margin-top:0"><%= preset.kind === 'wordpress' ? 'Make an application password' : preset.kind === 'firebase' ? 'Make a read-only key' : 'Make a read-only login' %></h2>
       <ol class="small" style="margin:0;padding-left:1.1rem;line-height:1.75"><% preset.where.forEach(function (w) { %><li><%= w %></li><% }) %></ol>
       <% if (preset.sql) { %><pre class="ad-sql"><code><%= preset.sql %></code></pre><% } %>
       <p class="muted small" style="margin:.7rem 0 0">A login that can change anything is refused, so NoBossly can only ever read.</p>
