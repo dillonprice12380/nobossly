@@ -77,6 +77,8 @@ const PRESETS = {
       'Under Keys, add a JSON key, open the file and paste all of it here.'
     ] },
   wordpress: { key: 'wordpress', kind: 'wordpress', label: 'WordPress', emoji: '📝', blurb: 'New registered users on a WordPress site.',
+    click: { action: '/app-data/connect/wordpress/start', field: { name: 'url', label: 'Your site address', placeholder: 'https://example.com' }, button: 'Connect with WordPress',
+      note: 'You go to your own site, sign in as an administrator, and click Approve. WordPress makes a password just for NoBossly, which you can revoke from your profile at any time.' },
     fields: [
       { name: 'url', label: 'Site address', placeholder: 'https://example.com' },
       { name: 'user', label: 'Username (an administrator)' },

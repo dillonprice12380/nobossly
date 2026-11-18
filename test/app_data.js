@@ -155,6 +155,22 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
   ok('registrations are counted until they are older than 90 days; no active numbers', wc.total === 312 && wc.byDay['2026-11-17'] === 2 && wc.active7 === null);
   ok('a site on a private address is refused', /private network/.test((await wp.verify(wpIn, Object.assign({}, wopts, { lookup: lookupAs('192.168.0.10') }))).error));
 
+  console.log('\nConnect with WordPress (its own approval page):');
+  {
+    const disc = fakeFetch({ 'https://example.com/wp-json/': () => [200, { authentication: { 'application-passwords': { endpoints: { authorization: 'https://example.com/wp-admin/authorize-application.php' } } } }] });
+    const a = await wp.authorizeUrl('example.com/wp-admin', { fetchImpl: disc, lookup: lookupAs('34.1.1.1') });
+    ok('the site\'s approval page is found from its REST index', a.url === 'https://example.com/wp-admin/authorize-application.php' && a.site === 'https://example.com' && disc.calls[0].opts.redirect === 'manual');
+    const link = new URL(wp.approvalLink(a, 'https://nobossly.com/app-data/connect/wordpress/callback?state=s1', 'https://nobossly.com/app-data/connect/wordpress/callback?state=s1&rejected=1'));
+    ok('...and NoBossly asks for its own named password, coming back here', link.searchParams.get('app_name') === 'NoBossly' && link.searchParams.get('app_id') === wp.APP_ID && /state=s1$/.test(link.searchParams.get('success_url')));
+    const elsewhere = fakeFetch({ 'https://example.com/wp-json/': () => [200, { authentication: { 'application-passwords': { endpoints: { authorization: 'https://evil.example.net/approve' } } } }] });
+    ok('an approval page on another host is refused', /different address/.test((await wp.authorizeUrl('https://example.com', { fetchImpl: elsewhere, lookup: lookupAs('34.1.1.1') })).error));
+    ok('a site without app approval says what to do instead', /paste an application password/.test((await wp.authorizeUrl('https://example.com', { fetchImpl: fakeFetch({ 'https://example.com/wp-json/': () => [200, { namespaces: [] }] }), lookup: lookupAs('34.1.1.1') })).error));
+    ok('http and private sites are refused', !!(await wp.authorizeUrl('http://example.com')).error && /private network/.test((await wp.authorizeUrl('https://example.com', { lookup: lookupAs('10.0.0.1') })).error));
+    const routes = read('src/routes/app_data.js');
+    ok('the callback checks the state from a cookie and that the site is the one asked for', /timingSafeEqual/.test(routes) && /host !== want\.host/.test(routes) && /rejected/.test(routes));
+    ok('...then the password it got is checked like a pasted one', /AD\.connect\(sc, req\.user\.id, 'wordpress', \{ url: want\.site, user: req\.query\.user_login, password: req\.query\.password \}\)/.test(routes));
+  }
+
   console.log('\nConnecting and choosing what to count:');
   {
     const stored = [];
@@ -215,6 +231,7 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
   ok('before the migration it says "being switched on"', render('app_data.ejs', { list: [], sums: {}, ready: false, presets: Object.values(AD.PRESETS), max: 3, canSync: true, everyHours: 6 }).includes('Being set up'));
   const cp = render('app_data_connect.ejs', { preset: AD.PRESETS.supabase, ready: true, full: false, max: 3 });
   ok('the Supabase page shows the read-only role to make and the pooler string', !cp.startsWith('ERR') && cp.includes('exception when duplicate_object then') && cp.includes('create or replace view nobossly.users as select id, created_at, last_sign_in_at from auth.users;') && cp.includes('grant select on nobossly.users to nobossly_reader;') && !cp.includes('grant usage on schema auth') && cp.includes('Session pooler') && /name="url" type="password"/.test(cp), cp.startsWith('ERR') ? cp.slice(0, 300) : undefined);
+  ok('WordPress leads with Connect with WordPress, the manual way folded away', (p => /action="\/app-data\/connect\/wordpress\/start"/.test(p) && /<details class="ad-manual">/.test(p))(render('app_data_connect.ejs', { preset: AD.PRESETS.wordpress, ready: true, full: false, max: 3 })));
   ok('Firebase asks for the key file in a text box', /<textarea name="key"/.test(render('app_data_connect.ejs', { preset: AD.PRESETS.firebase, ready: true, full: false, max: 3 })));
   const su = render('app_data_setup.ejs', { conn: { id: 'c1', kind: 'postgres', label: 'Supabase', host_label: 'h', status: 'setup', config: null }, tables, tablesError: null, needsTable: true, fillable: AD.fillable(['sw_active', 'sw_waitlist']), defaults: AD.DEFAULT_FILL });
   ok('set-up lists the readable tables and guesses the columns', !su.startsWith('ERR') && su.includes('<option value="auth.users"') && /value="created_at" selected/.test(su) && /value="last_sign_in_at" selected/.test(su), su.startsWith('ERR') ? su.slice(0, 300) : undefined);

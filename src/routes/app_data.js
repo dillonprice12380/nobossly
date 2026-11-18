@@ -9,6 +9,9 @@ const router = require('express').Router();
 const { serviceClient } = require('../supabase');
 const AD = require('../app_data');
 const dashboards = require('../path_dashboards');
+const crypto = require('crypto');
+const wpConnect = require('../app_data/wordpress');
+const SITE = (process.env.SITE_URL || 'https://nobossly.com').replace(/\/$/, '');
 
 const service = () => { try { return serviceClient(); } catch (_) { return null; } };
 const enc = encodeURIComponent;
@@ -59,6 +62,46 @@ router.post('/connect/:preset(' + PRESETS + ')', async (req, res, next) => {
     if (r.error === 'save') return go(res, back, missing(r.dbError) ? 'Connecting app databases is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.');
     if (r.error) return go(res, back, r.error);
     go(res, '/app-data/' + r.id + '/setup', 'Connected. Now choose what to count.');
+  } catch (e) { next(e); }
+});
+
+// ------------------------------------------------- Connect with WordPress
+// The member names their site; WordPress's own approval page does the rest
+// and sends them back here with an application password made for NoBossly.
+const WP_COOKIE = 'nb_wp_connect';
+const cookieOpts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/app-data', maxAge: 15 * 60 * 1000 };
+
+router.post('/connect/wordpress/start', async (req, res, next) => {
+  try {
+    const back = '/app-data/connect/wordpress';
+    const a = await wpConnect.authorizeUrl(req.body && req.body.url);
+    if (a.error) return go(res, back, a.error);
+    const state = crypto.randomBytes(18).toString('base64url');
+    res.cookie(WP_COOKIE, JSON.stringify({ state, site: a.site, host: a.host }), cookieOpts);
+    const cb = SITE + '/app-data/connect/wordpress/callback?state=' + state;
+    res.redirect(wpConnect.approvalLink(a, cb, cb + '&rejected=1'));
+  } catch (e) { next(e); }
+});
+
+router.get('/connect/wordpress/callback', async (req, res, next) => {
+  try {
+    const back = '/app-data/connect/wordpress';
+    let want = null;
+    try { want = JSON.parse((req.cookies && req.cookies[WP_COOKIE]) || 'null'); } catch (_) { want = null; }
+    res.clearCookie(WP_COOKIE, { path: '/app-data' });
+    const got = String(req.query.state || '');
+    const same = want && want.state && got.length === want.state.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want.state));
+    if (!same) return go(res, back, 'That WordPress approval did not finish. Try again.');
+    if (req.query.rejected) return go(res, back, 'WordPress was not connected (you said no).');
+    let host = null;
+    try { host = new URL(String(req.query.site_url || '')).hostname.toLowerCase(); } catch (_) { host = null; }
+    if (host !== want.host) return go(res, back, 'That approval came from a different site. Try again.');
+    const sc = service();
+    if (!sc) return go(res, back, 'Connecting is not switched on right now. Try again later.');
+    const r = await AD.connect(sc, req.user.id, 'wordpress', { url: want.site, user: req.query.user_login, password: req.query.password });
+    if (r.error === 'save') return go(res, back, missing(r.dbError) ? 'Connecting app databases is being switched on. Check back shortly.' : 'Could not save the connection. Please try again.');
+    if (r.error) return go(res, back, r.error);
+    go(res, '/app-data/' + r.id + '/setup', 'WordPress connected. Choose what to fill in, then save.');
   } catch (e) { next(e); }
 });
 
