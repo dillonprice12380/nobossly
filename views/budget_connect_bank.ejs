@@ -48,22 +48,35 @@
         return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
           .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'That did not work. Try again.'); return j; }); });
       };
+      // Banks that log in on their own site (Chase, Bank of America…) send the
+      // member back here with ?oauth_state_id=…; Plaid then finishes in the same
+      // Link session, so the link token is kept in this tab until then.
+      var KEY = 'nb_plaid_link_token';
+      var keep = function (t) { try { sessionStorage.setItem(KEY, t); } catch (_) {} };
+      var kept = function () { try { return sessionStorage.getItem(KEY); } catch (_) { return null; } };
+      var open = function (token, receivedRedirectUri) {
+        var handler = window.Plaid.create(Object.assign({
+          token: token,
+          onSuccess: function (publicToken, metadata) {
+            try { sessionStorage.removeItem(KEY); } catch (_) {}
+            say('Connecting and fetching your transactions…');
+            post('/budget/connect/bank/exchange', { public_token: publicToken, metadata: { institution: metadata.institution, accounts: metadata.accounts } })
+              .then(function (r) { window.location = r.redirect || '/budget/review'; })
+              .catch(function (e) { btn.disabled = false; say(e.message); });
+          },
+          onExit: function (err) { btn.disabled = false; say(err ? 'The bank did not connect: ' + (err.display_message || err.error_message || 'try again') + '.' : ''); }
+        }, receivedRedirectUri ? { receivedRedirectUri: receivedRedirectUri } : {}));
+        handler.open();
+      };
+      if (/[?&]oauth_state_id=/.test(window.location.search) && kept() && window.Plaid) {
+        btn.disabled = true; say('Finishing with your bank…');
+        open(kept(), window.location.href);
+      }
       btn.addEventListener('click', function () {
         if (!window.Plaid) return say('The bank window could not load. Check your connection and try again.');
         btn.disabled = true; say('Opening…');
-        post('/budget/connect/bank/link-token').then(function (j) {
-          var handler = window.Plaid.create({
-            token: j.link_token,
-            onSuccess: function (publicToken, metadata) {
-              say('Connecting and fetching your transactions…');
-              post('/budget/connect/bank/exchange', { public_token: publicToken, metadata: { institution: metadata.institution, accounts: metadata.accounts } })
-                .then(function (r) { window.location = r.redirect || '/budget/review'; })
-                .catch(function (e) { btn.disabled = false; say(e.message); });
-            },
-            onExit: function (err) { btn.disabled = false; say(err ? 'The bank did not connect: ' + (err.display_message || err.error_message || 'try again') + '.' : ''); }
-          });
-          handler.open();
-        }).catch(function (e) { btn.disabled = false; say(e.message); });
+        post('/budget/connect/bank/link-token').then(function (j) { keep(j.link_token); open(j.link_token); })
+          .catch(function (e) { btn.disabled = false; say(e.message); });
       });
     })();
   </script>

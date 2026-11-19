@@ -1,0 +1,15 @@
+{
+  "id": "com.nobossly.connect",
+  "version": "1.0.0",
+  "name": "NoBossly",
+  "icon": "",
+  "permissions": [
+    { "permission": "charge_read", "purpose": "Log each payment you receive in your NoBossly income log." },
+    { "permission": "payment_intent_read", "purpose": "Tell completed payments from failed or refunded ones." },
+    { "permission": "invoice_read", "purpose": "Mark subscription payments as recurring in your income log." },
+    { "permission": "subscription_read", "purpose": "Mark subscription payments as recurring in your income log." }
+  ],
+  "stripe_api_access_type": "oauth",
+  "distribution_type": "public",
+  "allowed_redirect_uris": ["https://nobossly.com/budget/connect/stripe/callback"]
+}
