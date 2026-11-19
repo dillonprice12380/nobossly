@@ -12,18 +12,18 @@
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 
-<% list.forEach(function (c) { var s = sums[c.id]; var p = byKey[c.provider] || byKey[c.kind] || { emoji: '🗄️' }; %>
+<% list.forEach(function (c) { var trs = sums[c.id] || []; var p = byKey[c.provider] || byKey[c.kind] || byKey[{ google: 'firebase' }[c.provider]] || { emoji: '🗄️' }; %>
   <section class="card ad-conn">
     <div class="ad-head">
       <div>
         <h2><%= p.emoji %> <%= c.label || 'Your app' %> <span class="muted small"><%= c.host_label || '' %></span></h2>
         <p class="muted small">
           <% if (c.status === 'setup') { %>Connected. Choose what to count to start.<% } else { %>Last counted <%= when(c.last_synced_at) %><% } %>
-          <% if (c.config && c.config.table) { %> · <code><%= c.config.schema %>.<%= c.config.table %></code><% } %>
+          <% if (trs.length && c.status !== 'setup') { %> · tracking <%= trs.length %> thing<%= trs.length === 1 ? '' : 's' %><% } %>
         </p>
       </div>
       <div class="cta-row" style="margin:0">
-        <% if (c.status === 'setup') { %><a class="btn btn-primary btn-sm" href="/app-data/<%= c.id %>/setup">Choose what to count</a>
+        <% if (c.status === 'setup') { %><a class="btn btn-primary btn-sm" href="/app-data/<%= c.id %>/setup">Choose what to track</a>
         <% } else { %>
           <% if (canSync) { %><form method="post" action="/app-data/<%= c.id %>/sync" class="inline"><button class="btn btn-ghost btn-sm">Count now</button></form><% } %>
           <a class="btn btn-ghost btn-sm" href="/app-data/<%= c.id %>/setup">Settings</a>
@@ -33,22 +33,30 @@
     </div>
     <% if (c.status === 'error' && c.last_error) { %><p class="small ad-err"><%= c.last_error %></p><% } %>
     <% if (c.status !== 'setup') { %>
-      <div class="ad-tiles">
-        <div class="ad-tile"><span>Users</span><b><%= num(s.total) %></b></div>
-        <div class="ad-tile"><span>New this week</span><b><%= num(s.new7) %></b><em><%= num(s.new30) %> in 30 days</em></div>
-        <div class="ad-tile"><span>Active, last 7 days</span><b><%= num(s.active7) %></b><% if (s.active7 == null) { %><em><%= c.kind === 'wordpress' ? 'WordPress does not record sign-ins' : 'Choose a last-active column' %></em><% } %></div>
-        <div class="ad-tile"><span>Active, last 30 days</span><b><%= num(s.active30) %></b><% if (s.total && s.active30 != null) { %><em><%= Math.round(100 * s.active30 / s.total) %>% of users</em><% } %></div>
+      <div class="ad-trackers">
+        <% trs.forEach(function (s) { var t = s.tracker; %>
+          <div class="ad-tr">
+            <div class="ad-tr-head"><strong><%= t.label %></strong><% if (t.filter) { %> <span class="muted small"><%= t.filter.column %> = <%= t.filter.value %></span><% } %></div>
+            <div class="ad-tiles">
+              <div class="ad-tile"><span>Total</span><b><%= num(s.total) %></b></div>
+              <% if (t.created) { %><div class="ad-tile"><span>New this week</span><b><%= num(s.new7) %></b><em><%= num(s.new30) %> in 30 days</em></div><% } %>
+              <% if (t.active) { %>
+                <div class="ad-tile"><span>Active, 7 days</span><b><%= num(s.active7) %></b></div>
+                <div class="ad-tile"><span>Active, 30 days</span><b><%= num(s.active30) %></b><% if (s.total && s.active30 != null) { %><em><%= Math.round(100 * s.active30 / s.total) %>%</em><% } %></div>
+              <% } %>
+            </div>
+            <% if (t.created && s.hasNew) { %>
+              <figure class="ad-chart" aria-label="<%= t.label %>: new per week, last 12 weeks">
+                <div class="ad-bars">
+                  <% s.weeks.forEach(function (w) { %><div class="ad-bar" title="<%= w.from %> to <%= w.to %>: <%= w.n %> new"><i style="height:<%= Math.max(2, Math.round(100 * w.n / s.max)) %>%"></i><span><%= w.n %></span></div><% }) %>
+                </div>
+                <div class="ad-axis muted small"><span>12 weeks ago</span><span>this week</span></div>
+              </figure>
+            <% } %>
+          </div>
+        <% }) %>
       </div>
-      <figure class="ad-chart" aria-label="New users per week, last 12 weeks">
-        <figcaption class="muted small">New users per week</figcaption>
-        <div class="ad-bars">
-          <% s.weeks.forEach(function (w) { %>
-            <div class="ad-bar" title="<%= w.from %> to <%= w.to %>: <%= w.n %> new"><i style="height:<%= Math.max(2, Math.round(100 * w.n / s.max)) %>%"></i><span><%= w.n %></span></div>
-          <% }) %>
-        </div>
-        <div class="ad-axis muted small"><span><%= s.weeks[0].from %></span><span>this week</span></div>
-      </figure>
-      <% if (c.config && c.config.fill && Object.keys(c.config.fill).length) { %><p class="muted small" style="margin:.6rem 0 0">Also fills in your dashboard numbers each time it counts. Change that in Settings.</p><% } %>
+      <% if (c.config && Array.isArray(c.config.fill) && c.config.fill.length) { %><p class="muted small" style="margin:.6rem 0 0">Also fills in your dashboard numbers each time it counts. Change that in Settings.</p><% } %>
     <% } %>
   </section>
 <% }) %>
@@ -88,5 +96,10 @@
   .ad-pick { display: flex; flex-direction: column; gap: .25rem; text-decoration: none; color: var(--text); }
   .ad-pick:hover { border-color: var(--accent); }
   .ad-emoji { font-size: 1.4rem; }
+  .ad-trackers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr)); gap: .8rem; margin-top: .9rem; }
+  .ad-tr { border: 1px solid var(--border); border-radius: 12px; padding: .75rem .85rem; }
+  .ad-tr .ad-tiles { margin-top: .5rem; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); }
+  .ad-tr .ad-tile b { font-size: 1.2rem; }
+  .ad-tr .ad-bars { height: 5rem; }
 </style>
 <%- include('partials/foot') %>

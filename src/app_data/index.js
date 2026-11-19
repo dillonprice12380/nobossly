@@ -11,6 +11,7 @@ const C = require('./common');
 const sbapi = require('./supabase_api');
 const ps = require('./planetscale');
 const OA = require('./oauth');
+const TR = require('./trackers');
 const registry = require('../engines/registry');
 const metrics = require('../engines/metrics');
 require('../path_dashboards');   // registers every path's numbers
@@ -43,7 +44,7 @@ grant select on your_database.users to 'nobossly_reader'@'%';   -- your users ta
 
 // What a member can pick on the connect page.
 const PRESETS = {
-  supabase: { key: 'supabase', kind: 'postgres', oauth: 'supabase', oauthNote: 'You sign in to Supabase and pick your project. NoBossly asks only to see your projects and to read your database, and reads through Supabase\'s own read-only access: no role to make, no SQL to run.', label: 'Supabase', emoji: '⚡', blurb: 'Sign-ups and sign-ins from Supabase Auth, or any table.',
+  supabase: { key: 'supabase', kind: 'postgres', oauth: 'supabase', oauthNote: 'You sign in to Supabase, pick your project, then choose which tables to track. Supabase only lets apps run queries with its database read-and-write permission, so its screen says so; NoBossly only ever uses Supabase\'s read-only query, which runs as a database user that cannot change anything. No role to make, no SQL to run.', label: 'Supabase', emoji: '⚡', blurb: 'Sign-ups and sign-ins from Supabase Auth, or any table.',
     fields: [{ name: 'url', label: 'Connection string (Session pooler)', placeholder: 'postgresql://nobossly_reader.abcd…@aws-0-….pooler.supabase.com:5432/postgres', secret: true }],
     sql: SUPABASE_SQL,
     where: [
@@ -222,25 +223,29 @@ const DEFAULT_FILL = { total: 'sw_waitlist', active: 'sw_active' };
 function configFrom(conn, body, tables) {
   const b = body || {};
   const cfg = {};
+  let trackers;
   if (needsTable(conn.kind)) {
-    const t = (tables || []).find(x => x.key === String(b.table || ''));
-    if (!t) return { error: 'Choose the table your users are in.' };
-    const col = name => t.columns.find(c => c.name === String(name || ''));
-    const created = col(b.created);
-    if (!created) return { error: 'Choose the column that says when each user signed up.' };
-    const active = b.active ? col(b.active) : null;
-    if (b.active && !active) return { error: 'That last-active column is not in the table.' };
-    Object.assign(cfg, { schema: t.schema, table: t.table, created: created.name, createdEpoch: !!created.epoch },
-      active ? { active: active.name, activeEpoch: !!active.epoch } : {});
+    // The round-1 form (one table) still works: it becomes one tracker.
+    const form = b.t_table === undefined && b.table !== undefined
+      ? { t_table: b.table, t_label: 'Users', t_created: b.created, t_active: b.active || '' } : b;
+    const r = TR.fromForm(form, tables);
+    if (r.error) return { error: r.error };
+    trackers = r.trackers;
+    cfg.trackers = trackers;
+  } else {
+    trackers = [{ key: 'users', label: 'Users', active: conn.kind === 'wordpress' ? null : 'built-in', created: 'built-in' }];
   }
+  // Dashboard numbers to fill in: which count, from which tracker.
   const keys = new Set(fillable().map(m => m.key));
-  const fill = {};
+  const fill = [];
   for (const k of ['total', 'active', 'new']) {
-    const v = String(b['fill_' + k] || '');
-    if (v && keys.has(v)) fill[k] = v;
+    const metric = String(b['fill_' + k] || '');
+    if (!metric || !keys.has(metric)) continue;
+    const tk = String(b['fill_' + k + '_from'] || '') || (trackers.find(t => (k !== 'active' || t.active) && (k !== 'new' || t.created)) || {}).key;
+    const tr = trackers.find(t => t.key === tk);
+    if (!tr || (k === 'active' && !tr.active) || (k === 'new' && !tr.created)) continue;
+    fill.push({ what: k, tracker: tr.key, metric });
   }
-  if (fill.active && needsTable(conn.kind) && !cfg.active) delete fill.active;
-  if (fill.active && conn.kind === 'wordpress') delete fill.active;
   cfg.fill = fill;
   if (conn.config && conn.config.project) cfg.project = conn.config.project;
   return { config: cfg };
@@ -251,36 +256,57 @@ async function saveConfig(sc, conn, config) {
   return error ? { error: 'Could not save that. Please try again.' } : { ok: true };
 }
 
-/** Count, save the day's numbers, and fill in the member's numbers. */
+const ready = conn => !needsTable(conn.kind) || TR.trackersOf(conn.config).length > 0;
+
+/** Count each tracker, save the day's numbers, and fill in the member's numbers. */
 async function sync(sc, conn, opts = {}) {
   const now = opts.now || new Date();
-  if (needsTable(conn.kind) && !(conn.config && conn.config.table)) return { error: 'Choose what to count first.' };
+  if (!ready(conn)) return { error: 'Choose what to track first.' };
   const p = await parsedFor(sc, conn, opts);
   if (p.error) return C.fail(sc, conn, p.error, now);
-  const got = await KINDS[conn.kind].counts(p, conn.config || {}, Object.assign({}, opts, { now: now.getTime ? now.getTime() : now })).catch(e => ({ error: 'Counting failed: ' + String(e && e.message || e).slice(0, 120) }));
-  if (got.error) return C.fail(sc, conn, got.error, now);
-  const { history, today } = C.rowsOf(conn, got, now);
-  const h = await sc.from('app_metrics').upsert(history, { onConflict: 'connection_id,day' });
-  const t = await sc.from('app_metrics').upsert([today], { onConflict: 'connection_id,day' });
-  if (h.error || t.error) return C.fail(sc, conn, 'Could not save the numbers. We will try again later.', now);
-  const filled = [];
-  const fill = (conn.config && conn.config.fill) || {};
-  const values = { total: got.total, active: got.active30, new: Object.values(got.byDay || {}).reduce((a, b) => a + b, 0) };
-  for (const k of ['total', 'active', 'new']) {
-    const key = fill[k];
-    if (!key || values[k] == null || !registry.metric(key)) continue;
-    // "New" means this period's sign-ups: this month's, or this week's.
-    let v = values[k];
-    if (k === 'new') {
-      const def = registry.metric(key), start = metrics.periodOf(def, '', now);
-      v = Object.entries(got.byDay || {}).filter(([d]) => d >= start).reduce((a, [, n]) => a + n, 0);
-    }
-    if (k === 'active' && registry.metric(key).period === 'week') v = got.active7;
-    if (v == null) continue;
-    try { await metrics.log(sc, conn.user_id, key, '', v, 'From ' + (conn.label || 'your app') + ', counted by NoBossly', now); filled.push(key); } catch (_) { /* a number we could not log is skipped */ }
+  const nowMs = now.getTime ? now.getTime() : now;
+  let results, trackers;
+  if (needsTable(conn.kind)) {
+    trackers = TR.trackersOf(conn.config);
+    const got = await KINDS[conn.kind].countTrackers(p, trackers, Object.assign({}, opts, { now: nowMs })).catch(e => ({ error: 'Counting failed: ' + String(e && e.message || e).slice(0, 120) }));
+    if (got.error) return C.fail(sc, conn, got.error, now);
+    results = got.results;
+  } else {
+    trackers = [{ key: 'users', label: 'Users', created: 'built-in', active: conn.kind === 'wordpress' ? null : 'built-in' }];
+    const got = await KINDS[conn.kind].counts(p, conn.config || {}, Object.assign({}, opts, { now: nowMs })).catch(e => ({ error: 'Counting failed: ' + String(e && e.message || e).slice(0, 120) }));
+    if (got.error) return C.fail(sc, conn, got.error, now);
+    results = { users: got };
   }
-  await sc.from('data_connections').update({ status: 'active', last_error: null, last_synced_at: now.toISOString() }).eq('id', conn.id);
-  return { total: got.total, active7: got.active7, active30: got.active30, filled };
+  // Each tracker: 90 days of new items (if it has a date), then today with the totals.
+  const history = [], today = [];
+  const day0 = C.ymd(now);
+  for (const tr of trackers) {
+    const r = results[tr.key];
+    if (!r || r.error) continue;
+    if (r.byDay) for (let i = C.DAYS - 1; i >= 1; i--) {
+      const d = C.ymd(nowMs - i * 86400000);
+      history.push({ connection_id: conn.id, user_id: conn.user_id, tracker: tr.key, day: d, new_items: C.int(r.byDay[d]) || 0 });
+    }
+    today.push({ connection_id: conn.id, user_id: conn.user_id, tracker: tr.key, day: day0, total: C.int(r.total),
+      new_items: r.byDay ? C.int(r.byDay[day0]) || 0 : null, active_7d: C.int(r.active7), active_30d: C.int(r.active30) });
+  }
+  const h = history.length ? await sc.from('app_tracker_days').upsert(history, { onConflict: 'connection_id,tracker,day' }) : {};
+  const t = today.length ? await sc.from('app_tracker_days').upsert(today, { onConflict: 'connection_id,tracker,day' }) : {};
+  if (h.error || t.error) return C.fail(sc, conn, 'Could not save the numbers. We will try again later.', now);
+  const problems = trackers.map(tr => results[tr.key] && results[tr.key].error).filter(Boolean);
+
+  const filled = [];
+  for (const f of Array.isArray(conn.config && conn.config.fill) ? conn.config.fill : []) {
+    const r = results[f.tracker], def = registry.metric(f.metric);
+    if (!r || r.error || !def) continue;
+    let v = f.what === 'total' ? r.total : f.what === 'active' ? (def.period === 'week' ? r.active7 : r.active30) : null;
+    if (f.what === 'new' && r.byDay) { const start = metrics.periodOf(def, '', now); v = Object.entries(r.byDay).filter(([d]) => d >= start).reduce((a, [, n]) => a + n, 0); }
+    if (v == null || !isFinite(v)) continue;
+    try { await metrics.log(sc, conn.user_id, f.metric, '', v, 'From ' + (conn.label || 'your app') + ', counted by NoBossly', now); filled.push(f.metric); } catch (_) { /* a number we could not log is skipped */ }
+  }
+  await sc.from('data_connections').update({ status: problems.length === trackers.length ? 'error' : 'active', last_error: problems.length ? problems.join(' ').slice(0, 300) : null, last_synced_at: now.toISOString() }).eq('id', conn.id);
+  const first = results[trackers[0].key] || {};
+  return { counted: trackers.length - problems.length, problems, total: first.total, active30: first.active30, filled, error: problems.length === trackers.length ? problems[0] : null };
 }
 
 // The background pass: every set-up connection not synced in the last few hours.
@@ -291,28 +317,28 @@ async function runAll(sc, { now = new Date(), limit = 30 } = {}) {
   const out = { synced: 0, errors: 0 };
   if (error) return out;
   for (const c of data || []) {
-    if (c.kind === 'planetscale' || (needsTable(c.kind) && !(c.config && c.config.table))) continue;
+    if (c.kind === 'planetscale' || !ready(c)) continue;
     const r = await sync(sc, c, { now }).catch(e => ({ error: e.message }));
     out.synced++; if (r.error) out.errors++;
   }
   return out;
 }
 
-/** What the member's page shows for one connection, from app_metrics rows (oldest first). */
+/** What the page shows for one tracker, from its app_tracker_days rows. */
 function summary(rows, now = new Date()) {
   const list = (rows || []).slice().sort((a, b) => (a.day < b.day ? -1 : 1));
-  const last = [...list].reverse().find(r => r.total_users != null) || null;
-  const sumSince = days => { const from = C.ymd(now.getTime() - (days - 1) * 86400000); return list.filter(r => r.day >= from).reduce((a, r) => a + (r.new_users || 0), 0); };
+  const last = [...list].reverse().find(r => r.total != null) || null;
+  const hasNew = list.some(r => r.new_items != null);
+  const sumSince = days => { const from = C.ymd(now.getTime() - (days - 1) * 86400000); return list.filter(r => r.day >= from).reduce((a, r) => a + (r.new_items || 0), 0); };
   const weeks = [];
   for (let i = 11; i >= 0; i--) {
     const end = now.getTime() - i * 7 * 86400000, from = C.ymd(end - 6 * 86400000), to = C.ymd(end);
-    weeks.push({ from, to, n: list.filter(r => r.day >= from && r.day <= to).reduce((a, r) => a + (r.new_users || 0), 0) });
+    weeks.push({ from, to, n: list.filter(r => r.day >= from && r.day <= to).reduce((a, r) => a + (r.new_items || 0), 0) });
   }
   return {
-    total: last ? last.total_users : null, active7: last ? last.active_7d : null, active30: last ? last.active_30d : null,
-    new7: sumSince(7), new30: sumSince(30), weeks, max: Math.max(1, ...weeks.map(w => w.n)),
-    totals: list.filter(r => r.total_users != null).map(r => ({ day: r.day, n: r.total_users })).slice(-30)
+    total: last ? Number(last.total) : null, active7: last ? last.active_7d : null, active30: last ? last.active_30d : null,
+    hasNew, new7: hasNew ? sumSince(7) : null, new30: hasNew ? sumSince(30) : null, weeks, max: Math.max(1, ...weeks.map(w => w.n))
   };
 }
 
-module.exports = { PRESETS, KINDS, MAX, EVERY_HOURS, DEFAULT_FILL, OAUTH_OF, connectOAuth, needsProject, projectsFor, chooseProject, connect, tablesFor, fillable, configFrom, saveConfig, sync, runAll, summary, needsTable, parsedOfSecret, secretOfParsed };
+module.exports = { TR, ready, PRESETS, KINDS, MAX, EVERY_HOURS, DEFAULT_FILL, OAUTH_OF, connectOAuth, needsProject, projectsFor, chooseProject, connect, tablesFor, fillable, configFrom, saveConfig, sync, runAll, summary, needsTable, parsedOfSecret, secretOfParsed };
