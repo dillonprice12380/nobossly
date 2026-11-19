@@ -1,4 +1,4 @@
--- NOT APPLIED. Run in the Supabase SQL Editor; it ends with one row, ok = true.
+-- Applied live 2026-11-19 (run in the SQL Editor; returned true. Verified: app_tracker_days with RLS on, members read but cannot write, anon reads nothing, data_connections.config allows up to 12000 bytes).
 --
 -- App data, round 2 (2026-11-19): a member chooses what to track in their
 -- app's database, not just one users table. Each tracker is a table (and
