@@ -1,5 +1,7 @@
 # One-click connections: what each needs once
 
+Step-by-step sheets with every field filled in: docs/connector-signup-sheets.md.
+
 Each "Connect with …" button shows "Coming soon" (with the paste-a-key way
 still working) until its two environment variables are set. Register
 NoBossly once with each provider, using the redirect URI listed.

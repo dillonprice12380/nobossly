@@ -1,0 +1,21 @@
+# NoBossly's public Shopify app: read-only access to orders, so a member's
+# paid orders land in their NoBossly income log. Fill in client_id from the
+# Dev Dashboard, then run `shopify app deploy` from this folder.
+
+client_id = "PASTE-CLIENT-ID-HERE"
+name = "NoBossly"
+application_url = "https://nobossly.com/budget/connect/shopify"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders"
+
+[auth]
+redirect_urls = ["https://nobossly.com/budget/connect/shopify/callback"]
+
+[webhooks]
+api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://nobossly.com/webhooks/shopify"
