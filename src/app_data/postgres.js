@@ -7,6 +7,7 @@
 const { Client } = require('pg');
 const { resolvePublic } = require('./safety');
 const { TIMEOUT_MS, CONNECT_MS, DAYS } = require('./common');
+const TR = require('./trackers');
 
 // Which host a connection string is for, to name it and pick defaults.
 function providerOf(host) {
@@ -91,14 +92,14 @@ async function verify(p, opts = {}) {
   finally { await o.close(); }
 }
 
-// Tables the role can read that have a date column to count sign-ups by.
+// Every table the role can read, with its columns, for choosing what to track.
 const TABLES = `select table_schema as s, table_name as t, column_name as c, data_type as d
   from information_schema.columns
-  where table_schema not in ('pg_catalog', 'information_schema') and table_schema not like 'pg_toast%'
-    and data_type in ('timestamp with time zone', 'timestamp without time zone', 'date', 'bigint', 'integer')
+  where table_schema not in ('pg_catalog', 'information_schema') and table_schema not like 'pg_%'
+    and table_schema not in ('storage', 'realtime', 'vault', 'pgsodium', 'supabase_functions', 'supabase_migrations', 'net', 'cron', 'extensions', 'graphql', 'graphql_public', 'pgbouncer')
     and has_column_privilege(quote_ident(table_schema) || '.' || quote_ident(table_name), column_name, 'SELECT')
-  order by (table_schema = 'nobossly' and table_name = 'users') desc, (table_schema = 'auth' and table_name = 'users') desc, (table_name ~* 'user|member|account|customer|profile|signup|waitlist|subscriber') desc, table_schema, table_name, ordinal_position
-  limit 600`;
+  order by (table_schema = 'nobossly' and table_name = 'users') desc, (table_schema = 'auth' and table_name = 'users') desc, table_schema, table_name, ordinal_position
+  limit 3000`;
 
 async function tables(p, opts = {}) {
   const o = await open(p, opts);
@@ -113,10 +114,32 @@ function group(rows) {
   const by = new Map();
   for (const r of rows) {
     const k = r.s + '.' + r.t;
+    if (r.s === 'auth' && r.t !== 'users') continue;
     if (!by.has(k)) by.set(k, { schema: r.s, table: r.t, key: k, columns: [] });
-    by.get(k).columns.push({ name: r.c, type: r.d, epoch: /int/.test(r.d) });
+    by.get(k).columns.push({ name: r.c, type: r.d, epoch: /int/.test(r.d) && !/^(id|.*_id)$/.test(r.c) });
   }
-  return [...by.values()].filter(t => t.columns.some(c => !c.epoch || /creat|join|sign|regist|_at$|time/i.test(c.name))).slice(0, 80);
+  return [...by.values()].slice(0, 150);
+}
+
+/** Counts for each tracker, over one connection. → { results: { key: counts | { error } } } */
+async function countTrackers(p, trackers, opts = {}) {
+  const o = await open(p, opts);
+  if (o.error) return { error: o.error };
+  const results = {};
+  try {
+    for (const tr of trackers) {
+      try {
+        const chk = await o.client.query('select column_name from information_schema.columns where table_schema = $1 and table_name = $2', [tr.schema, tr.table]);
+        const have = new Set(chk.rows.map(r => r.column_name));
+        const sq = TR.sqlFor(tr, 'pg');
+        if (!have.size || sq.columns.some(c => !have.has(c))) { results[tr.key] = { error: tr.label + ': the table or a column chosen is no longer there.' }; continue; }
+        const tot = await o.client.query(sq.total, sq.params);
+        const days = sq.days ? await o.client.query(sq.days, sq.params) : { rows: [] };
+        results[tr.key] = TR.countsFrom(tr, tot.rows[0], days.rows);
+      } catch (e) { results[tr.key] = { error: tr.label + ': ' + explain(e) }; await o.client.query('rollback').catch(() => {}); await o.client.query('begin transaction read only').catch(() => {}); }
+    }
+    return { results };
+  } finally { await o.close(); }
 }
 
 // A column as a timestamp expression (whole-second epoch numbers allowed).
@@ -152,4 +175,4 @@ async function counts(p, cfg, opts = {}) {
 // nobossly.users view the connect page has the member make.
 const SUGGEST = { schema: 'nobossly', table: 'users', created: 'created_at', active: 'last_sign_in_at' };
 
-module.exports = { parse, providerOf, verify, tables, counts, explain, group, q, SUGGEST, WRITABLE };
+module.exports = { parse, providerOf, verify, tables, counts, countTrackers, explain, group, q, SUGGEST, WRITABLE };

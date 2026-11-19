@@ -183,24 +183,56 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
     ok('...three at most', /up to 3/.test(full.error));
     ok('secrets round-trip for each kind', AD.parsedOfSecret('postgres', AD.secretOfParsed('postgres', sp)).host === sp.host && AD.parsedOfSecret('firebase', AD.secretOfParsed('firebase', fp)).email === fp.email && AD.parsedOfSecret('wordpress', AD.secretOfParsed('wordpress', wpIn)).user === 'ana');
   }
-  const tables = [{ schema: 'auth', table: 'users', key: 'auth.users', columns: [{ name: 'created_at', epoch: false }, { name: 'last_sign_in_at', epoch: false }] }, { schema: 'public', table: 'waitlist', key: 'public.waitlist', columns: [{ name: 'joined', epoch: true }] }];
+  const T = (schema, table, cols) => ({ schema, table, key: schema + '.' + table, columns: cols.map(([name, type]) => ({ name, type, epoch: /int/.test(type) && !/^(id|.*_id)$/.test(name) })) });
+  const tables = [
+    T('auth', 'users', [['id', 'uuid'], ['created_at', 'timestamp with time zone'], ['last_sign_in_at', 'timestamp with time zone']]),
+    T('public', 'profiles', [['id', 'uuid'], ['role', 'text'], ['email', 'text'], ['created_at', 'timestamp with time zone']]),
+    T('public', 'jobs', [['id', 'bigint'], ['title', 'text'], ['status', 'text'], ['published_at', 'timestamp with time zone']]),
+    T('public', 'blog_posts', [['id', 'uuid'], ['title', 'text']]),
+    T('public', 'waitlist', [['id', 'bigint'], ['joined', 'bigint']])
+  ];
   const pgConn = { id: 'c1', user_id: 'me', kind: 'postgres' };
-  const cfg = AD.configFrom(pgConn, { table: 'auth.users', created: 'created_at', active: 'last_sign_in_at', fill_total: 'sw_waitlist', fill_active: 'sw_active', fill_new: 'not_a_metric' }, tables);
-  ok('a table and columns from the list are taken; numbers to fill are checked', !cfg.error && cfg.config.table === 'users' && cfg.config.active === 'last_sign_in_at' && cfg.config.fill.total === 'sw_waitlist' && cfg.config.fill.active === 'sw_active' && !cfg.config.fill.new);
-  ok('a table that was not listed is refused (no typed SQL)', !!AD.configFrom(pgConn, { table: 'auth.users; drop table x', created: 'created_at' }, tables).error && !!AD.configFrom(pgConn, { table: 'auth.users', created: 'email' }, tables).error);
-  ok('epoch columns are remembered as such', AD.configFrom(pgConn, { table: 'public.waitlist', created: 'joined' }, tables).config.createdEpoch === true);
-  ok('without a last-active column, active users are not filled in', !AD.configFrom(pgConn, { table: 'auth.users', created: 'created_at', fill_active: 'sw_active' }, tables).config.fill.active);
-  ok('WordPress never fills active users; Firebase needs no table', !AD.configFrom({ kind: 'wordpress' }, { fill_active: 'sw_active', fill_total: 'sw_waitlist' }).config.fill.active && !AD.configFrom({ kind: 'firebase' }, { fill_active: 'sw_active' }).error);
+  const form = {
+    t_table: ['auth.users', 'public.profiles', 'public.profiles', 'public.jobs', 'public.blog_posts', ''],
+    t_label: ['Users', 'Job seekers', 'Employers', 'Job posts', '', 'ignored'],
+    t_created: ['created_at', 'created_at', 'created_at', 'published_at', '', ''],
+    t_active: ['last_sign_in_at', '', '', '', '', ''],
+    t_fcol: ['', 'role', 'role', 'status', '', ''],
+    t_fval: ['', 'job_seeker', 'employer', 'open', '', ''],
+    fill_total: 'sw_waitlist', fill_total_from: 't3', fill_active: 'sw_active', fill_active_from: 't2', fill_new: 'not_a_metric'
+  };
+  const cfg = AD.configFrom(pgConn, form, tables);
+  const trs = cfg.config && cfg.config.trackers;
+  ok('several things can be tracked, the same table twice with different filters', !cfg.error && trs.length === 5 && trs[1].filter.value === 'job_seeker' && trs[2].filter.value === 'employer' && trs[2].label === 'Employers', cfg.error);
+  ok('...inventory without a date is fine; an unnamed row is named for its table', !trs[4].created && trs[4].label === 'Blog Posts' && trs[0].active === 'last_sign_in_at');
+  ok('numbers to fill come from the tracker chosen; active only from one with a last-active column', cfg.config.fill.length === 1 && cfg.config.fill[0].tracker === 't3' && cfg.config.fill[0].metric === 'sw_waitlist');
+  ok('a table that was not listed is refused (no typed SQL)', !!AD.configFrom(pgConn, { t_table: 'auth.users; drop table x' }, tables).error && !!AD.configFrom(pgConn, { t_table: 'public.jobs', t_created: 'title' }, tables).error);
+  ok('a filter needs a value; at least one row; twelve at most', /say which value/.test(AD.configFrom(pgConn, { t_table: 'public.profiles', t_fcol: 'role', t_fval: '' }, tables).error) && /at least one/.test(AD.configFrom(pgConn, { t_table: '' }, tables).error) && /Up to 12/.test(AD.configFrom(pgConn, { t_table: Array(13).fill('public.jobs') }, tables).error));
+  ok('epoch columns are remembered as such', AD.configFrom(pgConn, { t_table: 'public.waitlist', t_created: 'joined' }, tables).config.trackers[0].createdEpoch === true);
+  ok('the one-table form from before still works', AD.configFrom(pgConn, { table: 'auth.users', created: 'created_at', active: 'last_sign_in_at' }, tables).config.trackers[0].active === 'last_sign_in_at');
+  ok('...and a saved one-table config reads as one tracker', AD.TR.trackersOf({ schema: 'auth', table: 'users', created: 'created_at' })[0].key === 'users');
+  ok('suggestions: the users table, then tables that look like people or content', (sg => sg[0].table === 'users' && sg[0].active === 'last_sign_in_at' && sg.some(x => x.table === 'jobs' && x.created === 'published_at') && sg.some(x => x.table === 'blog_posts') && !sg.some(x => x.table === 'waitlist'))(AD.TR.suggest(tables)));
+  ok('filters are offered on short text columns, not ids, emails or titles', (c => c.includes('role') && c.includes('status') && !c.includes('email') && !c.includes('title') && !c.includes('id'))(tables.flatMap(t => t.columns.filter(AD.TR.isFilterable).map(x => x.name))));
+  {
+    const sq = AD.TR.sqlFor(trs[2], 'pg');
+    ok('SQL: the filter value travels as a parameter', /"role"::text = \$1/.test(sq.total) && sq.params[0] === 'employer' && !sq.total.includes('employer'));
+    const sl = AD.TR.sqlFor(Object.assign({}, trs[2], { filter: { column: 'role', value: "x' or '1'='1" } }), 'lit');
+    ok('...or, for Supabase, as an escaped literal', sl.total.includes("= 'x'' or ''1''=''1'"));
+    const sm = AD.TR.sqlFor(trs[3], 'mysql');
+    ok('...or, for MySQL, as a ? parameter', /CAST\(`status` AS CHAR\) = \?/.test(sm.total) && /`public`\.`jobs`/.test(sm.total));
+    ok('inventory without a date has no per-day query', AD.TR.sqlFor(trs[4], 'pg').days === null);
+  }
+  ok('WordPress never fills active users; Firebase needs no table', !AD.configFrom({ kind: 'wordpress' }, { fill_active: 'sw_active', fill_total: 'sw_waitlist' }).config.fill.some(f => f.what === 'active') && !AD.configFrom({ kind: 'firebase' }, { fill_active: 'sw_active' }).error);
   ok('the numbers on offer are counts, the member\'s path first', AD.fillable(['sw_active']).every(m => m.key) && AD.fillable(['sw_active'])[0].key === 'sw_active' && !AD.fillable().some(m => m.key === 'sw_mrr'));
 
   console.log('\nCounting:');
   {
     const sc = fakeSb({ metric_entries: s => ({ data: s.op === 'upsert' ? [Object.assign({ id: 'm1' }, s.payload)] : [], error: null }) },
       { data_connection_secret: { data: AD.secretOfParsed('firebase', fp), error: null } });
-    const conn = { id: 'c1', user_id: 'me', kind: 'firebase', label: 'Firebase', config: { fill: { total: 'sw_waitlist', active: 'sw_active', new: 'sw_paying' } } };
+    const conn = { id: 'c1', user_id: 'me', kind: 'firebase', label: 'Firebase', config: { fill: [{ what: 'total', tracker: 'users', metric: 'sw_waitlist' }, { what: 'active', tracker: 'users', metric: 'sw_active' }, { what: 'new', tracker: 'users', metric: 'sw_paying' }] } };
     const r = await AD.sync(sc, conn, { fetchImpl: fbFetch(), now });
-    const ups = sc.writes.filter(w => w.table === 'app_metrics');
-    ok('90 days of new users, then today with the totals, saved separately', ups.length === 2 && ups[0].payload.length === 89 && !('total_users' in ups[0].payload[0]) && ups[1].payload[0].day === '2026-11-18' && ups[1].payload[0].total_users === 3 && ups[1].payload[0].active_30d === 2);
+    const ups = sc.writes.filter(w => w.table === 'app_tracker_days');
+    ok('90 days of new users, then today with the totals, saved separately', ups.length === 2 && ups[0].payload.length === 89 && !('total' in ups[0].payload[0]) && ups[1].payload[0].day === '2026-11-18' && ups[1].payload[0].total === 3 && ups[1].payload[0].active_30d === 2 && ups[1].payload[0].tracker === 'users');
     const me = sc.writes.filter(w => w.table === 'metric_entries');
     ok('the chosen dashboard numbers are logged for this month, saying where they came from', r.filled.length === 3 && me.find(w => w.payload.metric === 'sw_waitlist').payload.value === 3 && me.find(w => w.payload.metric === 'sw_active').payload.value === 2 && me[0].payload.period === '2026-11-01' && /counted by NoBossly/.test(me[0].payload.note));
     ok('..."new" counts only this month\'s sign-ups', me.find(w => w.payload.metric === 'sw_paying').payload.value === 1);
@@ -208,10 +240,10 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
     const sc2 = fakeSb({}, { data_connection_secret: { data: AD.secretOfParsed('firebase', fp), error: null } });
     const r2 = await AD.sync(sc2, conn, { fetchImpl: fakeFetch({ 'https://oauth2.googleapis.com/token': () => [400, {}] }), now });
     ok('a refused key marks the connection as needing attention', /did not accept that key/.test(r2.error) && sc2.writes.some(w => w.table === 'data_connections' && w.payload.status === 'error'));
-    ok('a table connection that was never set up is not counted', /Choose what to count/.test((await AD.sync(fakeSb(), { id: 'c2', kind: 'postgres', config: null })).error));
+    ok('a table connection that was never set up is not counted', /Choose what to track/.test((await AD.sync(fakeSb(), { id: 'c2', kind: 'postgres', config: null })).error));
   }
   const rows = [];
-  for (let i = 0; i < 90; i++) rows.push({ day: C.ymd(now.getTime() - i * 86400000), new_users: i < 7 ? 2 : 1, total_users: i === 0 ? 500 : i === 3 ? 480 : null, active_7d: i === 0 ? 40 : null, active_30d: i === 0 ? 120 : null });
+  for (let i = 0; i < 90; i++) rows.push({ day: C.ymd(now.getTime() - i * 86400000), new_items: i < 7 ? 2 : 1, total: i === 0 ? 500 : i === 3 ? 480 : null, active_7d: i === 0 ? 40 : null, active_30d: i === 0 ? 120 : null });
   const s = AD.summary(rows, now);
   ok('the page summary: latest totals, new this week and month, 12 weekly bars', s.total === 500 && s.active30 === 120 && s.new7 === 14 && s.new30 === 37 && s.weeks.length === 12 && s.weeks[11].n === 14 && s.max === 14);
   ok('the background pass counts set-up connections every few hours', /appData\.runAll/.test(read('server.js')) && AD.EVERY_HOURS === 6);
@@ -220,21 +252,24 @@ const lookupAs = (...addrs) => async () => addrs.map(a => ({ address: a, family:
   const base = { title: 'App', user: { id: 'me' }, profile: { id: 'me', username: 'ana', path: 'software' }, plan: 'free', currentPath: '/app-data', canonicalUrl: '', unreadCount: 0, unreadMsgs: 0, metaDescription: '', bodyTheme: '', settings: {}, pendingDeletion: null, reactivated: false, isPremium: false, flags: FLAGS, flashErr: null, premiumTools: [], msg: null, affiliates: { forTitle: () => [], forPath: () => [], forText: () => [], any: () => false } };
   const render = (v, d) => { try { return ejs.render(read('views/' + v), Object.assign({}, base, d), { filename: path.join(ROOT, 'views', v) }); } catch (e) { return 'ERR ' + e.message; } };
   const list = [
-    { id: 'c1', kind: 'postgres', provider: 'supabase', label: 'Supabase', host_label: 'aws-0-us-east-1.pooler.supabase.com', config: { schema: 'auth', table: 'users', created: 'created_at', active: 'last_sign_in_at', fill: { active: 'sw_active' } }, status: 'active', last_synced_at: '2026-11-18T12:00:00Z' },
-    { id: 'c2', kind: 'wordpress', provider: 'wordpress', label: 'WordPress', host_label: 'example.com', config: { fill: {} }, status: 'error', last_error: 'WordPress did not accept that username and application password.', last_synced_at: '2026-11-18T12:00:00Z' }
+    { id: 'c1', kind: 'supabase', provider: 'supabase', label: 'Supabase', host_label: 'Job Board', config: { trackers: trs, fill: [] }, status: 'active', last_synced_at: '2026-11-18T12:00:00Z' },
+    { id: 'c2', kind: 'wordpress', provider: 'wordpress', label: 'WordPress', host_label: 'example.com', config: { fill: [] }, status: 'error', last_error: 'WordPress did not accept that username and application password.', last_synced_at: '2026-11-18T12:00:00Z' }
   ];
-  const sums = { c1: s, c2: AD.summary(rows.map(r => Object.assign({}, r, { active_7d: null, active_30d: null })), now) };
+  const sumsFor = (t, sm) => Object.assign({ tracker: t }, sm);
+  const sums = { c1: trs.map((t, i) => sumsFor(t, i === 4 ? AD.summary([{ day: C.ymd(now), total: 37, new_items: null }], now) : s)), c2: [sumsFor({ key: 'users', label: 'Users', created: 'built-in', active: null }, s)] };
   const page = render('app_data.ejs', { list, sums, ready: true, presets: Object.values(AD.PRESETS), max: 3, canSync: true, everyHours: 6 });
-  ok('the page shows each app: users, new, active, and a weekly chart', !page.startsWith('ERR') && page.includes('500') && page.includes('New this week') && (page.match(/class="ad-bar"/g) || []).length === 24, page.startsWith('ERR') ? page.slice(0, 300) : undefined);
-  ok('...WordPress says it has no sign-ins; an error is shown', page.includes('WordPress does not record sign-ins') && page.includes('did not accept that username'));
+  ok('the page shows a block per tracked thing: totals, new, active, a weekly chart', !page.startsWith('ERR') && ['Job seekers', 'Employers', 'Job posts', 'Blog Posts'].every(x => page.includes(x)) && page.includes('role = employer') && page.includes('500') && page.includes('New this week'), page.startsWith('ERR') ? page.slice(0, 300) : undefined);
+  ok('...inventory with no date shows its total without a chart; WordPress shows no active numbers', /Blog Posts[\s\S]*?37/.test(page) && (page.match(/class="ad-chart"/g) || []).length === 5 && !/WordPress[\s\S]*Active, 7 days/.test(page.slice(page.indexOf('example.com'))));
+  ok('...and the error is shown', page.includes('did not accept that username'));
   ok('...and offers another, with every kind of database', ['supabase', 'neon', 'postgres', 'mysql', 'firebase', 'wordpress'].every(k => page.includes('href="/app-data/connect/' + k + '"')));
   ok('before the migration it says "being switched on"', render('app_data.ejs', { list: [], sums: {}, ready: false, presets: Object.values(AD.PRESETS), max: 3, canSync: true, everyHours: 6 }).includes('Being set up'));
   const cp = render('app_data_connect.ejs', { preset: AD.PRESETS.supabase, ready: true, full: false, max: 3 });
   ok('the Supabase page shows the read-only role to make and the pooler string', !cp.startsWith('ERR') && cp.includes('exception when duplicate_object then') && cp.includes('create or replace view nobossly.users as select id, created_at, last_sign_in_at from auth.users;') && cp.includes('grant select on nobossly.users to nobossly_reader;') && !cp.includes('grant usage on schema auth') && cp.includes('Session pooler') && /name="url" type="password"/.test(cp), cp.startsWith('ERR') ? cp.slice(0, 300) : undefined);
   ok('WordPress leads with Connect with WordPress, the manual way folded away', (p => /action="\/app-data\/connect\/wordpress\/start"/.test(p) && /<details class="ad-manual">/.test(p))(render('app_data_connect.ejs', { preset: AD.PRESETS.wordpress, ready: true, full: false, max: 3 })));
   ok('Firebase asks for the key file in a text box', /<textarea name="key"/.test(render('app_data_connect.ejs', { preset: AD.PRESETS.firebase, ready: true, full: false, max: 3 })));
-  const su = render('app_data_setup.ejs', { conn: { id: 'c1', kind: 'postgres', label: 'Supabase', host_label: 'h', status: 'setup', config: null }, tables, tablesError: null, needsTable: true, fillable: AD.fillable(['sw_active', 'sw_waitlist']), defaults: AD.DEFAULT_FILL });
-  ok('set-up lists the readable tables and guesses the columns', !su.startsWith('ERR') && su.includes('<option value="auth.users"') && /value="created_at" selected/.test(su) && /value="last_sign_in_at" selected/.test(su), su.startsWith('ERR') ? su.slice(0, 300) : undefined);
+  const su = render('app_data_setup.ejs', { conn: { id: 'c1', kind: 'supabase', label: 'Supabase', host_label: 'Job Board', status: 'setup', config: null }, tables, tablesError: null, needsTable: true, trackers: AD.TR.suggest(tables), TR: AD.TR, fillable: AD.fillable(['sw_active', 'sw_waitlist']), defaults: AD.DEFAULT_FILL });
+  ok('set-up lists every readable table and starts from suggestions', !su.startsWith('ERR') && su.includes('<option value="public.blog_posts"') && (su.match(/class="tr-row"/g) || []).length === AD.TR.suggest(tables).length && /value="last_sign_in_at" selected/.test(su), su.startsWith('ERR') ? su.slice(0, 300) : undefined);
+  ok('...with a filter on each row and a way to add more', su.includes('name="t_fcol"') && su.includes('name="t_fval"') && su.includes('id="tr-add"') && su.includes('id="tr-tables"'));
   ok('...and suggests filling in Active users and Waitlist sign-ups', /name="fill_active"[\s\S]*?value="sw_active" selected/.test(su) && /name="fill_total"[\s\S]*?value="sw_waitlist" selected/.test(su));
   ok('workspace and the Active users page link here', read('views/workspace/index.ejs').includes('href="/app-data"') && read('views/workspace/metric.ejs').includes('href="/app-data"'));
   ok('routes are behind sign-in; secrets stored by the server only', /app\.use\('\/app-data', requireAuth/.test(read('server.js')) && /data_connection_store/.test(read('src/app_data/common.js')) && !/data_connection_secret/.test(read('src/routes/app_data.js')));

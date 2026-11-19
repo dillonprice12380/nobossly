@@ -1,37 +1,52 @@
 <%- include('partials/head') %>
-<%# Choose what NoBossly counts in a connected app database (src/app_data/index.js configFrom). %>
-<% locals.cfg = conn.config || {}; locals.fill = cfg.fill || (conn.status === 'setup' ? defaults : {}); %>
+<%# Choose what NoBossly tracks in a connected app database (src/app_data/trackers.js fromForm). %>
+<% locals.fill = Array.isArray(conn.config && conn.config.fill) ? conn.config.fill : [];
+   locals.fillOf = function (k) { return fill.find(function (f) { return f.what === k; }) || (conn.status === 'setup' && defaults[k] ? { metric: defaults[k] } : {}); };
+   locals.byKey = {}; tables.forEach(function (t) { byKey[t.key] = t; });
+   locals.rows = trackers.length ? trackers : [{ key: 't1' }];
+   locals.timeCols = function (t) { return t ? t.columns.filter(function (c) { return TR.isTime(c) || TR.isEpoch(c); }) : []; };
+   locals.filterCols = function (t) { return t ? t.columns.filter(TR.isFilterable) : []; }; %>
 <div class="page-head">
-  <div><h1>What to count</h1><p class="muted"><%= conn.label %> · <%= conn.host_label %></p></div>
+  <div><h1>What to track</h1><p class="muted"><%= conn.label %> · <%= conn.host_label %></p></div>
   <a class="btn btn-ghost btn-sm" href="/app-data">← Your app's users</a>
 </div>
 <% if (msg) { %><p class="notice"><%= msg %></p><% } %>
 <% if (tablesError) { %><div class="card"><p style="margin:0;color:var(--danger)"><%= tablesError %></p></div><% } %>
-<form class="card form-card" method="post" action="/app-data/<%= conn.id %>/setup" style="max-width:760px">
+<form class="card form-card" method="post" action="/app-data/<%= conn.id %>/setup" style="max-width:980px">
   <% if (needsTable) { %>
     <% if (!tables.length && !tablesError) { %>
-      <p class="muted">That login cannot read any table with a date column. Grant it SELECT on your users table, then come back.</p>
-    <% } else { %>
-      <label><strong>Table your users are in</strong>
-        <select name="table" required id="ad-table">
-          <% tables.forEach(function (t) { %><option value="<%= t.key %>" <%= cfg.schema + '.' + cfg.table === t.key ? 'selected' : '' %>><%= t.key %></option><% }) %>
-        </select>
-      </label>
-      <% tables.forEach(function (t, i) { var on = cfg.schema ? cfg.schema + '.' + cfg.table === t.key : i === 0; %>
-        <fieldset class="ad-cols" data-table="<%= t.key %>" <%= on ? '' : 'disabled hidden' %>>
-          <label><strong>When each user signed up</strong>
-            <select name="created" required>
-              <% t.columns.forEach(function (c) { %><option value="<%= c.name %>" <%= (on && cfg.created ? cfg.created === c.name : /^(created_at|created|inserted_at|joined_at|signup_at|registered_at|date_joined)$/i.test(c.name)) ? 'selected' : '' %>><%= c.name %><%= c.epoch ? ' (seconds since 1970)' : '' %></option><% }) %>
-            </select>
-          </label>
-          <label><strong>When each user was last active</strong> <span class="muted small">(optional; for active-user counts)</span>
-            <select name="active">
-              <option value="">None</option>
-              <% t.columns.forEach(function (c) { %><option value="<%= c.name %>" <%= (on && cfg.created ? cfg.active === c.name : /^(last_sign_in_at|last_seen_at|last_active_at|last_login_at|last_login|updated_at)$/i.test(c.name) && c.name !== 'updated_at') ? 'selected' : '' %>><%= c.name %><%= c.epoch ? ' (seconds since 1970)' : '' %></option><% }) %>
-            </select>
-          </label>
-        </fieldset>
-      <% }) %>
+      <p class="muted">NoBossly cannot see any tables in this database yet.</p>
+    <% } else if (tables.length) { %>
+      <p class="muted small" style="margin-top:0">Each row is one thing NoBossly counts every few hours. Pick a table; add a date column to see how many are new each week, a last-active column to count active users, and a filter to count only some rows (for example <em>role</em> = <em>employer</em>). You can add the same table more than once with different filters.</p>
+      <div id="tr-rows">
+        <% rows.forEach(function (tr, i) { var t = byKey[tr.schema + '.' + tr.table]; %>
+          <fieldset class="tr-row">
+            <div class="tr-grid">
+              <label><span>Table</span>
+                <select name="t_table" class="tr-table">
+                  <option value="">— remove this row —</option>
+                  <% tables.forEach(function (x) { %><option value="<%= x.key %>" <%= t && t.key === x.key ? 'selected' : '' %>><%= x.key %></option><% }) %>
+                </select></label>
+              <label><span>Name it</span><input name="t_label" maxlength="40" value="<%= tr.label || '' %>" placeholder="e.g. Employers"></label>
+              <label><span>When each was added</span>
+                <select name="t_created" class="tr-time"><option value="">No date (count only)</option>
+                  <% timeCols(t).forEach(function (c) { %><option value="<%= c.name %>" <%= tr.created === c.name ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                </select></label>
+              <label><span>Last active <em class="muted">(people only)</em></span>
+                <select name="t_active" class="tr-time"><option value="">None</option>
+                  <% timeCols(t).forEach(function (c) { %><option value="<%= c.name %>" <%= tr.active === c.name ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                </select></label>
+              <label><span>Only where</span>
+                <select name="t_fcol" class="tr-filter"><option value="">All rows</option>
+                  <% filterCols(t).forEach(function (c) { %><option value="<%= c.name %>" <%= tr.filter && tr.filter.column === c.name ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                </select></label>
+              <label><span>equals</span><input name="t_fval" maxlength="120" value="<%= tr.filter ? tr.filter.value : '' %>" placeholder="e.g. employer"></label>
+            </div>
+          </fieldset>
+        <% }) %>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="tr-add">+ Track something else</button>
+      <span class="muted small" style="margin-left:.5rem">Up to <%= TR.MAX %>.</span>
     <% } %>
   <% } else { %>
     <p class="muted"><%= conn.kind === 'firebase' ? 'Firebase Authentication records when each user signed up and last signed in, so NoBossly counts users, new users and active users from it.' : 'WordPress records when each user registered, so NoBossly counts users and new users. It does not record sign-ins, so there are no active-user numbers.' %></p>
@@ -40,29 +55,65 @@
   <fieldset class="ad-fill">
     <legend><strong>Fill in my dashboard numbers</strong> <span class="muted small">(optional)</span></legend>
     <p class="muted small" style="margin:.2rem 0 .5rem">Each time it counts, NoBossly logs the count as this month's number for you, so you do not type it.</p>
-    <% [['total', 'Total users →'], ['active', 'Active users (last 30 days) →'], ['new', 'New users this period →']].forEach(function (row) { if (row[0] === 'active' && conn.kind === 'wordpress') return; %>
-      <label class="ad-fill-row"><span><%= row[1] %></span>
-        <select name="fill_<%= row[0] %>">
+    <% [['total', 'Total'], ['active', 'Active (last 30 days)'], ['new', 'New this period']].forEach(function (row) { if (row[0] === 'active' && conn.kind === 'wordpress') return; var cur = fillOf(row[0]); %>
+      <div class="ad-fill-row">
+        <span><%= row[1] %></span>
+        <% if (needsTable && rows.length) { %>
+          <select name="fill_<%= row[0] %>_from" aria-label="From which tracker"><% rows.forEach(function (tr) { %><option value="<%= tr.key %>" <%= cur.tracker === tr.key ? 'selected' : '' %>><%= tr.label || tr.key %></option><% }) %></select>
+        <% } %>
+        <select name="fill_<%= row[0] %>" aria-label="Into which number">
           <option value="">Don't fill in</option>
-          <% fillable.forEach(function (m) { %><option value="<%= m.key %>" <%= fill[row[0]] === m.key ? 'selected' : '' %>><%= m.label %><%= m.mine ? '' : ' (another path)' %></option><% }) %>
+          <% fillable.forEach(function (m) { %><option value="<%= m.key %>" <%= cur.metric === m.key ? 'selected' : '' %>><%= m.label %><%= m.mine ? '' : ' (another path)' %></option><% }) %>
         </select>
-      </label>
+      </div>
     <% }) %>
   </fieldset>
   <button class="btn btn-primary" style="margin-top:.6rem" <%= needsTable && !tables.length ? 'disabled' : '' %>>Save and count</button>
 </form>
+<% if (needsTable && tables.length) { %>
+<script type="application/json" id="tr-tables"><%- JSON.stringify(tables.map(function (t) { return { key: t.key, time: timeCols(t).map(function (c) { return c.name; }), filter: filterCols(t).map(function (c) { return c.name; }) }; })).replace(/</g, '\\u003c') %></script>
 <script>
   (function () {
-    var sel = document.getElementById('ad-table');
-    if (!sel) return;
-    sel.addEventListener('change', function () {
-      document.querySelectorAll('.ad-cols').forEach(function (f) { var on = f.getAttribute('data-table') === sel.value; f.hidden = !on; f.disabled = !on; });
+    var tables = {}; JSON.parse(document.getElementById('tr-tables').textContent).forEach(function (t) { tables[t.key] = t; });
+    function fill(sel, names, first) {
+      var keep = sel.value; sel.innerHTML = '';
+      var o = document.createElement('option'); o.value = ''; o.textContent = first; sel.appendChild(o);
+      names.forEach(function (n) { var x = document.createElement('option'); x.value = n; x.textContent = n; if (n === keep) x.selected = true; sel.appendChild(x); });
+    }
+    function wire(row) {
+      var t = row.querySelector('.tr-table');
+      t.addEventListener('change', function () {
+        var info = tables[t.value] || { time: [], filter: [] };
+        var times = row.querySelectorAll('.tr-time');
+        fill(times[0], info.time, 'No date (count only)');
+        fill(times[1], info.time, 'None');
+        fill(row.querySelector('.tr-filter'), info.filter, 'All rows');
+        var guess = info.time.find(function (n) { return /^(created_at|created|inserted_at|published_at|posted_at)$/.test(n); });
+        if (guess && !times[0].value) times[0].value = guess;
+      });
+    }
+    var box = document.getElementById('tr-rows');
+    box.querySelectorAll('.tr-row').forEach(wire);
+    document.getElementById('tr-add').addEventListener('click', function () {
+      if (box.querySelectorAll('.tr-row').length >= <%= TR.MAX %>) return;
+      var row = box.querySelector('.tr-row').cloneNode(true);
+      row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+      row.querySelector('.tr-table').value = '';
+      row.querySelectorAll('.tr-time, .tr-filter').forEach(function (s) { s.innerHTML = ''; });
+      box.appendChild(row); wire(row); row.querySelector('.tr-table').focus();
     });
   })();
 </script>
+<% } %>
 <style>
-  .ad-cols, .ad-fill { border: 1px solid var(--border); border-radius: 10px; padding: .6rem .8rem; margin: .7rem 0; }
-  .ad-fill-row { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: .6rem; align-items: center; margin: .35rem 0; }
-  @media (max-width: 560px) { .ad-fill-row { grid-template-columns: 1fr; gap: .2rem; } }
+  .tr-row { border: 1px solid var(--border); border-radius: 12px; padding: .7rem .8rem; margin: 0 0 .7rem; }
+  .tr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem .8rem; }
+  .tr-grid label { margin: 0; display: flex; flex-direction: column; gap: .2rem; }
+  .tr-grid label span { font-size: .8rem; font-weight: 600; }
+  .tr-grid em { font-style: normal; font-weight: 400; }
+  .ad-fill { border: 1px solid var(--border); border-radius: 10px; padding: .6rem .8rem; margin: .9rem 0 .7rem; }
+  .ad-fill-row { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) minmax(0, 1fr); gap: .6rem; align-items: center; margin: .35rem 0; }
+  @media (max-width: 760px) { .tr-grid { grid-template-columns: 1fr 1fr; } .ad-fill-row { grid-template-columns: 1fr; gap: .2rem; } }
+  @media (max-width: 460px) { .tr-grid { grid-template-columns: 1fr; } }
 </style>
 <%- include('partials/foot') %>

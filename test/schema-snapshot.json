@@ -57,6 +57,16 @@
       "key",
       "value"
     ],
+    "app_tracker_days": [
+      "connection_id",
+      "user_id",
+      "tracker",
+      "day",
+      "total",
+      "new_items",
+      "active_7d",
+      "active_30d"
+    ],
     "badges": [
       "created_at",
       "criteria_type",

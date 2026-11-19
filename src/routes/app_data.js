@@ -38,9 +38,13 @@ router.get('/', async (req, res, next) => {
     const { list, ready } = await mine(req);
     const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
     const ids = list.map(c => c.id);
-    const rows = ids.length ? ((await req.sb.from('app_metrics').select('connection_id, day, total_users, new_users, active_7d, active_30d').in('connection_id', ids).gte('day', since).order('day').limit(1000)).data || []) : [];
+    const rows = ids.length ? ((await req.sb.from('app_tracker_days').select('connection_id, tracker, day, total, new_items, active_7d, active_30d').in('connection_id', ids).gte('day', since).order('day').limit(5000)).data || []) : [];
+    // For each connection, its trackers in the order chosen, each with its summary.
     const sums = {};
-    list.forEach(c => { sums[c.id] = AD.summary(rows.filter(r => r.connection_id === c.id)); });
+    list.forEach(c => {
+      const trs = AD.needsTable(c.kind) ? AD.TR.trackersOf(c.config) : [{ key: 'users', label: 'Users', created: 'built-in', active: c.kind === 'wordpress' ? null : 'built-in' }];
+      sums[c.id] = trs.map(t => Object.assign({ tracker: t }, AD.summary(rows.filter(r => r.connection_id === c.id && r.tracker === t.key))));
+    });
     res.render('app_data', { title: 'Your app\'s users', list, sums, ready, presets: Object.values(AD.PRESETS), max: AD.MAX, canSync: !!service(), everyHours: AD.EVERY_HOURS, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
@@ -164,7 +168,9 @@ router.get('/:id/setup', async (req, res, next) => {
       return res.render('app_data_project', { title: 'Choose a project', conn, projects: pr.projects || [], error: pr.error || null, msg: req.query.msg || null });
     }
     const t = sc ? await AD.tablesFor(sc, full) : { error: 'Not switched on right now. Try again later.' };
-    res.render('app_data_setup', { title: 'What to count', conn, tables: t.tables || [], tablesError: t.error || null, needsTable: AD.needsTable(conn.kind),
+    const chosen = AD.TR.trackersOf(conn.config);
+    res.render('app_data_setup', { title: 'What to track', conn, tables: t.tables || [], tablesError: t.error || null, needsTable: AD.needsTable(conn.kind),
+      trackers: chosen.length ? chosen : AD.TR.suggest(t.tables || []), TR: AD.TR,
       fillable: AD.fillable(pathMetricKeys(req.profile)), defaults: AD.DEFAULT_FILL, msg: req.query.msg || null });
   } catch (e) { next(e); }
 });
@@ -184,7 +190,7 @@ router.post('/:id/setup', async (req, res, next) => {
     const s = await AD.saveConfig(sc, full, c.config);
     if (s.error) return go(res, back, s.error);
     const r = await AD.sync(sc, Object.assign(full, { config: c.config }));
-    go(res, '/app-data', r.error ? r.error : 'Counted: ' + (r.total == null ? 'sign-ups' : r.total.toLocaleString('en-US') + ' users') + (r.active30 != null ? ', ' + r.active30.toLocaleString('en-US') + ' active in the last 30 days' : '') + '.' + (r.filled.length ? ' Your dashboard numbers are filled in too.' : ''));
+    go(res, '/app-data', r.error ? r.error : 'Counted ' + r.counted + ' thing' + (r.counted === 1 ? '' : 's') + '.' + (r.problems && r.problems.length ? ' ' + r.problems.join(' ') : '') + (r.filled.length ? ' Your dashboard numbers are filled in too.' : ''));
   } catch (e) { next(e); }
 });
 
@@ -196,7 +202,7 @@ router.post('/:id/sync', async (req, res, next) => {
     if (!sc) return go(res, '/app-data', 'Syncing is not switched on right now. Try again later.');
     if (conn.last_synced_at && Date.now() - new Date(conn.last_synced_at).getTime() < 60000) return go(res, '/app-data', 'Counted less than a minute ago.');
     const r = await AD.sync(sc, Object.assign({}, conn, { user_id: req.user.id }));
-    go(res, '/app-data', r.error ? r.error : 'Counted again.');
+    go(res, '/app-data', r.error ? r.error : 'Counted again.' + (r.problems && r.problems.length ? ' ' + r.problems.join(' ') : ''));
   } catch (e) { next(e); }
 });
 

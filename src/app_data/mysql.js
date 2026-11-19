@@ -6,6 +6,7 @@
 const mysql = require('mysql2/promise');
 const { resolvePublic } = require('./safety');
 const { TIMEOUT_MS, CONNECT_MS, DAYS } = require('./common');
+const TR = require('./trackers');
 
 function providerOf(host) {
   if (/\.psdb\.cloud$|planetscale/.test(host)) return 'planetscale';
@@ -83,15 +84,14 @@ async function tables(p, opts = {}) {
   if (o.error) return { error: o.error };
   try {
     const [rows] = await o.c.query(`select table_schema as s, table_name as t, column_name as c, data_type as d from information_schema.columns
-      where table_schema = database() and data_type in ('datetime', 'timestamp', 'date', 'bigint', 'int')
-      order by (table_name regexp 'user|member|account|customer|profile|signup|waitlist|subscriber') desc, table_name, ordinal_position limit 600`);
+      where table_schema = database() order by table_name, ordinal_position limit 3000`);
     const by = new Map();
     for (const r of rows) {
       const k = r.s + '.' + r.t;
       if (!by.has(k)) by.set(k, { schema: r.s, table: r.t, key: k, columns: [] });
-      by.get(k).columns.push({ name: r.c, type: r.d, epoch: /int/.test(r.d) });
+      by.get(k).columns.push({ name: r.c, type: r.d, epoch: /int/.test(r.d) && !/^(id|.*_id)$/.test(r.c) });
     }
-    return { tables: [...by.values()].filter(t => t.columns.some(c => !c.epoch || /creat|join|sign|regist|_at$|time/i.test(c.name))).slice(0, 80) };
+    return { tables: [...by.values()].slice(0, 150) };
   } catch (e) { return { error: explain(e) }; }
   finally { await o.close(); }
 }
@@ -116,4 +116,25 @@ async function counts(p, cfg, opts = {}) {
   finally { await o.close(); }
 }
 
-module.exports = { parse, providerOf, verify, tables, counts, explain, writeGrants, q };
+/** Counts for each tracker, over one connection. */
+async function countTrackers(p, trackers, opts = {}) {
+  const o = await open(p, opts);
+  if (o.error) return { error: o.error };
+  const results = {};
+  try {
+    for (const tr of trackers) {
+      try {
+        const [chk] = await o.c.query('select column_name as c from information_schema.columns where table_schema = ? and table_name = ?', [tr.schema, tr.table]);
+        const have = new Set(chk.map(r => r.c));
+        const sq = TR.sqlFor(tr, 'mysql');
+        if (!have.size || sq.columns.some(c => !have.has(c))) { results[tr.key] = { error: tr.label + ': the table or a column chosen is no longer there.' }; continue; }
+        const [[tot]] = await o.c.query(sq.total, sq.params);
+        const [days] = sq.days ? await o.c.query(sq.days, sq.params) : [[]];
+        results[tr.key] = TR.countsFrom(tr, tot, days);
+      } catch (e) { results[tr.key] = { error: tr.label + ': ' + explain(e) }; }
+    }
+    return { results };
+  } finally { await o.close(); }
+}
+
+module.exports = { countTrackers, parse, providerOf, verify, tables, counts, explain, writeGrants, q };
